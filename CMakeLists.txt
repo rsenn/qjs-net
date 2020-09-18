@@ -11,7 +11,7 @@ set(LIBWEBSOCKETS_INCLUDE_DIRS
 set(LIBWEBSOCKETS_FOUND TRUE)
 set(LIBWEBSOCKETS_LIBRARIES websockets ${CURL_LIBRARIES})
 
-include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS})
+include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS})
 link_directories(${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib)
 
 function(make_shared_module FNAME)
@@ -39,7 +39,8 @@ function(make_shared_module FNAME)
   install(TARGETS ${TARGET_NAME} DESTINATION lib/quickjs)
 
   if(LIBWEBSOCKETS_FOUND)
-    target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
+    target_include_directories(${TARGET_NAME}
+                               PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
     target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBS})
   endif()
 endfunction()
@@ -59,11 +60,17 @@ add_subdirectory(libwebsockets)
 
 # Main
 add_library(quickjs-minnet MODULE ${JS_BINDINGS_SOURCES})
-target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
+target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS}
+                                                  ${CURL_INCLUDE_DIRS})
 set_target_properties(
-  quickjs-minnet PROPERTIES 
-  COMPILE_FLAGS "-fvisibility=hidden"
-                            PREFIX "")
+  quickjs-minnet
+  PROPERTIES COMPILE_FLAGS "-fvisibility=hidden"
+             PREFIX ""
+             OUTPUT_NAME "minnet"
+             OUTPUT_NAME_DEBUG "minnet-debug")
 target_compile_definitions(quickjs-minnet PRIVATE "-DJS_BINDINGS_INIT_MODULE=1")
 target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} quickjs)
+
+install(TARGETS quickjs-minnet DESTINATION lib/quickjs)
+
 # link
