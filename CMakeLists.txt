@@ -66,8 +66,8 @@ set_target_properties(
   quickjs-minnet
   PROPERTIES COMPILE_FLAGS "-fvisibility=hidden"
              PREFIX ""
-             OUTPUT_NAME "minnet"
-             OUTPUT_NAME_DEBUG "minnet-debug")
+             OUTPUT_NAME "net"
+             OUTPUT_NAME_DEBUG "net-debug")
 target_compile_definitions(quickjs-minnet PRIVATE "-DJS_BINDINGS_INIT_MODULE=1")
 target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} quickjs)
 
