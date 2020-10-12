@@ -2,18 +2,19 @@ cmake_minimum_required(VERSION 3.0)
 project(minnet)
 
 
-find_library(CURL NAMES libcurl curl PATHS "${CMAKE_INSTALL_PREFIX}/lib")
 
 message("CURL: ${CURL}")
-if(WIN32)
-  set(CURL_LIBRARIES curl)
-else(WIN32)
+if(NOT CURL_FOUND)
   include(FindCURL)
   include(FindPkgConfig)
   if(NOT CURL_FOUND)
     pkg_check_modules(CURL libcurl)
+
+    if(NOT CURL_FOUND)
+      find_library(CURL NAMES libcurl curl PATHS "${CMAKE_INSTALL_PREFIX}/lib")
+    endif(NOT CURL_FOUND)
   endif(NOT CURL_FOUND)
-endif(WIN32)
+endif(NOT CURL_FOUND)
 set(DISABLE_WERROR TRUE)
 set(LWS_WITHOUT_TESTAPPS TRUE)
 set(LWS_WITHOUT_TEST_SERVER TRUE)
@@ -33,7 +34,7 @@ if(QUICKJS_INCLUDE_DIR)
   include_directories(${QUICKJS_INCLUDE_DIR})
 endif(QUICKJS_INCLUDE_DIR)
 
-include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS})
+include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
 link_directories(${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib)
 
 function(make_shared_module FNAME)
@@ -79,7 +80,7 @@ if(NOT USE_SYSTEM_LIBWEBSOCKETS)
 endif(NOT USE_SYSTEM_LIBWEBSOCKETS)
 # Main
 add_library(quickjs-minnet MODULE ${JS_BINDINGS_SOURCES})
-target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS})
+target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
 set_target_properties(
   quickjs-minnet
   PROPERTIES COMPILE_FLAGS "-fvisibility=hidden"
