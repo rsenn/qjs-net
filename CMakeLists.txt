@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(minnet)
 
+set(DISABLE_WERROR ON)
+#message("CURL: ${CURL}")
 
 
 message("CURL: ${CURL}")
@@ -11,20 +13,43 @@ if(NOT CURL_FOUND)
     pkg_check_modules(CURL libcurl)
 
     if(NOT CURL_FOUND)
-      find_library(CURL NAMES libcurl curl PATHS "${CMAKE_INSTALL_PREFIX}/lib")
+      find_library(
+        CURL
+        NAMES libcurl curl
+        PATHS "${CMAKE_INSTALL_PREFIX}/lib")
     endif(NOT CURL_FOUND)
   endif(NOT CURL_FOUND)
 endif(NOT CURL_FOUND)
-set(DISABLE_WERROR TRUE)
-set(LWS_WITHOUT_TESTAPPS TRUE)
-set(LWS_WITHOUT_TEST_SERVER TRUE)
-set(LWS_WITHOUT_TEST_PING TRUE)
-set(LWS_WITHOUT_TEST_CLIENT TRUE)
 
-# include: libwebsockets find_package(libwebsockets)
-set(LIBWEBSOCKETS_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
-set(LIBWEBSOCKETS_FOUND TRUE)
-set(LIBWEBSOCKETS_LIBRARIES websockets ${CURL_LIBRARIES})
+if(NOT CURL_FOUND)
+  message("-- Building CURL from source")
+  include(ExternalProject)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/curl/CMakeLists.txt")
+    set(CURL_REPO "")
+    add_subdirectory(curl)
+  else()
+     set(CURL_REPO "https://github.com/curl/curl.git")
+
+  ExternalProject_Add(
+    curl
+    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl"
+    GIT_REPOSITORY "${CURL_REPO}"
+    GIT_SUBMODULES_RECURSE TRUE
+    GIT_PROGRESS TRUE
+    BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/curl"
+    STEP_TARGETS   build)
+  set_property(DIRECTORY PROPERTY EP_STEP_TARGETS build)
+ endif()
+
+
+  set(CURL_LIBRARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/curl")
+  set(CURL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl/include")
+endif()
+
+set(DISABLE_WERROR ON)
+
+option(USE_SYSTEM_LIBWEBSOCKETS "Use system-installed libwebsockets" ON)
+
 
 if(NOT QUICKJS_INCLUDE_DIR)
   set(QUICKJS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
@@ -63,15 +88,31 @@ function(make_shared_module FNAME)
     target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBS})
   endif()
 endfunction()
-#
+
+
+IF(NOT LIBWEBSOCKETS_FOUND)
+  SET(USE_SYSTEM_LIBWEBSOCKETS OFF)
+  message("-- Building LIBWEBSOCKETS_FOUND from source")
+
+  set(LWS_WITHOUT_TESTAPPS TRUE)
+  set(LWS_WITHOUT_TEST_SERVER TRUE)
+  set(LWS_WITHOUT_TEST_PING TRUE)
+  set(LWS_WITHOUT_TEST_CLIENT TRUE)
+
+  # include: libwebsockets find_package(libwebsockets)
+  set(LIBWEBSOCKETS_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
+  set(LIBWEBSOCKETS_FOUND TRUE)
+  set(LIBWEBSOCKETS_LIBRARIES websockets ${CURL_LIBRARIES})
+
+  #add_subdirectory(libwebsockets)
+
+ENDIF(NOT LIBWEBSOCKETS_FOUND)
 # file(GLOB JS_BINDINGS_SOURCES ${CMAKE_SOURCE_DIR}/src/js_*.cpp) foreach(MOD ${JS_BINDINGS_SOURCES}) string(REGEX REPLACE "\\.cpp" "" MOD "${MOD}") string(REGEX REPLACE ".*/js_" "" MOD "${MOD}") list(APPEND JS_BINDINGS_MODULES ${MOD}) endforeach(MOD ${JS_BINDINGS_SOURCES})
 # message("JS_BINDINGS_MODULES: ${JS_BINDINGS_MODULES}") foreach(JS_MODULE ${JS_BINDINGS_MODULES}) make_shared_module(${JS_MODULE}) endforeach()
 
 file(GLOB JS_BINDINGS_SOURCES minnet.c minnet.h)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-option(USE_SYSTEM_LIBWEBSOCKETS "Use system-installed libwebsockets" ON)
 
 if(NOT USE_SYSTEM_LIBWEBSOCKETS)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/CMakeLists.txt)
