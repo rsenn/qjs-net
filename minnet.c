@@ -435,6 +435,10 @@ static JSValue minnet_fetch(JSContext *ctx, JSValueConst this_val, int argc,
 	long bufSize;
 	long status;
 	char *type;
+	const char* body_str = NULL;
+  struct curl_slist *headerlist = NULL;
+	char *buf = calloc(1,1);
+	size_t bufsize = 1;
 
 	JSValue resObj = JS_NewObjectClass(ctx, minnet_response_class_id);
 	if (JS_IsException(resObj))
@@ -453,16 +457,95 @@ static JSValue minnet_fetch(JSContext *ctx, JSValueConst this_val, int argc,
 	res->url = argv[0];
 	url = JS_ToCString(ctx, argv[0]);
 
+	if(argc > 1 && JS_IsObject(argv[1])) {
+		JSValue method, body, headers;
+		const char* method_str;
+		method = JS_GetPropertyStr(ctx, argv[1], "method");
+		body = JS_GetPropertyStr(ctx, argv[1], "body");
+		headers = JS_GetPropertyStr(ctx, argv[1], "headers");
+
+		if(!JS_IsUndefined(headers)) {
+			JSValue global_obj, object_ctor, object_proto,  keys, names, length;
+			int i;
+			int32_t len;
+		
+			global_obj = JS_GetGlobalObject(ctx);
+	    object_ctor = JS_GetPropertyStr(ctx, global_obj, "Object");
+	    keys = JS_GetPropertyStr(ctx, object_ctor, "keys");
+
+	    names = JS_Call(ctx, keys, object_ctor, 1, (JSValueConst*)&headers);
+	    length = JS_GetPropertyStr(ctx, names, "length");
+
+	    JS_ToInt32(ctx, &len, length);
+
+	    for(i = 0; i  < len; i++) {
+	    	char* h;
+	    	JSValue key,value;
+	    	const char* key_str, *value_str;
+	    	size_t key_len, value_len;
+				key = JS_GetPropertyUint32(ctx, names, i);
+				key_str = JS_ToCString(ctx, key);
+				key_len = strlen(key_str);
+
+				value = JS_GetPropertyStr(ctx, headers, key_str);
+				value_str = JS_ToCString(ctx, value);
+				value_len = strlen(value_str);
+
+				buf = realloc(buf, bufsize + key_len + 2 + value_len + 2 + 1);
+				h=&buf[bufsize];
+
+				strcpy(&buf[bufsize], key_str);
+				bufsize += key_len;
+				strcpy(&buf[bufsize], ": ");
+				bufsize += 2;
+		    strcpy(&buf[bufsize], value_str);
+				bufsize += value_len;
+				strcpy(&buf[bufsize], "\0\n");
+				bufsize += 2;
+
+				JS_FreeCString(ctx, key_str);
+				JS_FreeCString(ctx, value_str);
+
+		    headerlist = curl_slist_append(headerlist, h);
+	    }
+	    
+			JS_FreeValue(ctx, global_obj);
+			JS_FreeValue(ctx, object_ctor);
+			JS_FreeValue(ctx, object_proto);
+			JS_FreeValue(ctx, keys);
+			JS_FreeValue(ctx, names);
+			JS_FreeValue(ctx, length);
+	  }
+
+		method_str = JS_ToCString(ctx, method);
+
+		if(!JS_IsUndefined(body) || !strcasecmp(method_str, "post")) {
+			body_str = JS_ToCString(ctx, body);
+		}
+
+		JS_FreeCString(ctx, method_str);
+		
+		JS_FreeValue(ctx, method);
+		JS_FreeValue(ctx, body);
+		JS_FreeValue(ctx, headers);
+	}
+
 	curl = curl_easy_init();
 	if (!curl)
 		return JS_EXCEPTION;
 
 	fi = tmpfile();
 
+
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, "minimal-network-quickjs");
+  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fi);
+
+	if(body_str)
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body_str);
+
 
 	curlRes = curl_easy_perform(curl);
 	if (curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status) == CURLE_OK)
@@ -500,6 +583,11 @@ static JSValue minnet_fetch(JSContext *ctx, JSValueConst this_val, int argc,
 	res->size = bufSize;
 
 finish:
+  curl_slist_free_all(headerlist);
+  free(buf);
+	if(body_str)
+		JS_FreeCString(ctx, body_str);
+
 	curl_easy_cleanup(curl);
 	JS_SetOpaque(resObj, res);
 
