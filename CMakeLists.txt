@@ -2,26 +2,46 @@ cmake_minimum_required(VERSION 3.0)
 project(minnet)
 
 set(DISABLE_WERROR ON)
-#message("CURL: ${CURL}")
-
-
 message("CURL: ${CURL}")
-if(NOT CURL_FOUND)
-  include(FindCURL)
-  include(FindPkgConfig)
-  if(NOT CURL_FOUND)
-    pkg_check_modules(CURL libcurl)
 
+option(USE_SYSTEM_LIBCURL "Use system-installed libcurl" ON)
+option(USE_SYSTEM_LIBWEBSOCKETS "Use system-installed libwebsockets" ON)
+
+
+if(USE_SYSTEM_LIBCURL) 
+  unset(LIBCURL_INCLUDE_DIRS CACHE)
+  unset(LIBCURL_LIBRARY_DIRS CACHE)
+  unset(LIBCURL_LIBRARIES CACHE)
+  unset(LIBCURL_FOUND CACHE)
+
+  if(NOT CURL_FOUND)
+    include(FindCURL)
+    include(FindPkgConfig)
     if(NOT CURL_FOUND)
-      find_library(
-        CURL
-        NAMES libcurl curl
-        PATHS "${CMAKE_INSTALL_PREFIX}/lib")
+      pkg_check_modules(LIBCURL libcurl)
+
+      if(NOT LIBCURL_FOUND)
+        find_library(
+          LIBCURL
+          NAMES libcurl curl
+          PATHS "${CMAKE_INSTALL_PREFIX}/lib")
+        set(LIBCURL_LIBRARIES ${LIBCURL})
+      endif(NOT LIBCURL_FOUND)
+    else(NOT CURL_FOUND)
+      set(LIBCURL_LIBRARIES ${CURL_LIBRARIES})
+      set(LIBCURL_INCLUDE_DIRS ${CURL_INCLUDE_DIRS})
+      set(LIBCURL_LIBRARY_DIRS ${CMAKE_INSTALL_PREFIX}/lib)
+      set(LIBCURL_FOUND ${CURL_FOUND})
     endif(NOT CURL_FOUND)
   endif(NOT CURL_FOUND)
-endif(NOT CURL_FOUND)
 
-if(NOT CURL_FOUND)
+
+  if(NOT CURL_FOUND)
+    set(USE_SYSTEM_LIBCURL FALSE)
+  endif(NOT CURL_FOUND)
+endif(USE_SYSTEM_LIBCURL) 
+
+if(NOT USE_SYSTEM_LIBCURL)
   message("-- Building CURL from source")
   include(ExternalProject)
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/curl/CMakeLists.txt")
@@ -41,14 +61,18 @@ if(NOT CURL_FOUND)
   set_property(DIRECTORY PROPERTY EP_STEP_TARGETS build)
  endif()
 
-
-  set(CURL_LIBRARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/curl")
-  set(CURL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl/include")
+  set(LIBCURL_LIBRARY_DIRS "${CMAKE_CURRENT_BINARY_DIR}/curl")
+  set(LIBCURL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/curl/include")
+  set(LIBCURL_LIBRARIES curl)
 endif()
 
-set(DISABLE_WERROR ON)
 
-option(USE_SYSTEM_LIBWEBSOCKETS "Use system-installed libwebsockets" ON)
+foreach(VAR LIBCURL_LIBRARIES LIBCURL_INCLUDE_DIRS LIBCURL_LIBRARY_DIRS LIBCURL_FOUND)
+  message("${VAR} = ${${VAR}}")
+endforeach()
+
+
+set(DISABLE_WERROR ON)
 
 if(USE_SYSTEM_LIBWEBSOCKETS)
   include(FindPkgConfig)
@@ -71,7 +95,7 @@ if(QUICKJS_INCLUDE_DIR)
   include_directories(${QUICKJS_INCLUDE_DIR})
 endif(QUICKJS_INCLUDE_DIR)
 
-include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
+include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${LIBCURL_INCLUDE_DIRS})
 
 function(make_shared_module FNAME)
   string(REGEX REPLACE "_" "-" NAME "${FNAME}")
@@ -82,7 +106,7 @@ function(make_shared_module FNAME)
 
   add_library(${TARGET_NAME} SHARED ${FNAME}.c)
 
-  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} quickjs dl)
+  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${LIBCURL_LIBRARIES} quickjs dl)
   set_target_properties(
     ${TARGET_NAME}
     PROPERTIES PREFIX ""
@@ -113,7 +137,7 @@ IF(NOT LIBWEBSOCKETS_FOUND)
   # include: libwebsockets find_package(libwebsockets)
   set(LIBWEBSOCKETS_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
   set(LIBWEBSOCKETS_FOUND TRUE)
-  set(LIBWEBSOCKETS_LIBRARIES websockets ${CURL_LIBRARIES})
+  set(LIBWEBSOCKETS_LIBRARIES websockets)
   set(LIBWEBSOCKETS_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib)
   #add_subdirectory(libwebsockets)
 ELSE(NOT LIBWEBSOCKETS_FOUND)
@@ -143,7 +167,7 @@ if(NOT USE_SYSTEM_LIBWEBSOCKETS)
 endif(NOT USE_SYSTEM_LIBWEBSOCKETS)
 # Main
 add_library(quickjs-minnet MODULE ${JS_BINDINGS_SOURCES})
-target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
+target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} ${LIBCURL_INCLUDE_DIRS})
 set_target_properties(
   quickjs-minnet
   PROPERTIES COMPILE_FLAGS "-fvisibility=hidden"
@@ -152,7 +176,7 @@ set_target_properties(
              # OUTPUT_NAME_DEBUG "net-debug"
 )
 target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
-target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} quickjs)
+target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${LIBCURL_LIBRARIES} quickjs)
 
 install(TARGETS quickjs-minnet DESTINATION lib/quickjs)
 

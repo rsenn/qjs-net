@@ -552,7 +552,7 @@ static JSValue minnet_fetch(JSContext *ctx, JSValueConst this_val, int argc,
 		res->status = JS_NewInt32(ctx, (int32_t)status);
 
 	if (curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &type) == CURLE_OK)
-		res->type = JS_NewString(ctx, type);
+		res->type = type ? JS_NewString(ctx, type) : JS_NULL;
 
 	res->ok = JS_FALSE;
 
