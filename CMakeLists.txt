@@ -50,6 +50,18 @@ set(DISABLE_WERROR ON)
 
 option(USE_SYSTEM_LIBWEBSOCKETS "Use system-installed libwebsockets" ON)
 
+if(USE_SYSTEM_LIBWEBSOCKETS)
+  include(FindPkgConfig)
+
+  unset(LIBWEBSOCKETS_INCLUDE_DIRS CACHE)
+  unset(LIBWEBSOCKETS_LIBRARY_DIRS CACHE)
+  unset(LIBWEBSOCKETS_LIBRARIES CACHE)
+  unset(LIBWEBSOCKETS_FOUND CACHE)
+
+  pkg_search_module(LIBWEBSOCKETS libwebsockets)
+endif(USE_SYSTEM_LIBWEBSOCKETS)
+
+
 
 if(NOT QUICKJS_INCLUDE_DIR)
   set(QUICKJS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
@@ -60,7 +72,6 @@ if(QUICKJS_INCLUDE_DIR)
 endif(QUICKJS_INCLUDE_DIR)
 
 include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
-link_directories(${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib)
 
 function(make_shared_module FNAME)
   string(REGEX REPLACE "_" "-" NAME "${FNAME}")
@@ -71,7 +82,7 @@ function(make_shared_module FNAME)
 
   add_library(${TARGET_NAME} SHARED ${FNAME}.c)
 
-  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBS} quickjs dl)
+  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} quickjs dl)
   set_target_properties(
     ${TARGET_NAME}
     PROPERTIES PREFIX ""
@@ -85,7 +96,7 @@ function(make_shared_module FNAME)
 
   if(LIBWEBSOCKETS_FOUND)
     target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
-    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBS})
+    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES})
   endif()
 endfunction()
 
@@ -103,10 +114,21 @@ IF(NOT LIBWEBSOCKETS_FOUND)
   set(LIBWEBSOCKETS_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
   set(LIBWEBSOCKETS_FOUND TRUE)
   set(LIBWEBSOCKETS_LIBRARIES websockets ${CURL_LIBRARIES})
-
+  set(LIBWEBSOCKETS_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib)
   #add_subdirectory(libwebsockets)
+ELSE(NOT LIBWEBSOCKETS_FOUND)
+
 
 ENDIF(NOT LIBWEBSOCKETS_FOUND)
+
+foreach(VAR LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS LIBWEBSOCKETS_LIBRARY_DIRS LIBWEBSOCKETS_FOUND)
+  message("${VAR} = ${${VAR}}")
+endforeach()
+
+#if(NOT USE_SYSTEM_LIBWEBSOCKETS)
+  link_directories(${LIBWEBSOCKETS_LIBRARY_DIRS})
+#endif(NOT USE_SYSTEM_LIBWEBSOCKETS)
+
 # file(GLOB JS_BINDINGS_SOURCES ${CMAKE_SOURCE_DIR}/src/js_*.cpp) foreach(MOD ${JS_BINDINGS_SOURCES}) string(REGEX REPLACE "\\.cpp" "" MOD "${MOD}") string(REGEX REPLACE ".*/js_" "" MOD "${MOD}") list(APPEND JS_BINDINGS_MODULES ${MOD}) endforeach(MOD ${JS_BINDINGS_SOURCES})
 # message("JS_BINDINGS_MODULES: ${JS_BINDINGS_MODULES}") foreach(JS_MODULE ${JS_BINDINGS_MODULES}) make_shared_module(${JS_MODULE}) endforeach()
 
