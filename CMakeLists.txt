@@ -77,7 +77,7 @@ endif()
 message(STATUS "CURL library: ${CURL_LIBRARY}")
 set(DISABLE_WERROR ON)
 
-option(USE_SYSTEM_LIBWEBSOCKETS "Use system-installed libwebsockets" ON)
+#[[option(USE_SYSTEM_LIBWEBSOCKETS "Use system-installed libwebsockets" ON)
 
 if(USE_SYSTEM_LIBWEBSOCKETS)
   include(FindPkgConfig)
@@ -88,7 +88,7 @@ if(USE_SYSTEM_LIBWEBSOCKETS)
   unset(LIBWEBSOCKETS_FOUND CACHE)
 
   pkg_search_module(LIBWEBSOCKETS libwebsockets)
-endif(USE_SYSTEM_LIBWEBSOCKETS)
+endif(USE_SYSTEM_LIBWEBSOCKETS)]]
 
 if(NOT QUICKJS_INCLUDE_DIR)
   set(QUICKJS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
@@ -139,28 +139,29 @@ function(make_shared_module FNAME)
   endif()
 endfunction()
 
-if(NOT LIBWEBSOCKETS_FOUND)
-  set(USE_SYSTEM_LIBWEBSOCKETS OFF)
-  message("-- Building LIBWEBSOCKETS_FOUND from source")
+option(BUILD_LIBWEBSOCKETS "build 3rdparty libwebsockets" OFF)
 
+if(LIBWEBSOCKETS_FOUND)
+  set(BUILD_LIBWEBSOCKETS OFF CACHE BOOL "build 3rdparty libwebsockets" FORCE)
+else(LIBWEBSOCKETS_FOUND)
+  set(BUILD_LIBWEBSOCKETS ON CACHE BOOL "build 3rdparty libwebsockets" FORCE)
+endif(LIBWEBSOCKETS_FOUND)
+
+if(BUILD_LIBWEBSOCKETS)
+  message("-- Building LIBWEBSOCKETS_FOUND from source")
   set(LWS_WITHOUT_TESTAPPS TRUE)
   set(LWS_WITHOUT_TEST_SERVER TRUE)
   set(LWS_WITHOUT_TEST_PING TRUE)
   set(LWS_WITHOUT_TEST_CLIENT TRUE)
-
   # include: libwebsockets find_package(libwebsockets)
-  set(LIBWEBSOCKETS_INCLUDE_DIRS
-      ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include
-      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
-      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
-  set(LIBWEBSOCKETS_FOUND TRUE)
-  set(LIBWEBSOCKETS_LIBRARIES websockets ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} # ${CURL_LIBRARY}
-  )
-  set(LIBWEBSOCKETS_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib)
-  # add_subdirectory(libwebsockets)
-else(NOT LIBWEBSOCKETS_FOUND)
-
-endif(NOT LIBWEBSOCKETS_FOUND)
+ 
+  set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets" FORCE)
+  set(LIBWEBSOCKETS_LIBRARIES websockets ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} CACHE PATH "libwebsockets libraries" FORCE)
+  set(LIBWEBSOCKETS_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include  ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
+      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include CACHE PATH "libwebsockets include directory" FORCE)
+  set(LIBWEBSOCKETS_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib CACHE PATH "libwebsockets library directory" FORCE)
+ add_subdirectory(libwebsockets)
+endif(BUILD_LIBWEBSOCKETS)
 
 foreach(VAR LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS
             LIBWEBSOCKETS_LIBRARY_DIRS LIBWEBSOCKETS_FOUND)
