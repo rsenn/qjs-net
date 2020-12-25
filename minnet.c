@@ -465,7 +465,7 @@ static JSValue minnet_fetch(JSContext *ctx, JSValueConst this_val, int argc,
 		headers = JS_GetPropertyStr(ctx, argv[1], "headers");
 
 		if(!JS_IsUndefined(headers)) {
-			JSValue global_obj, object_ctor, object_proto,  keys, names, length;
+			JSValue global_obj, object_ctor, /* object_proto, */  keys, names, length;
 			int i;
 			int32_t len;
 		
@@ -511,7 +511,7 @@ static JSValue minnet_fetch(JSContext *ctx, JSValueConst this_val, int argc,
 	    
 			JS_FreeValue(ctx, global_obj);
 			JS_FreeValue(ctx, object_ctor);
-			JS_FreeValue(ctx, object_proto);
+			//JS_FreeValue(ctx, object_proto);
 			JS_FreeValue(ctx, keys);
 			JS_FreeValue(ctx, names);
 			JS_FreeValue(ctx, length);

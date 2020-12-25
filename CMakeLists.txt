@@ -124,6 +124,17 @@ endfunction()
 option(BUILD_LIBWEBSOCKETS "build 3rdparty libwebsockets" OFF)
 
 
+if(NOT BUILD_LIBWEBSOCKETS)
+  include(FindPkgConfig)
+
+  unset(LIBWEBSOCKETS_INCLUDE_DIRS CACHE)
+  unset(LIBWEBSOCKETS_LIBRARY_DIRS CACHE)
+  unset(LIBWEBSOCKETS_LIBRARIES CACHE)
+  unset(LIBWEBSOCKETS_FOUND CACHE)
+
+  pkg_search_module(LIBWEBSOCKETS libwebsockets)
+endif(NOT BUILD_LIBWEBSOCKETS)
+
 if(NOT LIBWEBSOCKETS_FOUND)
   set(BUILD_LIBWEBSOCKETS ON CACHE BOOL "build 3rdparty libwebsockets" FORCE)
 endif(LIBWEBSOCKETS_FOUND)
