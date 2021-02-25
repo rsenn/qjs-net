@@ -91,6 +91,6 @@ set_target_properties(
 target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
 target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} quickjs)
 
-install(TARGETS quickjs-minnet DESTINATION lib/quickjs)
+install(TARGETS quickjs-minnet DESTINATION lib/quickjs PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 # link
