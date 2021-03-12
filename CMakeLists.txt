@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(minnet)
 
+#message("CURL: ${CURL}")
 
-
-message("CURL: ${CURL}")
 if(NOT CURL_FOUND)
   include(FindCURL)
   include(FindPkgConfig)
