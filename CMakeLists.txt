@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(minnet)
 
-set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag" FORCE)
+set(DISABLE_WERROR
+    TRUE
+    CACHE BOOL "Disable -Werror flag" FORCE)
 # message("CURL: ${CURL}")
 
 if(BUILD_SHARED_LIBS)
@@ -18,8 +20,12 @@ else(BUILD_CURL)
   set(LOCAL_CURL OFF)
 endif(BUILD_CURL)
 
-set(CMAKE_BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}/curl/lib" CACHE PATH "Build with local rpath" FORCE)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib" CACHE PATH "Build with install rpath" FORCE)
+set(CMAKE_BUILD_RPATH
+    "${CMAKE_CURRENT_BINARY_DIR}/curl/lib"
+    CACHE PATH "Build with local rpath" FORCE)
+set(CMAKE_INSTALL_RPATH
+    "${CMAKE_INSTALL_PREFIX}/lib"
+    CACHE PATH "Build with install rpath" FORCE)
 
 option(BUILD_CURL "Build curl library" ${LOCAL_CURL})
 message("BUILD_CURL: ${BUILD_CURL}")
@@ -117,20 +123,36 @@ function(make_shared_module FNAME)
 
   add_library(${TARGET_NAME} SHARED ${FNAME}.c)
 
-  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} quickjs dl)
-  set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "" BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}" INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib" OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
-                                                  BUILD_RPATH "${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
+  target_link_libraries(
+    ${TARGET_NAME}
+    ${LIBWEBSOCKETS_LIBRARIES}
+    ${CURL_LIBRARY}
+    ${OPENSSL_SSL_LIBRARY}
+    ${OPENSSL_CRYPTO_LIBRARY}
+    quickjs
+    dl)
+  set_target_properties(
+    ${TARGET_NAME}
+    PROPERTIES
+      PREFIX ""
+      BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}"
+      INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
+      OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
+      BUILD_RPATH
+      "${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs"
+  )
   target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
   install(TARGETS ${TARGET_NAME} DESTINATION lib/quickjs)
 
   if(LIBWEBSOCKETS_FOUND)
-    target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
-    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
+    target_include_directories(${TARGET_NAME}
+                               PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
+    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES}
+                          ${CURL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
   endif()
 endfunction()
 
 option(BUILD_LIBWEBSOCKETS "build 3rdparty libwebsockets" OFF)
-
 
 if(NOT BUILD_LIBWEBSOCKETS)
   include(FindPkgConfig)
@@ -144,28 +166,46 @@ if(NOT BUILD_LIBWEBSOCKETS)
 endif(NOT BUILD_LIBWEBSOCKETS)
 
 if(NOT LIBWEBSOCKETS_FOUND)
-  set(BUILD_LIBWEBSOCKETS ON CACHE BOOL "build 3rdparty libwebsockets" FORCE)
+  set(BUILD_LIBWEBSOCKETS
+      ON
+      CACHE BOOL "build 3rdparty libwebsockets" FORCE)
 endif(LIBWEBSOCKETS_FOUND)
 
 if(BUILD_LIBWEBSOCKETS)
-  message("-- Building LIBWEBSOCKETS_FOUND from source")
+  message("-- Building LIBWEBSOCKETS from source")
   set(LWS_WITHOUT_TESTAPPS TRUE)
   set(LWS_WITHOUT_TEST_SERVER TRUE)
   set(LWS_WITHOUT_TEST_PING TRUE)
   set(LWS_WITHOUT_TEST_CLIENT TRUE)
-    set(LWS_LINK_TESTAPPS_DYNAMIC OFF CACHE BOOL "link test apps dynamic" FORCE)
-    set(LWS_WITH_STATIC ON CACHE BOOL "build libwebsockets static library" FORCE)
+  set(LWS_LINK_TESTAPPS_DYNAMIC
+      OFF
+      CACHE BOOL "link test apps dynamic" FORCE)
+  set(LWS_WITH_STATIC
+      ON
+      CACHE BOOL "build libwebsockets static library" FORCE)
 
   # include: libwebsockets find_package(libwebsockets)
-  set(LIBWEBSOCKETS_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
-  set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets" FORCE)
-  set(LIBWEBSOCKETS_LIBRARIES websockets ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} CACHE PATH "libwebsockets libraries" FORCE)
-  set(LIBWEBSOCKETS_INCLUDE_DIRS "${LIBWEBSOCKETS_INCLUDE_DIRS}" CACHE PATH "libwebsockets include directory" FORCE)
-  set(LIBWEBSOCKETS_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib CACHE PATH "libwebsockets library directory" FORCE)
+  set(LIBWEBSOCKETS_INCLUDE_DIRS
+      ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include
+      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
+      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
+  set(LIBWEBSOCKETS_FOUND
+      ON
+      CACHE BOOL "found libwebsockets" FORCE)
+  set(LIBWEBSOCKETS_LIBRARIES
+      websockets ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY}
+      CACHE PATH "libwebsockets libraries" FORCE)
+  set(LIBWEBSOCKETS_INCLUDE_DIRS
+      "${LIBWEBSOCKETS_INCLUDE_DIRS}"
+      CACHE PATH "libwebsockets include directory" FORCE)
+  set(LIBWEBSOCKETS_LIBRARY_DIRS
+      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib
+      CACHE PATH "libwebsockets library directory" FORCE)
   add_subdirectory(libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets)
 endif(BUILD_LIBWEBSOCKETS)
 
-foreach(VAR LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS LIBWEBSOCKETS_LIBRARY_DIRS LIBWEBSOCKETS_FOUND)
+foreach(VAR LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS
+            LIBWEBSOCKETS_LIBRARY_DIRS LIBWEBSOCKETS_FOUND)
   message("${VAR} = ${${VAR}}")
 endforeach()
 
@@ -221,7 +261,6 @@ function(make_shared_module FNAME)
                           ${CURL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
   endif()
 endfunction()
- 
 
 # if(NOT USE_SYSTEM_LIBWEBSOCKETS)
 link_directories(${LIBWEBSOCKETS_LIBRARY_DIRS})
@@ -237,7 +276,7 @@ link_directories(${LIBWEBSOCKETS_LIBRARY_DIRS})
 file(GLOB JS_BINDINGS_SOURCES minnet.c minnet.h)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
- 
+
 # Main
 add_library(quickjs-minnet MODULE ${JS_BINDINGS_SOURCES})
 target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS}
@@ -254,6 +293,9 @@ target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1
 target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY}
                       ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} quickjs)
 
-install(TARGETS quickjs-minnet DESTINATION lib/quickjs)
+install(
+  TARGETS quickjs-minnet
+  DESTINATION lib/quickjs
+  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
 
 # link
