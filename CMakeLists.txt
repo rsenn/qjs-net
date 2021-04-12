@@ -105,12 +105,36 @@ if(USE_SYSTEM_LIBWEBSOCKETS)
 endif(USE_SYSTEM_LIBWEBSOCKETS)]]
 
 if(NOT QUICKJS_INCLUDE_DIR)
-  set(QUICKJS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
+  if(quickjs_includedir)
+    set(QUICKJS_INCLUDE_DIR "${quickjs_includedir}")
+  else(quickjs_includedir)
+    set(QUICKJS_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
+
+  endif(quickjs_includedir)
 endif(NOT QUICKJS_INCLUDE_DIR)
 
-if(QUICKJS_INCLUDE_DIR)
+if(EXISTS "${QUICKJS_INCLUDE_DIR}/quickjs")
+  set(QUICKJS_INCLUDE_DIR "${QUICKJS_INCLUDE_DIR}/quickjs")
+endif(EXISTS "${QUICKJS_INCLUDE_DIR}/quickjs")
+
+#if(NOT EXISTS "${QUICKJS_INCLUDE_DIR}")
+#  message(FATAL_ERROR "No QuickJS include directory found!")
+#endif(NOT EXISTS "${QUICKJS_INCLUDE_DIR}")
+
+include(CheckIncludeFile)
+
+message("QUICKJS_INCLUDE_DIR=${QUICKJS_INCLUDE_DIR}")
+#message("CMAKE_SYSTEM_INCLUDE_PATH=${CMAKE_SYSTEM_INCLUDE_PATH}")
+
+if(EXISTS "${QUICKJS_INCLUDE_DIR}")
+  list(APPEND CMAKE_REQUIRED_INCLUDES "${QUICKJS_INCLUDE_DIR}")
+endif(EXISTS "${QUICKJS_INCLUDE_DIR}")
+
+check_include_file("quickjs.h" HAVE_QUICKJS_H)
+
+if(HAVE_QUICKJS_H AND QUICKJS_INCLUDE_DIR)
   include_directories(${QUICKJS_INCLUDE_DIR})
-endif(QUICKJS_INCLUDE_DIR)
+endif(HAVE_QUICKJS_H AND QUICKJS_INCLUDE_DIR)
 
 include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
 
