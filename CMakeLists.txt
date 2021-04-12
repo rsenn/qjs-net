@@ -4,16 +4,18 @@ project(minnet)
 set(DISABLE_WERROR
     TRUE
     CACHE BOOL "Disable -Werror flag" FORCE)
-# message("CURL: ${CURL}")
 
-if(BUILD_SHARED_LIBS)
+option(BUILD_SHARED_LIBWEBSOCKETS "Shared building of dependency libraries" OFF)
+message("libwebsockets shared: ${BUILD_SHARED_LIBWEBSOCKETS}")
+
+if(BUILD_SHARED_LIBWEBSOCKETS)
   set(LWS_WITH_SHARED TRUE)
   set(LWS_WITH_STATIC FALSE)
-else(BUILD_SHARED_LIBS)
+else(BUILD_SHARED_LIBWEBSOCKETS)
   set(LWS_WITH_SHARED FALSE)
   set(LWS_WITH_STATIC TRUE)
   set(LWS_STATIC_PIC TRUE)
-endif(BUILD_SHARED_LIBS)
+endif(BUILD_SHARED_LIBWEBSOCKETS)
 
 if(BUILD_CURL)
   set(LOCAL_CURL ON)
