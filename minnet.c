@@ -163,20 +163,23 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 	case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
 		struct lws_pollargs *args = in;
 
-		if (args->events != args->prev_events)
+		if (args->events != args->prev_events) {
 			printf("WS change mode poll fd=%d events=%s %s prev_events=%s %s\n",
 				   args->fd, (args->events & POLLIN) ? "IN" : "",
 				   (args->events & POLLOUT) ? "OUT" : "",
 				   (args->prev_events & POLLIN) ? "IN" : "",
 				   (args->prev_events & POLLOUT) ? "OUT" : "");
-		JSValue cb_argv[3] = {JS_MKVAL(JS_TAG_INT, args->fd),
-							  (args->events & POLLIN)
-								  ? minnet_make_handler(ctx, args->fd, POLLIN)
-								  : JS_NULL,
-							  (args->events & POLLOUT)
-								  ? minnet_make_handler(ctx, args->fd, POLLOUT)
-								  : JS_NULL};
-		call_ws_callback(&server_cb_fd, 3, cb_argv);
+
+			JSValue cb_argv[3] = {
+				JS_MKVAL(JS_TAG_INT, args->fd),
+				(args->events & POLLIN)
+					? minnet_make_handler(ctx, args->fd, POLLIN)
+					: JS_NULL,
+				(args->events & POLLOUT)
+					? minnet_make_handler(ctx, args->fd, POLLOUT)
+					: JS_NULL};
+			call_ws_callback(&server_cb_fd, 3, cb_argv);
+		}
 		break;
 	}
 	default:
@@ -328,8 +331,8 @@ static JSValue minnet_ws_server(JSContext *ctx, JSValueConst this_val, int argc,
 	lws_service_adjust_timeout(context, 1, 0);
 
 	while (a >= 0) {
-		a = lws_service(context, 20); // minnet_ws_service(context, 500);
-		jsm_std_loop(ctx, 20);
+		//a = lws_service(context, 20); // minnet_ws_service(context, 500);
+		jsm_std_loop(ctx, 1000);
 	}
 	lws_context_destroy(context);
 
