@@ -3,10 +3,12 @@
 
 # Default target executed when no arguments are given to make.
 default_target: all
+
 .PHONY : default_target
 
 # Allow only one "make -f Makefile2" at a time, but pass parallelism.
 .NOTPARALLEL:
+
 
 #=============================================================================
 # Special targets provided by cmake.
@@ -14,22 +16,29 @@ default_target: all
 # Disable implicit rules so canonical targets will work.
 .SUFFIXES:
 
+
 # Disable VCS-based implicit rules.
 % : %,v
+
 
 # Disable VCS-based implicit rules.
 % : RCS/%
 
+
 # Disable VCS-based implicit rules.
 % : RCS/%,v
+
 
 # Disable VCS-based implicit rules.
 % : SCCS/s.%
 
+
 # Disable VCS-based implicit rules.
 % : s.%
 
+
 .SUFFIXES: .hpux_make_needs_suffix_list
+
 
 # Command-line flag to silence nested $(MAKE).
 $(VERBOSE)MAKESILENT = -s
@@ -39,6 +48,7 @@ $(VERBOSE).SILENT:
 
 # A target that is always out of date.
 cmake_force:
+
 .PHONY : cmake_force
 
 #=============================================================================
@@ -48,10 +58,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /opt/cmake-20201216/bin/cmake
+CMAKE_COMMAND = /opt/cmake-20201114/bin/cmake
 
 # The command to remove a file.
-RM = /opt/cmake-20201216/bin/cmake -E rm -f
+RM = /opt/cmake-20201114/bin/cmake -E rm -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -68,37 +78,37 @@ CMAKE_BINARY_DIR = /home/roman/Projects/plot-cv
 # Special rule for the target install/strip
 install/strip: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
-	/opt/cmake-20201216/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+	/opt/cmake-20201114/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
 .PHONY : install/strip
 
 # Special rule for the target install/strip
 install/strip/fast: preinstall/fast
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
-	/opt/cmake-20201216/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+	/opt/cmake-20201114/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
 .PHONY : install/strip/fast
 
 # Special rule for the target install/local
 install/local: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
-	/opt/cmake-20201216/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+	/opt/cmake-20201114/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
 .PHONY : install/local
 
 # Special rule for the target install/local
 install/local/fast: preinstall/fast
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
-	/opt/cmake-20201216/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+	/opt/cmake-20201114/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
 .PHONY : install/local/fast
 
 # Special rule for the target install
 install: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/opt/cmake-20201216/bin/cmake -P cmake_install.cmake
+	/opt/cmake-20201114/bin/cmake -P cmake_install.cmake
 .PHONY : install
 
 # Special rule for the target install
 install/fast: preinstall/fast
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/opt/cmake-20201216/bin/cmake -P cmake_install.cmake
+	/opt/cmake-20201114/bin/cmake -P cmake_install.cmake
 .PHONY : install/fast
 
 # Special rule for the target list_install_components
@@ -108,26 +118,29 @@ list_install_components:
 
 # Special rule for the target list_install_components
 list_install_components/fast: list_install_components
+
 .PHONY : list_install_components/fast
 
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/opt/cmake-20201216/bin/cmake --regenerate-during-build -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	/opt/cmake-20201114/bin/cmake --regenerate-during-build -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : rebuild_cache
 
 # Special rule for the target rebuild_cache
 rebuild_cache/fast: rebuild_cache
+
 .PHONY : rebuild_cache/fast
 
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
-	/opt/cmake-20201216/bin/ccmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	/opt/cmake-20201114/bin/cmake-gui -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
 edit_cache/fast: edit_cache
+
 .PHONY : edit_cache/fast
 
 # The main all target
@@ -144,6 +157,7 @@ clean:
 
 # The main clean target
 clean/fast: clean
+
 .PHONY : clean/fast
 
 # Prepare targets for installation.
@@ -168,6 +182,7 @@ quickjs/net/CMakeFiles/quickjs-minnet.dir/rule:
 
 # Convenience name for target.
 quickjs-minnet: quickjs/net/CMakeFiles/quickjs-minnet.dir/rule
+
 .PHONY : quickjs-minnet
 
 # fast build rule for target.
@@ -176,6 +191,7 @@ quickjs-minnet/fast:
 .PHONY : quickjs-minnet/fast
 
 minnet.o: minnet.c.o
+
 .PHONY : minnet.o
 
 # target to build an object file
@@ -184,6 +200,7 @@ minnet.c.o:
 .PHONY : minnet.c.o
 
 minnet.i: minnet.c.i
+
 .PHONY : minnet.i
 
 # target to preprocess a source file
@@ -192,6 +209,7 @@ minnet.c.i:
 .PHONY : minnet.c.i
 
 minnet.s: minnet.c.s
+
 .PHONY : minnet.s
 
 # target to generate assembly for a file

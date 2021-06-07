@@ -1,4 +1,4 @@
-import { client, server, fetch } from "minnet.so"
+import { client, server, fetch } from "net"
 
 function CreateServer() {
     print("SERVER")

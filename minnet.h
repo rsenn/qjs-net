@@ -8,18 +8,19 @@ typedef struct minnet_ws_callback {
 	JSValue *func_obj;
 } minnet_ws_callback;
 
-static struct minnet_ws_callback *server_cb_message;
-static struct minnet_ws_callback *server_cb_connect;
-static struct minnet_ws_callback *server_cb_close;
-static struct minnet_ws_callback *server_cb_pong;
+static struct minnet_ws_callback server_cb_message;
+static struct minnet_ws_callback server_cb_connect;
+static struct minnet_ws_callback server_cb_close;
+static struct minnet_ws_callback server_cb_pong;
+static struct minnet_ws_callback server_cb_fd;
 
 static JSValue minnet_ws_server(JSContext *ctx, JSValueConst this_val, int argc,
 								JSValueConst *argv);
 
-static struct minnet_ws_callback *client_cb_message;
-static struct minnet_ws_callback *client_cb_connect;
-static struct minnet_ws_callback *client_cb_close;
-static struct minnet_ws_callback *client_cb_pong;
+static struct minnet_ws_callback client_cb_message;
+static struct minnet_ws_callback client_cb_connect;
+static struct minnet_ws_callback client_cb_close;
+static struct minnet_ws_callback client_cb_pong;
 
 static JSValue minnet_ws_client(JSContext *ctx, JSValueConst this_val, int argc,
 								JSValueConst *argv);
@@ -52,6 +53,8 @@ static JSValue minnet_ws_pong(JSContext *ctx, JSValueConst this_val, int argc,
 							  JSValueConst *argv);
 static JSValue minnet_ws_close(JSContext *ctx, JSValueConst this_val, int argc,
 							   JSValueConst *argv);
+static JSValue minnet_ws_get(JSContext *ctx, JSValueConst this_val, int magic);
+
 static void minnet_ws_finalizer(JSRuntime *rt, JSValue val);
 
 static JSClassDef minnet_ws_class = {
@@ -64,6 +67,7 @@ static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
 	JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
 	JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
 	JS_CFUNC_DEF("close", 1, minnet_ws_close),
+	JS_CGETSET_MAGIC_DEF("fd", minnet_ws_get, 0, 0),
 	JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebSocket",
 					   JS_PROP_CONFIGURABLE),
 };
