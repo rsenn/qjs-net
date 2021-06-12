@@ -76,23 +76,115 @@ static JSValue minnet_service_handler(JSContext *ctx, JSValueConst this_val,
 									  int argc, JSValueConst *argv, int magic,
 									  JSValue *func_data)
 {
-	/*lws_service_fd()*/
+	int32_t rw = 0;
+	uint32_t calls = ++func_data[3].u.int32;
+	struct lws_pollfd pfd;
+	struct lws_pollargs args =
+		*(struct lws_pollargs *)&JS_VALUE_GET_PTR(func_data[4]);
+	struct lws_context *context = JS_VALUE_GET_PTR(func_data[2]);
+
+	if (argc >= 1)
+		JS_ToInt32(ctx, &rw, argv[0]);
+
+	pfd.fd = JS_VALUE_GET_INT(func_data[0]);
+	pfd.revents = rw ? POLLOUT : POLLIN;
+	pfd.events = JS_VALUE_GET_INT(func_data[1]);
+
+	if (pfd.events != (POLLIN | POLLOUT) || poll(&pfd, 1, 0) > 0)
+		lws_service_fd(context, &pfd);
+
+	/*if (calls <= 100)
+		printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
+			   "%d %d]\n",
+			   rw ? "writable" : "readable", calls, pfd.fd, pfd.events,
+			   pfd.revents, args.fd, args.events, args.prev_events);*/
+
+	return JS_UNDEFINED;
 }
 
-static JSValue minnet_make_handler(JSContext *ctx, int fd, int events)
+enum { READ_HANDLER = 0, WRITE_HANDLER };
+
+static JSValue minnet_make_handler(JSContext *ctx, struct lws_pollargs *pfd,
+								   struct lws *wsi, int magic)
 {
-	JSValue data[1] = {JS_NewInt32(ctx, fd)};
-	return JS_NewCFunctionData(ctx, minnet_service_handler, 0, events, 1, data);
+	JSValue data[5] = {
+		JS_MKVAL(JS_TAG_INT, pfd->fd),     JS_MKVAL(JS_TAG_INT, pfd->events),
+		JS_MKPTR(0, lws_get_context(wsi)), JS_MKVAL(JS_TAG_INT, 0),
+		JS_MKPTR(0, *(void **)pfd),
+	};
+
+	return JS_NewCFunctionData(ctx, minnet_service_handler, 0, magic,
+							   countof(data), data);
+}
+
+static JSValue minnet_function_bound(JSContext *ctx, JSValueConst this_val,
+									 int argc, JSValueConst argv[], int magic,
+									 JSValue *func_data)
+{
+	JSValue args[argc + magic];
+	size_t i, j;
+	for (i = 0; i < magic; i++)
+		args[i] = func_data[i + 1];
+	for (j = 0; j < argc; j++)
+		args[i++] = argv[j];
+
+	return JS_Call(ctx, func_data[0], this_val, i, args);
+}
+
+static JSValue minnet_function_bind(JSContext *ctx, JSValueConst func, int argc,
+									JSValueConst argv[])
+{
+	JSValue data[argc + 1];
+	size_t i;
+	data[0] = JS_DupValue(ctx, func);
+	for (i = 0; i < argc; i++)
+		data[i + 1] = JS_DupValue(ctx, argv[i]);
+	return JS_NewCFunctionData(ctx, minnet_function_bound, 0, argc, argc + 1,
+							   data);
+}
+
+static JSValue minnet_function_bind_1(JSContext *ctx, JSValueConst func,
+									  JSValueConst arg)
+{
+	return minnet_function_bind(ctx, func, 1, &arg);
+}
+
+static void minnet_make_handlers(JSContext *ctx, struct lws *wsi,
+								 struct lws_pollargs *pfd, JSValue out[2])
+{
+	JSValue func = minnet_make_handler(ctx, pfd, wsi, 0);
+
+	out[0] =
+		(pfd->events & POLLIN)
+			? minnet_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER))
+			: JS_NULL;
+	out[1] =
+		(pfd->events & POLLOUT)
+			? minnet_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER))
+			: JS_NULL;
+
+	JS_FreeValue(ctx, func);
 }
 
 static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 						   void *user, void *in, size_t len);
 
+static int lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason,
+							 void *user, void *in, size_t len);
+
 static struct lws_protocols lws_server_protocols[] = {
 	{"minnet", lws_ws_callback, 0, 0},
-	{"http", lws_callback_http_dummy, 0, 0},
+	{"http", lws_http_callback, 0, 0},
 	{NULL, NULL, 0, 0},
 };
+
+static int lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason,
+							 void *user, void *in, size_t len)
+{
+	// printf("http callback %d\n", reason);
+
+	return lws_callback_http_dummy(wsi, reason, user, in, len);
+}
 
 static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 						   void *user, void *in, size_t len)
@@ -103,12 +195,14 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 	case LWS_CALLBACK_PROTOCOL_INIT:
 		break;
 	case LWS_CALLBACK_ESTABLISHED: {
+		// printf("callback ESTABLISHED\n");
 		if (server_cb_connect.func_obj) {
 			JSValue ws_obj = create_websocket_obj(server_cb_connect.ctx, wsi);
 			call_ws_callback(&server_cb_connect, 1, &ws_obj);
 		}
 	} break;
 	case LWS_CALLBACK_CLOSED: {
+		// printf("callback CLOSED %d\n", lws_get_socket_fd(wsi));
 		if (server_cb_close.func_obj) {
 			call_ws_callback(&server_cb_close, 0, NULL);
 		}
@@ -132,57 +226,112 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 			call_ws_callback(&server_cb_pong, 2, cb_argv);
 		}
 	} break;
-	case LWS_CALLBACK_HTTP_BODY:
-		printf("LWS_CALLBACK_HTTP_BODY\n");
-
+	case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
+		// printf("callback HTTP_CONFIRM_UPGRADE fd=%d\n",
+		// lws_get_socket_fd(wsi));
 		break;
-
+	}
+	case LWS_CALLBACK_HTTP_BODY: {
+		// printf("callback HTTP_BODY fd=%d\n", lws_get_socket_fd(wsi));
+		break;
+	}
+	case LWS_CALLBACK_CLOSED_HTTP: {
+		// printf("callback CLOSED_HTTP fd=%d\n", lws_get_socket_fd(wsi));
+		break;
+	}
 	case LWS_CALLBACK_ADD_POLL_FD: {
 		struct lws_pollargs *args = in;
-		printf("WS add poll fd=%d events=%s %s\n", args->fd,
+		/*printf("callback ADD_POLL_FD fd=%d events=%s %s %s\n", args->fd,
 			   (args->events & POLLIN) ? "IN" : "",
-			   (args->events & POLLOUT) ? "OUT" : "");
-		JSValue cb_argv[3] = {JS_MKVAL(JS_TAG_INT, args->fd),
-							  (args->events & POLLIN)
-								  ? minnet_make_handler(ctx, args->fd, POLLIN)
-								  : JS_NULL,
-							  (args->events & POLLOUT)
-								  ? minnet_make_handler(ctx, args->fd, POLLOUT)
-								  : JS_NULL};
-		call_ws_callback(&server_cb_fd, 3, cb_argv);
+			   (args->events & POLLOUT) ? "OUT" : "",
+			   (args->events & POLLERR) ? "ERR" : "");*/
+		if (server_cb_fd.func_obj) {
+			JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
+			minnet_make_handlers(ctx, wsi, args, &argv[1]);
+
+			call_ws_callback(&server_cb_fd, 3, argv);
+			JS_FreeValue(ctx, argv[0]);
+			JS_FreeValue(ctx, argv[1]);
+			JS_FreeValue(ctx, argv[2]);
+		}
 		break;
 	}
 	case LWS_CALLBACK_DEL_POLL_FD: {
 		struct lws_pollargs *args = in;
-		printf("WS del poll fd=%d\n", args->fd);
-		JSValue cb_argv[3] = {JS_MKVAL(JS_TAG_INT, args->fd), JS_NULL, JS_NULL};
-		call_ws_callback(&server_cb_fd, 3, cb_argv);
+		// printf("callback DEL_POLL_FD fd=%d\n", args->fd);
+		JSValue argv[3] = {
+			JS_NewInt32(server_cb_fd.ctx, args->fd),
+		};
+		minnet_make_handlers(ctx, wsi, args, &argv[1]);
+		call_ws_callback(&server_cb_fd, 3, argv);
+		JS_FreeValue(ctx, argv[0]);
 
 		break;
 	}
 	case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
 		struct lws_pollargs *args = in;
 
-		if (args->events != args->prev_events) {
-			printf("WS change mode poll fd=%d events=%s %s prev_events=%s %s\n",
-				   args->fd, (args->events & POLLIN) ? "IN" : "",
-				   (args->events & POLLOUT) ? "OUT" : "",
-				   (args->prev_events & POLLIN) ? "IN" : "",
-				   (args->prev_events & POLLOUT) ? "OUT" : "");
+		/*printf(
+			"callback CHANGE_MODE_POLL_FD fd=%d events=%03o prev_events=%03o\n",
+			args->fd, args->events, args->prev_events);*/
 
-			JSValue cb_argv[3] = {
-				JS_MKVAL(JS_TAG_INT, args->fd),
-				(args->events & POLLIN)
-					? minnet_make_handler(ctx, args->fd, POLLIN)
-					: JS_NULL,
-				(args->events & POLLOUT)
-					? minnet_make_handler(ctx, args->fd, POLLOUT)
-					: JS_NULL};
-			call_ws_callback(&server_cb_fd, 3, cb_argv);
+		if (args->events != args->prev_events) {
+			JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
+			minnet_make_handlers(ctx, wsi, args, &argv[1]);
+
+			call_ws_callback(&server_cb_fd, 3, argv);
+			JS_FreeValue(ctx, argv[0]);
+			JS_FreeValue(ctx, argv[1]);
+			JS_FreeValue(ctx, argv[2]);
 		}
 		break;
 	}
+	case LWS_CALLBACK_HTTP_FILE_COMPLETION: {
+		// printf("callback HTTP_FILE_COMPLETION\n");
+		break;
+	}
+	case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
+		// printf("callback FILTER_NETWORK_CONNECTION\n");
+		break;
+	}
+	case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+		// printf("callback FILTER_HTTP_CONNECTION\n");
+		break;
+	}
+	case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
+		// printf("callback SERVER_NEW_CLIENT_INSTANTIATED\n");
+		break;
+	}
+	case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
+		// printf("callback OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS\n");
+		break;
+	}
+	case LWS_CALLBACK_WSI_CREATE: {
+		// printf("callback WSI_CREATE\n");
+		break;
+	}
+	case LWS_CALLBACK_LOCK_POLL: {
+		break;
+	}
+	case LWS_CALLBACK_UNLOCK_POLL: {
+		break;
+	}
+	case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
+		// printf("callback HTTP_BIND_PROTOCOL\n");
+		break;
+	}
+	case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
+		// printf("callback HTTP_DROP_PROTOCOL\n");
+		break;
+	}
+	case LWS_CALLBACK_WSI_DESTROY: {
+		// printf("callback LWS_CALLBACK_WSI_DESTROY %d\n",
+		// lws_get_socket_fd(in));
+		break;
+	}
+
 	default:
+		// printf("Unknown lws callback %d\n", reason);
 		break;
 	}
 
@@ -230,7 +379,8 @@ typedef struct JSThreadState {
 	void *recv_pipe, *send_pipe;
 } JSThreadState;
 
-static int minnet_ws_service(struct lws_context *context, uint32_t timeout)
+/*static int minnet_ws_service(struct lws_context *context, uint32_t
+timeout)
 {
 	int ret, i, j = 0, n = FD_SETSIZE;
 	struct pollfd pfds[n];
@@ -238,13 +388,13 @@ static int minnet_ws_service(struct lws_context *context, uint32_t timeout)
 
 	for (i = 0; i < n; i++) {
 		if ((wss[j] = wsi_from_fd(context, i))) {
-			printf("wss[%d] (%d) %i\n", j, i, lws_partial_buffered(wss[j]));
+			printf("wss[%d] (%d) %i\n", j, i,
+lws_partial_buffered(wss[j]));
 
 			pfds[j] = (struct pollfd){
 				.fd = i,
-				.events = POLLIN | (lws_partial_buffered(wss[j]) ? POLLOUT : 0),
-				.revents = 0};
-			j++;
+				.events = POLLIN | (lws_partial_buffered(wss[j]) ?
+POLLOUT : 0), .revents = 0}; j++;
 		}
 	}
 
@@ -254,7 +404,7 @@ static int minnet_ws_service(struct lws_context *context, uint32_t timeout)
 		}
 	}
 	return ret;
-}
+}*/
 
 static JSValue minnet_ws_server(JSContext *ctx, JSValueConst this_val, int argc,
 								JSValueConst *argv)
@@ -331,8 +481,10 @@ static JSValue minnet_ws_server(JSContext *ctx, JSValueConst this_val, int argc,
 	lws_service_adjust_timeout(context, 1, 0);
 
 	while (a >= 0) {
-		//a = lws_service(context, 20); // minnet_ws_service(context, 500);
-		jsm_std_loop(ctx, 1000);
+		if (server_cb_fd.func_obj)
+			js_std_loop(ctx);
+		else
+			a = lws_service(context, 20);
 	}
 	lws_context_destroy(context);
 
