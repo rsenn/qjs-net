@@ -193,9 +193,10 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 
 	switch (reason) {
 	case LWS_CALLBACK_PROTOCOL_INIT:
+		printf("callback PROTOCOL_INIT\n");
 		break;
 	case LWS_CALLBACK_ESTABLISHED: {
-		// printf("callback ESTABLISHED\n");
+		printf("callback ESTABLISHED\n");
 		if (server_cb_connect.func_obj) {
 			JSValue ws_obj = create_websocket_obj(server_cb_connect.ctx, wsi);
 			call_ws_callback(&server_cb_connect, 1, &ws_obj);
@@ -295,7 +296,7 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 	}
 	case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-		// printf("callback FILTER_HTTP_CONNECTION\n");
+		printf("callback FILTER_HTTP_CONNECTION\n");
 		break;
 	}
 	case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
@@ -307,7 +308,7 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 	}
 	case LWS_CALLBACK_WSI_CREATE: {
-		// printf("callback WSI_CREATE\n");
+		printf("callback WSI_CREATE\n");
 		break;
 	}
 	case LWS_CALLBACK_LOCK_POLL: {
