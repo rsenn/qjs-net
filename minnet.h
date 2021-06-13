@@ -21,6 +21,7 @@ static struct minnet_ws_callback client_cb_message;
 static struct minnet_ws_callback client_cb_connect;
 static struct minnet_ws_callback client_cb_close;
 static struct minnet_ws_callback client_cb_pong;
+static struct minnet_ws_callback client_cb_fd;
 
 static JSValue minnet_ws_client(JSContext *ctx, JSValueConst this_val, int argc,
 								JSValueConst *argv);
@@ -43,6 +44,7 @@ static int js_minnet_init(JSContext *ctx, JSModuleDef *m)
 
 typedef struct {
 	struct lws *lwsi;
+	/*minnet_ws_callback onmessage, onconnect, onclose,onpong;*/
 } MinnetWebsocket;
 
 static JSValue minnet_ws_send(JSContext *ctx, JSValueConst this_val, int argc,

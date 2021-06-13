@@ -69,6 +69,8 @@ static JSValue create_websocket_obj(JSContext *ctx, struct lws *wsi)
 
 static JSValue call_ws_callback(minnet_ws_callback *cb, int argc, JSValue *argv)
 {
+	if (!cb->func_obj)
+		return JS_UNDEFINED;
 	return JS_Call(cb->ctx, *(cb->func_obj), *(cb->this_obj), argc, argv);
 }
 
@@ -193,24 +195,31 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 
 	switch (reason) {
 	case LWS_CALLBACK_PROTOCOL_INIT:
-		printf("callback PROTOCOL_INIT\n");
+		// printf("callback PROTOCOL_INIT\n");
 		break;
 	case LWS_CALLBACK_ESTABLISHED: {
-		printf("callback ESTABLISHED\n");
+		// printf("callback ESTABLISHED\n");
 		if (server_cb_connect.func_obj) {
 			JSValue ws_obj = create_websocket_obj(server_cb_connect.ctx, wsi);
 			call_ws_callback(&server_cb_connect, 1, &ws_obj);
 		}
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_CLOSED: {
 		// printf("callback CLOSED %d\n", lws_get_socket_fd(wsi));
 		if (server_cb_close.func_obj) {
-			call_ws_callback(&server_cb_close, 0, NULL);
+			JSValue ws_obj = create_websocket_obj(server_cb_close.ctx, wsi);
+			JSValue cb_argv[2] = {
+				ws_obj, in ? JS_NewStringLen(server_cb_connect.ctx, in, len)
+						   : JS_UNDEFINED};
+			call_ws_callback(&server_cb_close, in ? 2 : 1, cb_argv);
 		}
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_SERVER_WRITEABLE: {
 		lws_callback_on_writable(wsi);
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_RECEIVE: {
 		if (server_cb_message.func_obj) {
 			JSValue ws_obj = create_websocket_obj(server_cb_message.ctx, wsi);
@@ -218,7 +227,8 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 			JSValue cb_argv[2] = {ws_obj, msg};
 			call_ws_callback(&server_cb_message, 2, cb_argv);
 		}
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_RECEIVE_PONG: {
 		if (server_cb_pong.func_obj) {
 			JSValue ws_obj = create_websocket_obj(server_cb_pong.ctx, wsi);
@@ -226,7 +236,8 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 			JSValue cb_argv[2] = {ws_obj, msg};
 			call_ws_callback(&server_cb_pong, 2, cb_argv);
 		}
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
 		// printf("callback HTTP_CONFIRM_UPGRADE fd=%d\n",
 		// lws_get_socket_fd(wsi));
@@ -242,10 +253,7 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 	}
 	case LWS_CALLBACK_ADD_POLL_FD: {
 		struct lws_pollargs *args = in;
-		/*printf("callback ADD_POLL_FD fd=%d events=%s %s %s\n", args->fd,
-			   (args->events & POLLIN) ? "IN" : "",
-			   (args->events & POLLOUT) ? "OUT" : "",
-			   (args->events & POLLERR) ? "ERR" : "");*/
+	//printf("callback ADD_POLL_FD fd=%d events=%s %s %s\n", args->fd, (args->events & POLLIN) ? "IN" : "", (args->events & POLLOUT) ? "OUT" : "", (args->events & POLLERR) ? "ERR" : "");
 		if (server_cb_fd.func_obj) {
 			JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
 			minnet_make_handlers(ctx, wsi, args, &argv[1]);
@@ -259,7 +267,7 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 	}
 	case LWS_CALLBACK_DEL_POLL_FD: {
 		struct lws_pollargs *args = in;
-		// printf("callback DEL_POLL_FD fd=%d\n", args->fd);
+		//printf("callback DEL_POLL_FD fd=%d\n", args->fd);
 		JSValue argv[3] = {
 			JS_NewInt32(server_cb_fd.ctx, args->fd),
 		};
@@ -272,9 +280,7 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 	case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
 		struct lws_pollargs *args = in;
 
-		/*printf(
-			"callback CHANGE_MODE_POLL_FD fd=%d events=%03o prev_events=%03o\n",
-			args->fd, args->events, args->prev_events);*/
+		//printf("callback CHANGE_MODE_POLL_FD fd=%d events=%03o prev_events=%03o\n", args->fd, args->events, args->prev_events);
 
 		if (args->events != args->prev_events) {
 			JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
@@ -296,7 +302,7 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 	}
 	case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-		printf("callback FILTER_HTTP_CONNECTION\n");
+		// printf("callback FILTER_HTTP_CONNECTION\n");
 		break;
 	}
 	case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
@@ -308,7 +314,7 @@ static int lws_ws_callback(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 	}
 	case LWS_CALLBACK_WSI_CREATE: {
-		printf("callback WSI_CREATE\n");
+		// printf("callback WSI_CREATE\n");
 		break;
 	}
 	case LWS_CALLBACK_LOCK_POLL: {
@@ -536,30 +542,35 @@ static int lws_client_callback(struct lws *wsi,
 	switch (reason) {
 	case LWS_CALLBACK_PROTOCOL_INIT: {
 		connect_client();
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
 		client_wsi = NULL;
 		if (client_cb_close.func_obj) {
 			JSValue why = JS_NewString(client_cb_close.ctx, in);
 			call_ws_callback(&client_cb_close, 1, &why);
 		}
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_CLIENT_ESTABLISHED: {
 		if (client_cb_connect.func_obj) {
 			JSValue ws_obj = create_websocket_obj(client_cb_connect.ctx, wsi);
 			call_ws_callback(&client_cb_connect, 1, &ws_obj);
 		}
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_CLIENT_WRITEABLE: {
 		lws_callback_on_writable(wsi);
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL: {
 		client_wsi = NULL;
 		if (client_cb_close.func_obj) {
 			JSValue why = JS_NewString(client_cb_close.ctx, in);
 			call_ws_callback(&client_cb_close, 1, &why);
 		}
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_CLIENT_RECEIVE: {
 		if (client_cb_message.func_obj) {
 			JSValue ws_obj = create_websocket_obj(client_cb_message.ctx, wsi);
@@ -567,7 +578,8 @@ static int lws_client_callback(struct lws *wsi,
 			JSValue cb_argv[2] = {ws_obj, msg};
 			call_ws_callback(&client_cb_message, 2, cb_argv);
 		}
-	} break;
+		break;
+	}
 	case LWS_CALLBACK_CLIENT_RECEIVE_PONG: {
 		if (client_cb_pong.func_obj) {
 			JSValue ws_obj = create_websocket_obj(client_cb_pong.ctx, wsi);
@@ -575,7 +587,46 @@ static int lws_client_callback(struct lws *wsi,
 			JSValue cb_argv[2] = {ws_obj, data};
 			call_ws_callback(&client_cb_pong, 2, cb_argv);
 		}
-	} break;
+		break;
+	}
+	case LWS_CALLBACK_ADD_POLL_FD: {
+		struct lws_pollargs *args = in;
+		if (client_cb_fd.func_obj) {
+			JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
+			minnet_make_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+
+			call_ws_callback(&client_cb_fd, 3, argv);
+			JS_FreeValue(client_cb_fd.ctx, argv[0]);
+			JS_FreeValue(client_cb_fd.ctx, argv[1]);
+			JS_FreeValue(client_cb_fd.ctx, argv[2]);
+		}
+		break;
+	}
+	case LWS_CALLBACK_DEL_POLL_FD: {
+		struct lws_pollargs *args = in;
+		JSValue argv[3] = {
+			JS_NewInt32(client_cb_fd.ctx, args->fd),
+		};
+		minnet_make_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+		call_ws_callback(&client_cb_fd, 3, argv);
+		JS_FreeValue(client_cb_fd.ctx, argv[0]);
+
+		break;
+	}
+	case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
+		struct lws_pollargs *args = in;
+
+		if (args->events != args->prev_events) {
+			JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
+			minnet_make_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+
+			call_ws_callback(&client_cb_fd, 3, argv);
+			JS_FreeValue(client_cb_fd.ctx, argv[0]);
+			JS_FreeValue(client_cb_fd.ctx, argv[1]);
+			JS_FreeValue(client_cb_fd.ctx, argv[2]);
+		}
+		break;
+	}
 	default:
 		break;
 	}
@@ -608,6 +659,7 @@ static JSValue minnet_ws_client(JSContext *ctx, JSValueConst this_val, int argc,
 	JSValue opt_on_close = JS_GetPropertyStr(ctx, options, "onClose");
 	JSValue opt_on_connect = JS_GetPropertyStr(ctx, options, "onConnect");
 	JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
+	JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
 
 	if (JS_IsString(opt_host))
 		client_server_address = JS_ToCString(ctx, opt_host);
@@ -619,6 +671,7 @@ static JSValue minnet_ws_client(JSContext *ctx, JSValueConst this_val, int argc,
 	GETCB(opt_on_close, client_cb_close)
 	GETCB(opt_on_connect, client_cb_connect)
 	GETCB(opt_on_message, client_cb_message)
+	GETCB(opt_on_fd, client_cb_fd)
 
 	client_context = lws_create_context(&info);
 	if (!client_context) {
@@ -627,8 +680,10 @@ static JSValue minnet_ws_client(JSContext *ctx, JSValueConst this_val, int argc,
 	}
 
 	while (n >= 0) {
-		n = lws_service(client_context, 500);
-		js_std_loop(ctx);
+		if (client_cb_fd.func_obj)
+			js_std_loop(ctx);
+		else
+			n = lws_service(client_context, 500);
 	}
 
 	lws_context_destroy(client_context);
