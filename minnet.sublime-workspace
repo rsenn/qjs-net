@@ -1,0 +1,941 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"break",
+				"stringBreakNewline"
+			],
+			[
+				"define",
+				"defineProperty"
+			],
+			[
+				"Event",
+				"EventEmitter"
+			],
+			[
+				"sy",
+				"syntaxerror_ctor"
+			],
+			[
+				"child_pr",
+				"child_process_proto"
+			],
+			[
+				"JS_GetP",
+				"JS_GetPropertyUint32"
+			],
+			[
+				"JS_SetProp",
+				"JS_SetPropertyUint32"
+			],
+			[
+				"targtet_",
+				"target_compile_definitions"
+			],
+			[
+				"jsm_module",
+				"jsm_module_loader_so"
+			],
+			[
+				"base",
+				"base_name"
+			],
+			[
+				"ATOM",
+				"ATOM_TO_VALUE"
+			],
+			[
+				"prop",
+				"propenum_tab"
+			],
+			[
+				"JS_Set",
+				"JS_SetPropertyUint32"
+			],
+			[
+				"js_loca",
+				"js_location_data"
+			],
+			[
+				"loca",
+				"location_proto"
+			],
+			[
+				"JS_SetP",
+				"JS_SetPropertyUint32"
+			],
+			[
+				"HAVE_QUI",
+				"HAVE_QUICKJS_LIBRARY"
+			],
+			[
+				"jsm_load",
+				"jsm_load_packages_json"
+			],
+			[
+				"js_sy",
+				"js_syntaxerror_class_id"
+			],
+			[
+				"synta",
+				"syntaxerror_proto"
+			],
+			[
+				"property_",
+				"property_enumeration_key"
+			],
+			[
+				"jsm_mo",
+				"jsm_module_loader_path"
+			],
+			[
+				"inspe",
+				"inspect_custom_node"
+			],
+			[
+				"inspect",
+				"inspect_custom_node"
+			],
+			[
+				"property",
+				"property_enumeration_circular"
+			],
+			[
+				"Reg",
+				"RegExpCompare"
+			],
+			[
+				"property_enum",
+				"property_enumeration_length"
+			],
+			[
+				"Opera",
+				"OperatorsObjects"
+			],
+			[
+				"else",
+				"elseif"
+			],
+			[
+				"ABC",
+				"ABCDEF"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "rpc.js",
+			"settings":
+			{
+				"buffer_size": 10871,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"edit",
+				"SchemeEditor: Edit Current Scheme"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"outlin",
+				"Browse Mode: Outline (Right)"
+			],
+			[
+				"outline",
+				"Browse Mode: Outline (Right)"
+			],
+			[
+				"",
+				"Arithmetic"
+			],
+			[
+				"out",
+				"Browse Mode: Outline (Right)"
+			],
+			[
+				"disable",
+				"Package Control: Disable Package"
+			],
+			[
+				"Package Control: disable",
+				"Package Control: Disable Package"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Disable Package"
+			],
+			[
+				"adap",
+				"Debugger: Install Adapters"
+			],
+			[
+				"install ada",
+				"Debugger: Install Adapters"
+			],
+			[
+				"adapter",
+				"Debugger: Install Adapters"
+			],
+			[
+				"debug",
+				"Debugger: Install Adapters"
+			],
+			[
+				"Package Control: remove",
+				"Package Control: Remove Package"
+			],
+			[
+				"debu",
+				"Debugger: Install Adapters"
+			],
+			[
+				"add re",
+				"Package Control: Add Repository"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 393.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/home/roman/Projects/plot-cv/quickjs/net"
+	],
+	"file_history":
+	[
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/repl.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/process.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/require.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_misc.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/fs.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/tty.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/CMakeLists.txt",
+		"/home/roman/Projects/plot-cv/quickjs/modules/cmake/FindQuickJS.cmake",
+		"/home/roman/Projects/plot-cv/quickjs/modules/qjsm.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/util.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/events.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-lexer.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-inspect.c",
+		"/home/roman/Projects/plot-cv/quickjs/quickjs.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/pointer.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/utils.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/utils.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-misc.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/base64.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-mmap.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-internal.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/vector.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-deep.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/extendArray.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/predicate.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-predicate.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-repeater.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-sockets.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-tree-walker.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-xml.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-predicate.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-pointer.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-child-process.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/child-process.c",
+		"/home/roman/Projects/plot-cv/quickjs/quickjs-debugger.c",
+		"/home/roman/Projects/plot-cv/quickjs/quickjs-libc.c",
+		"/home/roman/Projects/plot-cv/quickjs/quickjs.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-internal.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/child-process.h",
+		"/home/roman/Projects/plot-cv/quickjs/list.h",
+		"/home/roman/Projects/plot-cv/quickjs/net/libwebsockets/lib/core-net/pollfd.c",
+		"/home/roman/Projects/plot-cv/quickjs/net/libwebsockets/include/libwebsockets/lws-callbacks.h",
+		"/home/roman/Projects/plot-cv/quickjs/net/libwebsockets/test-apps/test-server.c",
+		"/home/roman/Projects/plot-cv/quickjs/net/libwebsockets/build/x86_64-linux-gnu/include/libwebsockets/lws-callbacks.h",
+		"/home/roman/Projects/plot-cv/quickjs/net/libwebsockets/READMEs/README.coding.md",
+		"/home/roman/Projects/plot-cv/quickjs/modules/location.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-lexer.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-location.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-location.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_childprocess.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_pointer.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/stack.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/path.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/pointer.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/predicate.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-path.c",
+		"/home/roman/Sources/plot-cv/quickjs/modules/quickjs-pointer.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-pointer.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/vector.c",
+		"/home/roman/Sources/opencv/modules/core/include/opencv2/core/mat.inl.hpp",
+		"/home/roman/Projects/plot-cv/quickjs/modules/path.h",
+		"/opt/opencv-4.5.0/include/opencv4/opencv2/core/mat.hpp",
+		"/home/roman/.config/sublime-text/Packages/User/Themes/TronLegacy.tmTheme",
+		"/home/roman/Sources/plot-cv/quickjs/modules/utils.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_qjsm.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/console.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_lexer.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_mmap.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/base64.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lexer.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/jslexer.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lexer.h",
+		"/home/roman/Sources/plot-cv/quickjs/modules/quickjs-lexer.c",
+		"/home/roman/Projects/plot-cv/quickjs/defs.cmake",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_parser.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/location.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_console.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_stack.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-bjson.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/.clang-format",
+		"/home/roman/Projects/plot-cv/quickjs/modules/virtual-properties.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_inspect.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-lexer.c.orig",
+		"/home/roman/Projects/plot-cv/quickjs/cutils.h",
+		"/home/roman/Projects/plot-cv/quickjs/cutils.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_xml.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_op_overloading.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_performance.js",
+		"/home/roman/Projects/plot-cv/quickjs/libregexp.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/perf_hooks.js",
+		"/home/roman/Sources/plot-cv/quickjs/modules/CMakeLists.txt",
+		"/home/roman/Projects/plot-cv/quickjs/modules/cmake/functions.cmake",
+		"/home/roman/Sources/opencv_contrib/modules/ximgproc/src/fast_line_detector.cpp",
+		"/home/roman/Sources/plot-cv/quickjs/modules/utils.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/iteration.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/property-enumeration.h",
+		"/home/roman/Sources/plot-cv/quickjs/modules/quickjs-inspect.c",
+		"/home/roman/Sources/plot-cv/quickjs/modules/vector.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/property-enumeration.c",
+		"/home/roman/Sources/plot-cv/quickjs/modules/property-enumeration.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/parser.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/ANSI-C-grammar-2011.l",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/Shell-Grammar.l",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_deep.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/lib/bnflexer.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_fs.js",
+		"/home/roman/Sources/plot-cv/quickjs/modules/qjsm.c",
+		"/home/roman/Sources/plot-cv/quickjs/modules/quickjs-deep.c",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_path.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_predicate.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_treewalker.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/test_bjson.js",
+		"/home/roman/Projects/c-img/yimg/stb_image.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/tests/Shell-Grammar.y",
+		"/home/roman/Projects/node/lib/internal/util/inspect.js",
+		"/home/roman/Projects/node/lib/internal/util/types.js",
+		"/home/roman/Projects/plot-cv/quickjs/modules/usr.list",
+		"/home/roman/Projects/plot-cv/quickjs/modules/quickjs-deep.c.orig",
+		"/home/roman/Sources/plot-cv/quickjs/modules/quickjs-tree-walker.c",
+		"/home/roman/Projects/plot-cv/quickjs/libbf.h",
+		"/home/roman/Projects/plot-cv/quickjs/quickjs-libc.h",
+		"/home/roman/Projects/plot-cv/quickjs/modules/build/x86_64-linux-gnu/require.c",
+		"/home/roman/Projects/plot-cv/lib/grammars/JSON5.g4",
+		"/home/roman/Projects/plot-cv/lib/grammars/CMake.g4",
+		"/home/roman/Projects/plot-cv/lib/grammars/Lua.g4",
+		"/home/roman/Projects/plot-cv/quickjs/modules/build/x86_64-linux-gnu/console.c",
+		"/home/roman/Projects/plot-cv/lib/grammars/c11-parser.y",
+		"/home/roman/Projects/plot-cv/lib/grammars/c11-scanner.l"
+	],
+	"find":
+	{
+		"height": 26.0
+	},
+	"find_in_files":
+	{
+		"height": 99.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": true,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": true,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "rpc.js",
+					"selected": true,
+					"semi_transient": true,
+					"settings":
+					{
+						"buffer_size": 10871,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "./",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								}
+							],
+							"syntax": "Packages/JavaScriptNext - ES6 Syntax/JavaScriptNext.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 26.0
+	},
+	"input":
+	{
+		"height": 42.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.Debugger":
+	{
+		"height": 139.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "minnet.sublime-project",
+	"replace":
+	{
+		"height": 48.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"terminal.",
+				"lib/terminal.js"
+			],
+			[
+				"repl.js",
+				"lib/repl.js"
+			],
+			[
+				"qjsm",
+				"qjsm.c"
+			],
+			[
+				"tty.js",
+				"lib/tty.js"
+			],
+			[
+				"quickjs-lex",
+				"quickjs-lexer.c"
+			],
+			[
+				"inspe",
+				"quickjs-inspect.c"
+			],
+			[
+				"utils.h",
+				"utils.h"
+			],
+			[
+				"intern",
+				"quickjs-internal.h"
+			],
+			[
+				"quickjs-in",
+				"quickjs-inspect.c"
+			],
+			[
+				"test_chil",
+				"tests/test_childprocess.js"
+			],
+			[
+				"pointer.h",
+				"pointer.h"
+			],
+			[
+				"cmake",
+				"CMakeLists.txt"
+			],
+			[
+				"stack",
+				"lib/stack.js"
+			],
+			[
+				"",
+				"tests/test_qjsm.js"
+			],
+			[
+				"test_misc",
+				"tests/test_misc.js"
+			],
+			[
+				"quickjs-misc",
+				"quickjs-misc.c"
+			],
+			[
+				"vector.h",
+				"vector.h"
+			],
+			[
+				"test_lex",
+				"tests/test_lexer.js"
+			],
+			[
+				"fs.js",
+				"lib/fs.js"
+			],
+			[
+				"quickjs.c",
+				"~/Projects/plot-cv/quickjs/quickjs.c"
+			],
+			[
+				"pointer.c",
+				"pointer.c"
+			],
+			[
+				"-insp",
+				"quickjs-inspect.c"
+			],
+			[
+				"test_op",
+				"tests/test_op_overloading.js"
+			],
+			[
+				"lexer.c",
+				"lexer.c"
+			],
+			[
+				"quickjs-lexer",
+				"quickjs-lexer.c"
+			],
+			[
+				"test_qjs",
+				"tests/test_qjsm.js"
+			],
+			[
+				"utils.c",
+				"utils.c"
+			],
+			[
+				"qjsm.c",
+				"qjsm.c"
+			],
+			[
+				"quickjs-pre",
+				"quickjs-predicate.c"
+			],
+			[
+				"pred",
+				"predicate.c"
+			],
+			[
+				"dee",
+				"quickjs-deep.c"
+			],
+			[
+				"quickjs.h",
+				"~/Projects/plot-cv/quickjs/quickjs.h"
+			],
+			[
+				"qjsm.",
+				"qjsm.c"
+			],
+			[
+				"test_qj",
+				"tests/test_qjsm.js"
+			],
+			[
+				"quicksj-in",
+				"quickjs-internal.h"
+			],
+			[
+				"property",
+				"property-enumeration.c"
+			],
+			[
+				"pointer.",
+				"pointer.c"
+			],
+			[
+				"quickjs",
+				"quickjs-inspect.c"
+			],
+			[
+				"util.j",
+				"lib/util.js"
+			],
+			[
+				"jsm.c",
+				"qjsm.c"
+			],
+			[
+				"test_point",
+				"tests/test_pointer.js"
+			],
+			[
+				"bnflex",
+				"lib/bnflexer.js"
+			],
+			[
+				"bnf.y",
+				"~/Projects/plot-cv/lib/grammars/bnf.y"
+			],
+			[
+				"test_par",
+				"tests/test_parser.js"
+			],
+			[
+				"grammar.ki",
+				"grammar.kison"
+			],
+			[
+				"test_pat",
+				"tests/test_path.js"
+			],
+			[
+				"exten",
+				"lib/extendArray.js"
+			],
+			[
+				"test_parse",
+				"tests/test_parser.js"
+			],
+			[
+				"test_path",
+				"tests/test_path.js"
+			],
+			[
+				"test_lexer",
+				"tests/test_lexer.js"
+			],
+			[
+				"lexer.h",
+				"lexer.h"
+			],
+			[
+				"test_tree",
+				"tests/test_treewalker.js"
+			],
+			[
+				"tree.h",
+				"src/tree.h"
+			],
+			[
+				"scan_ulongn",
+				"lib/scan/scan_ulongn.c"
+			],
+			[
+				"term_rest",
+				"src/term/term_restore.c"
+			],
+			[
+				"parse.h",
+				"src/parse.h"
+			],
+			[
+				"cmakeli",
+				"CMakeLists.txt"
+			],
+			[
+				"byte.h",
+				"lib/byte.h"
+			],
+			[
+				"buffer.h",
+				"lib/buffer.h"
+			],
+			[
+				"shell.h",
+				"lib/shell.h"
+			],
+			[
+				"mmap_file",
+				"lib/stralloc/mmap_filename.c"
+			],
+			[
+				"uffer.h",
+				"lib/buffer.h"
+			],
+			[
+				"scan.h",
+				"lib/scan.h"
+			],
+			[
+				"stralloc.h",
+				"lib/stralloc.h"
+			],
+			[
+				"path.h",
+				"lib/path.h"
+			],
+			[
+				"str.h",
+				"lib/str.h"
+			],
+			[
+				"scan.",
+				"lib/scan.h"
+			],
+			[
+				"debug_char",
+				"src/debug/debug_char.c"
+			],
+			[
+				"source_pop",
+				"src/source/source_pop.c"
+			],
+			[
+				"builtin.h",
+				"src/builtin.h"
+			],
+			[
+				"debug_node",
+				"src/debug/debug_node.c"
+			],
+			[
+				"sig_in",
+				"lib/sig_internal.h"
+			],
+			[
+				"term_",
+				"src/term/term_attr.c"
+			],
+			[
+				"glob.h",
+				"lib/glob.h"
+			],
+			[
+				"source.h",
+				"src/source.h"
+			],
+			[
+				"fdtable",
+				"src/fdtable.h"
+			],
+			[
+				"fd.h",
+				"src/fd.h"
+			],
+			[
+				"eval",
+				"src/eval.h"
+			],
+			[
+				"ieee",
+				"doc/posix/ieee-p1003.2-d11.2-s3.txt"
+			],
+			[
+				"expand.h",
+				"src/expand.h"
+			],
+			[
+				"builtin_dum",
+				"src/builtin/builtin_dump.c"
+			],
+			[
+				"h_main",
+				"src/sh/sh_main.c"
+			],
+			[
+				"parse_cha",
+				"src/parse/parse_chartable.c"
+			],
+			[
+				"debug.h",
+				"src/debug.h"
+			],
+			[
+				"exec_c",
+				"src/exec/exec_command.c"
+			],
+			[
+				"eval.h",
+				"src/eval.h"
+			],
+			[
+				"test-op",
+				"test-operators.js"
+			],
+			[
+				"filesys",
+				"lib/filesystem.js"
+			],
+			[
+				"repl.",
+				"repl.js"
+			],
+			[
+				"test-str",
+				"plot-cv/quickjs/modules/test-str0.c"
+			],
+			[
+				"property-en",
+				"plot-cv/quickjs/modules/property-enumeration.h"
+			],
+			[
+				"cutil",
+				"plot-cv/quickjs/cutils.c"
+			],
+			[
+				"test-libre",
+				"plot-cv/quickjs/modules/test-libregexp.c"
+			],
+			[
+				"clang-as",
+				"plot-cv/clang-ast.js"
+			],
+			[
+				"repl",
+				"plot-cv/repl.js"
+			],
+			[
+				"consoleS",
+				"plot-cv/lib/consoleSetup.js"
+			],
+			[
+				"test-ed",
+				"plot-cv/test-editline.js"
+			],
+			[
+				"gl.js",
+				"plot-cv/gl.js"
+			],
+			[
+				"editline",
+				"plot-cv/editline.js"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"~/Projects/plot-cv/plot-cv.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 251.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
