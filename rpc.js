@@ -85,6 +85,9 @@ export class Connection {
     this.socket = socket;
 
     this.log = (...args) => {
+      const { console } = globalThis;
+      //std.puts('Connection.log '+console.log+'');
+
       (instance.log ?? console.log)(`${this.constructor.name} (#${this.socket.fd})`, ...args);
     };
 
@@ -130,7 +133,13 @@ export class Connection {
 
   static callbacks(fdlist, classes, instance) {
     const ctor = this;
-    const log = instance.log ?? console.log;
+
+    const log = (...args) => {
+      const { console } = globalThis;
+      //std.puts('Connection.log '+console.log+'');
+
+      (instance.log ?? console.log)(...args);
+    };
     return {
       onConnect(socket) {
         log(`Connected`, { socket, ctor });
