@@ -325,6 +325,7 @@ export function RPCSocket(url, service = RPCServerConnection) {
     },
     listen(new_ws, os = globalThis.os) {
       if(!new_ws) new_ws = MakeWebSocket;
+      console.log('new_ws', new_ws + '');
       (instance.log ?? console.log)(`${service.name} listening on ${url}`);
       if(os) SetHandlers(os, this.callbacks);
       this.ws = new_ws(url, this.callbacks, true);
@@ -344,6 +345,12 @@ export function RPCSocket(url, service = RPCServerConnection) {
 
     }
   });
+  function SetHandlers(os, handlers) {
+    handlers.onFd = function(fd, readable, writable) {
+      os.setReadHandler(fd, readable);
+      os.setWriteHandler(fd, writable);
+    };
+  }
 
   let sockId;
 
