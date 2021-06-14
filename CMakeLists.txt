@@ -204,8 +204,14 @@ if(BUILD_LIBWEBSOCKETS)
       ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets" FORCE)
   set(LIBWEBSOCKETS_LIBRARIES
-      "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a;mbedtls;uv;brotlienc;cap"
+      "mbedtls;uv;brotlienc;cap"
       CACHE STRING "libwebsockets libraries" FORCE)
+  if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
+    list(PREPEND LIBWEBSOCKETS_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
+    else(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
+    list(PREPEND LIBWEBSOCKETS_LIBRARIES "websockets")
+  endif(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
+
   set(LIBWEBSOCKETS_INCLUDE_DIRS "${LIBWEBSOCKETS_INCLUDE_DIRS}"
       CACHE PATH "libwebsockets include directory" FORCE)
   set(LIBWEBSOCKETS_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib
