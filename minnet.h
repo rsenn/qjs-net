@@ -1,6 +1,7 @@
 #include "quickjs.h"
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
+#define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags) { .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET_MAGIC, .magic = magic_num, .u = { .getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} } }
 
 static JSValue minnet_log, minnet_log_this;
 static JSContext* minnet_log_ctx;
@@ -86,7 +87,7 @@ static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
     JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
     JS_CFUNC_DEF("close", 1, minnet_ws_close),
-    JS_CGETSET_MAGIC_DEF("fd", minnet_ws_get, 0, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, 0, JS_PROP_ENUMERABLE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebSocket", JS_PROP_CONFIGURABLE),
 };
 

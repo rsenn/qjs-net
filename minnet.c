@@ -1,6 +1,7 @@
 #include "minnet.h"
 #include "list.h"
 #include <curl/curl.h>
+#include <netinet/in.h>
 #include <libwebsockets.h>
 #include <sys/time.h>
 
@@ -36,7 +37,6 @@ lws_log_callback(int level, const char* line) {
     }
   }
 }
-
 
 __attribute__((visibility("default"))) JSModuleDef*
 JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
