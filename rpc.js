@@ -341,28 +341,32 @@ define(RPCClientConnection.prototype, { [Symbol.toStringTag]: 'RPCClientConnecti
  * @return     {RPCSocket}  The RPC socket.
  */
 export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
-  const instance = new.target ? this : new RPCSocket(url, service);
+  if(!new.target) return new RPCSocket(url, service, verbosity);
 
-  instance.fdlist = {};
-  instance.classes = {};
-  instance.log = console.config
-    ? (msg, ...args) => {
-        const { console } = globalThis;
-        console /*instance.log ??*/.log
-          .call(
-            console,
-            msg,
-            console.config({
-              multiline: false,
-              compact: false,
-              maxStringLength: 100,
-              stringBreakNewline: false,
-              hideKeys: ['obj']
-            }),
-            ...args
-          );
-      }
-    : (...args) => console.log(...args);
+  const instance = new.target ? this : new RPCSocket(url, service, verbosity);
+
+  define(instance, {
+    fdlist: {},
+    classes: {},
+    log: console.config
+      ? (msg, ...args) => {
+          const { console } = globalThis;
+          console /*instance.log ??*/.log
+            .call(
+              console,
+              msg,
+              console.config({
+                multiline: false,
+                compact: false,
+                maxStringLength: 100,
+                stringBreakNewline: false,
+                hideKeys: ['obj']
+              }),
+              ...args
+            );
+        }
+      : (...args) => console.log(...args)
+  });
 
   const callbacks = service.getCallbacks(instance, verbosity);
 
@@ -370,6 +374,7 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
   if(typeof url != 'object') url = parseURL(url);
 
   define(instance, {
+    service,
     callbacks,
     url,
     register(ctor) {
@@ -396,11 +401,18 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
       this.log(`${service.name} connecting to ${this.url}`);
       if(os) setHandlers(os, callbacks);
       this.ws = new_ws(this.url, callbacks, false);
+      console.log('connect()', this.ws);
       return this;
     },
     /* prettier-ignore */ get connected() {
-      const {ws}= this;
-      return ws && typeof ws.readyState == 'number' ? ws.readyState <= ws.OPEN : false;
+      const ws = this.ws;
+      console.log("ws", ws);
+      if(ws)
+      return typeof ws.readyState == 'number' ? ws.readyState == ws.OPEN : false;
+    const {fdlist} = instance;
+      console.log("fdlist", fdlist);
+
+    return  fdlist[Object.keys( fdlist)[0]].connected;
     }
   });
 
@@ -409,25 +421,23 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
 
 Object.defineProperty(RPCSocket.prototype, Symbol.toStringTag, { value: 'RPCSocket' });
 
-if(globalThis.WebSocket) {
-  function MakeWebSocket(url, callbacks) {
-    let ws;
-    try {
-      ws = new WebSocket(url + '');
-    } catch(error) {
-      callbacks.onError(ws, error);
-      return null;
-    }
-    ws.onconnect = () => callbacks.onConnect(ws);
-    ws.onopen = () => callbacks.onOpen(ws);
-    ws.onerror = error => callbacks.onError(ws, error);
-    ws.onmessage = msg => callbacks.onMessage(ws, msg);
-    ws.onpong = pong => callbacks.onPong(ws, pong);
-    ws.onclose = reason => callbacks.onClose(ws, reason);
-    ws.fd = sockId = (sockId | 0) + 1;
-
-    return ws;
+function MakeWebSocket(url, callbacks) {
+  let ws;
+  try {
+    ws = new WebSocket(url + '');
+  } catch(error) {
+    callbacks.onError(ws, error);
+    return null;
   }
+  ws.onconnect = () => callbacks.onConnect(ws);
+  ws.onopen = () => callbacks.onOpen(ws);
+  ws.onerror = error => callbacks.onError(ws, error);
+  ws.onmessage = msg => callbacks.onMessage(ws, msg);
+  ws.onpong = pong => callbacks.onPong(ws, pong);
+  ws.onclose = reason => callbacks.onClose(ws, reason);
+  ws.fd = sockId = (sockId | 0) + 1;
+
+  return ws;
 }
 
 /*if(globalThis.scriptArgs && scriptArgs[0].endsWith('rpc.js')) {
@@ -564,10 +574,15 @@ export function getPropertyDescriptors(obj, merge = true) {
   return descriptors;
 }
 
-export function define(obj, props) {
+export function define(obj, ...args) {
   let propdesc = {};
-  for(let prop of getKeys(props))
-    propdesc[prop] = { value: props[prop], enumerable: false, configurable: true, writable: true };
+  for(let props of args) {
+    let desc = Object.getOwnPropertyDescriptors(props);
+    for(let prop of getKeys(desc)) {
+      propdesc[prop] = { ...desc[prop], enumerable: false, configurable: true };
+      if('value' in propdesc[prop]) propdesc[prop].writable = false;
+    }
+  }
   Object.defineProperties(obj, propdesc);
   return obj;
 }
