@@ -3,12 +3,28 @@
 #include <curl/curl.h>
 #include <netinet/in.h>
 #include <sys/time.h>
+#include <assert.h>
 
 #ifdef JS_SHARED_LIBRARY
 #define JS_INIT_MODULE js_init_module
 #else
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
+
+static void
+http_header_alloc(JSContext* ctx, struct http_header* hdr, size_t size) {
+  hdr->start = js_malloc(ctx, size);
+  hdr->pos = hdr->start;
+  hdr->end = hdr->start + size;
+}
+
+static void
+http_header_free(JSContext* ctx, struct http_header* hdr) {
+  js_free(ctx, hdr->start);
+  hdr->start = 0;
+  hdr->pos = 0;
+  hdr->end = 0;
+}
 
 void js_std_loop(JSContext* ctx);
 
@@ -96,19 +112,6 @@ create_websocket_obj(JSContext* ctx, struct lws* wsi) {
   return ws_obj;
 }
 
-/*static JSValue
-clone_websocket_obj(JSContext* ctx, MinnetWebsocket* res) {
-  JSValue ws_obj = JS_NewObjectClass(ctx, minnet_ws_class_id);
-
-  if(JS_IsException(ws_obj))
-    return JS_EXCEPTION;
-
-  res->ref_count++;
-
-  JS_SetOpaque(ws_obj, res);
-  return ws_obj;
-}*/
-
 static JSValue
 get_websocket_obj(JSContext* ctx, struct lws* wsi) {
   JSObject* obj;
@@ -121,7 +124,6 @@ get_websocket_obj(JSContext* ctx, struct lws* wsi) {
 
     return JS_DupValue(ctx, ws_obj);
   }
-  // return clone_websocket_obj(ctx, res);
 
   return create_websocket_obj(ctx, wsi);
 }
@@ -221,14 +223,82 @@ static struct lws_protocols lws_server_protocols[] = {
 
 static int
 lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  // printf("http callback %d\n", reason);
+  uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE], *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
 
+  switch(reason) {
+    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
+      // printf("callback HTTP_CONFIRM_UPGRADE fd=%d\n",
+      // lws_get_socket_fd(wsi));
+      break;
+    }
+    case LWS_CALLBACK_HTTP_BODY: {
+      printf("callback HTTP_BODY fd=%d\n", lws_get_socket_fd(wsi));
+      break;
+    }
+    case LWS_CALLBACK_CLOSED_HTTP: {
+      // printf("callback CLOSED_HTTP fd=%d\n", lws_get_socket_fd(wsi));
+      break;
+    }
+    case LWS_CALLBACK_HTTP_FILE_COMPLETION: {
+      // printf("callback HTTP_FILE_COMPLETION\n");
+      break;
+    }
+    case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+      if(server_cb_http.func_obj) {
+        // printf("callback FILTER_HTTP_CONNECTION %s\n", in);
+        JSValue ret, ws_obj = get_websocket_obj(server_cb_http.ctx, wsi);
+        JSValue argv[] = {ws_obj, JS_NewString(server_cb_http.ctx, in)};
+        int32_t result = 0;
+        MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
+
+        http_header_alloc(server_cb_http.ctx, &ws->header, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
+
+        ret = call_ws_callback(&server_cb_http, 2, argv);
+        JS_FreeValue(server_cb_http.ctx, argv[0]);
+        JS_FreeValue(server_cb_http.ctx, argv[1]);
+
+        if(JS_IsNumber(ret))
+          JS_ToInt32(server_cb_http.ctx, &result, ret);
+        JS_FreeValue(server_cb_http.ctx, ret);
+
+        /* if(!result) {
+           if(ws->header.pos > ws->header.start)
+             lws_finalize_write_http_header(ws->lwsi, ws->header.start, &ws->header.pos, ws->header.end);
+         }*/
+
+        if(result)
+          http_header_free(server_cb_http.ctx, &ws->header);
+
+        //   if(result)
+        return result;
+      }
+      break;
+    }
+    case LWS_CALLBACK_ADD_HEADERS: {
+      if(server_cb_http.func_obj) {
+        JSValue ws_obj = get_websocket_obj(server_cb_http.ctx, wsi);
+        MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
+        struct lws_process_html_args* args = (struct lws_process_html_args*)in;
+
+        if(ws->header.pos > ws->header.start) {
+          size_t len = ws->header.pos - ws->header.start;
+
+          assert(len <= args->max_len);
+
+          memcpy(args->p, ws->header.start, len);
+          args->p += len;
+        }
+      }
+
+      break;
+    }
+  }
   return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
 
 static int
 lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  JSContext* ctx = lws_server_protocols[0].user;
+  // JSContext* ctx = lws_server_protocols[0].user;
 
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT:
@@ -275,31 +345,19 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       }
       break;
     }
-    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
-      // printf("callback HTTP_CONFIRM_UPGRADE fd=%d\n",
-      // lws_get_socket_fd(wsi));
-      break;
-    }
-    case LWS_CALLBACK_HTTP_BODY: {
-      // printf("callback HTTP_BODY fd=%d\n", lws_get_socket_fd(wsi));
-      break;
-    }
-    case LWS_CALLBACK_CLOSED_HTTP: {
-      // printf("callback CLOSED_HTTP fd=%d\n", lws_get_socket_fd(wsi));
-      break;
-    }
+
     case LWS_CALLBACK_ADD_POLL_FD: {
       struct lws_pollargs* args = in;
       // printf("callback ADD_POLL_FD fd=%d events=%s %s %s\n", args->fd, (args->events & POLLIN) ? "IN" : "", (args->events &
       // POLLOUT) ? "OUT" : "", (args->events & POLLERR) ? "ERR" : "");
       if(server_cb_fd.func_obj) {
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
-        minnet_make_handlers(ctx, wsi, args, &argv[1]);
+        minnet_make_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
         call_ws_callback(&server_cb_fd, 3, argv);
-        JS_FreeValue(ctx, argv[0]);
-        JS_FreeValue(ctx, argv[1]);
-        JS_FreeValue(ctx, argv[2]);
+        JS_FreeValue(server_cb_fd.ctx, argv[0]);
+        JS_FreeValue(server_cb_fd.ctx, argv[1]);
+        JS_FreeValue(server_cb_fd.ctx, argv[2]);
       }
       break;
     }
@@ -309,9 +367,9 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       JSValue argv[3] = {
           JS_NewInt32(server_cb_fd.ctx, args->fd),
       };
-      minnet_make_handlers(ctx, wsi, args, &argv[1]);
+      minnet_make_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
       call_ws_callback(&server_cb_fd, 3, argv);
-      JS_FreeValue(ctx, argv[0]);
+      JS_FreeValue(server_cb_fd.ctx, argv[0]);
 
       break;
     }
@@ -322,27 +380,21 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       if(args->events != args->prev_events) {
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
-        minnet_make_handlers(ctx, wsi, args, &argv[1]);
+        minnet_make_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
         call_ws_callback(&server_cb_fd, 3, argv);
-        JS_FreeValue(ctx, argv[0]);
-        JS_FreeValue(ctx, argv[1]);
-        JS_FreeValue(ctx, argv[2]);
+        JS_FreeValue(server_cb_fd.ctx, argv[0]);
+        JS_FreeValue(server_cb_fd.ctx, argv[1]);
+        JS_FreeValue(server_cb_fd.ctx, argv[2]);
       }
       break;
     }
-    case LWS_CALLBACK_HTTP_FILE_COMPLETION: {
-      // printf("callback HTTP_FILE_COMPLETION\n");
-      break;
-    }
+
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
       // printf("callback FILTER_NETWORK_CONNECTION\n");
       break;
     }
-    case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-      // printf("callback FILTER_HTTP_CONNECTION\n");
-      break;
-    }
+
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
       // printf("callback SERVER_NEW_CLIENT_INSTANTIATED\n");
       break;
@@ -377,7 +429,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
     default:
       // printf("Unknown lws callback %d\n", reason);
-      break;
+      return lws_http_callback(wsi, reason, user, in, len);
   }
 
   return lws_callback_http_dummy(wsi, reason, user, in, len);
@@ -465,6 +517,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_on_connect = JS_GetPropertyStr(ctx, options, "onConnect");
   JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
+  JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
 
   if(JS_IsNumber(opt_port))
@@ -480,6 +533,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   GETCB(opt_on_connect, server_cb_connect)
   GETCB(opt_on_message, server_cb_message)
   GETCB(opt_on_fd, server_cb_fd)
+  GETCB(opt_on_http, server_cb_http)
 
   SETLOG
 
@@ -492,7 +546,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   info.protocols = lws_server_protocols;
   info.mounts = 0;
   info.vhost_name = host;
-  info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT | LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
+  info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
 
   if(JS_IsArray(ctx, opt_mounts)) {
     const struct lws_http_mount** ptr = &info.mounts;
@@ -727,8 +781,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
   size_t len;
   int m, n;
 
-  ws_obj = JS_GetOpaque(this_val, minnet_ws_class_id);
-  if(!ws_obj)
+  if(!(ws_obj = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
 
   if(JS_IsString(argv[0])) {
@@ -760,13 +813,79 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
 }
 
 static JSValue
+minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic) {
+  MinnetWebsocket* ws_obj;
+  JSValue ret = JS_UNDEFINED;
+  struct http_header* header;
+
+  if(!(ws_obj = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
+    return JS_EXCEPTION;
+
+  header = &ws_obj->header;
+
+  switch(magic) {
+    case 0: {
+      const char* msg = 0;
+      uint32_t status = 0;
+
+      JS_ToUint32(ctx, &status, argv[0]);
+
+      if(argc >= 2)
+        msg = JS_ToCString(ctx, argv[1]);
+
+      lws_return_http_status(ws_obj->lwsi, status, msg);
+      if(msg)
+        JS_FreeCString(ctx, msg);
+      break;
+    }
+    case 1: {
+
+      const char* msg = 0;
+      size_t len = 0;
+      uint32_t status = 0;
+
+      JS_ToUint32(ctx, &status, argv[0]);
+
+      if(argc >= 2)
+        msg = JS_ToCStringLen(ctx, &len, argv[1]);
+
+      if(lws_http_redirect(ws_obj->lwsi, status, (unsigned char*)msg, len, &header->pos, header->end) < 0)
+        ret = JS_NewInt32(ctx, -1);
+      if(msg)
+        JS_FreeCString(ctx, msg);
+      break;
+    }
+    case 2: {
+      size_t namelen;
+      const char* namestr = JS_ToCStringLen(ctx, &namelen, argv[0]);
+      char* name = js_malloc(ctx, namelen + 2);
+      size_t len;
+      const char* value = JS_ToCStringLen(ctx, &len, argv[1]);
+
+      memcpy(name, namestr, namelen);
+      name[namelen] = ':';
+      name[namelen + 1] = '\0';
+
+      if(lws_add_http_header_by_name(ws_obj->lwsi, name, value, len, &header->pos, header->end) < 0)
+        ret = JS_NewInt32(ctx, -1);
+
+      js_free(ctx, name);
+      JS_FreeCString(ctx, namestr);
+      JS_FreeCString(ctx, value);
+      break;
+    }
+  }
+
+  return ret;
+}
+
+static JSValue
 minnet_ws_ping(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetWebsocket* ws_obj;
   uint8_t* data;
   size_t len;
 
-  ws_obj = JS_GetOpaque(this_val, minnet_ws_class_id);
-  if(!ws_obj)
+  if(!(ws_obj = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
 
   data = JS_GetArrayBuffer(ctx, &len, argv[0]);
@@ -792,8 +911,7 @@ minnet_ws_pong(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
   uint8_t* data;
   size_t len;
 
-  ws_obj = JS_GetOpaque(this_val, minnet_ws_class_id);
-  if(!ws_obj)
+  if(!(ws_obj = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
 
   data = JS_GetArrayBuffer(ctx, &len, argv[0]);
@@ -819,8 +937,7 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* a
   const char* reason = 0;
   size_t rlen = 0;
 
-  ws_obj = JS_GetOpaque(this_val, minnet_ws_class_id);
-  if(!ws_obj)
+  if(!(ws_obj = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
 
   if(ws_obj->lwsi) {
@@ -852,7 +969,7 @@ static JSValue
 minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetWebsocket* ws_obj;
 
-  if(!(ws_obj = JS_GetOpaque(this_val, minnet_ws_class_id)))
+  if(!(ws_obj = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
 
   return JS_NewInt32(ctx, lws_get_socket_fd(ws_obj->lwsi));

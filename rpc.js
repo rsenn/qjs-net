@@ -1,5 +1,5 @@
-import inspect from 'inspect';
-import * as bjson from 'bjson';
+//import inspect from 'inspect';
+//import * as bjson from 'bjson';
 import { SyscallError } from '../../lib/misc.js';
 
 let sockId;
@@ -53,34 +53,40 @@ const codecs = {
   json: (verbose = false) => ({
     encode: v => JSON.stringify(v, ...(verbose ? [null, 2] : [])),
     decode: v => JSON.parse(v)
-  }),
-  js: (verbose = false) => ({
-    encode: v => inspect(v, { colors: false, compact: verbose ? false : -2 }),
-    decode: v => eval(`(${v})`)
-  }),
-  bjson: () => ({
-    encode: v => bjson.write(v),
-    decode: v => bjson.read(v)
   })
 };
+
+if(globalThis.inspect) {
+  codecs.js = (verbose = false) => ({
+    encode: v => inspect(v, { colors: false, compact: verbose ? false : -2 }),
+    decode: v => eval(`(${v})`)
+  });
+}
+
+if(globalThis.bjson) {
+  codecs.bjson = () => ({
+    encode: v => bjson.write(v),
+    decode: v => bjson.read(v)
+  });
+}
 
 /**
  * @interface Connection
  */
 export class Connection extends MessageTransceiver {
-  constructor(socket, instance, log) {
+  constructor(socket, instance, log, codec = codecs.none()) {
     super();
     this.socket = socket;
     this.fd = socket.fd;
-     this.exception = null;
-    this.codec = codecs.json(false);
-    this.log = (...args) => log(this.constructor.name, `(fd ${this.socket.fd})`, ...args);
-     this.log('new Connection');
+    this.exception = null;
+    this.codec = codec;
+    this.log = (...args) => log(this[Symbol.toStringTag], `(fd ${this.socket.fd})`, ...args);
+    this.log('new Connection');
   }
 
   error(message) {
-     const { socket } = this;
-   this.log(`ERROR: ${message}`);
+    const { socket } = this;
+    this.log(`ERROR: ${message}`);
     this.exception = new Error(message);
     this.close(socket.CLOSE_STATUS_PROTOCOL_ERR, message);
     return this.exception;
@@ -106,6 +112,7 @@ export class Connection extends MessageTransceiver {
       throw this.error(`JSON parse error: '${msg ?? err.message}'`);
       return this.exception;
     }
+    this.log('onmessage', { msg, data });
     let response = this.processMessage(data);
     this.log('onmessage', { data, response });
     if(isThenable(response)) response.then(r => this.sendMessage(r));
@@ -153,11 +160,11 @@ export class Connection extends MessageTransceiver {
   }
 
   static getCallbacks(instance, verbosity = 0) {
-    const {classes,fdlist, log} = instance;
+    const { classes, fdlist, log } = instance;
     const ctor = this;
     const verbose = verbosity > 1 ? (...args) => log('VERBOSE', ...args) : () => {};
 
-    log(`${ctor.name}.getCallbacks`, {instance,log,verbosity});
+    log(`${ctor.name}.getCallbacks`, { instance, log, verbosity });
 
     const handle = (sock, event, ...args) => {
       let conn, obj;
@@ -179,15 +186,15 @@ export class Connection extends MessageTransceiver {
     return {
       onConnect(sock) {
         verbose(`Connected`, { fd: sock.fd }, ctor.name);
-        const connection = new ctor(sock, classes, instance, log);
+        const connection = new ctor(sock, instance, log, classes);
 
-        verbose(`Connected`, { connection});
+        verbose(`Connected`, { connection });
         fdlist[sock.fd] = connection;
         handle(sock, 'connect');
       },
       onOpen(sock) {
         verbose(`Opened`, { fd: sock.fd }, ctor.name);
-        fdlist[sock.fd] = new ctor(sock, classes, instance, log);
+        fdlist[sock.fd] = new ctor(sock, instance, log, classes);
         handle(sock, 'open');
       },
       onMessage(sock, msg) {
@@ -213,14 +220,14 @@ export class Connection extends MessageTransceiver {
   }
 }
 
-Object.defineProperty(Connection.prototype, Symbol.toStringTag, { value: 'Connection' });
+define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
 
 export class RPCServerConnection extends Connection {
-  constructor(socket, classes, instance, log) {
-    log("RPCServerConnection", {socket,classes,instance,log});
-    
-    super(socket, instance, log);
-    
+  constructor(socket, instance, log, classes, codec = codecs.json(false)) {
+    log('RPCServerConnection', { socket, classes, instance, log });
+
+    super(socket, instance, log, codec);
+
     this.classes = classes;
     this.instances = {};
     this.lastId = 0;
@@ -296,15 +303,9 @@ export class RPCServerConnection extends Connection {
     }
     return ret;
   }
-
-  /*static get name() {
-    return 'RPC server';
-  }*/
 }
 
-Object.defineProperty(RPCServerConnection.prototype, Symbol.toStringTag, {
-  value: 'RPCServerConnection'
-});
+define(RPCServerConnection.prototype, { [Symbol.toStringTag]: 'RPCServerConnection' });
 
 /**
  * @class This class describes a client connection.
@@ -317,9 +318,10 @@ Object.defineProperty(RPCServerConnection.prototype, Symbol.toStringTag, {
  *
  */
 export class RPCClientConnection extends Connection {
-  constructor(socket, classes, instance, log) {
-    super(socket, instance, log);
+  constructor(socket, instance, log, classes, codec = codecs.json(false)) {
+    super(socket, instance, log, codec);
     this.instances = {};
+    this.classes = classes;
     this.connected = true;
   }
 
@@ -327,17 +329,9 @@ export class RPCClientConnection extends Connection {
     const { success, error, result } = response;
     this.log('message:', response);
   }
-
-  static get name() {
-    return 'RPC client';
-  }
-
-  [Symbol.toStringTag] = 'RPCClientConnection';
 }
 
-Object.defineProperty(RPCClientConnection.prototype, Symbol.toStringTag, {
-  value: 'RPCClientConnection'
-});
+define(RPCClientConnection.prototype, { [Symbol.toStringTag]: 'RPCClientConnection' });
 
 /**
  * @class Creates new RPC socket
@@ -351,7 +345,7 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
 
   instance.fdlist = {};
   instance.classes = {};
-  instance.log = (msg, ...args) => {
+  instance.log = console.config ? ((msg, ...args) => {
     const { console } = globalThis;
     console /*instance.log ??*/.log
       .call(
@@ -366,7 +360,7 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
         }),
         ...args
       );
-  };
+  }) : ((...args) => console.log(...args));
 
   const callbacks = service.getCallbacks(instance, verbosity);
 
@@ -540,11 +534,8 @@ export function getPropertyNames(obj, method = obj => Object.getOwnPropertyNames
 
 export function getKeys(obj) {
   let keys = new Set();
-
   for(let key of getPropertyNames(obj)) keys.add(key);
-
   for(let key of getPropertyNames(obj, obj => Object.getOwnPropertySymbols(obj))) keys.add(key);
-
   return [...keys];
 }
 
@@ -573,7 +564,7 @@ export function getPropertyDescriptors(obj, merge = true) {
 
 export function define(obj, props) {
   let propdesc = {};
-  for(let prop in props)
+  for(let prop of getKeys(props))
     propdesc[prop] = { value: props[prop], enumerable: false, configurable: true, writable: true };
   Object.defineProperties(obj, propdesc);
   return obj;
