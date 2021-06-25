@@ -1,195 +1,17 @@
 import inspect from 'inspect';
+import * as bjson from 'bjson';
 import { SyscallError } from '../../lib/misc.js';
 
 let sockId;
-function isThenable(value) {
-  return typeof value == 'object' && value != null && typeof value.then == 'function';
-}
-
-function hasHandler(obj, eventName) {
-  if(typeof obj == 'object' && obj != null) {
-    const handler = obj['on' + eventName];
-    if(typeof handler == 'function') return handler;
-  }
-}
-
-function callHandler(obj, eventName, ...args) {
-  let ret,
-    fn = hasHandler(obj, eventName);
-  if(fn) return fn.call(obj, ...args);
-}
-
-function parseURL(url_or_port) {
-  let protocol, host, port;
-  if(!isNaN(+url_or_port)) [protocol, host, port] = ['ws', '0.0.0.0', url_or_port];
-  else {
-    [protocol = 'ws', host, port = 80] = [
-      .../(.*:\/\/|)([^:/]*)(:[0-9]+|).*/.exec(url_or_port)
-    ].slice(1);
-    if(typeof port == 'string') port = port.slice(1);
-  }
-  port = +port;
-  if(protocol) {
-    protocol = protocol.slice(0, -3);
-    if(protocol.startsWith('http')) protocol = protocol.replace('http', 'ws');
-  }
-
-  return {
-    protocol,
-    host,
-    port,
-    toString() {
-      const { protocol, host, port } = this;
-      return `${protocol || 'ws'}://${host}:${port}`;
-    }
-  };
-}
-
-export function getPropertyNames(obj, method = obj => Object.getOwnPropertyNames(obj)) {
-  let names = new Set();
-  do {
-    for(let name of method(obj)) names.add(name);
-    let proto = Object.getPrototypeOf(obj);
-    if(proto === obj) break;
-    obj = proto;
-  } while(typeof obj == 'object' && obj != null);
-  return [...names];
-}
-
-export function getKeys(obj) {
-  let keys = new Set();
-
-  for(let key of getPropertyNames(obj)) keys.add(key);
-
-  for(let key of getPropertyNames(obj, obj => Object.getOwnPropertySymbols(obj))) keys.add(key);
-
-  return [...keys];
-}
-
-export function getPropertyDescriptors(obj, merge = true) {
-  let descriptors = [];
-  do {
-    let desc = Object.getOwnPropertyDescriptors(obj);
-    descriptors.push(desc);
-    //for(let name in desc) if(!(name in descriptors)) descriptors[name] = desc[name];
-    let proto = Object.getPrototypeOf(obj);
-    if(proto === obj) break;
-    obj = proto;
-  } while(typeof obj == 'object' && obj != null);
-  if(merge) {
-    let i = 0;
-    let result = {};
-    for(let desc of descriptors)
-      for(let prop of getKeys(desc)) if(!(prop in result)) result[prop] = desc[prop];
-
-    /*console.log(`desc[${i++}]:`, getKeys(desc));
-      Object.assign(result, desc);*/
-    return result;
-  }
-  return descriptors;
-}
-
-export function define(obj, props) {
-  let propdesc = {};
-  for(let prop in props)
-    propdesc[prop] = { value: props[prop], enumerable: false, configurable: true, writable: true };
-  Object.defineProperties(obj, propdesc);
-}
-
-function setHandlers(os, handlers) {
-  handlers.onFd = function(fd, readable, writable) {
-    os.setReadHandler(fd, readable);
-    os.setWriteHandler(fd, writable);
-  };
-}
-
-function statusResponse(success, result_or_error, data) {
-  let r = { success };
-  if(result_or_error !== undefined) r[success ? 'result' : 'error'] = result_or_error;
-  if(typeof data == 'object' && data != null && typeof data.seq == 'number') r.seq = data.seq;
-  return r;
-}
-
-function objectCommand(fn) {
-  return function(data) {
-    const respond = (success, result) => statusResponse(success, result, data);
-    const { id, ...rest } = data;
-    if(id in this.instances) {
-      data.obj = this.instances[id];
-      return fn.call(this, data, respond);
-    }
-    return respond(false, `No such object #${id}`);
-  };
-}
-
-function makeListPropertiesCmd(pred = v => typeof v != 'function', defaults = {}) {
-  return objectCommand((data, respond) => {
-    const {
-      obj,
-      enumerable = true,
-      source = false,
-      keyDescriptor = true,
-      valueDescriptor = true
-    } = data;
-    defaults = { enumerable: true, writable: true, configurable: true, ...defaults };
-    let propDesc = getPropertyDescriptors(obj);
-    let keys = getKeys(propDesc);
-    let props = keys.reduce((acc, key) => {
-      const desc = propDesc[key];
-      let value = desc?.value || obj[key];
-      if(pred(value)) {
-        if(valueDescriptor) {
-          value = makeValueDescriptor(value, source);
-          for(let flag of ['enumerable', 'writable', 'configurable'])
-            if(desc[flag] !== undefined)
-              if(desc[flag] != defaults[flag]) value[flag] = desc[flag];
-        } else if(typeof value == 'function') {
-          value = value + '';
-        }
-        acc.push([keyDescriptor ? makeValueDescriptor(key) : key, value]);
-      }
-      return acc;
-    }, []);
-    return respond(true, props);
-  });
-}
-
-function getPrototypeName(proto) {
-  return proto.constructor?.name ?? proto[Symbol.toStringTag];
-}
-
-function makeValueDescriptor(value, source = false) {
-  const type = typeof value;
-  let desc = { type };
-  if(type == 'object' && value != null) {
-    desc['class'] = getPrototypeName(value) ?? getPrototypeName(Object.getPrototypeOf(value));
-    desc['chain'] = Util.getPrototypeChain(value).map(getPrototypeName);
-  } else if(type == 'symbol') {
-    desc['description'] = value.description;
-    desc['symbol'] = value.toString();
-  } else if(type == 'function') {
-    if(value.length !== undefined) desc['length'] = value.length;
-  }
-  if(value instanceof ArrayBuffer) {
-    let array = new Uint8Array(value);
-    value = [...array];
-    desc['class'] = 'ArrayBuffer';
-    delete desc['chain'];
-  }
-  if(typeof value == 'function') {
-    if(source) desc.source = value + '';
-  } else if(typeof value != 'symbol') {
-    desc.value = value;
-  }
-  return desc;
-}
 
 /** @interface MessageReceiver */
 export class MessageReceiver {
   static [Symbol.hasInstance](instance) {
     return 'onmessage' in instance;
   }
-  onmessage = null;
+
+  /** @abstract */
+  onmessage(msg) { throw new Error(`MessageReceiver.onmessage unimplemented`); }
 }
 
 /** @interface MessageTransmitter */
@@ -198,10 +20,13 @@ export class MessageTransmitter {
     return typeof sendMessage == 'function';
   }
   /** @abstract */
-  sendMessage() {}
+  sendMessage() { throw new Error(`MessageReceiver.sendMessage unimplemented`); }
 }
 
-/** @interface MessageTransceiver */
+/** @interface MessageTransceiver
+ * @mixes MessageReceiver
+ * @mixes MessageTransmitter
+ */
 export function MessageTransceiver() {}
 
 Object.assign(
@@ -225,15 +50,20 @@ const codecs = {
     decode: v => JSON.parse(v)
   }),
   js: (verbose = false) => ({
-    encode: v => inspect(v, { colors: false, compact: -2 }),
+    encode: v => inspect(v, { colors: false, compact: verbose ? false : -2 }),
     decode: v => eval(`(${v})`)
-  })
+  }),  
+  bjson: () => ({
+    encode: v => bjson.write(v),
+    decode: v => bjson.read(v)
+  }),
+
 };
 
 /**
  * @interface Connection
  */
-export class Connection {
+export class Connection extends MessageTransceiver {
   constructor(socket, instance, log) {
     this.socket = socket;
     this.fd = socket.fd;
@@ -453,11 +283,13 @@ Object.defineProperty(RPCServerConnection.prototype, Symbol.toStringTag, {
 });
 
 /**
- * This class describes a client connection.
+ * @class This class describes a client connection.
  *
  * @class      RPCClientConnection
  * @param      {Object} socket
  * @param      {Object} classes
+ * @param      {Object} instance
+ * @param      {Function} instance
  *
  */
 export class RPCClientConnection extends Connection {
@@ -484,9 +316,7 @@ Object.defineProperty(RPCClientConnection.prototype, Symbol.toStringTag, {
 });
 
 /**
- * Creates new RPC socket
- *
- * @class      RPCSocket (name)
+ * @class Creates new RPC socket
  * @param      {string}     [url=window.location.href]     URL (ws://127.0.0.1) or Port
  * @param      {function}   [service=RPCServerConnection]  The service constructor
  * @return     {RPCSocket}  The RPC socket.
@@ -624,6 +454,187 @@ if(globalThis.WebSocket) {
     }
   }
 }*/
+function isThenable(value) {
+  return typeof value == 'object' && value != null && typeof value.then == 'function';
+}
+
+function hasHandler(obj, eventName) {
+  if(typeof obj == 'object' && obj != null) {
+    const handler = obj['on' + eventName];
+    if(typeof handler == 'function') return handler;
+  }
+}
+
+function callHandler(obj, eventName, ...args) {
+  let ret,
+    fn = hasHandler(obj, eventName);
+  if(fn) return fn.call(obj, ...args);
+}
+
+function parseURL(url_or_port) {
+  let protocol, host, port;
+  if(!isNaN(+url_or_port)) [protocol, host, port] = ['ws', '0.0.0.0', url_or_port];
+  else {
+    [protocol = 'ws', host, port = 80] = [
+      .../(.*:\/\/|)([^:/]*)(:[0-9]+|).*/.exec(url_or_port)
+    ].slice(1);
+    if(typeof port == 'string') port = port.slice(1);
+  }
+  port = +port;
+  if(protocol) {
+    protocol = protocol.slice(0, -3);
+    if(protocol.startsWith('http')) protocol = protocol.replace('http', 'ws');
+  }
+
+  return {
+    protocol,
+    host,
+    port,
+    toString() {
+      const { protocol, host, port } = this;
+      return `${protocol || 'ws'}://${host}:${port}`;
+    }
+  };
+}
+
+export function getPropertyNames(obj, method = obj => Object.getOwnPropertyNames(obj)) {
+  let names = new Set();
+  do {
+    for(let name of method(obj)) names.add(name);
+    let proto = Object.getPrototypeOf(obj);
+    if(proto === obj) break;
+    obj = proto;
+  } while(typeof obj == 'object' && obj != null);
+  return [...names];
+}
+
+export function getKeys(obj) {
+  let keys = new Set();
+
+  for(let key of getPropertyNames(obj)) keys.add(key);
+
+  for(let key of getPropertyNames(obj, obj => Object.getOwnPropertySymbols(obj))) keys.add(key);
+
+  return [...keys];
+}
+
+export function getPropertyDescriptors(obj, merge = true) {
+  let descriptors = [];
+  do {
+    let desc = Object.getOwnPropertyDescriptors(obj);
+    descriptors.push(desc);
+    //for(let name in desc) if(!(name in descriptors)) descriptors[name] = desc[name];
+    let proto = Object.getPrototypeOf(obj);
+    if(proto === obj) break;
+    obj = proto;
+  } while(typeof obj == 'object' && obj != null);
+  if(merge) {
+    let i = 0;
+    let result = {};
+    for(let desc of descriptors)
+      for(let prop of getKeys(desc)) if(!(prop in result)) result[prop] = desc[prop];
+
+    /*console.log(`desc[${i++}]:`, getKeys(desc));
+      Object.assign(result, desc);*/
+    return result;
+  }
+  return descriptors;
+}
+
+export function define(obj, props) {
+  let propdesc = {};
+  for(let prop in props)
+    propdesc[prop] = { value: props[prop], enumerable: false, configurable: true, writable: true };
+  Object.defineProperties(obj, propdesc);
+}
+
+function setHandlers(os, handlers) {
+  handlers.onFd = function(fd, readable, writable) {
+    os.setReadHandler(fd, readable);
+    os.setWriteHandler(fd, writable);
+  };
+}
+
+function statusResponse(success, result_or_error, data) {
+  let r = { success };
+  if(result_or_error !== undefined) r[success ? 'result' : 'error'] = result_or_error;
+  if(typeof data == 'object' && data != null && typeof data.seq == 'number') r.seq = data.seq;
+  return r;
+}
+
+function objectCommand(fn) {
+  return function(data) {
+    const respond = (success, result) => statusResponse(success, result, data);
+    const { id, ...rest } = data;
+    if(id in this.instances) {
+      data.obj = this.instances[id];
+      return fn.call(this, data, respond);
+    }
+    return respond(false, `No such object #${id}`);
+  };
+}
+
+function makeListPropertiesCmd(pred = v => typeof v != 'function', defaults = {}) {
+  return objectCommand((data, respond) => {
+    const {
+      obj,
+      enumerable = true,
+      source = false,
+      keyDescriptor = true,
+      valueDescriptor = true
+    } = data;
+    defaults = { enumerable: true, writable: true, configurable: true, ...defaults };
+    let propDesc = getPropertyDescriptors(obj);
+    let keys = getKeys(propDesc);
+    let props = keys.reduce((acc, key) => {
+      const desc = propDesc[key];
+      let value = desc?.value || obj[key];
+      if(pred(value)) {
+        if(valueDescriptor) {
+          value = makeValueDescriptor(value, source);
+          for(let flag of ['enumerable', 'writable', 'configurable'])
+            if(desc[flag] !== undefined)
+              if(desc[flag] != defaults[flag]) value[flag] = desc[flag];
+        } else if(typeof value == 'function') {
+          value = value + '';
+        }
+        acc.push([keyDescriptor ? makeValueDescriptor(key) : key, value]);
+      }
+      return acc;
+    }, []);
+    return respond(true, props);
+  });
+}
+
+function getPrototypeName(proto) {
+  return proto.constructor?.name ?? proto[Symbol.toStringTag];
+}
+
+function makeValueDescriptor(value, source = false) {
+  const type = typeof value;
+  let desc = { type };
+  if(type == 'object' && value != null) {
+    desc['class'] = getPrototypeName(value) ?? getPrototypeName(Object.getPrototypeOf(value));
+    desc['chain'] = Util.getPrototypeChain(value).map(getPrototypeName);
+  } else if(type == 'symbol') {
+    desc['description'] = value.description;
+    desc['symbol'] = value.toString();
+  } else if(type == 'function') {
+    if(value.length !== undefined) desc['length'] = value.length;
+  }
+  if(value instanceof ArrayBuffer) {
+    let array = new Uint8Array(value);
+    value = [...array];
+    desc['class'] = 'ArrayBuffer';
+    delete desc['chain'];
+  }
+  if(typeof value == 'function') {
+    if(source) desc.source = value + '';
+  } else if(typeof value != 'symbol') {
+    desc.value = value;
+  }
+  return desc;
+}
 
 export default {
   ServerConnection: RPCServerConnection,
@@ -638,3 +649,4 @@ export default {
   define,
   SyscallError
 };
+
