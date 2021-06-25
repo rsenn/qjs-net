@@ -2,7 +2,6 @@
 #include "list.h"
 #include <curl/curl.h>
 #include <netinet/in.h>
-#include <libwebsockets.h>
 #include <sys/time.h>
 
 #ifdef JS_SHARED_LIBRARY
@@ -76,21 +75,55 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
 
 static JSValue
 create_websocket_obj(JSContext* ctx, struct lws* wsi) {
+  MinnetWebsocket* res;
   JSValue ws_obj = JS_NewObjectClass(ctx, minnet_ws_class_id);
+
   if(JS_IsException(ws_obj))
     return JS_EXCEPTION;
 
-  MinnetWebsocket* res;
-  res = js_mallocz(ctx, sizeof(*res));
-
-  if(!res) {
+  if(!(res = js_mallocz(ctx, sizeof(*res)))) {
     JS_FreeValue(ctx, ws_obj);
     return JS_EXCEPTION;
   }
 
   res->lwsi = wsi;
+  res->ref_count = 1;
+
+  JS_SetOpaque(ws_obj, res);
+
+  lws_set_wsi_user(wsi, JS_VALUE_GET_OBJ(JS_DupValue(ctx, ws_obj)));
+
+  return ws_obj;
+}
+
+/*static JSValue
+clone_websocket_obj(JSContext* ctx, MinnetWebsocket* res) {
+  JSValue ws_obj = JS_NewObjectClass(ctx, minnet_ws_class_id);
+
+  if(JS_IsException(ws_obj))
+    return JS_EXCEPTION;
+
+  res->ref_count++;
+
   JS_SetOpaque(ws_obj, res);
   return ws_obj;
+}*/
+
+static JSValue
+get_websocket_obj(JSContext* ctx, struct lws* wsi) {
+  JSObject* obj;
+
+  if((obj = lws_wsi_user(wsi))) {
+    JSValue ws_obj = JS_MKPTR(JS_TAG_OBJECT, obj);
+    MinnetWebsocket* res = JS_GetOpaque2(ctx, ws_obj, minnet_ws_class_id);
+
+    res->ref_count++;
+
+    return JS_DupValue(ctx, ws_obj);
+  }
+  // return clone_websocket_obj(ctx, res);
+
+  return create_websocket_obj(ctx, wsi);
 }
 
 static JSValue
@@ -204,15 +237,17 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_ESTABLISHED: {
       // printf("callback ESTABLISHED\n");
       if(server_cb_connect.func_obj) {
-        JSValue ws_obj = create_websocket_obj(server_cb_connect.ctx, wsi);
+        JSValue ws_obj = get_websocket_obj(server_cb_connect.ctx, wsi);
         call_ws_callback(&server_cb_connect, 1, &ws_obj);
       }
       break;
     }
     case LWS_CALLBACK_CLOSED: {
-      // printf("callback CLOSED %d\n", lws_get_socket_fd(wsi));
-      if(server_cb_close.func_obj) {
-        JSValue ws_obj = create_websocket_obj(server_cb_close.ctx, wsi);
+      MinnetWebsocket* res = lws_wsi_user(wsi);
+
+      if(server_cb_close.func_obj && (!res || res->lwsi)) {
+        // printf("callback CLOSED %d\n", lws_get_socket_fd(wsi));
+        JSValue ws_obj = get_websocket_obj(server_cb_close.ctx, wsi);
         JSValue cb_argv[2] = {ws_obj, in ? JS_NewStringLen(server_cb_connect.ctx, in, len) : JS_UNDEFINED};
         call_ws_callback(&server_cb_close, in ? 2 : 1, cb_argv);
       }
@@ -224,7 +259,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
     case LWS_CALLBACK_RECEIVE: {
       if(server_cb_message.func_obj) {
-        JSValue ws_obj = create_websocket_obj(server_cb_message.ctx, wsi);
+        JSValue ws_obj = get_websocket_obj(server_cb_message.ctx, wsi);
         JSValue msg = JS_NewStringLen(server_cb_message.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
         call_ws_callback(&server_cb_message, 2, cb_argv);
@@ -233,7 +268,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
     case LWS_CALLBACK_RECEIVE_PONG: {
       if(server_cb_pong.func_obj) {
-        JSValue ws_obj = create_websocket_obj(server_cb_pong.ctx, wsi);
+        JSValue ws_obj = get_websocket_obj(server_cb_pong.ctx, wsi);
         JSValue msg = JS_NewArrayBufferCopy(server_cb_pong.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
         call_ws_callback(&server_cb_pong, 2, cb_argv);
@@ -549,7 +584,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
     case LWS_CALLBACK_CLIENT_ESTABLISHED: {
       if(client_cb_connect.func_obj) {
-        JSValue ws_obj = create_websocket_obj(client_cb_connect.ctx, wsi);
+        JSValue ws_obj = get_websocket_obj(client_cb_connect.ctx, wsi);
         call_ws_callback(&client_cb_connect, 1, &ws_obj);
       }
       break;
@@ -568,7 +603,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
     case LWS_CALLBACK_CLIENT_RECEIVE: {
       if(client_cb_message.func_obj) {
-        JSValue ws_obj = create_websocket_obj(client_cb_message.ctx, wsi);
+        JSValue ws_obj = get_websocket_obj(client_cb_message.ctx, wsi);
         JSValue msg = JS_NewStringLen(client_cb_message.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
         call_ws_callback(&client_cb_message, 2, cb_argv);
@@ -577,7 +612,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
     case LWS_CALLBACK_CLIENT_RECEIVE_PONG: {
       if(client_cb_pong.func_obj) {
-        JSValue ws_obj = create_websocket_obj(client_cb_pong.ctx, wsi);
+        JSValue ws_obj = get_websocket_obj(client_cb_pong.ctx, wsi);
         JSValue data = JS_NewArrayBufferCopy(client_cb_pong.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, data};
         call_ws_callback(&client_cb_pong, 2, cb_argv);
@@ -781,14 +816,36 @@ minnet_ws_pong(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
 static JSValue
 minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetWebsocket* ws_obj;
+  const char* reason = 0;
+  size_t rlen = 0;
 
   ws_obj = JS_GetOpaque(this_val, minnet_ws_class_id);
   if(!ws_obj)
     return JS_EXCEPTION;
 
-  // TODO: Find out how to clsoe connection
+  if(ws_obj->lwsi) {
+    int optind = 0;
+    uint32_t status = LWS_CLOSE_STATUS_NORMAL;
 
-  return JS_UNDEFINED;
+    if(optind < argc && JS_IsNumber(argv[optind]))
+      JS_ToInt32(ctx, &status, argv[optind++]);
+
+    if(optind < argc) {
+      reason = JS_ToCStringLen(ctx, &rlen, argv[optind++]);
+      if(rlen > 124)
+        rlen = 124;
+    }
+
+    if(reason)
+      lws_close_reason(ws_obj->lwsi, status, reason, rlen);
+
+    lws_close_free_wsi(ws_obj->lwsi, status, "minnet_ws_close");
+
+    ws_obj->lwsi = 0;
+    return JS_TRUE;
+  }
+
+  return JS_FALSE;
 }
 
 static JSValue
@@ -804,8 +861,10 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
 static void
 minnet_ws_finalizer(JSRuntime* rt, JSValue val) {
   MinnetWebsocket* ws_obj = JS_GetOpaque(val, minnet_ws_class_id);
-  if(ws_obj)
-    js_free_rt(rt, ws_obj);
+  if(ws_obj) {
+    if(--ws_obj->ref_count == 0)
+      js_free_rt(rt, ws_obj);
+  }
 }
 
 static JSValue

@@ -11,7 +11,9 @@ export class MessageReceiver {
   }
 
   /** @abstract */
-  onmessage(msg) { throw new Error(`MessageReceiver.onmessage unimplemented`); }
+  onmessage(msg) {
+    throw new Error(`MessageReceiver.onmessage unimplemented`);
+  }
 }
 
 /** @interface MessageTransmitter */
@@ -20,10 +22,13 @@ export class MessageTransmitter {
     return typeof sendMessage == 'function';
   }
   /** @abstract */
-  sendMessage() { throw new Error(`MessageReceiver.sendMessage unimplemented`); }
+  sendMessage() {
+    throw new Error(`MessageReceiver.sendMessage unimplemented`);
+  }
 }
 
-/** @interface MessageTransceiver
+/**
+ * @interface MessageTransceiver
  * @mixes MessageReceiver
  * @mixes MessageTransmitter
  */
@@ -52,12 +57,11 @@ const codecs = {
   js: (verbose = false) => ({
     encode: v => inspect(v, { colors: false, compact: verbose ? false : -2 }),
     decode: v => eval(`(${v})`)
-  }),  
+  }),
   bjson: () => ({
     encode: v => bjson.write(v),
     decode: v => bjson.read(v)
-  }),
-
+  })
 };
 
 /**
@@ -65,28 +69,28 @@ const codecs = {
  */
 export class Connection extends MessageTransceiver {
   constructor(socket, instance, log) {
+    super();
     this.socket = socket;
     this.fd = socket.fd;
-    this.fdlist = instance.fdlist;
-    this.exception = null;
+     this.exception = null;
     this.codec = codecs.json(false);
-
     this.log = (...args) => log(this.constructor.name, `(fd ${this.socket.fd})`, ...args);
-
-    this.log('new Connection');
+     this.log('new Connection');
   }
 
   error(message) {
-    this.log(`ERROR: ${message}`);
+     const { socket } = this;
+   this.log(`ERROR: ${message}`);
     this.exception = new Error(message);
-    this.close();
+    this.close(socket.CLOSE_STATUS_PROTOCOL_ERR, message);
     return this.exception;
   }
 
-  close() {
-    this.log('close');
+  close(...args) {
     const { socket } = this;
-    socket.close();
+    this.log('close(', ...args, ')');
+
+    socket.close(...args);
     delete this.socket;
     delete this.fd;
     this.connected = false;
@@ -110,6 +114,14 @@ export class Connection extends MessageTransceiver {
 
   processMessage(data) {
     this.log('message:', data);
+  }
+
+  onconnect() {
+    this.log('connect');
+  }
+
+  onopen() {
+    this.log('open');
   }
 
   onpong(data) {
@@ -140,10 +152,12 @@ export class Connection extends MessageTransceiver {
     this.socket.send(msg);
   }
 
-  static getCallbacks(fdlist, classes, instance, log, verbosity = 0) {
+  static getCallbacks(instance, verbosity = 0) {
+    const {classes,fdlist, log} = instance;
     const ctor = this;
-    let handlers;
-    const verbose = verbosity ? (...args) => log('VERBOSE', ...args) : () => {};
+    const verbose = verbosity > 1 ? (...args) => log('VERBOSE', ...args) : () => {};
+
+    log(`${ctor.name}.getCallbacks`, {instance,log,verbosity});
 
     const handle = (sock, event, ...args) => {
       let conn, obj;
@@ -162,9 +176,17 @@ export class Connection extends MessageTransceiver {
       delete fdlist[fd];
     };
 
-    handlers = {
+    return {
       onConnect(sock) {
         verbose(`Connected`, { fd: sock.fd }, ctor.name);
+        const connection = new ctor(sock, classes, instance, log);
+
+        verbose(`Connected`, { connection});
+        fdlist[sock.fd] = connection;
+        handle(sock, 'connect');
+      },
+      onOpen(sock) {
+        verbose(`Opened`, { fd: sock.fd }, ctor.name);
         fdlist[sock.fd] = new ctor(sock, classes, instance, log);
         handle(sock, 'open');
       },
@@ -175,7 +197,7 @@ export class Connection extends MessageTransceiver {
       onError(sock, error) {
         verbose(`Error`, { fd: sock.fd }, error);
         callHandler(instance, 'error', error);
-        handle(sock, 'error', error) /*.then(fd => delete fdlist[fd])*/;
+        handle(sock, 'error', error);
         remove(sock);
       },
       onClose(sock, why) {
@@ -188,7 +210,6 @@ export class Connection extends MessageTransceiver {
         handle(sock, 'pong', data);
       }
     };
-    return handlers;
   }
 }
 
@@ -196,7 +217,10 @@ Object.defineProperty(Connection.prototype, Symbol.toStringTag, { value: 'Connec
 
 export class RPCServerConnection extends Connection {
   constructor(socket, classes, instance, log) {
+    log("RPCServerConnection", {socket,classes,instance,log});
+    
     super(socket, instance, log);
+    
     this.classes = classes;
     this.instances = {};
     this.lastId = 0;
@@ -273,9 +297,9 @@ export class RPCServerConnection extends Connection {
     return ret;
   }
 
-  static get name() {
+  /*static get name() {
     return 'RPC server';
-  }
+  }*/
 }
 
 Object.defineProperty(RPCServerConnection.prototype, Symbol.toStringTag, {
@@ -317,16 +341,17 @@ Object.defineProperty(RPCClientConnection.prototype, Symbol.toStringTag, {
 
 /**
  * @class Creates new RPC socket
+ *
  * @param      {string}     [url=window.location.href]     URL (ws://127.0.0.1) or Port
  * @param      {function}   [service=RPCServerConnection]  The service constructor
  * @return     {RPCSocket}  The RPC socket.
  */
 export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
   const instance = new.target ? this : new RPCSocket(url, service);
-  const fdlist = {};
-  const classes = {};
 
-  const log = (msg, ...args) => {
+  instance.fdlist = {};
+  instance.classes = {};
+  instance.log = (msg, ...args) => {
     const { console } = globalThis;
     console /*instance.log ??*/.log
       .call(
@@ -343,27 +368,25 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
       );
   };
 
-  const callbacks = service.getCallbacks(fdlist, classes, instance, log, verbosity);
+  const callbacks = service.getCallbacks(instance, verbosity);
 
   if(!url) url = globalThis.location?.href;
   if(typeof url != 'object') url = parseURL(url);
 
   define(instance, {
-    fdlist,
-    classes,
     callbacks,
     url,
     register(ctor) {
       if(typeof ctor == 'object' && ctor !== null) {
         for(let name in ctor) classes[name] = ctor[name];
       } else {
-        classes[ctor.name] = ctor;
+        this.classes[ctor.name] = ctor;
       }
       return this;
     },
     listen(new_ws, os = globalThis.os) {
       if(!new_ws) new_ws = MakeWebSocket;
-      log(`${service.name} listening on ${this.url}`);
+      this.log(`${service.name} listening on ${this.url}`);
       if(os) setHandlers(os, callbacks);
       this.listening = true;
       this.ws = new_ws(this.url, callbacks, true);
@@ -374,7 +397,7 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
     },
     connect(new_ws, os = globalThis.os) {
       if(!new_ws) new_ws = MakeWebSocket;
-      log(`${service.name} connecting to ${this.url}`);
+      this.log(`${service.name} connecting to ${this.url}`);
       if(os) setHandlers(os, callbacks);
       this.ws = new_ws(this.url, callbacks, false);
       return this;
@@ -399,7 +422,8 @@ if(globalThis.WebSocket) {
       callbacks.onError(ws, error);
       return null;
     }
-    ws.onopen = () => callbacks.onConnect(ws);
+    ws.onconnect = () => callbacks.onConnect(ws);
+    ws.onopen = () => callbacks.onOpen(ws);
     ws.onerror = error => callbacks.onError(ws, error);
     ws.onmessage = msg => callbacks.onMessage(ws, msg);
     ws.onpong = pong => callbacks.onPong(ws, pong);
@@ -484,17 +508,23 @@ function parseURL(url_or_port) {
   if(protocol) {
     protocol = protocol.slice(0, -3);
     if(protocol.startsWith('http')) protocol = protocol.replace('http', 'ws');
+  } else {
+    protocol = 'ws';
   }
 
-  return {
-    protocol,
-    host,
-    port,
-    toString() {
-      const { protocol, host, port } = this;
-      return `${protocol || 'ws'}://${host}:${port}`;
+  return define(
+    {
+      protocol,
+      host,
+      port
+    },
+    {
+      toString() {
+        const { protocol, host, port } = this;
+        return `${protocol || 'ws'}://${host}:${port}`;
+      }
     }
-  };
+  );
 }
 
 export function getPropertyNames(obj, method = obj => Object.getOwnPropertyNames(obj)) {
@@ -546,6 +576,7 @@ export function define(obj, props) {
   for(let prop in props)
     propdesc[prop] = { value: props[prop], enumerable: false, configurable: true, writable: true };
   Object.defineProperties(obj, propdesc);
+  return obj;
 }
 
 function setHandlers(os, handlers) {
@@ -649,4 +680,3 @@ export default {
   define,
   SyscallError
 };
-
