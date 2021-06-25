@@ -345,22 +345,24 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
 
   instance.fdlist = {};
   instance.classes = {};
-  instance.log = console.config ? ((msg, ...args) => {
-    const { console } = globalThis;
-    console /*instance.log ??*/.log
-      .call(
-        console,
-        msg,
-        console.config({
-          multiline: false,
-          compact: false,
-          maxStringLength: 100,
-          stringBreakNewline: false,
-          hideKeys: ['obj']
-        }),
-        ...args
-      );
-  }) : ((...args) => console.log(...args));
+  instance.log = console.config
+    ? (msg, ...args) => {
+        const { console } = globalThis;
+        console /*instance.log ??*/.log
+          .call(
+            console,
+            msg,
+            console.config({
+              multiline: false,
+              compact: false,
+              maxStringLength: 100,
+              stringBreakNewline: false,
+              hideKeys: ['obj']
+            }),
+            ...args
+          );
+      }
+    : (...args) => console.log(...args);
 
   const callbacks = service.getCallbacks(instance, verbosity);
 
