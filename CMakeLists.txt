@@ -110,12 +110,12 @@ if(USE_SYSTEM_LIBWEBSOCKETS)
 endif(USE_SYSTEM_LIBWEBSOCKETS)]]
 
 if(NOT QUICKJS_INCLUDE_DIR)
-  if(quickjs_includedir)
-    set(QUICKJS_INCLUDE_DIR "${quickjs_includedir}")
-  else(quickjs_includedir)
+  if(QUICKJS_INCLUDE_DIR)
+    set(QUICKJS_INCLUDE_DIR "${QUICKJS_INCLUDE_DIR}")
+  else(QUICKJS_INCLUDE_DIR)
     set(QUICKJS_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
 
-  endif(quickjs_includedir)
+  endif(QUICKJS_INCLUDE_DIR)
 endif(NOT QUICKJS_INCLUDE_DIR)
 
 if(EXISTS "${QUICKJS_INCLUDE_DIR}/quickjs")
