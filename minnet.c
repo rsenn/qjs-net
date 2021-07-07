@@ -1,9 +1,9 @@
 #include "minnet.h"
 #include "list.h"
+#include <assert.h>
 #include <curl/curl.h>
 #include <netinet/in.h>
 #include <sys/time.h>
-#include <assert.h>
 
 #ifdef JS_SHARED_LIBRARY
 #define JS_INIT_MODULE js_init_module
@@ -263,7 +263,8 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
 
         /* if(!result) {
            if(ws->header.pos > ws->header.start)
-             lws_finalize_write_http_header(ws->lwsi, ws->header.start, &ws->header.pos, ws->header.end);
+             lws_finalize_write_http_header(ws->lwsi, ws->header.start,
+         &ws->header.pos, ws->header.end);
          }*/
 
         if(result)
@@ -348,7 +349,8 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
     case LWS_CALLBACK_ADD_POLL_FD: {
       struct lws_pollargs* args = in;
-      // printf("callback ADD_POLL_FD fd=%d events=%s %s %s\n", args->fd, (args->events & POLLIN) ? "IN" : "", (args->events &
+      // printf("callback ADD_POLL_FD fd=%d events=%s %s %s\n", args->fd,
+      // (args->events & POLLIN) ? "IN" : "", (args->events &
       // POLLOUT) ? "OUT" : "", (args->events & POLLERR) ? "ERR" : "");
       if(server_cb_fd.func_obj) {
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
@@ -376,7 +378,8 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
       struct lws_pollargs* args = in;
 
-      // printf("callback CHANGE_MODE_POLL_FD fd=%d events=%03o prev_events=%03o\n", args->fd, args->events, args->prev_events);
+      // printf("callback CHANGE_MODE_POLL_FD fd=%d events=%03o
+      // prev_events=%03o\n", args->fd, args->events, args->prev_events);
 
       if(args->events != args->prev_events) {
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
@@ -519,6 +522,8 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
   JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
+  JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");
+  JSValue opt_ssl_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
 
   if(JS_IsNumber(opt_port))
     JS_ToInt32(ctx, &port, opt_port);
@@ -547,6 +552,10 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   info.mounts = 0;
   info.vhost_name = host;
   info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
+  if(JS_IsString(opt_ssl_cert))
+    info.ssl_cert_filepath = JS_ToCString(ctx, opt_ssl_cert);
+  if(JS_IsString(opt_ssl_private_key))
+    info.ssl_private_key_filepath = JS_ToCString(ctx, opt_ssl_private_key);
 
   if(JS_IsArray(ctx, opt_mounts)) {
     const struct lws_http_mount** ptr = &info.mounts;
@@ -593,6 +602,12 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       js_free(ctx, (void*)mount);
     }
   }
+
+  if(info.ssl_cert_filepath)
+    JS_FreeCString(ctx, info.ssl_cert_filepath);
+
+  if(info.ssl_private_key_filepath)
+    JS_FreeCString(ctx, info.ssl_private_key_filepath);
 
   return JS_NewInt32(ctx, 0);
 }
