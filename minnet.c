@@ -46,9 +46,14 @@ lws_log_callback(int level, const char* line) {
       size_t len = strlen(line);
       JSValueConst argv[2] = {JS_NewString(minnet_log_ctx, "minnet"),
                               JS_NewStringLen(minnet_log_ctx, line, len > 0 && line[len - 1] == '\n' ? len - 1 : len)};
-      JS_Call(minnet_log_ctx, minnet_log, minnet_log_this, 2, argv);
+      JSValue ret = JS_Call(minnet_log_ctx, minnet_log, minnet_log_this, 2, argv);
+
+      if(JS_IsException(ret))
+        minnet_exception = TRUE;
+
       JS_FreeValue(minnet_log_ctx, argv[0]);
       JS_FreeValue(minnet_log_ctx, argv[1]);
+      JS_FreeValue(minnet_log_ctx, ret);
     }
   }
 }
@@ -511,6 +516,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   struct lws_context* context;
   struct lws_context_creation_info info;
 
+  JSValue ret = JS_NewInt32(ctx, 0);
   JSValue options = argv[0];
 
   JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
@@ -525,7 +531,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");
   JSValue opt_ssl_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
 
-  if(JS_IsNumber(opt_port))
+  if(!JS_IsUndefined(opt_port))
     JS_ToInt32(ctx, &port, opt_port);
 
   if(JS_IsString(opt_host))
@@ -552,6 +558,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   info.mounts = 0;
   info.vhost_name = host;
   info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
+
   if(JS_IsString(opt_ssl_cert))
     info.ssl_cert_filepath = JS_ToCString(ctx, opt_ssl_cert);
   if(JS_IsString(opt_ssl_private_key))
@@ -583,6 +590,11 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   lws_service_adjust_timeout(context, 1, 0);
 
   while(a >= 0) {
+    if(minnet_exception) {
+      ret = JS_EXCEPTION;
+      break;
+    }
+
     if(server_cb_fd.func_obj)
       js_std_loop(ctx);
     else
@@ -596,7 +608,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     for(mount = info.mounts; mount; mount = next) {
       next = mount->mount_next;
       JS_FreeCString(ctx, mount->mountpoint);
-      JS_FreeCString(ctx, mount->origin);
+      js_free(ctx, mount->origin);
       if(mount->def)
         JS_FreeCString(ctx, mount->def);
       js_free(ctx, (void*)mount);
@@ -609,7 +621,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   if(info.ssl_private_key_filepath)
     JS_FreeCString(ctx, info.ssl_private_key_filepath);
 
-  return JS_NewInt32(ctx, 0);
+  return ret;
 }
 
 static struct lws_context* client_context;

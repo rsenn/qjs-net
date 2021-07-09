@@ -1,4 +1,5 @@
 #include "quickjs.h"
+#include "cutils.h"
 #include <libwebsockets.h>
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
@@ -11,6 +12,7 @@
 
 static JSValue minnet_log, minnet_log_this;
 static JSContext* minnet_log_ctx;
+static BOOL minnet_exception;
 
 static JSValue
 minnet_get_log(JSContext* ctx, JSValueConst this_val) {
