@@ -508,6 +508,20 @@ POLLOUT : 0), .revents = 0}; j++;
   return ret;
 }*/
 
+static void
+minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValueConst options) {
+  JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");
+  JSValue opt_ssl_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
+  JSValue opt_ssl_ca = JS_GetPropertyStr(ctx, options, "sslCA");
+
+  if(JS_IsString(opt_ssl_cert))
+    info->ssl_cert_filepath = JS_ToCString(ctx, opt_ssl_cert);
+  if(JS_IsString(opt_ssl_private_key))
+    info->ssl_private_key_filepath = JS_ToCString(ctx, opt_ssl_private_key);
+  if(JS_IsString(opt_ssl_ca))
+    info->client_ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
+}
+
 static JSValue
 minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   int a = 0;
@@ -528,8 +542,6 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
   JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
-  JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");
-  JSValue opt_ssl_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
 
   if(!JS_IsUndefined(opt_port))
     JS_ToInt32(ctx, &port, opt_port);
@@ -559,10 +571,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   info.vhost_name = host;
   info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
 
-  if(JS_IsString(opt_ssl_cert))
-    info.ssl_cert_filepath = JS_ToCString(ctx, opt_ssl_cert);
-  if(JS_IsString(opt_ssl_private_key))
-    info.ssl_private_key_filepath = JS_ToCString(ctx, opt_ssl_private_key);
+  minnet_ws_sslcert(ctx, &info, options);
 
   if(JS_IsArray(ctx, opt_mounts)) {
     const struct lws_http_mount** ptr = &info.mounts;
@@ -626,17 +635,20 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
 static struct lws_context* client_context;
 static struct lws* client_wsi;
-static int port = 7981;
+static int client_server_port = 7981;
 static const char* client_server_address = "localhost";
 
 static int
 connect_client(void) {
+  printf("client_server_address: %s\n", client_server_address);
+  printf("client_server_port: %i\n", client_server_port);
+
   struct lws_client_connect_info i;
 
   memset(&i, 0, sizeof(i));
 
   i.context = client_context;
-  i.port = port;
+  i.port = client_server_port;
   i.address = client_server_address;
   i.path = "/";
   i.host = i.address;
@@ -715,19 +727,20 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
     case LWS_CALLBACK_DEL_POLL_FD: {
       struct lws_pollargs* args = in;
-      JSValue argv[3] = {
-          JS_NewInt32(client_cb_fd.ctx, args->fd),
-      };
-      minnet_make_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
-      call_ws_callback(&client_cb_fd, 3, argv);
-      JS_FreeValue(client_cb_fd.ctx, argv[0]);
-
+      if(client_cb_fd.func_obj) {
+        JSValue argv[3] = {
+            JS_NewInt32(client_cb_fd.ctx, args->fd),
+        };
+        minnet_make_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+        call_ws_callback(&client_cb_fd, 3, argv);
+        JS_FreeValue(client_cb_fd.ctx, argv[0]);
+      }
       break;
     }
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
       struct lws_pollargs* args = in;
 
-      if(args->events != args->prev_events) {
+      if(client_cb_fd.func_obj && args->events != args->prev_events) {
         JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
         minnet_make_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
 
@@ -753,6 +766,7 @@ static JSValue
 minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   struct lws_context_creation_info info;
   int n = 0;
+  JSValue ret = JS_NewInt32(ctx, 0);
 
   SETLOG
 
@@ -770,11 +784,12 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
 
+
   if(JS_IsString(opt_host))
     client_server_address = JS_ToCString(ctx, opt_host);
 
   if(JS_IsNumber(opt_port))
-    JS_ToInt32(ctx, &port, opt_port);
+    JS_ToInt32(ctx, &client_server_port, opt_port);
 
   GETCB(opt_on_pong, client_cb_pong)
   GETCB(opt_on_close, client_cb_close)
@@ -782,13 +797,22 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   GETCB(opt_on_message, client_cb_message)
   GETCB(opt_on_fd, client_cb_fd)
 
+  minnet_ws_sslcert(ctx, &info, options);
+
   client_context = lws_create_context(&info);
   if(!client_context) {
     lwsl_err("Libwebsockets init failed\n");
     return JS_EXCEPTION;
   }
 
+connect_client();
+
   while(n >= 0) {
+    if(minnet_exception) {
+      ret = JS_EXCEPTION;
+      break;
+    }
+
     if(client_cb_fd.func_obj)
       js_std_loop(ctx);
     else
@@ -797,7 +821,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
   lws_context_destroy(client_context);
 
-  return JS_EXCEPTION;
+  return ret;
 }
 
 static JSValue

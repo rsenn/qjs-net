@@ -4,6 +4,26 @@ import { SyscallError } from '../../lib/misc.js';
 
 let sockId;
 
+export function EventProxy(
+  instance = {},
+  callback = (name, event, thisObj) => console.log('EventProxy', { name, event, thisObj })
+) {
+  function WrapEvent(handler, name) {
+    return function(e) {
+      return callback(name, e, this);
+    };
+  }
+
+  return new Proxy(instance, {
+    get(obj, prop) {
+      if(prop.startsWith('on')) {
+        return WrapEvent(obj[prop], prop.slice(2));
+      }
+      return obj[prop];
+    }
+  });
+}
+
 /** @interface MessageReceiver */
 export class MessageReceiver {
   static [Symbol.hasInstance](instance) {
@@ -346,6 +366,9 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
   const instance = new.target ? this : new RPCSocket(url, service, verbosity);
 
   define(instance, {
+    get fd() {
+      return Object.keys(this.fdlist)[0] ?? -1;
+    },
     fdlist: {},
     classes: {},
     log: console.config
@@ -440,50 +463,6 @@ function MakeWebSocket(url, callbacks) {
   return ws;
 }
 
-/*if(globalThis.scriptArgs && scriptArgs[0].endsWith('rpc.js')) {
-  class TestClass {
-    method(...args) {
-      console.log('TestClass.method args =', args);
-      return [1, 2, 3, 4];
-    }
-
-    async asyncMethod(...args) {
-      console.log('TestClass.asyncMethod args =', args);
-      return [1, 2, 3, 4];
-    }
-  }
-  const SERVER = 0,
-    CLIENT = 1;
-  const modes = { socket: +scriptArgs[1]?.startsWith('c') };
-  if(scriptArgs[2]) modes.protocol = +scriptArgs[2]?.startsWith('c');
-  else modes.protocol = SERVER;
-
-  if(modes.socket) {
-    try {
-      const rpc = new RPCSocket(9200, modes.protocol ? RPCClientConnection : RPCServerConnection);
-      rpc.register({ TestClass });
-      import('os').then(os =>
-        import('net').then(({ client }) =>
-          rpc.connect((url, callbacks) => client({ ...url, ...callbacks }), os)
-        )
-      );
-    } catch(e) {
-      console.log('ERROR: ' + e.message);
-    }
-  } else {
-    try {
-      const rpc = new RPCSocket(9200, modes.protocol ? RPCClientConnection : RPCServerConnection);
-      rpc.register({ TestClass });
-      import('os').then(os =>
-        import('net').then(({ server }) =>
-          rpc.listen((url, callbacks) => server({ ...url, ...callbacks }), os)
-        )
-      );
-    } catch(e) {
-      console.log('ERROR: ' + e.message);
-    }
-  }
-}*/
 function isThenable(value) {
   return typeof value == 'object' && value != null && typeof value.then == 'function';
 }
@@ -533,7 +512,7 @@ function parseURL(url_or_port) {
   );
 }
 
-export function getPropertyNames(obj, method = obj => Object.getOwnPropertyNames(obj)) {
+function getPropertyNames(obj, method = obj => Object.getOwnPropertyNames(obj)) {
   let names = new Set();
   do {
     for(let name of method(obj)) names.add(name);
@@ -544,14 +523,14 @@ export function getPropertyNames(obj, method = obj => Object.getOwnPropertyNames
   return [...names];
 }
 
-export function getKeys(obj) {
+function getKeys(obj) {
   let keys = new Set();
   for(let key of getPropertyNames(obj)) keys.add(key);
   for(let key of getPropertyNames(obj, obj => Object.getOwnPropertySymbols(obj))) keys.add(key);
   return [...keys];
 }
 
-export function getPropertyDescriptors(obj, merge = true) {
+function getPropertyDescriptors(obj, merge = true) {
   let descriptors = [];
   do {
     let desc = Object.getOwnPropertyDescriptors(obj);
@@ -574,7 +553,7 @@ export function getPropertyDescriptors(obj, merge = true) {
   return descriptors;
 }
 
-export function define(obj, ...args) {
+function define(obj, ...args) {
   let propdesc = {};
   for(let props of args) {
     let desc = Object.getOwnPropertyDescriptors(props);
@@ -682,9 +661,6 @@ export default {
   MessageReceiver,
   MessageTransmitter,
   MessageTransceiver,
-  getPropertyNames,
-  getPropertyDescriptors,
-  getKeys,
-  define,
+  EventProxy,
   SyscallError
 };
