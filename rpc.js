@@ -462,13 +462,13 @@ export class RPCClientConnection extends Connection {
     this.classes = classes;
     this.connected = true;
     RPCClientConnection.set.add(this);
-
+    /*
     this.on('error', function(error) {
       this.log('RPCClientConnection.onerror', error);
     });
     this.on('response', function(response) {
       this.log('RPCClientConnection.onresponse', response);
-    });
+    });*/
   }
 
   processMessage(response) {
