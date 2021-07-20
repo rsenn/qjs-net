@@ -284,7 +284,7 @@ export class Connection extends MessageTransceiver {
   sendMessage(obj) {
     if(typeof obj == 'object')
       if(typeof obj.seq == 'number') {
-        if(this.messages && this.messages.responses) this.messages.responses[obj.seq] = obj;
+        if(this.messages && this.messages.requests) this.messages.requests[obj.seq] = obj;
       } else {
         obj.seq = this.makeSeq();
       }
@@ -296,8 +296,8 @@ export class Connection extends MessageTransceiver {
   sendCommand(command, params = {}) {
     let message = { command, ...params };
     if(typeof params == 'object' && params != null && typeof params.seq != 'number') params.seq = this.seq = (this.seq | 0) + 1;
-    if(this.messages && this.messages.responses) if (typeof params.seq == 'number') this.messages.responses[params.seq] = message;
-    if(this.messages && this.messages.responses) this.messages.responses[params.seq] = message;
+    if(this.messages && this.messages.requests) if (typeof params.seq == 'number') this.messages.requests[params.seq] = message;
+    if(this.messages && this.messages.requests) this.messages.requests[params.seq] = message;
     this.sendMessage(message);
     this.log('Connection.sendCommand', { command, params, message });
   }
@@ -375,7 +375,7 @@ function RPCCommands(classes = {}) {
       } catch(e) {
         return statusResponse(false, e.message);
       }
-      return { success: true, id, name };
+      return { success: true, result: { id, name } };
     },
     list() {
       this.log('RPCCommands.list');
@@ -488,13 +488,9 @@ export class RPCClientConnection extends Connection {
     this.classes = classes;
     this.connected = true;
     RPCClientConnection.set.add(this);
-    /*
-    this.on('error', function(error) {
-      this.log('RPCClientConnection.onerror', error);
-    });
-    this.on('response', function(response) {
-      this.log('RPCClientConnection.onresponse', response);
-    });*/
+
+    this.on('error', LogWrap('RPCClientConnection.onerror'));
+    this.on('response', LogWrap('RPCClientConnection.response'));
   }
 
   processMessage(response) {
@@ -791,21 +787,21 @@ export function makeListPropertiesCmd(pred = v => typeof v != 'function', defaul
     defaults = { enumerable: true, writable: true, configurable: true, ...defaults };
     let propDesc = getPropertyDescriptors(obj, true, (proto, depth) => depth < (defaults.maxDepth ?? Infinity));
     let keys = GetKeys(propDesc);
-    let props = keys.reduce((acc, key) => {
+    let map = keys.reduce((acc, key) => {
       const desc = propDesc[key];
       let value = desc?.value || obj[key];
       if(pred(value)) {
         if(valueDescriptor) {
-          value = makeValueDescriptor(value, source);
+          value = SerializeValue(value, source);
           for(let flag of ['enumerable', 'writable', 'configurable']) if(desc[flag] !== undefined) if (desc[flag] != defaults[flag]) value[flag] = desc[flag];
         } else if(typeof value == 'function') {
           value = value + '';
         }
-        acc.push([keyDescriptor ? makeValueDescriptor(key) : key, value]);
+        acc.push([keyDescriptor ? SerializeValue(key) : key, value]);
       }
       return acc;
     }, []);
-    return respond(true, props);
+    return respond(true, map);
   });
 }
 
@@ -814,13 +810,20 @@ export function getPrototypeName(proto) {
 }
 
 export function MakeCommandFunction(cmd, connection) {
-  return function(...args) {
-    connection.sendCommand(cmd, ...args);
-    return connection.waitFor('response').then(LogWrap(`RESPONSE to '${cmd}'`));
+  return async function(...args) {
+    await connection.sendCommand(cmd, ...args);
+    let r = await connection.waitFor('response');
+
+    let t = { methods: entries => entries.map(([k, v]) => DeserializeValue(k)) };
+
+    if(t[cmd]) r = t[cmd](r);
+
+    console.log(`RESPONSE to '${cmd}'`, r);
+    return r;
   };
 }
 
-export function makeValueDescriptor(value, source = false) {
+export function SerializeValue(value, source = false) {
   const type = typeof value;
   let desc = { type };
   if(type == 'object' && value != null) {
@@ -846,6 +849,12 @@ export function makeValueDescriptor(value, source = false) {
   return desc;
 }
 
+export function DeserializeValue(desc) {
+  if(desc.type == 'symbol') return Symbol.for(desc.description);
+  // if(desc.type=='string')
+  return desc.value;
+}
+
 export default {
   ServerConnection: RPCServerConnection,
   ClientConnection: RPCClientConnection,
@@ -853,6 +862,8 @@ export default {
   MessageReceiver,
   MessageTransmitter,
   MessageTransceiver,
+  SerializeValue,
+  DeserializeValue,
   EventLogger,
   SyscallError,
   define
