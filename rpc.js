@@ -9,14 +9,38 @@ let sockId;
 
 extendArray(Array.prototype);
 
-export const DebugFlags = (globalThis.DebugFlags = (environ = process.env['DEBUG'] || '') =>
+export const VfnAdapter = vfn => ({
+  get: k => vfn(k),
+  set: (k, v) => vfn(k, v)
+});
+
+export const VfnDecorator = vfn => define(vfn, VfnAdapter(vfn));
+
+export const Memoize = (globalThis.memoize = function memoize(fn) {
+  let self,
+    storage = {};
+  const v = VfnDecorator((key, value) => (value !== undefined ? (storage[key] = value) : storage[key]));
+  self = function(key, ...args) {
+    let r;
+
+    if((r = v.get(key))) return r;
+    r = fn.call(this, key, ...args);
+    v.set(key, r);
+    return r;
+  };
+  self.cache = storage;
+  return Object.freeze(self);
+});
+
+export const DebugFlags = (globalThis.DebugFlags = Util.memoize((environ = (globalThis.process && process.env['DEBUG']) || '') =>
   environ
     .split(/[^A-Za-z0-9_]+/g)
     .filter(n => n !== '')
     .reduce((acc, n) => {
       acc[n] = true;
       return acc;
-    }, {}));
+    }, {})
+));
 
 globalThis.GetClasses = function* GetClasses(obj) {
   let keys = GetKeys(obj);
@@ -178,7 +202,9 @@ export class Connection extends MessageTransceiver {
       seq: 0,
       socket,
       exception: null,
-      log: (...args) => log(this[Symbol.toStringTag], `(fd ${this.socket.fd})`, ...args),
+      log(...args) {
+        if(DebugFlags()[this[Symbol.toStringTag]]) console.log(...args);
+      },
       messages: { requests: {}, responses: {} }
     });
     define(this, typeof codec == 'string' && codecs[codec] ? { codecName: codec, codec: codecs[codec]() } : {});
@@ -208,12 +234,12 @@ export class Connection extends MessageTransceiver {
     let { codec, codecName } = this;
     if(!msg) return;
     if(typeof msg == 'string' && msg.trim() == '') return;
-    this.log('Connection.onmessage', { msg, codec, codecName });
+    // this.log('Connection.onmessage', { msg, codec, codecName });
     let data;
     try {
       data = codec.decode((msg && msg.data) || msg);
     } catch(err) {
-      throw this.error(`${this.codec.name} parse error: '${(err && err.message) || msg}'` + err.stack);
+      throw this.error(`Connection.onmessage ${this.codec.name} parse error: '${(err && err.message) || msg}'` + err.stack);
       return this.exception;
     }
     let response = this.processMessage(data);
@@ -269,11 +295,11 @@ export class Connection extends MessageTransceiver {
 
   sendCommand(command, params = {}) {
     let message = { command, ...params };
-    if(typeof params.seq != 'number') params.seq = this.seq = (this.seq | 0) + 1;
+    if(typeof params == 'object' && params != null && typeof params.seq != 'number') params.seq = this.seq = (this.seq | 0) + 1;
     if(this.messages && this.messages.responses) if (typeof params.seq == 'number') this.messages.responses[params.seq] = message;
     if(this.messages && this.messages.responses) this.messages.responses[params.seq] = message;
     this.sendMessage(message);
-    this.log('Connection.sendCommand', { thisObj: this, message });
+    this.log('Connection.sendCommand', { command, params, message });
   }
 
   static getCallbacks(instance, verbosity = 0) {
@@ -428,7 +454,7 @@ export class RPCServerConnection extends Connection {
     const { command, seq } = data;
     const { commands } = this;
     fn = commands[command];
-    this.log('RPCServerConnection.processMessage', { data, command, seq, fn });
+    //this.log('RPCServerConnection.processMessage', { data, command, seq, fn });
     if(typeof seq == 'number') this.messages.requests[seq] = data;
     if(typeof fn == 'function') return fn.call(this, data);
     switch (command) {
@@ -473,7 +499,7 @@ export class RPCClientConnection extends Connection {
 
   processMessage(response) {
     const { success, error, result, seq } = response;
-    this.log('RPCClientConnection.processMessage', response, new Error().stack.replace(/Error\n?/, ''));
+    //this.log('RPCClientConnection.processMessage', response, new Error().stack.replace(/Error\n?/, ''));
 
     if(success) this.emit('response', result);
     else if(error) this.emit('error', error);
@@ -508,7 +534,7 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
         const { console } = globalThis;
         console /*instance.log ??*/
           .log(
-            msg,
+            { msg },
             console.config({
               multiline: false,
               compact: false,
@@ -787,9 +813,12 @@ export function getPrototypeName(proto) {
   return proto.constructor?.name ?? proto[Symbol.toStringTag];
 }
 
-export function makeCommandProxy(cmd, connection) {
-  return function(params = {}) {
-    connection.sendCommand(cmd, params);
+export function MakeCommandFunction(cmd, connection) {
+  return async function(...args) {
+    connection.sendCommand(cmd, ...args);
+    let response = await connection.waitFor('response');
+    console.debug(`Command '${cmd}' proxy`, response);
+    return response;
   };
 }
 
