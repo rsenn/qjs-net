@@ -231,23 +231,7 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE], *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
 
   switch(reason) {
-    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
-      // printf("callback HTTP_CONFIRM_UPGRADE fd=%d\n",
-      // lws_get_socket_fd(wsi));
-      break;
-    }
-    case LWS_CALLBACK_HTTP_BODY: {
-      printf("callback HTTP_BODY fd=%d\n", lws_get_socket_fd(wsi));
-      break;
-    }
-    case LWS_CALLBACK_CLOSED_HTTP: {
-      // printf("callback CLOSED_HTTP fd=%d\n", lws_get_socket_fd(wsi));
-      break;
-    }
-    case LWS_CALLBACK_HTTP_FILE_COMPLETION: {
-      // printf("callback HTTP_FILE_COMPLETION\n");
-      break;
-    }
+
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
       if(server_cb_http.func_obj) {
         // printf("callback FILTER_HTTP_CONNECTION %s\n", in);
@@ -312,7 +296,6 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       break;
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_ESTABLISHED: {
-      printf("callback %s\n", minnet_callback_name(reason));
       if(server_cb_connect.func_obj) {
         JSValue ws_obj = get_websocket_obj(server_cb_connect.ctx, wsi);
         call_ws_callback(&server_cb_connect, 1, &ws_obj);
@@ -613,9 +596,6 @@ static const char* client_server_address = "localhost";
 
 static int
 connect_client(void) {
-  printf("client_server_address: %s\n", client_server_address);
-  printf("client_server_port: %i\n", client_server_port);
-
   struct lws_client_connect_info i;
 
   memset(&i, 0, sizeof(i));
@@ -645,8 +625,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       break;
     }
     case LWS_CALLBACK_CONNECTING: {
-
-      printf("LWS_CALLBACK_CONNECTING\n");
+      //   printf("LWS_CALLBACK_CONNECTING\n");
       break;
     }
 
@@ -745,10 +724,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       }
       break;
     }
-    case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL: {
-      printf("http bind\n");
-      break;
-    }
+
     default: {
       // minnet_print_unhandled(reason);
       break;

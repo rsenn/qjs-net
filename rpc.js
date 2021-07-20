@@ -176,6 +176,11 @@ if(globalThis.bjson) {
   };
 }
 
+export function RPCApi(c) {
+  define(this, { connection: c });
+  for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get']) this[cmd] = MakeCommandFunction(cmd, null, this);
+}
+
 /**
  * @interface Connection
  */
@@ -363,10 +368,10 @@ define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
 
 Connection.list = [];
 
-function RPCCommands(classes = {}) {
+function RPCServerEndpoint(classes = {}) {
   return {
     new({ class: name, args = [] }) {
-      this.log('RPCCommands.new');
+      this.log('RPCServerEndpoint.new');
       let obj, ret, id;
       try {
         obj = new this.classes[name](...args);
@@ -378,7 +383,7 @@ function RPCCommands(classes = {}) {
       return { success: true, result: { id, name } };
     },
     list() {
-      this.log('RPCCommands.list');
+      this.log('RPCServerEndpoint.list');
 
       return { success: true, result: Object.keys({ ...classes, ...this.classes }) };
     },
@@ -409,8 +414,8 @@ function RPCCommands(classes = {}) {
         GetProperties(obj, obj => Object.getOwnPropertySymbols(obj)).map(sym => sym.description)
       );
     }),
-    properties: makeListPropertiesCmd(v => typeof v != 'function'),
-    methods: makeListPropertiesCmd(v => typeof v == 'function', { enumerable: false }),
+    properties: MakeListCommand(v => typeof v != 'function'),
+    methods: MakeListCommand(v => typeof v == 'function', { enumerable: false }),
     get: objectCommand(({ obj, property }, respond) => {
       if(property in obj && typeof obj[property] != 'function') {
         const result = obj[property];
@@ -424,9 +429,9 @@ function RPCCommands(classes = {}) {
   };
 }
 
-export class RPCServerConnection extends Connection {
+export class RPCServer extends Connection {
   constructor(socket, instance, log, codec = codecs.json(false), classes) {
-    log('RPCServerConnection.constructor', { socket, classes, instance, log });
+    //log('RPCServer.constructor', { socket, classes, instance, log });
 
     super(socket, instance, log, codec);
 
@@ -437,10 +442,10 @@ export class RPCServerConnection extends Connection {
       lastId: 0,
       connected: true,
       messages: { requests: {}, responses: {} },
-      commands: RPCCommands()
+      commands: RPCServerEndpoint()
     });
 
-    RPCServerConnection.set.add(connection);
+    RPCServer.set.add(connection);
   }
 
   makeId() {
@@ -454,7 +459,7 @@ export class RPCServerConnection extends Connection {
     const { command, seq } = data;
     const { commands } = this;
     fn = commands[command];
-    //this.log('RPCServerConnection.processMessage', { data, command, seq, fn });
+    //this.log('RPCServer.processMessage', { data, command, seq, fn });
     if(typeof seq == 'number') this.messages.requests[seq] = data;
     if(typeof fn == 'function') return fn.call(this, data);
     switch (command) {
@@ -467,35 +472,37 @@ export class RPCServerConnection extends Connection {
   }
 }
 
-define(RPCServerConnection.prototype, { [Symbol.toStringTag]: 'RPCServerConnection' });
+define(RPCServer.prototype, { [Symbol.toStringTag]: 'RPCServer' });
 
-RPCServerConnection.list = [];
+RPCServer.list = [];
 
 /**
  * @class This class describes a client connection.
  *
- * @class      RPCClientConnection
+ * @class      RPCClient
  * @param      {Object} socket
  * @param      {Object} classes
  * @param      {Object} instance
  * @param      {Function} instance
  *
  */
-export class RPCClientConnection extends Connection {
+export class RPCClient extends Connection {
   constructor(socket, instance, log, codec = codecs.json(false), classes) {
     super(socket, instance, log, codec);
     this.instances = {};
     this.classes = classes;
     this.connected = true;
-    RPCClientConnection.set.add(this);
+    RPCClient.set.add(this);
+    this.log('RPCClient.constructor', { socket, instance, log, codec, classes } /*, new Error().stack.replace(/Error\n?/, '')*/);
+    this.on('error', LogWrap('ERROR'));
+    //  this.on('response', LogWrap('RESPONSE'));
 
-    this.on('error', LogWrap('RPCClientConnection.onerror'));
-    this.on('response', LogWrap('RPCClientConnection.response'));
+    Object.defineProperties(this, { api: { get: memoize(() => new RPCApi(this)) } });
   }
 
   processMessage(response) {
+    this.log('RPCClient.processMessage', response, new Error().stack.replace(/Error\n?/, ''));
     const { success, error, result, seq } = response;
-    //this.log('RPCClientConnection.processMessage', response, new Error().stack.replace(/Error\n?/, ''));
 
     if(success) this.emit('response', result);
     else if(error) this.emit('error', error);
@@ -511,17 +518,17 @@ export class RPCClientConnection extends Connection {
   }
 }
 
-define(RPCClientConnection.prototype, { [Symbol.toStringTag]: 'RPCClientConnection' });
-define(RPCClientConnection.prototype, EventEmitter.prototype, { [Symbol.asyncIterator]: EventEmitter.prototype[Symbol.asyncIterator] });
+define(RPCClient.prototype, { [Symbol.toStringTag]: 'RPCClient' });
+define(RPCClient.prototype, EventEmitter.prototype, { [Symbol.asyncIterator]: EventEmitter.prototype[Symbol.asyncIterator] });
 
 /**
  * @class Creates new RPC socket
  *
  * @param      {string}     [url=window.location.href]     URL (ws://127.0.0.1) or Port
- * @param      {function}   [service=RPCServerConnection]  The service constructor
+ * @param      {function}   [service=RPCServer]  The service constructor
  * @return     {RPCSocket}  The RPC socket.
  */
-export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
+export function RPCSocket(url, service = RPCServer, verbosity = 1) {
   if(!new.target) return new RPCSocket(url, service, verbosity);
 
   const instance = new.target ? this : new RPCSocket(url, service, verbosity);
@@ -541,7 +548,7 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
             ...args
           );
       }
-    : (...args) => console.log(...args);
+    : console.log; /*(...args) => console.log(...args)*/
 
   define(instance, {
     get fd() {
@@ -608,9 +615,8 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
 
   return instance;
 }
-for(let ctor of [RPCSocket, Connection, RPCClientConnection, RPCServerConnection]) {
+for(let ctor of [RPCSocket, Connection, RPCClient, RPCServer]) {
   let set = new Set();
-
   define(ctor, {
     set,
     get list() {
@@ -718,7 +724,7 @@ export function GetKeys(obj, pred = (obj, depth) => obj !== Object.prototype) {
 }
 
 export function getPropertyDescriptors(obj, merge = true, pred = (proto, depth) => true) {
-  let descriptors = [];
+  let a = [];
   let depth = 0,
     desc,
     ok;
@@ -727,7 +733,7 @@ export function getPropertyDescriptors(obj, merge = true, pred = (proto, depth) 
     try {
       ok = pred(obj, depth);
     } catch(e) {}
-    if(ok) descriptors.push(desc);
+    if(ok) a.push(desc);
     let proto = Object.getPrototypeOf(obj);
     if(proto === obj) break;
     obj = proto;
@@ -736,10 +742,10 @@ export function getPropertyDescriptors(obj, merge = true, pred = (proto, depth) 
   if(merge) {
     let i = 0;
     let result = {};
-    for(let desc of descriptors) for (let prop of GetKeys(desc)) if(!(prop in result)) result[prop] = desc[prop];
+    for(let desc of a) for (let prop of GetKeys(desc)) if(!(prop in result)) result[prop] = desc[prop];
     return result;
   }
-  return descriptors;
+  return a;
 }
 
 export function define(obj, ...args) {
@@ -781,7 +787,7 @@ export function objectCommand(fn) {
   };
 }
 
-export function makeListPropertiesCmd(pred = v => typeof v != 'function', defaults = { maxDepth: Infinity }) {
+export function MakeListCommand(pred = v => typeof v != 'function', defaults = { maxDepth: Infinity }) {
   return objectCommand((data, respond) => {
     const { obj, enumerable = true, source = false, keyDescriptor = true, valueDescriptor = true } = data;
     defaults = { enumerable: true, writable: true, configurable: true, ...defaults };
@@ -809,19 +815,41 @@ export function getPrototypeName(proto) {
   return proto.constructor?.name ?? proto[Symbol.toStringTag];
 }
 
-export function MakeCommandFunction(cmd, connection) {
-  return async function(...args) {
-    await connection.sendCommand(cmd, ...args);
-    let r = await connection.waitFor('response');
+function DeserializeEntries(e) {
+  return e.map(a => a.map(DeserializeValue));
+}
 
-    let t = { methods: entries => entries.map(([k, v]) => DeserializeValue(k)) };
+function DeserializeKeys(e) {
+  return e.map(([k]) => DeserializeValue(k));
+}
 
+function DeserializeMap(e) {
+  return new Map(DeserializeEntries(e));
+}
+function DeserializeObject(e) {
+  return Object.fromEntries(DeserializeEntries(e));
+}
+function ForwardMethods(e) {
+  let keys = DeserializeKeys(e);
+  let ret = {};
+  for(let key of keys) {
+    ret[key] = MakeCommandFunction(key, o => o.connection);
+  }
+  return ret;
+}
+export const MakeCommandFunction = (cmd, getConnection, thisObj) => {
+  if(typeof getConnection != 'function') getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
+  //console.log("MakeCommandFunction",{cmd,getConnection,thisObj});
+  return async function(params = {}) {
+    let client = getConnection(this);
+    await client.sendCommand(cmd, params);
+    let r = await client.waitFor('response');
+    let t = { methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
     if(t[cmd]) r = t[cmd](r);
-
     console.log(`RESPONSE to '${cmd}'`, r);
     return r;
   };
-}
+};
 
 export function SerializeValue(value, source = false) {
   const type = typeof value;
@@ -849,6 +877,10 @@ export function SerializeValue(value, source = false) {
   return desc;
 }
 
+export function DeserializeSymbols(names) {
+  return names.map(n => n.replace(/Symbol\./, '')).map(n => Symbol[n]);
+}
+
 export function DeserializeValue(desc) {
   if(desc.type == 'symbol') return Symbol.for(desc.description);
   // if(desc.type=='string')
@@ -856,9 +888,11 @@ export function DeserializeValue(desc) {
 }
 
 export default {
-  ServerConnection: RPCServerConnection,
-  ClientConnection: RPCClientConnection,
+  ServerConnection: RPCServer,
+  ClientConnection: RPCClient,
+  Commands: RPCServerEndpoint,
   Socket: RPCSocket,
+  Api: RPCApi,
   MessageReceiver,
   MessageTransmitter,
   MessageTransceiver,
