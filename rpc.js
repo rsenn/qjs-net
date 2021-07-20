@@ -4,6 +4,19 @@ import { SyscallError } from '../../lib/misc.js';
 
 let sockId;
 
+export function Mapper(map = new WeakMap()) {   
+  let self;
+  self = function(key,value) {
+    if(value === undefined) value = map.get(key);
+  else map.set(key,value);
+  return value;
+  }
+  return Object.setPrototypeOf(self,Mapper.prototype);
+}
+Mapper.prototype = new Function;
+Mapper.prototype.constructor = Mapper;
+
+
 export function EventProxy(instance = {}, callback = (name, event, thisObj) => console.log('EventProxy', { name, event, thisObj })) {
   function WrapEvent(handler, name) {
     return function(e) {
@@ -98,6 +111,9 @@ if(globalThis.bjson) {
  * @interface Connection
  */
 export class Connection extends MessageTransceiver {
+
+  static fromSocket = new  WeakMap();
+
   constructor(socket, instance, log, codec = 'none') {
     super();
     this.socket = socket;
@@ -106,6 +122,8 @@ export class Connection extends MessageTransceiver {
     this.codec = typeof codec == 'string' ? codecs[codec]() : codec;
     this.log = (...args) => log(this[Symbol.toStringTag], `(fd ${this.socket.fd})`, ...args);
     this.log('new Connection');
+    Connection.list.add(this);
+    Connection.fromSocket.set(socket, this);
   }
 
   error(message) {
@@ -130,10 +148,10 @@ export class Connection extends MessageTransceiver {
     if(!msg) return;
     if(typeof msg == 'string' && msg.trim() == '') return;
 
-    msg = (msg && msg.data) || msg;
-    this.log('onmessage', { msg, data });
+     this.log('onmessage', { msg });
+     let data;
     try {
-      data = this.codec.decode(msg);
+      data = this.codec.decode(msg && msg.data || msg);
     } catch(err) {
       throw this.error(`${this.codec.name} parse error: '${(err && err.message) || msg}'`);
       return this.exception;
@@ -246,6 +264,8 @@ export class Connection extends MessageTransceiver {
 
 define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
 
+Connection.list = new /*Weak*/Set();
+
 export class RPCServerConnection extends Connection {
   constructor(socket, instance, log, classes, codec = codecs.json(false)) {
     log('RPCServerConnection', { socket, classes, instance, log });
@@ -257,6 +277,7 @@ export class RPCServerConnection extends Connection {
     this.lastId = 0;
     this.connected = true;
     this.messages = { requests: {}, responses: {} };
+RPCServerConnection.list.add(this);
   }
 
   makeId() {
@@ -274,6 +295,9 @@ export class RPCServerConnection extends Connection {
         return statusResponse(false, e.message);
       }
       return { success: true, id, name };
+    },
+    list() {
+ return {success: true, classes: Object.keys(this.classes) };
     },
     delete: objectCommand(({ id }, respond) => {
       delete this.instances[id];
@@ -324,6 +348,8 @@ export class RPCServerConnection extends Connection {
 
 define(RPCServerConnection.prototype, { [Symbol.toStringTag]: 'RPCServerConnection' });
 
+RPCServerConnection.list = new Set();
+
 /**
  * @class This class describes a client connection.
  *
@@ -340,6 +366,7 @@ export class RPCClientConnection extends Connection {
     this.instances = {};
     this.classes = classes;
     this.connected = true;
+    RPCClientConnection.list.add(this);
   }
 
   processMessage(response) {
@@ -349,6 +376,7 @@ export class RPCClientConnection extends Connection {
 }
 
 define(RPCClientConnection.prototype, { [Symbol.toStringTag]: 'RPCClientConnection' });
+RPCClientConnection.list = new Set();
 
 /**
  * @class Creates new RPC socket
@@ -440,6 +468,14 @@ export function RPCSocket(url, service = RPCServerConnection, verbosity = 1) {
   });
 
   return instance;
+}
+
+export function RPCFactory(clientConnection) {
+  
+  return function(className, ...args) {
+
+sendMessage
+  } 
 }
 
 Object.defineProperty(RPCSocket.prototype, Symbol.toStringTag, { value: 'RPCSocket' });
