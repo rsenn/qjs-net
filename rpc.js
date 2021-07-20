@@ -7,7 +7,6 @@ let sockId;
 
 extendArray(Array.prototype);
 
-
 export function Mapper(map = new WeakMap()) {
   let self;
   self = function(key, value) {
@@ -19,6 +18,25 @@ export function Mapper(map = new WeakMap()) {
 }
 Mapper.prototype = new Function();
 Mapper.prototype.constructor = Mapper;
+
+export function DefaultConstructor(mapper, fn = (...args) => new Object(...args)) {
+  let self;
+  self = function(...args) {
+    let [key, value] = args;
+    if(args.length <= 1) {
+      if(!(value = map.get(key))) {
+        value = fn(...args.slice(1));
+        map.set(key, value);
+      }
+    } else {
+      map.set(key, value);
+    }
+    return value;
+  };
+  return Object.setPrototypeOf(self, DefaultConstructor.prototype);
+}
+DefaultConstructor.prototype = new Function();
+DefaultConstructor.prototype.constructor = DefaultConstructor;
 
 export function EventProxy(instance = {}, callback = (name, event, thisObj) => console.log('EventProxy', { name, event, thisObj })) {
   function WrapEvent(handler, name) {
@@ -116,6 +134,10 @@ if(globalThis.bjson) {
 export class Connection extends MessageTransceiver {
   static fromSocket = new WeakMap();
 
+  static equal(a, b) {
+    return (a.socket != null && a.socket === b.socket) || (typeof a.fd == 'number' && a.fd === b.fd);
+  }
+
   constructor(socket, instance, log, codec = 'none') {
     super();
     this.socket = socket;
@@ -124,7 +146,7 @@ export class Connection extends MessageTransceiver {
     this.codec = typeof codec == 'string' ? codecs[codec]() : codec;
     this.log = (...args) => log(this[Symbol.toStringTag], `(fd ${this.socket.fd})`, ...args);
     this.log('new Connection');
-    Connection.list.add(this);
+    Connection.list.pushIf(this);
     Connection.fromSocket.set(socket, this);
   }
 
