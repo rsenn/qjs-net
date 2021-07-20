@@ -432,7 +432,6 @@ function RPCServerEndpoint(classes = {}) {
 export class RPCServer extends Connection {
   constructor(socket, instance, log, codec = codecs.json(false), classes) {
     //log('RPCServer.constructor', { socket, classes, instance, log });
-
     super(socket, instance, log, codec);
 
     let connection = this;
@@ -887,6 +886,9 @@ export function DeserializeValue(desc) {
   return desc.value;
 }
 
+export const RPCConnect = (url, service = RPCClient) => new RPCSocket(url, service).connect();
+export const RPCListen = (url, service = RPCServer) => new RPCSocket(url, service).listen();
+
 export default {
   ServerConnection: RPCServer,
   ClientConnection: RPCClient,
@@ -900,5 +902,7 @@ export default {
   DeserializeValue,
   EventLogger,
   SyscallError,
-  define
+  define,
+  connect: RPCConnect,
+  listen: RPCListen
 };
