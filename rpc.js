@@ -4,6 +4,7 @@ import { SyscallError } from '../../lib/misc.js';
 import { EventEmitter } from '../../lib/events.js';
 import extendArray from '../modules/lib/extendArray.js';
 import { Repeater } from '../../lib/repeater/repeater.js';
+import inspect from '../../lib/objectInspect.js';
 
 let sockId;
 
@@ -177,9 +178,34 @@ if(globalThis.bjson) {
 }
 
 export function RPCApi(c) {
-  define(this, { connection: c });
-  for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get']) this[cmd] = MakeCommandFunction(cmd, null, this);
+  let api;
+  api = define(new.target ? this : new RPCApi(c), { connection: c });
+
+  return api;
 }
+
+for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get']) RPCApi.prototype[cmd] = MakeCommandFunction(cmd, o => o.connection);
+
+export function RPCProxy(c) {
+  let obj = define(new.target ? this : new RPCProxy(c), { connection: c });
+
+  return new Proxy(obj, {});
+}
+
+export function RPCObject(id, connection) {
+  let obj = define(new.target ? this : new RPCObject(id), { connection, id });
+  return api.methods({ id }).then(r => Object.assign(obj, r));
+}
+
+export function RPCFactory(api) {
+  function Factory(className) {
+    return api.new({ class: className });
+  }
+
+  return Factory;
+}
+
+RPCObject.prototype[Symbol.toStringTag] = 'RPCObject';
 
 /**
  * @interface Connection
@@ -239,7 +265,7 @@ export class Connection extends MessageTransceiver {
     let { codec, codecName } = this;
     if(!msg) return;
     if(typeof msg == 'string' && msg.trim() == '') return;
-    // this.log('Connection.onmessage', { msg, codec, codecName });
+    this.log('Connection.onmessage', { msg, codec, codecName });
     let data;
     try {
       data = codec.decode((msg && msg.data) || msg);
@@ -311,7 +337,7 @@ export class Connection extends MessageTransceiver {
     const { classes, fdlist, log } = instance;
     const ctor = this;
     const verbose = verbosity > 1 ? (...args) => log('VERBOSE', ...args) : () => {};
-    log(`${ctor.name}.getCallbacks`, { instance, log, verbosity });
+    //log(`${ctor.name}.getCallbacks`, { instance, log, verbosity });
     const handle = (sock, event, ...args) => {
       let conn, obj;
       if((conn = fdlist[sock.fd])) {
@@ -595,7 +621,7 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
       this.log(`${service.name} connecting to ${this.url}`);
       if(os) setHandlers(os, callbacks);
       this.ws = new_ws(this.url, callbacks, false);
-      console.log('connect()', this.ws);
+      //console.log('connect()', this.ws);
       return this;
     },
     /* prettier-ignore */ get connected() {
@@ -625,12 +651,6 @@ for(let ctor of [RPCSocket, Connection, RPCClient, RPCServer]) {
       return this.list.last;
     }
   });
-}
-
-export function RPCFactory(clientConnection) {
-  return function(className, ...args) {
-    sendMessage;
-  };
 }
 
 Object.defineProperty(RPCSocket.prototype, Symbol.toStringTag, { value: 'RPCSocket' });
@@ -815,11 +835,13 @@ export function getPrototypeName(proto) {
 }
 
 function DeserializeEntries(e) {
-  return e.map(a => a.map(DeserializeValue));
+  if(Array.isArray(e)) return e.map(a => a.map(DeserializeValue));
+  throw new Error(`DeserializeEntries e=${inspect(e)}`);
 }
 
 function DeserializeKeys(e) {
-  return e.map(([k]) => DeserializeValue(k));
+  if(Array.isArray(e)) return e.map(([k]) => DeserializeValue(k));
+  throw new Error(`DeserializeKeys e=${inspect(e)}`);
 }
 
 function DeserializeMap(e) {
@@ -828,27 +850,47 @@ function DeserializeMap(e) {
 function DeserializeObject(e) {
   return Object.fromEntries(DeserializeEntries(e));
 }
-function ForwardMethods(e) {
+function ForwardMethods(e, ret = {}) {
   let keys = DeserializeKeys(e);
-  let ret = {};
   for(let key of keys) {
     ret[key] = MakeCommandFunction(key, o => o.connection);
   }
+  // console.log(`ForwardMethods`, { e, keys, ret });
   return ret;
 }
-export const MakeCommandFunction = (cmd, getConnection, thisObj) => {
+
+function ForwardObject(e) {
+  let obj = ForwardMethods(e, {});
+  console.log(`ForwardObject`, { e, obj });
+  return obj;
+}
+
+function MakeCommandFunction(cmd, getConnection, thisObj, t) {
+  const pfx = [`RESPONSE to`, typeof cmd == 'symbol' ? cmd : `"${cmd}"`];
+  t ??= { /*new: ForwardObject, */ methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
   if(typeof getConnection != 'function') getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
   //console.log("MakeCommandFunction",{cmd,getConnection,thisObj});
+  return function(params = {}) {
+    let client = getConnection(thisObj || this);
+    return new Promise((resolve, reject) => {
+      client.once('response', r => {
+        if(t[cmd]) r = t[cmd](r);
+        //console.log(...pfx, r);
+        resolve(r);
+      });
+
+      client.sendCommand(cmd, params);
+    });
+  };
   return async function(params = {}) {
     let client = getConnection(this);
     await client.sendCommand(cmd, params);
     let r = await client.waitFor('response');
-    let t = { methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
     if(t[cmd]) r = t[cmd](r);
     console.log(`RESPONSE to '${cmd}'`, r);
     return r;
   };
-};
+}
 
 export function SerializeValue(value, source = false) {
   const type = typeof value;
@@ -895,6 +937,7 @@ export default {
   Commands: RPCServerEndpoint,
   Socket: RPCSocket,
   Api: RPCApi,
+  Factory: RPCFactory,
   MessageReceiver,
   MessageTransmitter,
   MessageTransceiver,
