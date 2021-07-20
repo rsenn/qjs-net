@@ -312,7 +312,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       break;
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_ESTABLISHED: {
-      // printf("callback ESTABLISHED\n");
+      printf("callback %s\n", minnet_callback_name(reason));
       if(server_cb_connect.func_obj) {
         JSValue ws_obj = get_websocket_obj(server_cb_connect.ctx, wsi);
         call_ws_callback(&server_cb_connect, 1, &ws_obj);
@@ -399,37 +399,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       break;
     }
 
-      /* case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
-         // printf("callback FILTER_NETWORK_CONNECTION\n");
-         break;
-       }
-
-       case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
-         // printf("callback SERVER_NEW_CLIENT_INSTANTIATED\n");
-         break;
-       }
-       case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
-         // printf("callback OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS\n");
-         break;
-       }
-       case LWS_CALLBACK_WSI_CREATE: {
-         // printf("callback WSI_CREATE\n");
-         break;
-       }
-       case LWS_CALLBACK_LOCK_POLL: {
-         break;
-       }
-       case LWS_CALLBACK_UNLOCK_POLL: {
-         break;
-       }
-       case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
-         // printf("callback HTTP_BIND_PROTOCOL\n");
-         break;
-       }
-       case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
-         // printf("callback HTTP_DROP_PROTOCOL\n");
-         break;
-       }
+      /*
        case LWS_CALLBACK_WSI_DESTROY: {
          // printf("callback LWS_CALLBACK_WSI_DESTROY %d\n",
          // lws_get_socket_fd(in));
@@ -437,14 +407,13 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
        }*/
 
     default: {
-      minnet_print_unhandled(reason);
+      //  minnet_print_unhandled(reason);
       break;
-      // printf("Unknown lws callback %d\n", reason);
     }
   }
-  return lws_http_callback(wsi, reason, user, in, len);
+  // return lws_http_callback(wsi, reason, user, in, len);
 
-  //  return lws_callback_http_dummy(wsi, reason, user, in, len);
+  return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
 
 static struct lws_http_mount*
@@ -781,7 +750,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       break;
     }
     default: {
-      minnet_print_unhandled(reason);
+      // minnet_print_unhandled(reason);
       break;
     }
   }
