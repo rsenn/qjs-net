@@ -814,11 +814,9 @@ export function getPrototypeName(proto) {
 }
 
 export function MakeCommandFunction(cmd, connection) {
-  return async function(...args) {
+  return function(...args) {
     connection.sendCommand(cmd, ...args);
-    let response = await connection.waitFor('response');
-    console.debug(`Command '${cmd}' proxy`, response);
-    return response;
+    return connection.waitFor('response').then(LogWrap(`RESPONSE to '${cmd}'`));
   };
 }
 
