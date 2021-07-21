@@ -10,6 +10,16 @@ let sockId;
 
 extendArray(Array.prototype);
 
+export const LogWrap = (globalThis.LogWrap = function LogWrap(log) {
+  if(typeof log == 'string') {
+    let str = log;
+    log = (...args) => console.log(str, ...args);
+  } else if(!log) {
+    log = (...args) => console.log(...args);
+  }
+  return (value, ...args) => (log(value, ...args), value);
+});
+
 export const VfnAdapter = vfn => ({
   get: k => vfn(k),
   set: (k, v) => vfn(k, v)
@@ -285,7 +295,7 @@ export class Connection extends MessageTransceiver {
       return this.exception;
     }
     let response = this.processMessage(data);
-    this.log('Connection.onmessage', { data, response });
+    //this.log('Connection.onmessage', { data, response });
     if(isThenable(response)) response.then(r => this.sendMessage(r));
     else if(response !== undefined) this.sendMessage(response);
   }
@@ -295,12 +305,12 @@ export class Connection extends MessageTransceiver {
     throw new Error('Virtual method');
   }
 
-  onconnect() {
-    this.log('Connection.onconnect');
-  }
-  onopen() {
-    this.log('Connection.onopen');
-  }
+  onconnect = LogWrap('Connection.onconnect');
+  onopen = LogWrap('Connection.onopen');
+
+  /*  onopen(arg) {
+    this.log('Connection.onopen', { arg });
+  }*/
 
   onpong(data) {
     this.log('Connection.onpong:', data);
@@ -323,7 +333,7 @@ export class Connection extends MessageTransceiver {
   }
 
   sendMessage(obj) {
-    this.log('Connection.sendMessage', obj);
+    //this.log('Connection.sendMessage', obj);
     if(typeof obj == 'object')
       if(typeof obj.seq == 'number') {
         if(this.messages && this.messages.requests) this.messages.requests[obj.seq] = obj;
@@ -492,10 +502,10 @@ export class RPCServer extends Connection {
     let fn,
       ret = null;
     if(!('command' in data)) return statusResponse(false, `No command specified`);
-    const { command, seq } = data;
+    const { command, seq, params } = data;
     const { commands } = this;
     fn = commands[command];
-    this.log('RPCServer.processMessage', { data, command, seq, fn });
+    this.log('RPCServer.processMessage', { command, seq, params });
     if(typeof seq == 'number') this.messages.requests[seq] = data;
     if(typeof fn == 'function') return fn.call(this, data);
     switch (command) {
@@ -555,7 +565,7 @@ export class RPCClient extends Connection {
 }
 
 define(RPCClient.prototype, { [Symbol.toStringTag]: 'RPCClient' });
-define(RPCClient.prototype, EventEmitter.prototype, { [Symbol.asyncIterator]: EventEmitter.prototype[Symbol.asyncIterator] });
+define(Connection.prototype, EventEmitter.prototype, { [Symbol.asyncIterator]: EventEmitter.prototype[Symbol.asyncIterator] });
 
 /**
  * @class Creates new RPC socket
@@ -584,7 +594,12 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
             ...args
           );
       }
-    : console.log; */ (...args) => console.log(...args);
+    : console.log; */ (...args) => {
+    let tok = (args[0] || '').replace(/[^A-Za-z0-9_].*/g, '');
+
+    if(DEBUG[tok]) console.debug(...args);
+    else console.log(...args);
+  };
 
   define(instance, {
     get fd() {
