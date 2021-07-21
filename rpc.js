@@ -295,14 +295,13 @@ export class Connection extends MessageTransceiver {
     throw new Error('Virtual method');
   }
 
-  onconnect = LogWrap('Log <onconnect>');
-  onopen = LogWrap('Log <onopen>');
-  // onclose = LogWrap('Log <onopen>');
-  /*
+  onconnect() {
+    this.log('Connection.onconnect');
+  }
   onopen() {
     this.log('Connection.onopen');
   }
-*/
+
   onpong(data) {
     this.log('Connection.onpong:', data);
   }
@@ -332,6 +331,7 @@ export class Connection extends MessageTransceiver {
         obj.seq = this.makeSeq();
       }
     let msg = typeof obj != 'string' ? this.codec.encode(obj) : obj;
+
     this.socket.send(msg);
   }
 
@@ -530,8 +530,8 @@ export class RPCClient extends Connection {
     this.connected = true;
     RPCClient.set.add(this);
     //this.log('RPCClient.constructor', { socket, instance, log, codec, classes } /*, new Error().stack.replace(/Error\n?/, '')*/);
-    this.on('error', LogWrap('ERROR'));
-    this.on('response', LogWrap('RESPONSE'));
+    this.on('error', e => console.error('RPCClient', e));
+    this.on('response', r => console.log('RPCClient.onresponse', r));
 
     Object.defineProperties(this, { api: { get: memoize(() => new RPCApi(this)) } });
   }
