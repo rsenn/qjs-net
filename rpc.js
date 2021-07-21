@@ -323,6 +323,7 @@ export class Connection extends MessageTransceiver {
   }
 
   sendMessage(obj) {
+    this.log('Connection.sendMessage', obj);
     if(typeof obj == 'object')
       if(typeof obj.seq == 'number') {
         if(this.messages && this.messages.requests) this.messages.requests[obj.seq] = obj;
@@ -330,17 +331,16 @@ export class Connection extends MessageTransceiver {
         obj.seq = this.makeSeq();
       }
     let msg = typeof obj != 'string' ? this.codec.encode(obj) : obj;
-    this.log('Connection.sendMessage', msg);
     this.socket.send(msg);
   }
 
   sendCommand(command, params = {}) {
     let message = { command, ...params };
+    this.log('Connection.sendCommand', { command, params, message });
     if(typeof params == 'object' && params != null && typeof params.seq != 'number') params.seq = this.seq = (this.seq | 0) + 1;
     if(this.messages && this.messages.requests) if (typeof params.seq == 'number') this.messages.requests[params.seq] = message;
     if(this.messages && this.messages.requests) this.messages.requests[params.seq] = message;
     this.sendMessage(message);
-    this.log('Connection.sendCommand', { command, params, message });
   }
 
   static getCallbacks(instance, verbosity = 0) {
@@ -587,7 +587,9 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
 
   define(instance, {
     get fd() {
-      return Object.keys(this.fdlist)[0] ?? -1;
+      let ret = Object.keys(this.fdlist)[0] ?? -1;
+      if(!isNaN(+ret)) ret = +ret;
+      return ret;
     },
     get socket() {
       return this.fdlist[this.fd]?.socket;
