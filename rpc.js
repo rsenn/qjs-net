@@ -115,7 +115,7 @@ export function EventLogger(instance = {}, callback = (name, event, thisObj) => 
 }
 
 /** @interface MessageReceiver */
-export class MessageReceiver {
+export class MessageReceiver extends EventEmitter {
   static [Symbol.hasInstance](instance) {
     return 'onmessage' in instance;
   }
@@ -565,7 +565,6 @@ export class RPCClient extends Connection {
 }
 
 define(RPCClient.prototype, { [Symbol.toStringTag]: 'RPCClient' });
-define(Connection.prototype, EventEmitter.prototype, { [Symbol.asyncIterator]: EventEmitter.prototype[Symbol.asyncIterator] });
 
 /**
  * @class Creates new RPC socket
