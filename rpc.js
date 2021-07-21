@@ -276,7 +276,7 @@ export class Connection extends MessageTransceiver {
     let { codec, codecName } = this;
     if(!msg) return;
     if(typeof msg == 'string' && msg.trim() == '') return;
-    this.log('Connection.onmessage', { msg, codec, codecName });
+    //this.log('Connection.onmessage', { msg, codec, codecName });
     let data;
     try {
       data = codec.decode((msg && msg.data) || msg);
@@ -285,24 +285,23 @@ export class Connection extends MessageTransceiver {
       return this.exception;
     }
     let response = this.processMessage(data);
-    this.log('Connection.onmessage', { data, response });
+    // this.log('Connection.onmessage', { data, response });
     if(isThenable(response)) response.then(r => this.sendMessage(r));
     else if(response !== undefined) this.sendMessage(response);
   }
 
   processMessage(data) {
-    this.log('Connection.processMessage', { data });
+    this.log('Connection', '.processMessage', { data });
     throw new Error('Virtual method');
   }
 
-  onconnect() {
-    this.log('Connection.onconnect');
-  }
-
+  onconnect = LogWrap('connect');
+  onopen = LogWrap('open');
+  /*
   onopen() {
     this.log('Connection.onopen');
   }
-
+*/
   onpong(data) {
     this.log('Connection.onpong:', data);
   }
@@ -529,9 +528,9 @@ export class RPCClient extends Connection {
     this.classes = classes;
     this.connected = true;
     RPCClient.set.add(this);
-    this.log('RPCClient.constructor', { socket, instance, log, codec, classes } /*, new Error().stack.replace(/Error\n?/, '')*/);
+    //this.log('RPCClient.constructor', { socket, instance, log, codec, classes } /*, new Error().stack.replace(/Error\n?/, '')*/);
     this.on('error', LogWrap('ERROR'));
-    //  this.on('response', LogWrap('RESPONSE'));
+    this.on('response', LogWrap('RESPONSE'));
 
     Object.defineProperties(this, { api: { get: memoize(() => new RPCApi(this)) } });
   }
