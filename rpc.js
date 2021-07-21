@@ -33,15 +33,15 @@ export const Memoize = (globalThis.memoize = function memoize(fn) {
   return Object.freeze(self);
 });
 
-export const DebugFlags = (globalThis.DebugFlags = Util.memoize((environ = (globalThis.process && process.env['DEBUG']) || '') =>
-  environ
-    .split(/[^A-Za-z0-9_]+/g)
-    .filter(n => n !== '')
-    .reduce((acc, n) => {
-      acc[n] = true;
-      return acc;
-    }, {})
-));
+export const DebugFlags = (globalThis.DebugFlags = Util.memoize((environ = (globalThis.process && process.env['DEBUG']) || '') => {
+  let a = Array.isArray(environ) ? environ : environ.split(/[^A-Za-z0-9_]+/g);
+  a = a.filter(n => n !== '');
+  a = a.reduce((acc, n) => {
+    acc[n] = true;
+    return acc;
+  }, {});
+  return a;
+}));
 
 globalThis.GetClasses = function* GetClasses(obj) {
   let keys = GetKeys(obj);
@@ -196,16 +196,27 @@ export function RPCObject(id, connection) {
   let obj = define(new.target ? this : new RPCObject(id), { connection, id });
   return api.methods({ id }).then(r => Object.assign(obj, r));
 }
+RPCObject.prototype[Symbol.toStringTag] = 'RPCObject';
 
 export function RPCFactory(api) {
-  function Factory(className) {
-    return api.new({ class: className });
+  async function Factory(opts) {
+    if(typeof opts == 'string') {
+      const name = opts;
+      opts = { class: name };
+    }
+    let instance = await api.new(opts);
+    let { connection } = api;
+    let obj = Object.setPrototypeOf({ instance, connection }, RPCObject.prototype);
+
+    define(obj, await api.methods(instance));
+    return obj;
   }
 
   return Factory;
 }
+RPCFactory.prototype = new Function();
 
-RPCObject.prototype[Symbol.toStringTag] = 'RPCObject';
+RPCFactory.prototype[Symbol.toStringTag] = 'RPCFactory';
 
 /**
  * @interface Connection
@@ -850,32 +861,32 @@ function DeserializeMap(e) {
 function DeserializeObject(e) {
   return Object.fromEntries(DeserializeEntries(e));
 }
-function ForwardMethods(e, ret = {}) {
+function ForwardMethods(e, ret = {}, thisObj) {
   let keys = DeserializeKeys(e);
   for(let key of keys) {
-    ret[key] = MakeCommandFunction(key, o => o.connection);
+    ret[key] = MakeCommandFunction(key, o => o.connection, thisObj);
   }
   // console.log(`ForwardMethods`, { e, keys, ret });
   return ret;
 }
 
-function ForwardObject(e) {
-  let obj = ForwardMethods(e, {});
-  console.log(`ForwardObject`, { e, obj });
+function ForwardObject(e, thisObj) {
+  let obj = ForwardMethods(e, {}, thisObj);
+  console.log(`ForwardObject`, { e, obj, thisObj });
   return obj;
 }
 
 function MakeCommandFunction(cmd, getConnection, thisObj, t) {
   const pfx = [`RESPONSE to`, typeof cmd == 'symbol' ? cmd : `"${cmd}"`];
-  t ??= { /*new: ForwardObject, */ methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
+  t ??= { methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
   if(typeof getConnection != 'function') getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
   //console.log("MakeCommandFunction",{cmd,getConnection,thisObj});
   return function(params = {}) {
-    let client = getConnection(thisObj || this);
+    thisObj = thisObj || this;
+    let client = getConnection(thisObj);
     return new Promise((resolve, reject) => {
       client.once('response', r => {
         if(t[cmd]) r = t[cmd](r);
-        //console.log(...pfx, r);
         resolve(r);
       });
 
