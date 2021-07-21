@@ -285,7 +285,7 @@ export class Connection extends MessageTransceiver {
       return this.exception;
     }
     let response = this.processMessage(data);
-    // this.log('Connection.onmessage', { data, response });
+    this.log('Connection.onmessage', { data, response });
     if(isThenable(response)) response.then(r => this.sendMessage(r));
     else if(response !== undefined) this.sendMessage(response);
   }
@@ -295,8 +295,9 @@ export class Connection extends MessageTransceiver {
     throw new Error('Virtual method');
   }
 
-  onconnect = LogWrap('connect');
-  onopen = LogWrap('open');
+  onconnect = LogWrap('Log <onconnect>');
+  onopen = LogWrap('Log <onopen>');
+  // onclose = LogWrap('Log <onopen>');
   /*
   onopen() {
     this.log('Connection.onopen');
@@ -494,7 +495,7 @@ export class RPCServer extends Connection {
     const { command, seq } = data;
     const { commands } = this;
     fn = commands[command];
-    //this.log('RPCServer.processMessage', { data, command, seq, fn });
+    this.log('RPCServer.processMessage', { data, command, seq, fn });
     if(typeof seq == 'number') this.messages.requests[seq] = data;
     if(typeof fn == 'function') return fn.call(this, data);
     switch (command) {
@@ -567,10 +568,10 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
   if(!new.target) return new RPCSocket(url, service, verbosity);
 
   const instance = new.target ? this : new RPCSocket(url, service, verbosity);
-  const log = console.config
+  const log = /*console.config
     ? (msg, ...args) => {
         const { console } = globalThis;
-        console /*instance.log ??*/
+        console 
           .log(
             { msg },
             console.config({
@@ -583,7 +584,7 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
             ...args
           );
       }
-    : console.log; /*(...args) => console.log(...args)*/
+    : console.log; */ (...args) => console.log(...args);
 
   define(instance, {
     get fd() {
