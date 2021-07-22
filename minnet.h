@@ -1,5 +1,7 @@
 #include "quickjs.h"
 #include "cutils.h"
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <libwebsockets.h>
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))

@@ -2,8 +2,23 @@
 #include "list.h"
 #include <assert.h>
 #include <curl/curl.h>
-#include <netinet/in.h>
 #include <sys/time.h>
+
+/*
+ * Unlike ws, http is a stateless protocol.  This pss only exists for the
+ * duration of a single http transaction.  With http/1.1 keep-alive and http/2,
+ * that is unrelated to (shorter than) the lifetime of the network connection.
+ */
+struct pss {
+  char path[128];
+
+  int times;
+  int budget;
+
+  int content_lines;
+};
+
+static int interrupted;
 
 #ifdef JS_SHARED_LIBRARY
 #define JS_INIT_MODULE js_init_module
@@ -228,7 +243,13 @@ static struct lws_protocols lws_server_protocols[] = {
 
 static int
 lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+  struct pss* pss = (struct pss*)user;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE], *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
+  time_t t;
+  int n;
+#if defined(LWS_HAVE_CTIME_R)
+  char date[32];
+#endif
 
   switch(reason) {
 
@@ -280,6 +301,151 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
         }
       }
 
+      break;
+    }
+    case LWS_CALLBACK_HTTP: {
+
+      /*
+       * If you want to know the full url path used, you can get it
+       * like this
+       *
+       * n = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI);
+       *
+       * The base path is the first (n - strlen((const char *)in))
+       * chars in buf.
+       */
+
+      /*
+       * In contains the url part after the place the mount was
+       * positioned at, eg, if positioned at "/dyn" and given
+       * "/dyn/mypath", in will contain /mypath
+       */
+      lws_snprintf(pss->path, sizeof(pss->path), "%s", (const char*)in);
+
+      lws_get_peer_simple(wsi, (char*)buf, sizeof(buf));
+      lwsl_notice("%s: HTTP: connection %s, path %s\n", __func__, (const char*)buf, pss->path);
+
+      /*
+       * Demonstrates how to retreive a urlarg x=value
+       */
+
+      {
+        char value[100];
+        int z = lws_get_urlarg_by_name_safe(wsi, "x", value, sizeof(value) - 1);
+
+        if(z >= 0)
+          lwsl_hexdump_notice(value, (size_t)z);
+      }
+
+      /*
+       * prepare and write http headers... with regards to content-
+       * length, there are three approaches:
+       *
+       *  - http/1.0 or connection:close: no need, but no pipelining
+       *  - http/1.1 or connected:keep-alive
+       *     (keep-alive is default for 1.1): content-length required
+       *  - http/2: no need, LWS_WRITE_HTTP_FINAL closes the stream
+       *
+       * giving the api below LWS_ILLEGAL_HTTP_CONTENT_LEN instead of
+       * a content length forces the connection response headers to
+       * send back "connection: close", disabling keep-alive.
+       *
+       * If you know the final content-length, it's always OK to give
+       * it and keep-alive can work then if otherwise possible.  But
+       * often you don't know it and avoiding having to compute it
+       * at header-time makes life easier at the server.
+       */
+      if(lws_add_http_common_headers(wsi,
+                                     HTTP_STATUS_OK,
+                                     "text/html",
+                                     LWS_ILLEGAL_HTTP_CONTENT_LEN, /* no content len */
+                                     &p,
+                                     end))
+        return 1;
+      if(lws_finalize_write_http_header(wsi, start, &p, end))
+        return 1;
+
+      pss->times = 0;
+      pss->budget = atoi((char*)in + 1);
+      pss->content_lines = 0;
+      if(!pss->budget)
+        pss->budget = 10;
+
+      /* write the body separately */
+      lws_callback_on_writable(wsi);
+
+      return 0;
+    }
+    case LWS_CALLBACK_HTTP_WRITEABLE: {
+
+      if(!pss || pss->times > pss->budget)
+        break;
+
+
+      n = LWS_WRITE_HTTP;
+      if(pss->times == pss->budget)
+        n = LWS_WRITE_HTTP_FINAL;
+
+      if(!pss->times) {
+        /*
+         * the first time, we print some html title
+         */
+        t = time(NULL);
+        /*
+         * to work with http/2, we must take care about LWS_PRE
+         * valid behind the buffer we will send.
+         */
+        p += lws_snprintf((char*)p,
+                          lws_ptr_diff_size_t(end, p),
+                          "<html>"
+                          "<head><meta charset=utf-8 "
+                          "http-equiv=\"Content-Language\" "
+                          "content=\"en\"/></head><body>"
+                          "<img src=\"/libwebsockets.org-logo.svg\">"
+                          "<br>Dynamic content for '%s' from mountpoint."
+                          "<br>Time: %s<br><br>"
+                          "</body></html>",
+                          pss->path,
+#if defined(LWS_HAVE_CTIME_R)
+                          ctime_r(&t, date));
+#else
+                          ctime(&t));
+#endif
+      } else {
+        /*
+         * after the first time, we create bulk content.
+         *
+         * Again we take care about LWS_PRE valid behind the
+         * buffer we will send.
+         */
+
+        while(lws_ptr_diff(end, p) > 80)
+          p += lws_snprintf(
+              (char*)p, lws_ptr_diff_size_t(end, p), "%d.%d: this is some content... ", pss->times, pss->content_lines++);
+
+        p += lws_snprintf((char*)p, lws_ptr_diff_size_t(end, p), "<br><br>");
+      }
+
+      pss->times++;
+      if(lws_write(wsi, (uint8_t*)start, lws_ptr_diff_size_t(p, start), (enum lws_write_protocol)n) != lws_ptr_diff(p, start))
+        return 1;
+
+      /*
+       * HTTP/1.0 no keepalive: close network connection
+       * HTTP/1.1 or HTTP1.0 + KA: wait / process next transaction
+       * HTTP/2: stream ended, parent connection remains up
+       */
+      if(n == LWS_WRITE_HTTP_FINAL) {
+        if(lws_http_transaction_completed(wsi))
+          return -1;
+      } else
+        lws_callback_on_writable(wsi);
+
+      return 0;
+    }
+
+    default: {
+      minnet_print_unhandled(reason);
       break;
     }
   }
@@ -477,6 +643,25 @@ minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValu
   if(JS_IsString(opt_ssl_ca))
     info->client_ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
 }
+static const struct lws_http_mount mount_dyn = {
+    /* .mount_next */ NULL,   /* linked-list "next" */
+    /* .mountpoint */ "/dyn", /* mountpoint URL */
+    /* .origin */ NULL,       /* protocol */
+    /* .def */ NULL,
+    /* .protocol */ "http",
+    /* .cgienv */ NULL,
+    /* .extra_mimetypes */ NULL,
+    /* .interpret */ NULL,
+    /* .cgi_timeout */ 0,
+    /* .cache_max_age */ 0,
+    /* .auth_mask */ 0,
+    /* .cache_reusable */ 0,
+    /* .cache_revalidate */ 0,
+    /* .cache_intermediaries */ 0,
+    /* .origin_protocol */ LWSMPRO_CALLBACK, /* dynamic */
+    /* .mountpoint_len */ 4,                 /* char count */
+    /* .basic_auth_login_file */ NULL,
+};
 
 static JSValue
 minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -528,9 +713,9 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
 
   minnet_ws_sslcert(ctx, &info, options);
+  const struct lws_http_mount** ptr = &info.mounts;
 
   if(JS_IsArray(ctx, opt_mounts)) {
-    const struct lws_http_mount** ptr = &info.mounts;
     uint32_t i;
 
     for(i = 0;; i++) {
@@ -543,6 +728,9 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       ptr = (const struct lws_http_mount**)&(*ptr)->mount_next;
     }
   }
+
+  *ptr = &mount_dyn;
+  ptr = &mount_dyn.mount_next;
 
   context = lws_create_context(&info);
 
@@ -573,7 +761,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     for(mount = info.mounts; mount; mount = next) {
       next = mount->mount_next;
       JS_FreeCString(ctx, mount->mountpoint);
-      js_free(ctx, mount->origin);
+      js_free(ctx, (void*)mount->origin);
       if(mount->def)
         JS_FreeCString(ctx, mount->def);
       js_free(ctx, (void*)mount);
