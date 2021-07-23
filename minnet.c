@@ -399,6 +399,8 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     printf("io_handler #%zu fd = %d, events = %s, revents = %s, context = %p\n", seq, pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
 
     lws_service_fd(context, &pfd);
+
+    values[2] = pfd.revents;
   }
 
   /*if (calls <= 100)
@@ -420,7 +422,7 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
   //  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
-  printf("make_handler #%u fd = %d, events = 0x%04x,   context = %p\n", values[3], values[0], values[1], (void*)values[2]);
+  printf("make_handler #%u fd = %d, events = 0x%04x, revents = 0x%04x, context = %p\n", values[4], values[0], values[1], values[2], (void*)values[3]);
   JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
