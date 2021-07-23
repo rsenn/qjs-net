@@ -353,16 +353,16 @@ static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   int32_t rw = 0;
   uint32_t calls = ++func_data[3].u.int32;
-  MinnetPollFd pfd = {(int)JS_VALUE_GET_FLOAT64(func_data[0]), (int)JS_VALUE_GET_FLOAT64(func_data[1]), 0};
+  MinnetPollFd pfd = {.fd = (int)JS_VALUE_GET_FLOAT64(func_data[0]), .events = (int)JS_VALUE_GET_FLOAT64(func_data[1]), .revents = 0};
   //  struct lws_pollargs args = *(struct lws_pollargs*)&JS_VALUE_GET_PTR(func_data[4]);
   struct lws_context* context = value2ptr(ctx, func_data[2]);
-
-  printf("io_handler fd = %d, events = 0x%04x context = %p\n", pfd.fd, pfd.events, context);
 
   if(argc >= 1)
     JS_ToInt32(ctx, &rw, argv[0]);
 
-  pfd.revents = rw ? POLLOUT : POLLIN;
+  pfd.revents = rw == WRITE_HANDLER ? POLLOUT : POLLIN;
+
+  printf("io_handler fd = %d, events = 0x%04x, revents = %04x, context = %p\n", pfd.fd, pfd.events, pfd.revents, context);
 
   if(pfd.events != (POLLIN | POLLOUT) || poll(&pfd, 1, 0) > 0)
     lws_service_fd(context, &pfd);
