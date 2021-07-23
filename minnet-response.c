@@ -12,10 +12,10 @@ minnet_response_dump(JSContext* ctx, struct http_response* res) {
   char *url = "nil", *type = "nil";
   JS_ToInt32(ctx, &status, res->status);
   ok = JS_ToBool(ctx, res->ok);
-  // if(JS_IsString(res->url))
-  url = JS_ToCString(ctx, res->url);
-  //  if(JS_IsString(res->type))
-  type = JS_ToCString(ctx, res->type);
+  if(JS_VALUE_GET_TAG(res->url))
+    url = JS_ToCString(ctx, res->url);
+  if(JS_VALUE_GET_TAG(res->type))
+    type = JS_ToCString(ctx, res->type);
   printf(" status = %d, ok = %d, url = %s, type = %s", status, ok, url, type);
   printf(" }\n");
   /*
