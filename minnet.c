@@ -385,14 +385,15 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     if(poll(&x, 1, 0) < 0) {
       printf("poll error: %s\n", strerror(errno));
     }
+    if(x.revents & PIO)
+      values[2] = x.revents & PIO;
   }
 
-  printf("\nio_handler #%zu fd = %d, events = %s, revents = %s, context = %p", seq, pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
+  printf("\nio_handler #%zu fd = %d, events = %s, revents = %s, context = %p", seq, x.fd, io_events(x.events), io_events(x.revents), context);
   fflush(stdout);
 
-  if(pfd.revents & PIO) {
-    lws_service_fd(context, &pfd);
-    values[2] = pfd.revents;
+  if(x.revents & PIO) {
+    lws_service_fd(context, &x);
   }
 
   /*if (calls <= 100)
