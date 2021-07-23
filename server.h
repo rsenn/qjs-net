@@ -26,4 +26,4 @@ http_header_free(JSContext* ctx, struct http_header* hdr) {
 
 void js_std_loop(JSContext* ctx);
 
-#endif
+#endif /* MINNET_SERVER_H */

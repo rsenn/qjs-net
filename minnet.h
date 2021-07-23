@@ -1,7 +1,8 @@
+#ifndef MINNET_H
+#define MINNET_H
+
 #include "cutils.h"
 #include "quickjs.h"
-#include <netinet/in.h>
-#include <sys/socket.h>
 #include <libwebsockets.h>
 
 #ifdef JS_SHARED_LIBRARY
@@ -26,8 +27,7 @@ extern JSValue minnet_log, minnet_log_this;
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
 
-void         lws_print_unhandled(int);
-JSValue      minnet_get_log(JSContext*, JSValue this_val);
-JSValue      minnet_set_log(JSContext*, JSValue this_val, int argc, JSValue argv[]);
-JSValue      minnet_make_handler(JSContext*, struct lws_pollargs* pfd, struct lws* wsi, int magic);
-void         minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* pfd, JSValue out[2]);
+void lws_print_unhandled(int);
+void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* pfd, JSValue out[2]);
+
+#endif /* MINNET_H */

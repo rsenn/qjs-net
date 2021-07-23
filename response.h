@@ -1,6 +1,8 @@
 #ifndef MINNET_RESPONSE_H
 #define MINNET_RESPONSE_H
 
+#include "quickjs.h"
+
 /* class Response */
 
 typedef struct {

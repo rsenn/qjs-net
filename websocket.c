@@ -4,6 +4,45 @@
 
 JSClassID minnet_ws_class_id;
 
+static JSValue
+create_websocket_obj(JSContext* ctx, struct lws* wsi) {
+  MinnetWebsocket* res;
+  JSValue ws_obj = JS_NewObjectClass(ctx, minnet_ws_class_id);
+
+  if(JS_IsException(ws_obj))
+    return JS_EXCEPTION;
+
+  if(!(res = js_mallocz(ctx, sizeof(*res)))) {
+    JS_FreeValue(ctx, ws_obj);
+    return JS_EXCEPTION;
+  }
+
+  res->lwsi = wsi;
+  res->ref_count = 1;
+
+  JS_SetOpaque(ws_obj, res);
+
+  lws_set_wsi_user(wsi, JS_VALUE_GET_OBJ(JS_DupValue(ctx, ws_obj)));
+
+  return ws_obj;
+}
+
+JSValue
+minnet_ws_object(JSContext* ctx, struct lws* wsi) {
+  JSObject* obj;
+
+  if((obj = lws_wsi_user(wsi))) {
+    JSValue ws_obj = JS_MKPTR(JS_TAG_OBJECT, obj);
+    MinnetWebsocket* res = JS_GetOpaque2(ctx, ws_obj, minnet_ws_class_id);
+
+    res->ref_count++;
+
+    return JS_DupValue(ctx, ws_obj);
+  }
+
+  return create_websocket_obj(ctx, wsi);
+}
+
 void
 minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValueConst options) {
   JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");
