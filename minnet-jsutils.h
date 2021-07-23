@@ -76,11 +76,18 @@ ptr32(uint32_t lo, uint32_t hi) {
 }
 
 static inline void*
-ptr32values(JSContext* ctx, JSValueConst values[2]) {
+values32ptr(JSContext* ctx, JSValueConst values[2]) {
   int32_t lo, hi;
   JS_ToInt32(ctx, &lo, values[0]);
   JS_ToInt32(ctx, &hi, values[1]);
   return ptr32(lo, hi);
+}
+
+static inline JSValue
+ptr32value(JSContext* ctx, const void* ptr, int index) {
+  Pointer r = {ptr};
+
+  return JS_NewInt32(ctx, r.s32[index]);
 }
 
 #endif /* MINNET_JS_UTILS_H */
