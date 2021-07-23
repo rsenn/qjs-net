@@ -378,10 +378,10 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
 static JSValue
 make_handler(JSContext* ctx, struct lws_pollargs* args, struct lws* wsi, int magic) {
   struct lws_context* context = lws_get_context(wsi);
-  JSValueConst data[] = {JS_NewInt32(ctx, args->fd), JS_NewInt32(ctx, args->events), ptr32value(ctx, context, 0), ptr32value(ctx, context, 1)};
+  JSValueConst data[] = {JS_NewInt32(ctx, args->fd), JS_NewInt32(ctx, args->events), ptr2value(ctx, context)};
   //  printf("make_handler fd = %d, events = 0x%04x context = %p\n", args->fd, args->events, context);
-  printf("make_handler fd = %d, events = 0x%04x context = %p\n", JS_VALUE_GET_INT(data[0]), JS_VALUE_GET_INT(data[1]), value32ptr(ctx, &data[2]));
-  return JS_NewCFunctionData(ctx, io_handler, 0, magic, 4, data);
+  printf("make_handler fd = %d, events = 0x%04x context = %p\n", JS_VALUE_GET_INT(data[0]), JS_VALUE_GET_INT(data[1]), values32ptr(ctx, &data[2]));
+  return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
 
 void

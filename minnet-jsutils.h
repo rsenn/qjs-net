@@ -67,6 +67,28 @@ ptr(const void* ptr) {
   return r;
 }
 
+static inline JSValue
+ptr2value(JSContext* ctx, const void* ptr) {
+  Pointer r = {ptr};
+  char buf[128];
+  size_t len;
+  len = snprintf(buf, sizeof(buf), "0x%llx", (long long)ptr);
+  return JS_NewStringLen(ctx, buf, len);
+}
+
+static inline void*
+value2ptr(JSContext* ctx, JSValueConst value) {
+  Pointer r = {ptr};
+
+  if(JS_ToIndex(ctx, &r.u64, value)) {
+    const char* str = JS_ToCString(ctx, value);
+    BOOL hex = str[0] == '0' && str[1] == 'x';
+
+    r.u64 = strtoull(hex ? str + 2 : str, 0, hex ? 16 : 10);
+  }
+  return r.p;
+}
+
 static inline void*
 ptr32(uint32_t lo, uint32_t hi) {
   Pointer r = {0};
@@ -77,17 +99,16 @@ ptr32(uint32_t lo, uint32_t hi) {
 
 static inline void*
 values32ptr(JSContext* ctx, JSValueConst values[2]) {
-  int32_t lo, hi;
-  JS_ToInt32(ctx, &lo, values[0]);
-  JS_ToInt32(ctx, &hi, values[1]);
+  uint32_t lo, hi;
+  JS_ToUint32(ctx, &lo, values[0]);
+  JS_ToUint32(ctx, &hi, values[1]);
   return ptr32(lo, hi);
 }
 
 static inline JSValue
 ptr32value(JSContext* ctx, const void* ptr, int index) {
   Pointer r = {ptr};
-
-  return JS_NewInt32(ctx, r.s32[index]);
+  return JS_NewUint32(ctx, r.u32[index]);
 }
 
 #endif /* MINNET_JS_UTILS_H */
