@@ -377,7 +377,6 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   pfd.revents = revents & PIO;
 
   struct lws_context* context = value2ptr(ctx, func_data[3]);
-  printf("io_handler fd = %d, events = %s, revents = %s, context = %p\n", pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
 
   if(argc >= 1)
     JS_ToInt32(ctx, &wr, argv[0]);
@@ -397,8 +396,11 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     }
   }
 
-  if(pfd.revents & PIO)
+  if(pfd.revents & PIO) {
+    printf("io_handler fd = %d, events = %s, revents = %s, context = %p\n", pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
+
     lws_service_fd(context, &pfd);
+  }
 
   /*if (calls <= 100)
     printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
