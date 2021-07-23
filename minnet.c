@@ -364,6 +364,7 @@ io_events(int events) {
 
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
+  struct pollfd x = {0, 0, 0};
   struct lws_context* context;
   int wr = READ_HANDLER, flags;
   int fd, events, revents;
@@ -398,7 +399,9 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
 
   printf("\nio_handler #%zu fd = %d, events = %s, revents = %s, context = %p", seq, x.fd, io_events(x.events), io_events(x.revents), context);
   fflush(stdout);
-  11 if(revents & PIO) { lws_service_fd(context, &x); }
+  if(revents & PIO) {
+    lws_service_fd(context, &x);
+  }
 
   /*if (calls <= 100)
     printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
