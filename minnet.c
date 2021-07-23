@@ -417,7 +417,7 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   uint32_t seq = ++handler_seq;
   struct lws_context* context = lws_get_context(wsi);
   intptr_t values[] = {fd, events, 0, (intptr_t)context, seq};
-  JSValue buffer = JS_NewArrayBufferCopy(ctx, (const uint8_t*)values, sizeof(int32_t) * 3);
+  JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
   //  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
   printf("make_handler #%u fd = %d, events = 0x%04x,   context = %p\n", values[3], values[0], values[1], values[2]);
