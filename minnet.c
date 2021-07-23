@@ -365,12 +365,12 @@ io_events(int events) {
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   struct pollfd x = {0, 0, 0};
-  uint32_t seq;
   struct lws_context* context;
-  JS_ToUint32(ctx, &seq, func_data[2]);
-  int32_t wr = READ_HANDLER;
-  size_t len;
+  int wr = READ_HANDLER;
+  size_t seq, len;
   intptr_t* values = JS_GetArrayBuffer(ctx, &len, func_data[0]);
+  assert(len == sizeof(intptr_t) * 5);
+
   MinnetPollFd pfd = {0, 0, 0};
   pfd.fd = values[0];
   pfd.events = values[1];
@@ -420,7 +420,7 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
   //  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
-  printf("make_handler #%u fd = %d, events = 0x%04x,   context = %p\n", values[3], values[0], values[1], values[2]);
+  printf("make_handler #%u fd = %d, events = 0x%04x,   context = %p\n", values[3], values[0], values[1], (void*)values[2]);
   JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
