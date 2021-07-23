@@ -399,7 +399,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath
          */
         lws_snprintf(r->body.path, sizeof(r->body.path), "%s", (const char*)in);
-        if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)) > 0)
+        if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
           r->peer = js_strdup(ctx, buf);
 
         if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
@@ -413,7 +413,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       /*      JSValue response = minnet_response_wrap(ctx, &r->response);
        */
-      printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method, (const char*)in, r->uri, r->body.path);
+      printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method ? r->method : "(null)", r->peer ? r->peer : "(null)", r->uri ? r->uri : "(null)", r->body.path);
 
       { /*  Demonstrates how to retreive a urlarg x=value  */
 
