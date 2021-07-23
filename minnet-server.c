@@ -524,7 +524,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       return 0;
     }
     default: {
-      lws_print_unhandled(reason);
+      // lws_print_unhandled(reason);
       break;
     }
   }
