@@ -6,6 +6,8 @@
 #include "minnet-websocket.h"
 #include "minnet-jsutils.h"
 #include <assert.h>
+#include <errno.h>
+#include <string.h>
 #include <curl/curl.h>
 #include <sys/time.h>
 
@@ -411,7 +413,7 @@ static JSValue
 make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   struct lws_context* context = lws_get_context(wsi);
   JSValueConst data[] = {JS_NewInt64(ctx, fd), JS_NewInt64(ctx, events), JS_NewInt64(ctx, 0), ptr2value(ctx, context)};
-  printf("make_handler fd = %d, events = 0x%04x, prev_events = 0x%04x, context = %p\n", args->fd, args->events, args->prev_events, context);
+  printf("make_handler fd = %d, events = 0x%04x,   context = %p\n", fd, events, context);
   // printf("make_handler fd = %d, events = 0x%04x, context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
