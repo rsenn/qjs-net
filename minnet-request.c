@@ -45,6 +45,8 @@ minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws
   if(!header_alloc(ctx, &r->header, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE)) {
     JS_ThrowOutOfMemory(ctx);
   }
+
+  minnet_response_zero(&r->response);
 }
 
 MinnetRequest*

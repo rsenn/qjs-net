@@ -15,7 +15,12 @@ minnet_response_dump(JSContext* ctx, struct http_response* res) {
   printf("\n}\n");
   fflush(stdout);
 }
-
+void
+minnet_response_zero(struct http_response* res) {
+  res->buffer = 0;
+  res->size = 0;
+  res->status = res->ok = res->url = res->type = JS_UNDEFINED;
+}
 void
 minnet_response_init(JSContext* ctx, MinnetResponse* res, int32_t status, BOOL ok, const char* url, const char* type) {
   res->status = JS_NewInt32(ctx, status);
