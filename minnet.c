@@ -348,21 +348,36 @@ finish:
 
   return resObj;
 }
+static const char* const
+io_events(int events) {
+  switch(events & (POLLIN | POLLOUT)) {
+    case POLLIN | POLLOUT: return "IN|OUT";
+    case POLLIN: return "IN";
+    case POLLOUT: return "OUT";
+  }
+  return "";
+}
 
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
-  int32_t rw = 0;
+  int32_t fd = -1, events = 0;
+  BOOL wr = FALSE;
   uint32_t calls = ++func_data[3].u.int32;
-  MinnetPollFd pfd = {.fd = (int)JS_VALUE_GET_FLOAT64(func_data[0]), .events = (int)JS_VALUE_GET_FLOAT64(func_data[1]), .revents = 0};
-  //  struct lws_pollargs args = *(struct lws_pollargs*)&JS_VALUE_GET_PTR(func_data[4]);
+  MinnetPollFd pfd = {.events = (int)JS_VALUE_GET_FLOAT64(func_data[1]), .revents = 0};
+  JS_ToInt32(ctx, &fd, func_data[0]);
+  pfd.fd = fd;
+  JS_ToInt32(ctx, &events, func_data[1]);
+  pfd.events = events;
+
   struct lws_context* context = value2ptr(ctx, func_data[2]);
 
   if(argc >= 1)
-    JS_ToInt32(ctx, &rw, argv[0]);
+    wr = JS_ToBool(ctx, argv[0]);
 
-  pfd.revents = rw == WRITE_HANDLER ? POLLOUT : POLLIN;
+  pfd.revents = wr ? POLLOUT : POLLIN;
+  pfd.events |= pfd.revents;
 
-  printf("io_handler fd = %d, events = 0x%04x, revents = %04x, context = %p\n", pfd.fd, pfd.events, pfd.revents, context);
+  printf("io_handler fd = %d, events = %s, revents = %s, context = %p\n", pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
 
   if(pfd.events != (POLLIN | POLLOUT) || poll(&pfd, 1, 0) > 0)
     lws_service_fd(context, &pfd);
