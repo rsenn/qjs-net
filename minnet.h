@@ -26,7 +26,7 @@ enum { READ_HANDLER = 0, WRITE_HANDLER };
 typedef struct lws_pollfd MinnetPollFd;
 
 typedef struct http_header {
-  unsigned char *start, *pos, *end;
+  uint8_t *start, *pos, *end;
 } MinnetHttpHeader;
 
 extern JSValue minnet_log, minnet_log_this;

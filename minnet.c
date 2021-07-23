@@ -401,6 +401,17 @@ static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, mi
                                                     JS_CFUNC_DEF("setLog", 1, minnet_set_log)};
 static JSValue request_proto, websocket_proto;
 
+struct http_header*
+header_new(JSContext* ctx, size_t size) {
+  if(size == 0)
+    size = LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE;
+  struct http_header* hdr = js_mallocz(ctx, sizeof(struct http_header) + size);
+
+  hdr->start = (uint8_t*)&hdr[1];
+  hdr->pos = hdr->start;
+  hdr->end = hdr->start + size;
+  return hdr;
+}
 char*
 header_alloc(JSContext* ctx, struct http_header* hdr, size_t size) {
   hdr->start = js_malloc(ctx, size);
@@ -430,10 +441,15 @@ header_realloc(JSContext* ctx, struct http_header* hdr, size_t size) {
 
 void
 header_free(JSContext* ctx, struct http_header* hdr) {
-  js_free(ctx, hdr->start);
-  hdr->start = 0;
-  hdr->pos = 0;
-  hdr->end = 0;
+  uint8_t* start = hdr->start;
+  if(start == (uint8_t*)&hdr[1]) {
+    js_free(ctx, hdr);
+  } else {
+    hdr->start = 0;
+    hdr->pos = 0;
+    hdr->end = 0;
+    js_free(ctx, hdr);
+  }
 }
 enum { REQUEST_METHOD, REQUEST_PEER, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER };
 
