@@ -381,7 +381,7 @@ make_handler(JSContext* ctx, struct lws_pollargs* args, struct lws* wsi, int mag
   struct lws_context* context = lws_get_context(wsi);
   JSValueConst data[] = {JS_NewFloat64(ctx, args->fd), JS_NewFloat64(ctx, args->events | args->prev_events), ptr2value(ctx, context)};
   printf("make_handler fd = %d, events = 0x%04x, prev_events = 0x%04x, context = %p\n", args->fd, args->events, args->prev_events, context);
-  printf("make_handler fd = %d, events = 0x%04x,   context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
+  printf("make_handler fd = %d, events = 0x%04x, context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
 
