@@ -45,7 +45,7 @@ static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 
-static inline void
+static void
 body_dump(const char* n, struct http_body* b) {
   printf("\n\t%s\t{ times = %zx, budget = %zx }", n, b->times, b->budget);
   fflush(stdout);
