@@ -13,6 +13,14 @@ typedef struct JSThreadState {
   void *recv_pipe, *send_pipe;
 } JSThreadState;
 
+static JSValue
+vector2array(JSContext* ctx, int argc, JSValue argv[]) {
+  int i;
+  JSValue ret = JS_NewArray(ctx);
+  for(i = 0; i < argc; i++) JS_SetPropertyUint32(ctx, ret, i, argv[i]);
+  return ret;
+}
+
 static void
 js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
   JSValue global = JS_GetGlobalObject(ctx);

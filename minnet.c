@@ -365,6 +365,8 @@ io_events(int events) {
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   struct pollfd x = {0, 0, 0};
+  uint32_t seq = 0;
+  JS_ToUint32(ctx, &seq, func_data[4]);
   int64_t fd = -1, events = -1, revents = -1;
   int32_t wr = READ_HANDLER;
   uint32_t calls = ++func_data[3].u.int32;
@@ -397,7 +399,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   }
 
   if(pfd.revents & PIO) {
-    printf("io_handler fd = %d, events = %s, revents = %s, context = %p\n", pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
+    printf("io_handler #%zu fd = %d, events = %s, revents = %s, context = %p\n", seq, pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
 
     lws_service_fd(context, &pfd);
   }
@@ -411,11 +413,15 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   return JS_UNDEFINED;
 }
 
+static uint32_t handler_seq = 0;
+
 static JSValue
 make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
+  uint32_t seq = handler_seq++;
   struct lws_context* context = lws_get_context(wsi);
-  JSValueConst data[] = {JS_NewInt64(ctx, fd), JS_NewInt64(ctx, events), JS_NewInt64(ctx, 0), ptr2value(ctx, context)};
-  printf("make_handler fd = %d, events = 0x%04x,   context = %p\n", fd, events, context);
+  JSValue arr = vector2array(ctx, 5, (JSValueConst[5]){JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)});
+  JSValueConst data[] = {JS_NewInt64(ctx, fd), JS_NewInt64(ctx, events), JS_NewArray(ctx), ptr2value(ctx, context), JS_NewUint32(ctx, seq)};
+  printf("make_handler #%u fd = %d, events = 0x%04x,   context = %p\n", seq, fd, events, context);
   // printf("make_handler fd = %d, events = 0x%04x, context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
