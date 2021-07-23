@@ -2,6 +2,7 @@
 #include "minnet-server.h"
 #include "minnet-client.h"
 #include "minnet-response.h"
+#include "minnet-request.h"
 #include "minnet-websocket.h"
 #include "minnet-jsutils.h"
 #include <assert.h>
@@ -482,133 +483,6 @@ header_tobuffer(JSContext* ctx, struct http_header* hdr) {
   size_t len = hdr->end - hdr->start;
   return JS_NewArrayBuffer(ctx, ptr, len, header_finalizer, hdr, FALSE);
 }
-
-enum { REQUEST_METHOD, REQUEST_PEER, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_BUFFER };
-
-MinnetHttpRequest*
-minnet_request_new(JSContext* ctx, const char* in, struct lws* wsi) {
-  MinnetHttpRequest* r;
-  if((r = js_mallocz(ctx, sizeof(MinnetHttpRequest)))) {
-    char buf[1024];
-    ssize_t len;
-    /* In contains the url part after the place the mount was  positioned at,
-     * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath */
-
-    lws_snprintf(r->body.path, sizeof(r->body.path), "%s", (const char*)in);
-
-    if((len = lws_get_peer_simple(wsi, (char*)buf, sizeof(buf))) > 0)
-      r->peer = js_strndup(ctx, buf, len);
-
-    if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
-      r->uri = js_strndup(ctx, buf, len);
-      r->method = js_strdup(ctx, "GET");
-    } else if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
-      r->uri = js_strndup(ctx, buf, len);
-      r->method = js_strdup(ctx, "POST");
-    }
-
-    if(!header_alloc(ctx, &r->header, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE)) {
-      JS_ThrowOutOfMemory(ctx);
-      return 0;
-    }
-  }
-  return r;
-}
-
-JSValue
-minnet_request_constructor(JSContext* ctx, const char* in, struct lws* wsi) {
-  MinnetHttpRequest* r;
-  if(!(r = minnet_request_new(ctx, in, wsi)))
-    return JS_EXCEPTION;
-
-  return minnet_request_wrap(ctx, r);
-}
-
-JSValue
-minnet_request_wrap(JSContext* ctx, struct http_request* req) {
-  JSValue ret = JS_UNDEFINED;
-
-  ret = JS_NewObjectProtoClass(ctx, request_proto, minnet_request_class_id);
-
-  if(JS_IsException(ret))
-    return JS_EXCEPTION;
-  JS_SetOpaque(ret, req);
-  return ret;
-}
-JSValue
-minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
-  MinnetHttpRequest* req;
-  if(!(req = JS_GetOpaque(this_val, minnet_request_class_id)))
-    return JS_EXCEPTION;
-
-  JSValue ret = JS_UNDEFINED;
-  switch(magic) {
-    case REQUEST_METHOD: {
-      if(req->method)
-        ret = JS_NewString(ctx, req->method);
-      break;
-    }
-    case REQUEST_PEER: {
-      if(req->peer)
-        ret = JS_NewString(ctx, req->peer);
-      break;
-    }
-    case REQUEST_URI: {
-      if(req->uri)
-        ret = JS_NewString(ctx, req->uri);
-      break;
-    }
-    case REQUEST_PATH: {
-      ret = JS_NewString(ctx, req->body.path);
-      break;
-    }
-    case REQUEST_HEADER: {
-      ret = header_tostring(ctx, &req->header);
-      break;
-    }
-    case REQUEST_BUFFER: {
-      ret = header_tobuffer(ctx, &req->header);
-
-      break;
-    }
-  }
-  return ret;
-}
-
-JSValue
-minnet_request_getter_path(JSContext* ctx, JSValueConst this_val) {
-  MinnetHttpRequest* req = JS_GetOpaque(this_val, minnet_request_class_id);
-  if(req)
-    return JS_NewString(ctx, req->body.path);
-
-  return JS_EXCEPTION;
-}
-
-static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, 0, REQUEST_METHOD, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, 0, REQUEST_URI, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_request_get, 0, REQUEST_PEER, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("header", minnet_request_get, 0, REQUEST_HEADER, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_request_get, 0, REQUEST_BUFFER, 0),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
-};
-
-static void
-minnet_request_finalizer(JSRuntime* rt, JSValue val) {
-  MinnetHttpRequest* req = JS_GetOpaque(val, minnet_request_class_id);
-  if(req) {
-    if(req->uri)
-      js_free_rt(rt, req->uri);
-  }
-}
-
-JSClassDef minnet_request_class = {
-    "MinnetRequest",
-    .finalizer = minnet_request_finalizer,
-};
-
-JSClassID minnet_request_class_id;
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
