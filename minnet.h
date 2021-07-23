@@ -49,5 +49,35 @@ JSValue header_tobuffer(JSContext*, struct http_header* hdr);
 void header_dump(const char*, struct http_header* hdr);
 void value_dump(JSContext*, const char* n, JSValueConst const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
+typedef union pointer {
+  void* p;
+  struct {
+    uint32_t lo32, hi32;
+  };
+
+  uint64_t u64;
+  int64_t s64;
+  uint32_t u32[2];
+  int32_t s32[2];
+  uint16_t u16[4];
+  int16_t s16[4];
+  uint8_t u8[8];
+  int8_t s8[8];
+
+} MinnetPointer;
+
+static inline MinnetPointer
+ptr(const void* ptr) {
+  MinnetPointer r = {ptr};
+  return r;
+}
+
+static inline void*
+ptr32(int32_t lo, int32_t hi) {
+  MinnetPointer r;
+  r.lo32 = lo;
+  r.hi32 = hi;
+  return r.p;
+}
 
 #endif /* MINNET_H */
