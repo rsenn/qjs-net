@@ -413,7 +413,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       /*      JSValue response = minnet_response_wrap(ctx, &r->response);
        */
-      printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method, (const char*)buf, r->uri, r->body.path);
+      printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method, (const char*)in, r->uri, r->body.path);
 
       { /*  Demonstrates how to retreive a urlarg x=value  */
 
