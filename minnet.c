@@ -363,11 +363,11 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   int32_t fd = -1, events = 0;
   BOOL wr = FALSE;
   uint32_t calls = ++func_data[3].u.int32;
-  MinnetPollFd pfd = {.events = (int)JS_VALUE_GET_FLOAT64(func_data[1]), .revents = 0};
+  MinnetPollFd pfd = {0, 0, 0};
   JS_ToInt32(ctx, &fd, func_data[0]);
   pfd.fd = fd;
   JS_ToInt32(ctx, &events, func_data[1]);
-  pfd.events = events;
+  pfd.events = events & (POLLIN | POLLOUT);
 
   struct lws_context* context = value2ptr(ctx, func_data[2]);
 
@@ -375,7 +375,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     wr = JS_ToBool(ctx, argv[0]);
 
   pfd.revents = wr ? POLLOUT : POLLIN;
-  pfd.events |= pfd.revents;
+  pfd.events = (pfd.events | pfd.revents) & (POLLIN | POLLOUT);
 
   printf("io_handler fd = %d, events = %s, revents = %s, context = %p\n", pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
 
