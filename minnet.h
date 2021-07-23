@@ -20,22 +20,14 @@
 
 #define SETLOG lws_set_log_level(LLL_ERR, NULL);
 
+enum { READ_HANDLER = 0, WRITE_HANDLER };
+
 extern JSValue minnet_log, minnet_log_this;
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
 
-JSValue minnet_make_handler(JSContext*, struct lws_pollargs* pfd, struct lws* wsi, int magic);
-JSValue minnet_get_log(JSContext*, JSValue this_val);
-JSValue minnet_set_log(JSContext*, JSValue this_val, int argc, JSValue argv[]);
-JSValue minnet_fetch(JSContext*, JSValue this_val, int argc, JSValue* argv);
-void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* pfd, JSValue out[2]);
-
-enum { READ_HANDLER = 0, WRITE_HANDLER };
-
-static inline void
-get_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
-  JSValue global = JS_GetGlobalObject(ctx);
-  *console = JS_GetPropertyStr(ctx, global, "console");
-  *console_log = JS_GetPropertyStr(ctx, *console, "log");
-  JS_FreeValue(ctx, global);
-}
+void         lws_print_unhandled(int);
+JSValue      minnet_get_log(JSContext*, JSValue this_val);
+JSValue      minnet_set_log(JSContext*, JSValue this_val, int argc, JSValue argv[]);
+JSValue      minnet_make_handler(JSContext*, struct lws_pollargs* pfd, struct lws* wsi, int magic);
+void         minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* pfd, JSValue out[2]);

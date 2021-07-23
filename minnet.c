@@ -3,6 +3,7 @@
 #include "client.h"
 #include "response.h"
 #include "websocket.h"
+#include "jsutils.h"
 #include <assert.h>
 #include <curl/curl.h>
 #include <sys/time.h>
@@ -13,7 +14,6 @@
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
-
 JSValue minnet_log, minnet_log_this;
 JSContext* minnet_log_ctx = 0;
 BOOL minnet_exception = FALSE;
@@ -22,7 +22,7 @@ static void
 lws_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
     if(JS_VALUE_GET_TAG(minnet_log) == 0 && JS_VALUE_GET_TAG(minnet_log_this) == 0)
-      get_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log);
+      js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log);
 
     if(JS_IsFunction(minnet_log_ctx, minnet_log)) {
       size_t len = strlen(line);
@@ -40,7 +40,7 @@ lws_log_callback(int level, const char* line) {
   }
 }
 
-const char*
+static const char*
 lws_callback_name(int reason) {
   return ((const char* const[]){
       "LWS_CALLBACK_ESTABLISHED",
@@ -201,7 +201,7 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return ret;
 }
 
-JSValue
+static JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   CURL* curl;
   CURLcode curlRes;
@@ -369,29 +369,6 @@ finish:
   return resObj;
 }
 
-static inline JSValue
-js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue* func_data) {
-  JSValue args[argc + magic];
-  size_t i, j;
-  for(i = 0; i < magic; i++) args[i] = func_data[i + 1];
-  for(j = 0; j < argc; j++) args[i++] = argv[j];
-
-  return JS_Call(ctx, func_data[0], this_val, i, args);
-}
-
-static inline JSValue
-js_function_bind(JSContext* ctx, JSValueConst func, int argc, JSValueConst argv[]) {
-  JSValue data[argc + 1];
-  size_t i;
-  data[0] = JS_DupValue(ctx, func);
-  for(i = 0; i < argc; i++) data[i + 1] = JS_DupValue(ctx, argv[i]);
-  return JS_NewCFunctionData(ctx, js_function_bound, 0, argc, argc + 1, data);
-}
-
-static inline JSValue
-js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
-  return js_function_bind(ctx, func, 1, &arg);
-}
 
 JSValue
 minnet_make_handler(JSContext* ctx, struct lws_pollargs* pfd, struct lws* wsi, int magic) {
