@@ -365,19 +365,18 @@ io_events(int events) {
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   struct pollfd x = {0, 0, 0};
-  uint32_t seq = 0;
+  uint32_t seq;
+  struct lws_context* context;
   JS_ToUint32(ctx, &seq, func_data[2]);
-  int64_t fd = -1, events = -1, revents = -1;
   int32_t wr = READ_HANDLER;
   size_t len;
-  int32_t* values = JS_GetArrayBuffer(ctx, &len, func_data[0]);
+  intptr_t* values = JS_GetArrayBuffer(ctx, &len, func_data[0]);
   MinnetPollFd pfd = {0, 0, 0};
   pfd.fd = values[0];
   pfd.events = values[1];
   pfd.revents = values[2];
-
-  struct lws_context* context = value2ptr(ctx, func_data[1]);
-
+  context = (void*)values[3];
+  seq = values[4];
   if(argc >= 1)
     JS_ToInt32(ctx, &wr, argv[0]);
 
@@ -417,13 +416,12 @@ static JSValue
 make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   uint32_t seq = ++handler_seq;
   struct lws_context* context = lws_get_context(wsi);
-  int32_t values[3] = {fd, events, 0};
+  intptr_t values[] = {fd, events, 0, (intptr_t)context, seq};
   JSValue buffer = JS_NewArrayBufferCopy(ctx, (const uint8_t*)values, sizeof(int32_t) * 3);
 
-  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
-  printf("make_handler #%u fd = %d, events = 0x%04x,   context = %p\n", seq, fd, events, context);
-  JSValueConst data[] = {buffer /*vector2array(ctx, countof(items), items)*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)};
-  // printf("make_handler fd = %d, events = 0x%04x, context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
+  //  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
+  printf("make_handler #%u fd = %d, events = 0x%04x,   context = %p\n", values[3], values[0], values[1], values[2]);
+  JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
 
