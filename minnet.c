@@ -356,6 +356,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   MinnetPollFd pfd = {JS_VALUE_GET_INT(func_data[0]), JS_VALUE_GET_INT(func_data[1])};
   //  struct lws_pollargs args = *(struct lws_pollargs*)&JS_VALUE_GET_PTR(func_data[4]);
   struct lws_context* context = JS_VALUE_GET_PTR(func_data[2]);
+  printf("io_handler fd = %d, events = 0x%04x context = %p\n", pfd.fd, pfd.events, context);
 
   if(argc >= 1)
     JS_ToInt32(ctx, &rw, argv[0]);
@@ -377,12 +378,12 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
 static JSValue
 make_handler(JSContext* ctx, struct lws_pollargs* args, struct lws* wsi, int magic) {
   struct lws_context* context = lws_get_context(wsi);
-  JSValue data[] = {
+  JSValueConst data[] = {
       JS_MKVAL(JS_TAG_INT, args->fd),
       JS_MKVAL(JS_TAG_INT, args->events),
       JS_MKPTR(JS_TAG_OBJECT, context),
   };
-  printf("make_handler fd = %d, events = 0x%04x context = %p\n", args->fd, args->events, context);
+  //  printf("make_handler fd = %d, events = 0x%04x context = %p\n", args->fd, args->events, context);
   printf("make_handler fd = %d, events = 0x%04x context = %p\n", JS_VALUE_GET_INT(data[0]), JS_VALUE_GET_INT(data[1]), JS_VALUE_GET_PTR(data[2]));
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
