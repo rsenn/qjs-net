@@ -485,7 +485,7 @@ header_tobuffer(JSContext* ctx, struct http_header* hdr) {
 }
 void
 header_dump(struct http_header* hdr) {
-  printf("{ pos = %zx, size = %zx }\n", hdr->p - hdr->start, hdr->end - hdr->start);
+  printf("{ pos = %zx, size = %zx }\n", hdr->pos - hdr->start, hdr->end - hdr->start);
 }
 
 static int
