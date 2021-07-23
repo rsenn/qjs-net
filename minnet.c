@@ -371,14 +371,14 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   intptr_t* values = JS_GetArrayBuffer(ctx, &len, func_data[0]);
   assert(len == sizeof(intptr_t) * 5);
   x.fd = values[0];
-  x.events = values[1];
   x.revents = values[2];
   context = (void*)values[3];
   seq = values[4];
   if(argc >= 1)
     JS_ToInt32(ctx, &wr, argv[0]);
-  if(!x.events)
-    x.events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+  x.events = (values[1] & PIO) && wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+  if(!(x.events & PIO))
+    values[1] = x.events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
 
   if(!(x.revents & PIO)) {
 
