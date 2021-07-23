@@ -1,5 +1,5 @@
-#ifndef JSUTILS_H
-#define JSUTILS_H
+#ifndef MINNET_JSUTILS_H
+#define MINNET_JSUTILS_H
 
 #include <quickjs.h>
 #include <list.h>
@@ -45,4 +45,4 @@ js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
   return js_function_bind(ctx, func, 1, &arg);
 }
 
-#endif
+#endif /* MINNET_JS_UTILS_H */
