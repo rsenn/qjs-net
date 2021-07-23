@@ -412,28 +412,40 @@ header_new(JSContext* ctx, size_t size) {
   hdr->end = hdr->start + size;
   return hdr;
 }
-char*
-header_alloc(JSContext* ctx, struct http_header* hdr, size_t size) {
-  hdr->start = js_malloc(ctx, size);
+
+void
+header_init(struct http_header* hdr, uint8_t* start, size_t len) {
+  hdr->start = start;
   hdr->pos = hdr->start;
-  hdr->end = hdr->start + size;
-  return hdr->start;
+  hdr->end = hdr->start + len;
 }
 
-char*
+BOOL
+header_alloc(JSContext* ctx, struct http_header* hdr, size_t size) {
+
+  if((hdr->start = js_malloc(ctx, size))) {
+    hdr->pos = hdr->start;
+    hdr->end = hdr->start + size;
+    return TRUE;
+  }
+  return FALSE;
+}
+
+BOOL
 header_append(JSContext* ctx, struct http_header* hdr, const char* x, size_t n) {
   size_t headroom = hdr->end - hdr->pos;
   if(n > headroom)
     if(!header_realloc(ctx, hdr, n + 1))
-      return 0;
+      return FALSE;
   memcpy(hdr->pos, x, n);
   hdr->pos[n] = '\0';
   hdr->pos += n;
-  return hdr->start;
+  return TRUE;
 }
 
 char*
 header_realloc(JSContext* ctx, struct http_header* hdr, size_t size) {
+  assert((uint8_t*)&hdr[1] != hdr->start);
   hdr->start = js_realloc(ctx, hdr->start, size);
   hdr->end = hdr->start + size;
   return hdr->start;
@@ -452,6 +464,40 @@ header_free(JSContext* ctx, struct http_header* hdr) {
   }
 }
 enum { REQUEST_METHOD, REQUEST_PEER, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER };
+
+MinnetHttpRequest*
+minnet_request_new(JSContext* ctx, const char* in, struct lws* wsi) {
+  MinnetHttpRequest* r;
+  if((r = js_mallocz(ctx, sizeof(MinnetHttpRequest)))) {
+    char buf[1024];
+    ssize_t len;
+    /* In contains the url part after the place the mount was  positioned at,
+     * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath
+     */
+    lws_snprintf(r->body.path, sizeof(r->body.path), "%s", (const char*)in);
+
+    if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)) > 0)
+      r->peer = js_strdup(ctx, buf);
+
+    if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
+      r->uri = js_strndup(ctx, buf, len);
+      r->method = js_strdup(ctx, "GET");
+    } else if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
+      r->uri = js_strndup(ctx, buf, len);
+      r->method = js_strdup(ctx, "POST");
+    }
+  }
+  return r;
+}
+
+JSValue
+minnet_request_constructor(JSContext* ctx, const char* in, struct lws* wsi) {
+  MinnetHttpRequest* r;
+  if(!(r = minnet_request_new(ctx, in, wsi)))
+    return JS_EXCEPTION;
+
+  return minnet_request_wrap(ctx, r);
+}
 
 JSValue
 minnet_request_wrap(JSContext* ctx, struct http_request* req) {

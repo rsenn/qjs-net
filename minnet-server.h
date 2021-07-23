@@ -8,7 +8,7 @@ typedef struct lws_http_mount MinnetHttpMount;
 
 typedef struct http_body {
   char path[128];
-  size_t times, budget, content_lines;
+  size_t times, budget /*, content_lines*/;
 } MinnetHttpBody;
 
 typedef struct http_request {
