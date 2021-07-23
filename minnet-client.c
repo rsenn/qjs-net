@@ -1,5 +1,5 @@
-#include "client.h"
-#include "websocket.h"
+#include "minnet-client.h"
+#include "minnet-websocket.h"
 #include "minnet.h"
 
 static struct lws_context* client_context;

@@ -1,6 +1,6 @@
 #include "minnet.h"
-#include "websocket.h"
-#include "server.h"
+#include "minnet-websocket.h"
+#include "minnet-server.h"
 
 JSClassID minnet_ws_class_id;
 
@@ -41,6 +41,13 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
   }
 
   return create_websocket_obj(ctx, wsi);
+}
+
+JSValue
+minnet_ws_emit(struct ws_callback* cb, int argc, JSValue* argv) {
+  if(!cb->func_obj)
+    return JS_UNDEFINED;
+  return JS_Call(cb->ctx, *(cb->func_obj), *(cb->this_obj), argc, argv);
 }
 
 void
