@@ -44,7 +44,7 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
 }
 
 JSValue
-minnet_ws_emit(struct ws_callback* cb, int argc, JSValue* argv) {
+minnet_ws_emit(struct callback_ws* cb, int argc, JSValue* argv) {
   if(!cb->func_obj)
     return JS_UNDEFINED;
   return JS_Call(cb->ctx, *(cb->func_obj), *(cb->this_obj), argc, argv);

@@ -40,7 +40,7 @@ js_function_bind(JSContext* ctx, JSValueConst func, int argc, JSValueConst argv[
   return JS_NewCFunctionData(ctx, js_function_bound, 0, argc, argc + 1, data);
 }
 
-static JSValue
+static inline JSValue
 js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
   return js_function_bind(ctx, func, 1, &arg);
 }

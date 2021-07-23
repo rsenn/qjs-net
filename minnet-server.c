@@ -6,7 +6,7 @@
 
 static MinnetWebsocketCallback server_cb_message, server_cb_connect, server_cb_error, server_cb_close, server_cb_pong,
     server_cb_fd, server_cb_http;
- 
+
 static int interrupted;
 
 static MinnetHttpMount*
@@ -47,6 +47,20 @@ mount_new(JSContext* ctx, JSValueConst arr) {
   return ret;
 }
 
+static char*
+lws_get_uri(struct lws* wsi, JSContext* ctx, size_t* lenp) {
+  size_t len;
+  char *uri, buf[1024];
+
+  len = lws_hdr_copy(wsi, buf, sizeof(buf) - 1, WSI_TOKEN_GET_URI);
+  buf[len] = '\0';
+
+  if(lenp)
+    *lenp = len;
+
+  return js_strndup(ctx, buf, len);
+}
+
 static void
 mount_free(JSContext* ctx, MinnetHttpMount* mount) {
   JS_FreeCString(ctx, mount->mountpoint);
@@ -56,12 +70,9 @@ mount_free(JSContext* ctx, MinnetHttpMount* mount) {
   js_free(ctx, mount);
 }
 
-static int lws_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-static int lws_http_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-
-static struct lws_protocols lws_server_protocols[] = {
-    {"minnet", lws_server_callback, 0, 0},
-    {"http", lws_http_callback, 0, 0},
+static struct lws_protocols protocols[] = {
+    {"minnet", callback_ws, 0, 0},
+    {"http", callback_http, 0, 0},
     {NULL, NULL, 0, 0},
 };
 
@@ -96,6 +107,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   struct lws_context* context;
   struct lws_context_creation_info info;
 
+  lwsl_user("Minnet WebSocket Server\n");
   JSValue ret = JS_NewInt32(ctx, 0);
   JSValue options = argv[0];
 
@@ -128,11 +140,11 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
   memset(&info, 0, sizeof info);
 
-  lws_server_protocols[0].user = ctx;
-  lws_server_protocols[1].user = ctx;
+  protocols[0].user = ctx;
+  protocols[1].user = ctx;
 
   info.port = port;
-  info.protocols = lws_server_protocols;
+  info.protocols = protocols;
   info.mounts = 0;
   info.vhost_name = host;
   info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
@@ -200,8 +212,8 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 }
 
 static int
-lws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  // JSContext* ctx = lws_server_protocols[0].user;
+callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+  // JSContext* ctx = protocols[0].user;
 
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT:
@@ -249,6 +261,11 @@ lws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       break;
     }
 
+    case LWS_CALLBACK_LOCK_POLL:
+    case LWS_CALLBACK_UNLOCK_POLL: {
+      break;
+    }
+
     case LWS_CALLBACK_ADD_POLL_FD: {
       struct lws_pollargs* args = in;
 
@@ -266,26 +283,29 @@ lws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     case LWS_CALLBACK_DEL_POLL_FD: {
       struct lws_pollargs* args = in;
 
-      JSValue argv[3] = {
-          JS_NewInt32(server_cb_fd.ctx, args->fd),
-      };
-      minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
-      minnet_ws_emit(&server_cb_fd, 3, argv);
-      JS_FreeValue(server_cb_fd.ctx, argv[0]);
-
+      if(server_cb_fd.func_obj) {
+        JSValue argv[3] = {
+            JS_NewInt32(server_cb_fd.ctx, args->fd),
+        };
+        minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+        minnet_ws_emit(&server_cb_fd, 3, argv);
+        JS_FreeValue(server_cb_fd.ctx, argv[0]);
+      }
       break;
     }
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
       struct lws_pollargs* args = in;
 
-      if(args->events != args->prev_events) {
-        JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
-        minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+      if(server_cb_fd.func_obj) {
+        if(args->events != args->prev_events) {
+          JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
+          minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
-        minnet_ws_emit(&server_cb_fd, 3, argv);
-        JS_FreeValue(server_cb_fd.ctx, argv[0]);
-        JS_FreeValue(server_cb_fd.ctx, argv[1]);
-        JS_FreeValue(server_cb_fd.ctx, argv[2]);
+          minnet_ws_emit(&server_cb_fd, 3, argv);
+          JS_FreeValue(server_cb_fd.ctx, argv[0]);
+          JS_FreeValue(server_cb_fd.ctx, argv[1]);
+          JS_FreeValue(server_cb_fd.ctx, argv[2]);
+        }
       }
       break;
     }
@@ -299,8 +319,8 @@ lws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
 }
 
 static int
-lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetHttpBody* pss = (MinnetHttpBody*)user;
+callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+  MinnetHttpRequest* request = (MinnetHttpRequest*)user;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE], *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
   time_t t;
   int n;
@@ -365,72 +385,67 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
       break;
     }
     case LWS_CALLBACK_HTTP: {
-
-      /*
-       * If you want to know the full url path used, you can get it
-       * like this
-       *
+      JSValue ret = JS_UNDEFINED;
+      const char* content_type = "text/plain";
+      int32_t http_status = HTTP_STATUS_OK;
+      /*  If you want to know the full url path used, you can get it
+       * like this:
        * n = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI);
-       *
-       * The base path is the first (n - strlen((const char *)in))
-       * chars in buf.
+       * The base path is the first (n - strlen((const char *)in))  chars in buf.
        */
 
-      /*
-       * In contains the url part after the place the mount was
-       * positioned at, eg, if positioned at "/dyn" and given
-       * "/dyn/mypath", in will contain /mypath
+      /* In contains the url part after the place the mount was  positioned at,
+       * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath
        */
-      lws_snprintf(pss->path, sizeof(pss->path), "%s", (const char*)in);
-
+      lws_snprintf(request->body.path, sizeof(request->body.path), "%s", (const char*)in);
       lws_get_peer_simple(wsi, (char*)buf, sizeof(buf));
-      lwsl_notice("%s: HTTP: connection %s, path %s\n", __func__, (const char*)buf, pss->path);
+      request->uri = lws_get_uri(wsi, server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : 0, 0);
+      printf("%s: HTTP: connection %s, URI %s, path %s\n", __func__, (const char*)buf, request->uri, request->body.path);
 
-      /*
-       * Demonstrates how to retreive a urlarg x=value
-       */
+      /*  Demonstrates how to retreive a urlarg x=value  */
 
-      {
-        char value[100];
-        int z = lws_get_urlarg_by_name_safe(wsi, "x", value, sizeof(value) - 1);
+      char value[100];
+      int z;
 
-        if(z >= 0)
-          lwsl_hexdump_notice(value, (size_t)z);
+      if((z = lws_get_urlarg_by_name_safe(wsi, "x", value, sizeof(value) - 1)) >= 0)
+        lwsl_hexdump_notice(value, (size_t)z);
+
+      if(server_cb_http.func_obj) {
+        JSValueConst args[] = {JS_NewString(server_cb_http.ctx, request->body.path),
+                               JS_NewString(server_cb_http.ctx, request->uri)};
+        ret = minnet_ws_emit(&server_cb_http, countof(args), args);
+        JS_FreeValue(server_cb_http.ctx, args[0]);
+        JS_FreeValue(server_cb_http.ctx, args[1]);
       }
 
-      /*
-       * prepare and write http headers... with regards to content-
+      if(JS_IsString(ret))
+        content_type = "text/html";
+      if(JS_IsNumber(ret))
+        JS_ToInt32(server_cb_http.ctx, &http_status, ret);
+
+      /* prepare and write http headers... with regards to content-
        * length, there are three approaches:
-       *
        *  - http/1.0 or connection:close: no need, but no pipelining
        *  - http/1.1 or connected:keep-alive
        *     (keep-alive is default for 1.1): content-length required
        *  - http/2: no need, LWS_WRITE_HTTP_FINAL closes the stream
-       *
-       * giving the api below LWS_ILLEGAL_HTTP_CONTENT_LEN instead of
-       * a content length forces the connection response headers to
-       * send back "connection: close", disabling keep-alive.
-       *
-       * If you know the final content-length, it's always OK to give
-       * it and keep-alive can work then if otherwise possible.  But
-       * often you don't know it and avoiding having to compute it
-       * at header-time makes life easier at the server.
+       * giving the api below LWS_ILLEGAL_HTTP_CONTENT_LEN instead of  a content length
+       * forces the connection response headers to send back "connection: close",
+       *  disabling keep-alive.
+       * If you know the final content-length, it's always OK to give it and keep-alive
+       * can work then if otherwise possible.  But often you don't know it and avoiding having
+       * to compute it at header-time makes life easier at the server.
        */
-      if(lws_add_http_common_headers(wsi,
-                                     HTTP_STATUS_OK,
-                                     "text/html",
-                                     LWS_ILLEGAL_HTTP_CONTENT_LEN, /* no content len */
-                                     &p,
-                                     end))
+      if(lws_add_http_common_headers(wsi, http_status, content_type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &p, end))
         return 1;
+
       if(lws_finalize_write_http_header(wsi, start, &p, end))
         return 1;
 
-      pss->times = 0;
-      pss->budget = atoi((char*)in + 1);
-      pss->content_lines = 0;
-      if(!pss->budget)
-        pss->budget = 10;
+      request->body.times = 0;
+      request->body.content_lines = 0;
+      if(!(request->body.budget = atoi((char*)in + 1)))
+        request->body.budget = 10;
 
       /* write the body separately */
       lws_callback_on_writable(wsi);
@@ -439,22 +454,17 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
 
-      if(!pss || pss->times > pss->budget)
+      if(!request || request->body.times > request->body.budget)
         break;
 
       n = LWS_WRITE_HTTP;
-      if(pss->times == pss->budget)
+      if(request->body.times == request->body.budget)
         n = LWS_WRITE_HTTP_FINAL;
 
-      if(!pss->times) {
-        /*
-         * the first time, we print some html title
-         */
+      if(!request->body.times) {
+        /*  the first time, we print some html title  */
         t = time(NULL);
-        /*
-         * to work with http/2, we must take care about LWS_PRE
-         * valid behind the buffer we will send.
-         */
+        /*  to work with http/2, we must take care about LWS_PRE  valid behind the buffer we will send.*/
         p += lws_snprintf((char*)p,
                           lws_ptr_diff_size_t(end, p),
                           "<html>"
@@ -465,45 +475,44 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
                           "<br>Dynamic content for '%s' from mountpoint."
                           "<br>Time: %s<br><br>"
                           "</body></html>",
-                          pss->path,
+                          request->body.path,
 #if defined(LWS_HAVE_CTIME_R)
-                          ctime_r(&t, date));
+                          ctime_r(&t, date)
 #else
-                          ctime(&t));
+                          ctime(&t)
 #endif
+        );
       } else {
-        /*
-         * after the first time, we create bulk content.
-         *
-         * Again we take care about LWS_PRE valid behind the
-         * buffer we will send.
+        /* after the first time, we create bulk content. Again we take care about LWS_PRE valid behind the buffer we will send.
          */
 
         while(lws_ptr_diff(end, p) > 80)
-          p += lws_snprintf(
-              (char*)p, lws_ptr_diff_size_t(end, p), "%d.%d: this is some content... ", pss->times, pss->content_lines++);
+          p += lws_snprintf((char*)p,
+                            lws_ptr_diff_size_t(end, p),
+                            "%d.%d: this is some content... ",
+                            request->body.times,
+                            request->body.content_lines++);
 
         p += lws_snprintf((char*)p, lws_ptr_diff_size_t(end, p), "<br><br>");
       }
 
-      pss->times++;
+      request->body.times++;
       if(lws_write(wsi, (uint8_t*)start, lws_ptr_diff_size_t(p, start), (enum lws_write_protocol)n) != lws_ptr_diff(p, start))
         return 1;
 
-      /*
-       * HTTP/1.0 no keepalive: close network connection
+      /* HTTP/1.0 no keepalive: close network connection
        * HTTP/1.1 or HTTP1.0 + KA: wait / process next transaction
        * HTTP/2: stream ended, parent connection remains up
        */
       if(n == LWS_WRITE_HTTP_FINAL) {
         if(lws_http_transaction_completed(wsi))
           return -1;
-      } else
+      } else {
         lws_callback_on_writable(wsi);
+      }
 
       return 0;
     }
-
     default: {
       lws_print_unhandled(reason);
       break;

@@ -23,9 +23,13 @@
 
 enum { READ_HANDLER = 0, WRITE_HANDLER };
 
+typedef struct lws_pollfd MinnetPollFd;
+
 extern JSValue minnet_log, minnet_log_this;
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
+
+extern JSClassID minnet_request_class_id;
 
 void lws_print_unhandled(int);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* pfd, JSValue out[2]);

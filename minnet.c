@@ -158,33 +158,6 @@ lws_print_unhandled(int reason) {
 }
 
 static JSValue
-io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
-  int32_t rw = 0;
-  uint32_t calls = ++func_data[3].u.int32;
-  struct lws_pollfd pfd;
-  struct lws_pollargs args = *(struct lws_pollargs*)&JS_VALUE_GET_PTR(func_data[4]);
-  struct lws_context* context = JS_VALUE_GET_PTR(func_data[2]);
-
-  if(argc >= 1)
-    JS_ToInt32(ctx, &rw, argv[0]);
-
-  pfd.fd = JS_VALUE_GET_INT(func_data[0]);
-  pfd.revents = rw ? POLLOUT : POLLIN;
-  pfd.events = JS_VALUE_GET_INT(func_data[1]);
-
-  if(pfd.events != (POLLIN | POLLOUT) || poll(&pfd, 1, 0) > 0)
-    lws_service_fd(context, &pfd);
-
-  /*if (calls <= 100)
-    printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
-         "%d %d]\n",
-         rw ? "writable" : "readable", calls, pfd.fd, pfd.events,
-         pfd.revents, args.fd, args.events, args.prev_events);*/
-
-  return JS_UNDEFINED;
-}
-
-static JSValue
 get_log(JSContext* ctx, JSValueConst this_val) {
   return JS_DupValue(ctx, minnet_log);
 }
@@ -377,24 +350,47 @@ finish:
 }
 
 static JSValue
-make_handler(JSContext* ctx, struct lws_pollargs* pfd, struct lws* wsi, int magic) {
-  JSValue data[5] = {
-      JS_MKVAL(JS_TAG_INT, pfd->fd),
-      JS_MKVAL(JS_TAG_INT, pfd->events),
-      JS_MKPTR(0, lws_get_context(wsi)),
-      JS_MKVAL(JS_TAG_INT, 0),
-      JS_MKPTR(0, *(void**)pfd),
+io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
+  int32_t rw = 0;
+  uint32_t calls = ++func_data[3].u.int32;
+  MinnetPollFd pfd = {JS_VALUE_GET_INT(func_data[0]), JS_VALUE_GET_INT(func_data[1])};
+  //  struct lws_pollargs args = *(struct lws_pollargs*)&JS_VALUE_GET_PTR(func_data[4]);
+  struct lws_context* context = JS_VALUE_GET_PTR(func_data[2]);
+
+  if(argc >= 1)
+    JS_ToInt32(ctx, &rw, argv[0]);
+
+  pfd.revents = rw ? POLLOUT : POLLIN;
+
+  if(pfd.events != (POLLIN | POLLOUT) || poll(&pfd, 1, 0) > 0)
+    lws_service_fd(context, &pfd);
+
+  /*if (calls <= 100)
+    printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
+         "%d %d]\n",
+         rw ? "writable" : "readable", calls, pfd.fd, pfd.events,
+         pfd.revents, args.fd, args.events, args.prev_events);*/
+
+  return JS_UNDEFINED;
+}
+
+static JSValue
+make_handler(JSContext* ctx, struct lws_pollargs* args, struct lws* wsi, int magic) {
+  JSValue data[] = {
+      JS_MKVAL(JS_TAG_INT, args->fd),
+      JS_MKVAL(JS_TAG_INT, args->events),
+      JS_MKPTR(JS_TAG_INT, lws_get_context(wsi)),
   };
 
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
 
 void
-minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* pfd, JSValue out[2]) {
-  JSValue func = make_handler(ctx, pfd, wsi, 0);
+minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
+  JSValue func = make_handler(ctx, args, wsi, 0);
 
-  out[0] = (pfd->events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
-  out[1] = (pfd->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
+  out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
+  out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
 
   JS_FreeValue(ctx, func);
 }
@@ -404,6 +400,46 @@ static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, mi
                                                     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
                                                     // JS_CGETSET_DEF("log", get_log, set_log),
                                                     JS_CFUNC_DEF("setLog", 1, minnet_set_log)};
+
+JSValue
+minnet_request_getter_uri(JSContext* ctx, JSValueConst this_val) {
+  MinnetHttpRequest* req = JS_GetOpaque(this_val, minnet_request_class_id);
+  if(req)
+    return JS_NewString(ctx, req->uri);
+
+  return JS_EXCEPTION;
+}
+
+JSValue
+minnet_request_getter_path(JSContext* ctx, JSValueConst this_val) {
+  MinnetHttpRequest* req = JS_GetOpaque(this_val, minnet_request_class_id);
+  if(req)
+    return JS_NewString(ctx, req->body.path);
+
+  return JS_EXCEPTION;
+}
+
+static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
+    JS_CGETSET_DEF("uri", minnet_request_getter_uri, 0),
+    JS_CGETSET_DEF("path", minnet_request_getter_path, 0),
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
+};
+
+static void
+minnet_request_finalizer(JSRuntime* rt, JSValue val) {
+  MinnetHttpRequest* req = JS_GetOpaque(val, minnet_request_class_id);
+  if(req) {
+    if(req->uri)
+      js_free_rt(rt, req->uri);
+  }
+}
+
+JSClassDef minnet_request_class = {
+    "MinnetRequest",
+    .finalizer = minnet_request_finalizer,
+};
+
+JSClassID minnet_request_class_id;
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
@@ -424,6 +460,13 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JSValue response_proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, response_proto, minnet_response_proto_funcs, countof(minnet_response_proto_funcs));
   JS_SetClassProto(ctx, minnet_response_class_id, response_proto);
+
+  // Add class Request
+  JS_NewClassID(&minnet_request_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);
+  JSValue request_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, request_proto, minnet_request_proto_funcs, countof(minnet_request_proto_funcs));
+  JS_SetClassProto(ctx, minnet_request_class_id, request_proto);
 
   // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);

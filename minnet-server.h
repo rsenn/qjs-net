@@ -10,6 +10,11 @@ typedef struct http_body {
   size_t times, budget, content_lines;
 } MinnetHttpBody;
 
+typedef struct http_request {
+  char* uri;
+  MinnetHttpBody body;
+} MinnetHttpRequest;
+
 typedef struct http_header {
   unsigned char *start, *pos, *end;
 } MinnetHttpHeader;
@@ -31,5 +36,7 @@ http_header_free(JSContext* ctx, MinnetHttpHeader* hdr) {
   hdr->end = 0;
 }
 
-#endif /* MINNET_SERVER_H */
+static int callback_ws(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+static int callback_http(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
+#endif /* MINNET_SERVER_H */
