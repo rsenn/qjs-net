@@ -51,4 +51,12 @@ body_dump(const char* n, struct http_body* b) {
   fflush(stdout);
 }
 
+static void
+value_dump(JSContext* ctx, const char* n, JSValueConst v) {
+  const char* str = JS_ToCString(ctx, v);
+  printf("\n\t%s\t%s", n, str);
+  fflush(stdout);
+  JS_FreeCString(ctx, str);
+}
+
 #endif /* MINNET_REQUEST_H */

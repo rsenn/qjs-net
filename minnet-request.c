@@ -14,7 +14,7 @@ minnet_request_dump(MinnetRequest const* r) {
 
   header_dump("header", &r->header);
   body_dump("body", &r->body);
-  putc('\n');
+  fputc('\n', stdout);
   fflush(stdout);
 }
 

@@ -6,6 +6,17 @@ JSClassID minnet_response_class_id;
 JSValue minnet_response_proto;
 
 void
+minnet_response_dump(JSContext* ctx, struct http_response* res) {
+  printf("{");
+  value_dump(ctx, "status", res->status);
+  value_dump(ctx, "ok", res->ok);
+  value_dump(ctx, "url", res->url);
+  value_dump(ctx, "type", res->type);
+  printf("\n}\n");
+  fflush(stdout);
+}
+
+void
 minnet_response_init(JSContext* ctx, MinnetResponse* res, int32_t status, BOOL ok, const char* url, const char* type) {
   res->status = JS_NewInt32(ctx, status);
   res->ok = JS_NewBool(ctx, ok);

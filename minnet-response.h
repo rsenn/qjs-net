@@ -14,6 +14,7 @@ typedef struct http_response {
   JSValue type;
 } MinnetResponse;
 
+void minnet_response_dump(JSContext*, struct http_response*);
 void minnet_response_init(JSContext*, struct http_response*, int32_t status, BOOL ok, const char* url, const char* type);
 void minnet_response_free(JSRuntime*, struct http_response*);
 JSValue minnet_response_new(JSContext*, int32_t status, BOOL ok, const char* url, const char* type, uint8_t* buf, size_t len);
@@ -42,5 +43,13 @@ static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
 
 extern JSValue minnet_response_proto;
 extern JSClassID minnet_response_class_id;
+
+static void
+value_dump(JSContext* ctx, const char* n, JSValueConst v) {
+  const char* str = JS_ToCString(ctx, v);
+  printf("\n\t%s\t%s", n, str);
+  fflush(stdout);
+  JS_FreeCString(ctx, str);
+}
 
 #endif /* MINNET_RESPONSE_H */
