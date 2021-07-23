@@ -376,12 +376,14 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
 
 static JSValue
 make_handler(JSContext* ctx, struct lws_pollargs* args, struct lws* wsi, int magic) {
+  struct lws_context* context = lws_get_context(wsi);
   JSValue data[] = {
       JS_MKVAL(JS_TAG_INT, args->fd),
       JS_MKVAL(JS_TAG_INT, args->events),
-      JS_MKPTR(JS_TAG_INT, lws_get_context(wsi)),
+      JS_MKPTR(JS_TAG_OBJECT, context),
   };
-
+  printf("make_handler fd = %d, events = 0x%04x context = %p\n", args->fd, args->events, context);
+  printf("make_handler fd = %d, events = 0x%04x context = %p\n", JS_VALUE_GET_INT(data[0]), JS_VALUE_GET_INT(data[1]), JS_VALUE_GET_PTR(data[2]));
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
 
