@@ -370,6 +370,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   pfd.events = events & (POLLIN | POLLOUT);
 
   struct lws_context* context = value2ptr(ctx, func_data[2]);
+  printf("io_handler fd = %d, events = %s, revents = %s, context = %p\n", pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
 
   if(argc >= 1)
     wr = JS_ToBool(ctx, argv[0]);
@@ -377,9 +378,10 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   pfd.revents = wr ? POLLOUT : POLLIN;
   pfd.events = (pfd.events | pfd.revents) & (POLLIN | POLLOUT);
 
-  printf("io_handler fd = %d, events = %s, revents = %s, context = %p\n", pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
+  if(!(pfd.revents & (POLLIN | POLLOUT)))
+    poll(&pfd, 1, 0) > 0)
 
-  if(pfd.events != (POLLIN | POLLOUT) || poll(&pfd, 1, 0) > 0)
+  if(pfd.revents & (POLLIN | POLLOUT))
     lws_service_fd(context, &pfd);
 
   /*if (calls <= 100)
