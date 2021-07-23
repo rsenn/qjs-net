@@ -6,6 +6,13 @@ JSClassID minnet_request_class_id;
 JSValue minnet_request_proto;
 
 void
+minnet_request_dump(MinnetRequest const* r) {
+  printf("MinnetRequest uri = %s\n", r->uri);
+  printf("MinnetRequest path = %s\n", r->path);
+  printf("MinnetRequest type = %s\n", r->type);
+}
+
+void
 minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws* wsi) {
   char buf[1024];
   ssize_t len;
@@ -19,10 +26,10 @@ minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws
 
   if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
     r->uri = js_strndup(ctx, buf, len);
-    r->method = js_strdup(ctx, "GET");
+    r->type = js_strdup(ctx, "GET");
   } else if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
     r->uri = js_strndup(ctx, buf, len);
-    r->method = js_strdup(ctx, "POST");
+    r->type = js_strdup(ctx, "POST");
   }
 
   if(!header_alloc(ctx, &r->header, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE)) {
@@ -68,8 +75,8 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
   JSValue ret = JS_UNDEFINED;
   switch(magic) {
     case REQUEST_METHOD: {
-      if(req->method)
-        ret = JS_NewString(ctx, req->method);
+      if(req->type)
+        ret = JS_NewString(ctx, req->type);
       break;
     }
     case REQUEST_PEER: {

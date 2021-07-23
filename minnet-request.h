@@ -4,17 +4,22 @@
 #include "quickjs.h"
 #include "minnet-response.h"
 
+typedef struct http_header {
+  uint8_t *start, *pos, *end;
+} MinnetHttpHeader;
+
 typedef struct http_body {
   size_t times, budget /*, content_lines*/;
 } MinnetHttpBody;
 
 typedef struct http_request {
-  char *peer, *method, *uri, path[256];
+  char *peer, *type, *uri, path[256];
   struct http_header header;
   struct http_body body;
   MinnetResponse response;
 } MinnetRequest;
 
+void minnet_request_dump(MinnetRequest const*);
 void minnet_request_init(JSContext*, MinnetRequest* r, const char* in, struct lws* wsi);
 MinnetRequest* minnet_request_new(JSContext*, const char* in, struct lws* wsi);
 JSValue minnet_request_constructor(JSContext*, const char* in, struct lws* wsi);
