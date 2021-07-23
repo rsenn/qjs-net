@@ -412,7 +412,6 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   */
       /*      JSValue response = minnet_response_wrap(ctx, &r->response);
        */
-      minnet_request_dump(server_cb_http.ctx, r);
       { /*  Demonstrates how to retreive a urlarg x=value  */
 
         char value[100];
@@ -434,6 +433,8 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         ret = minnet_ws_emit(&server_cb_http.ctx, 2, args);
         /*  JS_FreeValue(server_cb_http.ctx, args[0]);
           JS_FreeValue(server_cb_http.ctx, args[1]);*/
+
+        minnet_request_dump(server_cb_http.ctx, r);
       }
       /* prepare and write http headers... with regards to content-
        * length, there are three approaches:

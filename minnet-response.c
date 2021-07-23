@@ -36,8 +36,8 @@ void
 minnet_response_init(JSContext* ctx, MinnetResponse* res, int32_t status, BOOL ok, const char* url, const char* type) {
   res->status = JS_NewInt32(ctx, status);
   res->ok = JS_NewBool(ctx, ok);
-  res->url = JS_NewString(ctx, url);
-  res->type = JS_NewString(ctx, type);
+  res->url = url ? JS_NewString(ctx, url) : JS_UNDEFINED;
+  res->type = type ? JS_NewString(ctx, type) : JS_UNDEFINED;
   res->buffer = 0;
   res->size = 0;
 }
