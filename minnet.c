@@ -395,11 +395,10 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     }
   }
 
+  printf("io_handler #%zu fd = %d, events = %s, revents = %s, context = %p\n", seq, pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
+
   if(pfd.revents & PIO) {
-    printf("io_handler #%zu fd = %d, events = %s, revents = %s, context = %p\n", seq, pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
-
     lws_service_fd(context, &pfd);
-
     values[2] = pfd.revents;
   }
 
