@@ -77,9 +77,9 @@ ptr32(uint32_t lo, uint32_t hi) {
 
 static inline void*
 ptr32values(JSContext* ctx, JSValueConst values[2]) {
-  uint32_t lo, hi;
-  JS_ToUint32(ctx, &lo, values[0]);
-  JS_ToUint32(ctx, &hi, values[1]);
+  int32_t lo, hi;
+  JS_ToInt32(ctx, &lo, values[0]);
+  JS_ToInt32(ctx, &hi, values[1]);
   return ptr32(lo, hi);
 }
 
