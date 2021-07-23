@@ -26,35 +26,7 @@ struct pss {
 
 static int interrupted;
 
-JSValue
-minnet_service_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
-  int32_t rw = 0;
-  uint32_t calls = ++func_data[3].u.int32;
-  struct lws_pollfd pfd;
-  struct lws_pollargs args = *(struct lws_pollargs*)&JS_VALUE_GET_PTR(func_data[4]);
-  struct lws_context* context = JS_VALUE_GET_PTR(func_data[2]);
-
-  if(argc >= 1)
-    JS_ToInt32(ctx, &rw, argv[0]);
-
-  pfd.fd = JS_VALUE_GET_INT(func_data[0]);
-  pfd.revents = rw ? POLLOUT : POLLIN;
-  pfd.events = JS_VALUE_GET_INT(func_data[1]);
-
-  if(pfd.events != (POLLIN | POLLOUT) || poll(&pfd, 1, 0) > 0)
-    lws_service_fd(context, &pfd);
-
-  /*if (calls <= 100)
-    printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
-         "%d %d]\n",
-         rw ? "writable" : "readable", calls, pfd.fd, pfd.events,
-         pfd.revents, args.fd, args.events, args.prev_events);*/
-
-  return JS_UNDEFINED;
-}
-
 static int lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
-
 static int lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
 static struct lws_protocols lws_server_protocols[] = {
@@ -121,7 +93,7 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
         if(header->pos > header->start) {
           size_t len = header->pos - header->start;
 
-          assert(len <= args->max_len);
+          // assert(len <= args->max_len);
 
           memcpy(args->p, header->start, len);
           args->p += len;

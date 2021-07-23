@@ -14,25 +14,6 @@ struct http_header {
   }
 #define SETLOG lws_set_log_level(LLL_ERR, NULL);
 
-/*
-static JSValue
-minnet_get_log(JSContext* ctx, JSValueConst this_val) {
-  return JS_DupValue(ctx, minnet_log);
-}
-
-static JSValue
-minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  JSValue ret = minnet_log;
-
-  minnet_log_ctx = ctx;
-  minnet_log = JS_DupValue(ctx, argv[0]);
-  if(argc > 1) {
-    JS_FreeValue(ctx, minnet_log_this);
-    minnet_log_this = JS_DupValue(ctx, argv[1]);
-  }
-  return ret;
-}*/
-
 extern struct minnet_ws_callback server_cb_message;
 extern struct minnet_ws_callback server_cb_connect;
 extern struct minnet_ws_callback server_cb_error;
