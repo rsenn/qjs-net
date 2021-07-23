@@ -25,8 +25,6 @@ static int interrupted;
 #else
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
- 
- 
 
 static void
 lws_log_callback(int level, const char* line) {
@@ -85,7 +83,6 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
     cb_ptr = cb;                                                                                                               \
   }
 #define SETLOG lws_set_log_level(LLL_ERR, NULL);
- 
 
 static JSValue
 minnet_service_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
@@ -533,33 +530,6 @@ typedef struct JSThreadState {
   int eval_script_recurse;
   void *recv_pipe, *send_pipe;
 } JSThreadState;
-
-/*static int minnet_ws_service(struct lws_context *context, uint32_t
-timeout)
-{
-  int ret, i, j = 0, n = FD_SETSIZE;
-  struct pollfd pfds[n];
-  struct lws *wss[n];
-
-  for (i = 0; i < n; i++) {
-    if ((wss[j] = wsi_from_fd(context, i))) {
-      printf("wss[%d] (%d) %i\n", j, i,
-lws_partial_buffered(wss[j]));
-
-      pfds[j] = (struct pollfd){
-        .fd = i,
-        .events = POLLIN | (lws_partial_buffered(wss[j]) ?
-POLLOUT : 0), .revents = 0}; j++;
-    }
-  }
-
-  if ((ret = poll(pfds, j, timeout)) != -1) {
-    for (i = 0; i < j; i++) {
-      lws_service_fd(context, (struct lws_pollfd *)&pfds[i]);
-    }
-  }
-  return ret;
-}*/
 
 static void
 minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValueConst options) {

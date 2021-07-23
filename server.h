@@ -17,7 +17,6 @@ struct http_header {
     cb_ptr = cb;                                                                                                               \
   }
 #define SETLOG lws_set_log_level(LLL_ERR, NULL);
- 
 
 static JSValue minnet_log, minnet_log_this;
 static JSContext* minnet_log_ctx;

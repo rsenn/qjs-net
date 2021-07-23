@@ -21,21 +21,6 @@ struct pss {
 
 static int interrupted;
 
-#ifdef JS_SHARED_LIBRARY
-#define JS_INIT_MODULE js_init_module
-#else
-#define JS_INIT_MODULE js_init_module_minnet
-#endif
- 
-static void
-get_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
-  JSValue global = JS_GetGlobalObject(ctx);
-  *console = JS_GetPropertyStr(ctx, global, "console");
-  *console_log = JS_GetPropertyStr(ctx, *console, "log");
-  JS_FreeValue(ctx, global);
-} 
- 
-
 static JSValue
 minnet_service_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   int32_t rw = 0;

@@ -1,5 +1,11 @@
 #include "server.h"
 
+#ifdef JS_SHARED_LIBRARY
+#define JS_INIT_MODULE js_init_module
+#else
+#define JS_INIT_MODULE js_init_module_minnet
+#endif
+
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 #define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags)                                              \
   {                                                                                                                            \
@@ -169,24 +175,29 @@ static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
 
 static JSClassID minnet_response_class_id;
 
-
 #define GETCB(opt, cb_ptr)                                                                                                     \
   if(JS_IsFunction(ctx, opt)) {                                                                                                \
     struct minnet_ws_callback cb = {ctx, &this_val, &opt};                                                                     \
     cb_ptr = cb;                                                                                                               \
   }
 #define SETLOG lws_set_log_level(LLL_ERR, NULL);
- 
 
+static inline void
+get_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
+  JSValue global = JS_GetGlobalObject(ctx);
+  *console = JS_GetPropertyStr(ctx, global, "console");
+  *console_log = JS_GetPropertyStr(ctx, *console, "log");
+  JS_FreeValue(ctx, global);
+}
 
-static JSValue
+static inline JSValue
 call_ws_callback(minnet_ws_callback* cb, int argc, JSValue* argv) {
   if(!cb->func_obj)
     return JS_UNDEFINED;
   return JS_Call(cb->ctx, *(cb->func_obj), *(cb->this_obj), argc, argv);
 }
 
-static JSValue
+static inline JSValue
 create_websocket_obj(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* res;
   JSValue ws_obj = JS_NewObjectClass(ctx, minnet_ws_class_id);
@@ -209,7 +220,7 @@ create_websocket_obj(JSContext* ctx, struct lws* wsi) {
   return ws_obj;
 }
 
-static JSValue
+static inline JSValue
 get_websocket_obj(JSContext* ctx, struct lws* wsi) {
   JSObject* obj;
 
