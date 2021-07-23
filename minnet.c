@@ -25,31 +25,8 @@ static int interrupted;
 #else
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
-
-static void
-http_header_alloc(JSContext* ctx, struct http_header* hdr, size_t size) {
-  hdr->start = js_malloc(ctx, size);
-  hdr->pos = hdr->start;
-  hdr->end = hdr->start + size;
-}
-
-static void
-http_header_free(JSContext* ctx, struct http_header* hdr) {
-  js_free(ctx, hdr->start);
-  hdr->start = 0;
-  hdr->pos = 0;
-  hdr->end = 0;
-}
-
-void js_std_loop(JSContext* ctx);
-
-static void
-get_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
-  JSValue global = JS_GetGlobalObject(ctx);
-  *console = JS_GetPropertyStr(ctx, global, "console");
-  *console_log = JS_GetPropertyStr(ctx, *console, "log");
-  JS_FreeValue(ctx, global);
-}
+ 
+ 
 
 static void
 lws_log_callback(int level, const char* line) {
@@ -108,52 +85,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
     cb_ptr = cb;                                                                                                               \
   }
 #define SETLOG lws_set_log_level(LLL_ERR, NULL);
-
-static JSValue
-create_websocket_obj(JSContext* ctx, struct lws* wsi) {
-  MinnetWebsocket* res;
-  JSValue ws_obj = JS_NewObjectClass(ctx, minnet_ws_class_id);
-
-  if(JS_IsException(ws_obj))
-    return JS_EXCEPTION;
-
-  if(!(res = js_mallocz(ctx, sizeof(*res)))) {
-    JS_FreeValue(ctx, ws_obj);
-    return JS_EXCEPTION;
-  }
-
-  res->lwsi = wsi;
-  res->ref_count = 1;
-
-  JS_SetOpaque(ws_obj, res);
-
-  lws_set_wsi_user(wsi, JS_VALUE_GET_OBJ(JS_DupValue(ctx, ws_obj)));
-
-  return ws_obj;
-}
-
-static JSValue
-get_websocket_obj(JSContext* ctx, struct lws* wsi) {
-  JSObject* obj;
-
-  if((obj = lws_wsi_user(wsi))) {
-    JSValue ws_obj = JS_MKPTR(JS_TAG_OBJECT, obj);
-    MinnetWebsocket* res = JS_GetOpaque2(ctx, ws_obj, minnet_ws_class_id);
-
-    res->ref_count++;
-
-    return JS_DupValue(ctx, ws_obj);
-  }
-
-  return create_websocket_obj(ctx, wsi);
-}
-
-static JSValue
-call_ws_callback(minnet_ws_callback* cb, int argc, JSValue* argv) {
-  if(!cb->func_obj)
-    return JS_UNDEFINED;
-  return JS_Call(cb->ctx, *(cb->func_obj), *(cb->this_obj), argc, argv);
-}
+ 
 
 static JSValue
 minnet_service_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
@@ -380,7 +312,6 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
 
       if(!pss || pss->times > pss->budget)
         break;
-
 
       n = LWS_WRITE_HTTP;
       if(pss->times == pss->budget)
