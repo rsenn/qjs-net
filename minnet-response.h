@@ -44,12 +44,4 @@ static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
 extern JSValue minnet_response_proto;
 extern JSClassID minnet_response_class_id;
 
-static void
-value_dump(JSContext* ctx, const char* n, JSValueConst v) {
-  const char* str = JS_ToCString(ctx, v);
-  printf("\n\t%s\t%s", n, str);
-  fflush(stdout);
-  JS_FreeCString(ctx, str);
-}
-
 #endif /* MINNET_RESPONSE_H */

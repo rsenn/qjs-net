@@ -490,6 +490,14 @@ header_dump(const char* n, struct http_header* hdr) {
   fflush(stdout);
 }
 
+void
+value_dump(JSContext* ctx, const char* n, JSValueConst v) {
+  const char* str = JS_ToCString(ctx, v);
+  printf("\n\t%s\t%s", n, str);
+  fflush(stdout);
+  JS_FreeCString(ctx, str);
+}
+
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   return JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
