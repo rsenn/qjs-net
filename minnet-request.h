@@ -47,7 +47,8 @@ static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
 
 static inline void
 body_dump(const char* n, struct http_body* b) {
-  printf("\n\t%s\t{ times = %zx, budget = %zx }\n", n, b->times, b->budget);
+  printf("\n\t%s\t{ times = %zx, budget = %zx }", n, b->times, b->budget);
+  fflush(stdout);
 }
 
 #endif /* MINNET_REQUEST_H */
