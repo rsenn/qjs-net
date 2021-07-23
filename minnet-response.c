@@ -8,11 +8,21 @@ JSValue minnet_response_proto;
 void
 minnet_response_dump(JSContext* ctx, struct http_response* res) {
   printf("{");
-  value_dump(ctx, "status", &res->status);
-  value_dump(ctx, "ok", &res->ok);
-  value_dump(ctx, "url", &res->url);
-  value_dump(ctx, "type", &res->type);
-  printf("\n}\n");
+  înt32_t status;
+  BOOL ok;
+  char *url, *type;
+  JS_ToInt32(ctx, &status, res->status);
+  ok = JS_ToBool(ctx, res->ok);
+  url = JS_ToCString(ctx, res->url);
+  type = JS_ToCString(ctx, res->type);
+  printf(" status = %d, ok = %d, url = %s, type = %s", status, ok, url, type);
+  printf(" }\n");
+  /*
+    value_dump(ctx, "status", &res->status);
+    value_dump(ctx, "ok", &res->ok);
+    value_dump(ctx, "url", &res->url);
+    value_dump(ctx, "type", &res->type);
+    printf("\n}\n");*/
   fflush(stdout);
 }
 void
