@@ -412,7 +412,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   */
       /*      JSValue response = minnet_response_wrap(ctx, &r->response);
        */
-      minnet_request_dump(r);
+      minnet_request_dump(server_cb_http.ctx, r);
       { /*  Demonstrates how to retreive a urlarg x=value  */
 
         char value[100];

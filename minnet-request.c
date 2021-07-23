@@ -6,7 +6,7 @@ JSClassID minnet_request_class_id;
 JSValue minnet_request_proto;
 
 void
-minnet_request_dump(MinnetRequest const* r) {
+minnet_request_dump(JSContext* ctx, MinnetRequest const* r) {
   printf("MinnetRequest\n\turi = %s", r->uri);
   printf("\n\tpath = %s", r->path);
   printf("\n\ttype = %s", r->type);
@@ -14,7 +14,8 @@ minnet_request_dump(MinnetRequest const* r) {
 
   header_dump("header", &r->header);
   body_dump("body", &r->body);
-  minnet_response_dump("response", &r->response);
+  fputs("\n\tresponse = ", stdout);
+  minnet_response_dump(ctx, &r->response);
   fputc('\n', stdout);
   fflush(stdout);
 }
