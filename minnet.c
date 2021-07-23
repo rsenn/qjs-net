@@ -364,37 +364,41 @@ io_events(int events) {
 
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
-  struct pollfd x = {0, 0, 0};
   struct lws_context* context;
-  int wr = READ_HANDLER;
+  int wr = READ_HANDLER, flags;
+  int fd, events, revents;
   size_t seq, len;
   intptr_t* values = JS_GetArrayBuffer(ctx, &len, func_data[0]);
   assert(len == sizeof(intptr_t) * 5);
-  x.fd = values[0];
-  x.revents = values[2];
+  fd = values[0];
+  revents = values[2];
   context = (void*)values[3];
   seq = values[4];
   if(argc >= 1)
     JS_ToInt32(ctx, &wr, argv[0]);
-  x.events = (values[1] & PIO) && wr == WRITE_HANDLER ? POLLOUT : POLLIN;
-  if(!(x.events & PIO))
-    values[1] = x.events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+  flags = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
 
-  if(!(x.revents & PIO)) {
+  if(!(events = (values[1] & PIO)))
+    values[1] = events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+
+  if(!(revents & PIO)) {
+    x.fd = fd;
+    x.events = events;
+    x.revents = 0;
 
     if(poll(&x, 1, 0) < 0) {
       printf("poll error: %s\n", strerror(errno));
+    } else {
+      revents = x.revents;
     }
-    if(x.revents & PIO)
-      values[2] = x.revents & PIO;
+
+    /* if(x.revents & PIO)
+       values[2] = x.revents & PIO;*/
   }
 
   printf("\nio_handler #%zu fd = %d, events = %s, revents = %s, context = %p", seq, x.fd, io_events(x.events), io_events(x.revents), context);
   fflush(stdout);
-
-  if(x.revents & PIO) {
-    lws_service_fd(context, &x);
-  }
+  11 if(revents & PIO) { lws_service_fd(context, &x); }
 
   /*if (calls <= 100)
     printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
@@ -416,6 +420,7 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
 
   //  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
   printf("\nmake_handler #%u fd = %d, events = 0x%04x, revents = 0x%04x, context = %p", values[4], values[0], values[1], values[2], (void*)values[3]);
+
   fflush(stdout);
   JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
