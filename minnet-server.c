@@ -340,6 +340,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         JSValue argv[] = {ws_obj, JS_NewString(server_cb_http.ctx, in)};
         int32_t result = 0;
         MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
+        printf("LWS_CALLBACK_FILTER_HTTP_CONNECTION in: %s\n", in);
 
         // ws->h = h;
 
@@ -370,7 +371,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
         struct lws_process_html_args* args = (struct lws_process_html_args*)in;
 
-        printf("args: %.*s", args->len, args->p);
+        printf("LWS_CALLBACK_ADD_HEADERS args: %.*s\n", args->len, args->p);
         /*  if(h->pos > h->start) {
             size_t len = h->pos - h->start;
 
@@ -412,7 +413,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       /*      JSValue response = minnet_response_wrap(ctx, &r->response);
        */
-      printf("%s: HTTP %s: connection %s, URI %s, path %s\n", __func__, r->method, (const char*)buf, r->uri, r->body.path);
+      printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method, (const char*)buf, r->uri, r->body.path);
 
       { /*  Demonstrates how to retreive a urlarg x=value  */
 
