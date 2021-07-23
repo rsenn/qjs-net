@@ -491,8 +491,8 @@ header_dump(const char* n, struct http_header* hdr) {
 }
 
 void
-value_dump(JSContext* ctx, const char* n, JSValueConst v) {
-  const char* str = JS_ToCString(ctx, v);
+value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
+  const char* str = JS_ToCString(ctx, *v);
   printf("\n\t%s\t%s", n, str);
   fflush(stdout);
   JS_FreeCString(ctx, str);

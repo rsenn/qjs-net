@@ -47,7 +47,7 @@ JSValue header_tostring(JSContext*, struct http_header* hdr);
 void header_finalizer(JSRuntime*, void* opaque, void* ptr);
 JSValue header_tobuffer(JSContext*, struct http_header* hdr);
 void header_dump(const char*, struct http_header* hdr);
-void value_dump(JSContext*, const char* n, JSValue v);
+void value_dump(JSContext*, const char* n, JSValueConst const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
 
 #endif /* MINNET_H */
