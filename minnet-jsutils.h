@@ -45,4 +45,33 @@ js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
   return js_function_bind(ctx, func, 1, &arg);
 }
 
+typedef union pointer {
+  void* p;
+  struct {
+    int32_t lo32, hi32;
+  };
+  uint64_t u64;
+  int64_t s64;
+  uint32_t u32[2];
+  int32_t s32[2];
+  uint16_t u16[4];
+  int16_t s16[4];
+  uint8_t u8[8];
+  int8_t s8[8];
+} Pointer;
+
+static inline Pointer
+ptr(const void* ptr) {
+  Pointer r = {ptr};
+  return r;
+}
+
+static inline void*
+ptr32(uint32_t lo, uint32_t hi) {
+  Pointer r = {0};
+  r.u32[0] = lo;
+  r.u32[1] = hi;
+  return r.p;
+}
+
 #endif /* MINNET_JS_UTILS_H */
