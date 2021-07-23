@@ -387,17 +387,11 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       JSValue ret = JS_UNDEFINED;
       const char* content_type = "text/plain";
       int32_t http_status = HTTP_STATUS_NOT_FOUND;
-      /*  If you want to know the full url path used, you can get it
-       * like this:
-       * n = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI);
-       * The base path is the first (n - strlen((const char *)in))  chars in buf.
-       */
+
       if(ctx) {
         char buf[1024];
         ssize_t len;
-        /* In contains the url part after the place the mount was  positioned at,
-         * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath
-         */
+
         lws_snprintf(r->path, sizeof(r->path), "%s", (const char*)in);
         if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
           r->peer = js_strdup(ctx, buf);
