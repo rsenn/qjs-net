@@ -1,9 +1,14 @@
 #include "minnet.h"
 #include "server.h"
 #include "list.h"
-#include <assert.h>
-#include <curl/curl.h>
-#include <sys/time.h>
+
+struct minnet_ws_callback server_cb_message;
+struct minnet_ws_callback server_cb_connect;
+struct minnet_ws_callback server_cb_error;
+struct minnet_ws_callback server_cb_close;
+struct minnet_ws_callback server_cb_pong;
+struct minnet_ws_callback server_cb_fd;
+struct minnet_ws_callback server_cb_http;
 
 /*
  * Unlike ws, http is a stateless protocol.  This pss only exists for the
@@ -21,7 +26,7 @@ struct pss {
 
 static int interrupted;
 
-static JSValue
+JSValue
 minnet_service_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   int32_t rw = 0;
   uint32_t calls = ++func_data[3].u.int32;
@@ -48,55 +53,6 @@ minnet_service_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   return JS_UNDEFINED;
 }
 
-enum { READ_HANDLER = 0, WRITE_HANDLER };
-
-static JSValue
-minnet_make_handler(JSContext* ctx, struct lws_pollargs* pfd, struct lws* wsi, int magic) {
-  JSValue data[5] = {
-      JS_MKVAL(JS_TAG_INT, pfd->fd),
-      JS_MKVAL(JS_TAG_INT, pfd->events),
-      JS_MKPTR(0, lws_get_context(wsi)),
-      JS_MKVAL(JS_TAG_INT, 0),
-      JS_MKPTR(0, *(void**)pfd),
-  };
-
-  return JS_NewCFunctionData(ctx, minnet_service_handler, 0, magic, countof(data), data);
-}
-
-static JSValue
-minnet_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue* func_data) {
-  JSValue args[argc + magic];
-  size_t i, j;
-  for(i = 0; i < magic; i++) args[i] = func_data[i + 1];
-  for(j = 0; j < argc; j++) args[i++] = argv[j];
-
-  return JS_Call(ctx, func_data[0], this_val, i, args);
-}
-
-static JSValue
-minnet_function_bind(JSContext* ctx, JSValueConst func, int argc, JSValueConst argv[]) {
-  JSValue data[argc + 1];
-  size_t i;
-  data[0] = JS_DupValue(ctx, func);
-  for(i = 0; i < argc; i++) data[i + 1] = JS_DupValue(ctx, argv[i]);
-  return JS_NewCFunctionData(ctx, minnet_function_bound, 0, argc, argc + 1, data);
-}
-
-static JSValue
-minnet_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
-  return minnet_function_bind(ctx, func, 1, &arg);
-}
-
-static void
-minnet_make_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* pfd, JSValue out[2]) {
-  JSValue func = minnet_make_handler(ctx, pfd, wsi, 0);
-
-  out[0] = (pfd->events & POLLIN) ? minnet_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
-  out[1] = (pfd->events & POLLOUT) ? minnet_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
-
-  JS_FreeValue(ctx, func);
-}
-
 static int lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
 static int lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
@@ -116,6 +72,7 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
 #if defined(LWS_HAVE_CTIME_R)
   char date[32];
 #endif
+  struct http_header* header = 0;
 
   switch(reason) {
 
@@ -126,6 +83,8 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
         JSValue argv[] = {ws_obj, JS_NewString(server_cb_http.ctx, in)};
         int32_t result = 0;
         MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
+        if(!(header = ws->header))
+          header = ws->header = js_mallocz(server_cb_http.ctx, sizeof(struct http_header));
 
         http_header_alloc(server_cb_http.ctx, &ws->header, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
 
@@ -138,9 +97,9 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
         JS_FreeValue(server_cb_http.ctx, ret);
 
         /* if(!result) {
-           if(ws->header.pos > ws->header.start)
-             lws_finalize_write_http_header(ws->lwsi, ws->header.start,
-         &ws->header.pos, ws->header.end);
+           if(header->pos > header->start)
+             lws_finalize_write_http_header(ws->lwsi, header->start,
+         &header->pos, header->end);
          }*/
 
         if(result)
@@ -156,13 +115,15 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
         JSValue ws_obj = get_websocket_obj(server_cb_http.ctx, wsi);
         MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
         struct lws_process_html_args* args = (struct lws_process_html_args*)in;
+        if(!(header = ws->header))
+          header = ws->header = js_mallocz(server_cb_http.ctx, sizeof(struct http_header));
 
-        if(ws->header.pos > ws->header.start) {
-          size_t len = ws->header.pos - ws->header.start;
+        if(header->pos > header->start) {
+          size_t len = header->pos - header->start;
 
           assert(len <= args->max_len);
 
-          memcpy(args->p, ws->header.start, len);
+          memcpy(args->p, header->start, len);
           args->p += len;
         }
       }
@@ -459,6 +420,7 @@ minnet_free_mount(JSContext* ctx, struct lws_http_mount* mount) {
     JS_FreeCString(ctx, mount->def);
   js_free(ctx, mount);
 }
+
 typedef struct JSThreadState {
   struct list_head os_rw_handlers;
   struct list_head os_signal_handlers;
@@ -495,19 +457,6 @@ POLLOUT : 0), .revents = 0}; j++;
   return ret;
 }*/
 
-static void
-minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValueConst options) {
-  JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");
-  JSValue opt_ssl_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
-  JSValue opt_ssl_ca = JS_GetPropertyStr(ctx, options, "sslCA");
-
-  if(JS_IsString(opt_ssl_cert))
-    info->ssl_cert_filepath = JS_ToCString(ctx, opt_ssl_cert);
-  if(JS_IsString(opt_ssl_private_key))
-    info->ssl_private_key_filepath = JS_ToCString(ctx, opt_ssl_private_key);
-  if(JS_IsString(opt_ssl_ca))
-    info->client_ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
-}
 static const struct lws_http_mount mount_dyn = {
     /* .mount_next */ NULL,   /* linked-list "next" */
     /* .mountpoint */ "/dyn", /* mountpoint URL */
@@ -528,7 +477,7 @@ static const struct lws_http_mount mount_dyn = {
     /* .basic_auth_login_file */ NULL,
 };
 
-static JSValue
+JSValue
 minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   int a = 0;
   int port = 7981;

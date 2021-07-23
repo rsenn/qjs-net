@@ -1,11 +1,7 @@
 #ifndef MINNET_SERVER_H
 #define MINNET_SERVER_H
 
-#include "quickjs.h"
 #include "cutils.h"
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <libwebsockets.h>
 
 struct http_header {
   unsigned char *start, *pos, *end;
@@ -18,10 +14,7 @@ struct http_header {
   }
 #define SETLOG lws_set_log_level(LLL_ERR, NULL);
 
-static JSValue minnet_log, minnet_log_this;
-static JSContext* minnet_log_ctx;
-static BOOL minnet_exception;
-
+/*
 static JSValue
 minnet_get_log(JSContext* ctx, JSValueConst this_val) {
   return JS_DupValue(ctx, minnet_log);
@@ -38,17 +31,17 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     minnet_log_this = JS_DupValue(ctx, argv[1]);
   }
   return ret;
-}
+}*/
 
-static struct minnet_ws_callback server_cb_message;
-static struct minnet_ws_callback server_cb_connect;
-static struct minnet_ws_callback server_cb_error;
-static struct minnet_ws_callback server_cb_close;
-static struct minnet_ws_callback server_cb_pong;
-static struct minnet_ws_callback server_cb_fd;
-static struct minnet_ws_callback server_cb_http;
+extern struct minnet_ws_callback server_cb_message;
+extern struct minnet_ws_callback server_cb_connect;
+extern struct minnet_ws_callback server_cb_error;
+extern struct minnet_ws_callback server_cb_close;
+extern struct minnet_ws_callback server_cb_pong;
+extern struct minnet_ws_callback server_cb_fd;
+extern struct minnet_ws_callback server_cb_http;
 
-static JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
 static inline void
 http_header_alloc(JSContext* ctx, struct http_header* hdr, size_t size) {

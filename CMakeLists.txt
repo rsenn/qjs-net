@@ -292,7 +292,7 @@ link_directories(${LIBWEBSOCKETS_LIBRARY_DIRS})
 # ${JS_BINDINGS_SOURCES}) message("JS_BINDINGS_MODULES: ${JS_BINDINGS_MODULES}") foreach(JS_MODULE
 # ${JS_BINDINGS_MODULES}) make_shared_module(${JS_MODULE}) endforeach()
 
-file(GLOB JS_BINDINGS_SOURCES minnet.c minnet.h server.c server.h)
+file(GLOB JS_BINDINGS_SOURCES minnet.c minnet.h server.c server.h client.c client.h)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
