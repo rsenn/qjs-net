@@ -416,7 +416,7 @@ static uint32_t handler_seq = 0;
 
 static JSValue
 make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
-  uint32_t seq = handler_seq++;
+  uint32_t seq = ++handler_seq;
   struct lws_context* context = lws_get_context(wsi);
   JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
   JSValue arr = vector2array(ctx, countof(items), items);
