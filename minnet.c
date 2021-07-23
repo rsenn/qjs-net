@@ -358,33 +358,44 @@ io_events(int events) {
   return "";
 }
 
+#define PIO (POLLIN | POLLOUT)
+
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
+  struct pollfd x = {0, 0, 0};
   int64_t fd = -1, events = -1, revents = -1;
-  BOOL wr = FALSE;
+  int32_t wr = READ_HANDLER;
   uint32_t calls = ++func_data[3].u.int32;
   MinnetPollFd pfd = {0, 0, 0};
   JS_ToInt64(ctx, &fd, func_data[0]);
   pfd.fd = fd;
   JS_ToInt64(ctx, &events, func_data[1]);
-  pfd.events = events & (POLLIN | POLLOUT);
+  pfd.events = events & PIO;
   JS_ToInt64(ctx, &revents, func_data[2]);
-  pfd.revents = revents & (POLLIN | POLLOUT);
+  pfd.revents = revents & PIO;
 
   struct lws_context* context = value2ptr(ctx, func_data[3]);
   printf("io_handler fd = %d, events = %s, revents = %s, context = %p\n", pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
 
   if(argc >= 1)
-    wr = JS_ToBool(ctx, argv[0]);
+    JS_ToInt32(ctx, &wr, argv[0]);
 
-  pfd.revents = wr ? POLLOUT : POLLIN;
-  pfd.events = (pfd.events | pfd.revents) & (POLLIN | POLLOUT);
+  pfd.revents = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+  pfd.events = (pfd.events | pfd.revents) & PIO;
 
-  if(!(pfd.revents & (POLLIN | POLLOUT)))
-    if(poll(&pfd, 1, 0) < 0)
-      pfd.revents = 0;
+  if(!(pfd.revents & PIO)) {
+    x.fd = pfd.fd;
+    x.events = pfd.revents;
+    x.revents = 0;
 
-  if(pfd.revents & (POLLIN | POLLOUT))
+    if(poll(&x, 1, 0) < 0) {
+      printf("poll error: %s\n", strerror(errno));
+    } else {
+      pfd.revents = x.revents;
+    }
+  }
+
+  if(pfd.revents & PIO)
     lws_service_fd(context, &pfd);
 
   /*if (calls <= 100)
@@ -397,9 +408,9 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
 }
 
 static JSValue
-make_handler(JSContext* ctx, struct lws_pollargs* args, struct lws* wsi, int magic) {
+make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   struct lws_context* context = lws_get_context(wsi);
-  JSValueConst data[] = {JS_NewInt64(ctx, args->fd), JS_NewInt64(ctx, args->events), JS_NewInt64(ctx, args->prev_events), ptr2value(ctx, context)};
+  JSValueConst data[] = {JS_NewInt64(ctx, fd), JS_NewInt64(ctx, events), JS_NewInt64(ctx, 0), ptr2value(ctx, context)};
   printf("make_handler fd = %d, events = 0x%04x, prev_events = 0x%04x, context = %p\n", args->fd, args->events, args->prev_events, context);
   // printf("make_handler fd = %d, events = 0x%04x, context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
@@ -407,7 +418,7 @@ make_handler(JSContext* ctx, struct lws_pollargs* args, struct lws* wsi, int mag
 
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
-  JSValue func = make_handler(ctx, args, wsi, 0);
+  JSValue func = make_handler(ctx, args->fd, args->events | args->prev_events, wsi, 0);
 
   out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
   out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
