@@ -355,7 +355,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   uint32_t calls = ++func_data[3].u.int32;
   MinnetPollFd pfd = {JS_VALUE_GET_INT(func_data[0]), JS_VALUE_GET_INT(func_data[1])};
   //  struct lws_pollargs args = *(struct lws_pollargs*)&JS_VALUE_GET_PTR(func_data[4]);
-  struct lws_context* context = values32ptr(ctx, &func_data[2]);
+  struct lws_context* context = value2ptr(ctx, func_data[2]);
   printf("io_handler fd = %d, events = 0x%04x context = %p\n", pfd.fd, pfd.events, context);
 
   if(argc >= 1)
