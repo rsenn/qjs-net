@@ -191,6 +191,7 @@ if(NOT LIBWEBSOCKETS_FOUND)
 endif(NOT LIBWEBSOCKETS_FOUND)
 
 if(BUILD_LIBWEBSOCKETS)
+
   message("-- Building LIBWEBSOCKETS from source")
   set(LWS_WITHOUT_TESTAPPS TRUE)
   set(LWS_WITHOUT_TEST_SERVER TRUE)
@@ -298,6 +299,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Main
 add_library(quickjs-minnet MODULE ${JS_BINDINGS_SOURCES})
+if(BUILD_LIBWEBSOCKETS)
+  add_dependencies(quickjs-minnet libwebsockets)
+endif(BUILD_LIBWEBSOCKETS)
+
 target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
 set_target_properties(
   quickjs-minnet PROPERTIES COMPILE_FLAGS "-fvisibility=hidden" PREFIX ""
