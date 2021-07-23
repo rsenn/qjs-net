@@ -379,7 +379,8 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   pfd.events = (pfd.events | pfd.revents) & (POLLIN | POLLOUT);
 
   if(!(pfd.revents & (POLLIN | POLLOUT)))
-    poll(&pfd, 1, 0) > 0)
+    if(poll(&pfd, 1, 0) < 0)
+      pfd.revents = 0;
 
   if(pfd.revents & (POLLIN | POLLOUT))
     lws_service_fd(context, &pfd);
