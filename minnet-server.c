@@ -366,20 +366,21 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_ADD_HEADERS: {
       if(server_cb_http.func_obj) {
-    /*    JSValue ws_obj = minnet_ws_object(server_cb_http.ctx, wsi);
+        JSValue ws_obj = minnet_ws_object(server_cb_http.ctx, wsi);
         MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
         struct lws_process_html_args* args = (struct lws_process_html_args*)in;
-      
-        if(h->pos > h->start) {
-          size_t len = h->pos - h->start;
 
- 
-          memcpy(args->p, h->start, len);
-          args->p += len;
-        }
-*/      }
+        printf("args: %.*s", args->len, args->p);
+        /*  if(h->pos > h->start) {
+            size_t len = h->pos - h->start;
 
-    break;
+
+            memcpy(args->p, h->start, len);
+            args->p += len;
+          }*/
+      }
+
+      break;
     }
     case LWS_CALLBACK_HTTP: {
       JSValue ret = JS_UNDEFINED;
