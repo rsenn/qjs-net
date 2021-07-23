@@ -20,6 +20,7 @@ typedef struct http_request {
   MinnetResponse response;
 } MinnetRequest;
 
+void minnet_header_dump(MinnetRequest const*);
 void minnet_request_dump(MinnetRequest const*);
 void minnet_request_init(JSContext*, MinnetRequest* r, const char* in, struct lws* wsi);
 MinnetRequest* minnet_request_new(JSContext*, const char* in, struct lws* wsi);

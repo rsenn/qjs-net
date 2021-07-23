@@ -46,11 +46,7 @@ void header_free(JSContext*, struct http_header* hdr);
 JSValue header_tostring(JSContext*, struct http_header* hdr);
 void header_finalizer(JSRuntime*, void* opaque, void* ptr);
 JSValue header_tobuffer(JSContext*, struct http_header* hdr);
-struct http_request* minnet_request_new(JSContext*, const char* in, struct lws* wsi);
-JSValue minnet_request_constructor(JSContext*, const char* in, struct lws* wsi);
-JSValue minnet_request_wrap(JSContext*, struct http_request* req);
-JSValue minnet_request_get(JSContext*, JSValue this_val, int magic);
-JSValue minnet_request_getter_path(JSContext*, JSValue this_val);
+void header_dump(struct http_header*);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
 
 #endif /* MINNET_H */

@@ -7,9 +7,10 @@ JSValue minnet_request_proto;
 
 void
 minnet_request_dump(MinnetRequest const* r) {
-  printf("MinnetRequest uri = %s\n", r->uri);
-  printf("MinnetRequest path = %s\n", r->path);
-  printf("MinnetRequest type = %s\n", r->type);
+  printf("MinnetRequest\n\turi = %s", r->uri);
+  printf("\n\tpath = %s", r->path);
+  printf("\n\ttype = %s", r->type);
+  printf("\n\tpeer = %s", r->peer);
 }
 
 void

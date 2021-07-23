@@ -483,6 +483,10 @@ header_tobuffer(JSContext* ctx, struct http_header* hdr) {
   size_t len = hdr->end - hdr->start;
   return JS_NewArrayBuffer(ctx, ptr, len, header_finalizer, hdr, FALSE);
 }
+void
+header_dump(struct http_header* hdr) {
+  printf("{ pos = %zx, size = %zx }\n", hdr->p - hdr->start, hdr->end - hdr->start);
+}
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
