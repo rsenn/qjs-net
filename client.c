@@ -1,4 +1,5 @@
 #include "client.h"
+#include "websocket.h"
 #include "minnet.h"
 
 static struct lws_context* client_context;
@@ -129,7 +130,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       client_wsi = NULL;
       if(client_cb_close.func_obj) {
         JSValue why = in ? JS_NewString(client_cb_close.ctx, in) : JS_NULL;
-        call_ws_callback(&client_cb_close, 1, &why);
+        call_websocket_callback(&client_cb_close, 1, &why);
       }
       break;
     }
@@ -137,7 +138,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     case LWS_CALLBACK_CLIENT_ESTABLISHED: {
       if(client_cb_connect.func_obj) {
         JSValue ws_obj = get_websocket_obj(client_cb_connect.ctx, wsi);
-        call_ws_callback(&client_cb_connect, 1, &ws_obj);
+        call_websocket_callback(&client_cb_connect, 1, &ws_obj);
       }
       break;
     }
@@ -149,7 +150,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       client_wsi = NULL;
       if(client_cb_close.func_obj) {
         JSValue cb_argv[] = {get_websocket_obj(client_cb_close.ctx, wsi), JS_NewString(client_cb_close.ctx, in)};
-        call_ws_callback(&client_cb_close, 2, cb_argv);
+        call_websocket_callback(&client_cb_close, 2, cb_argv);
         JS_FreeValue(client_cb_close.ctx, cb_argv[0]);
         JS_FreeValue(client_cb_close.ctx, cb_argv[1]);
       }
@@ -160,7 +161,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
         JSValue ws_obj = get_websocket_obj(client_cb_message.ctx, wsi);
         JSValue msg = JS_NewStringLen(client_cb_message.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
-        call_ws_callback(&client_cb_message, 2, cb_argv);
+        call_websocket_callback(&client_cb_message, 2, cb_argv);
       }
       break;
     }
@@ -169,7 +170,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
         JSValue ws_obj = get_websocket_obj(client_cb_pong.ctx, wsi);
         JSValue data = JS_NewArrayBufferCopy(client_cb_pong.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, data};
-        call_ws_callback(&client_cb_pong, 2, cb_argv);
+        call_websocket_callback(&client_cb_pong, 2, cb_argv);
       }
       break;
     }
@@ -177,9 +178,9 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       struct lws_pollargs* args = in;
       if(client_cb_fd.func_obj) {
         JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
-        minnet_make_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+        make_io_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
 
-        call_ws_callback(&client_cb_fd, 3, argv);
+        call_websocket_callback(&client_cb_fd, 3, argv);
         JS_FreeValue(client_cb_fd.ctx, argv[0]);
         JS_FreeValue(client_cb_fd.ctx, argv[1]);
         JS_FreeValue(client_cb_fd.ctx, argv[2]);
@@ -192,8 +193,8 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
         JSValue argv[3] = {
             JS_NewInt32(client_cb_fd.ctx, args->fd),
         };
-        minnet_make_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
-        call_ws_callback(&client_cb_fd, 3, argv);
+        make_io_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+        call_websocket_callback(&client_cb_fd, 3, argv);
         JS_FreeValue(client_cb_fd.ctx, argv[0]);
       }
       break;
@@ -203,9 +204,9 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
 
       if(client_cb_fd.func_obj && args->events != args->prev_events) {
         JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
-        minnet_make_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+        make_io_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
 
-        call_ws_callback(&client_cb_fd, 3, argv);
+        call_websocket_callback(&client_cb_fd, 3, argv);
         JS_FreeValue(client_cb_fd.ctx, argv[0]);
         JS_FreeValue(client_cb_fd.ctx, argv[1]);
         JS_FreeValue(client_cb_fd.ctx, argv[2]);
@@ -214,7 +215,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
 
     default: {
-      // minnet_print_unhandled(reason);
+      // lws_print_unhandled(reason);
       break;
     }
   }

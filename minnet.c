@@ -1,7 +1,8 @@
 #include "minnet.h"
 #include "server.h"
 #include "client.h"
-#include "list.h"
+#include "response.h"
+#include "websocket.h"
 #include <assert.h>
 #include <curl/curl.h>
 #include <sys/time.h>
@@ -40,6 +41,123 @@ lws_log_callback(int level, const char* line) {
   }
 }
 
+const char*
+lws_callback_name(int reason) {
+  return ((const char* const[]){
+      "LWS_CALLBACK_ESTABLISHED",
+      "LWS_CALLBACK_CLIENT_CONNECTION_ERROR",
+      "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH",
+      "LWS_CALLBACK_CLIENT_ESTABLISHED",
+      "LWS_CALLBACK_CLOSED",
+      "LWS_CALLBACK_CLOSED_HTTP",
+      "LWS_CALLBACK_RECEIVE",
+      "LWS_CALLBACK_RECEIVE_PONG",
+      "LWS_CALLBACK_CLIENT_RECEIVE",
+      "LWS_CALLBACK_CLIENT_RECEIVE_PONG",
+      "LWS_CALLBACK_CLIENT_WRITEABLE",
+      "LWS_CALLBACK_SERVER_WRITEABLE",
+      "LWS_CALLBACK_HTTP",
+      "LWS_CALLBACK_HTTP_BODY",
+      "LWS_CALLBACK_HTTP_BODY_COMPLETION",
+      "LWS_CALLBACK_HTTP_FILE_COMPLETION",
+      "LWS_CALLBACK_HTTP_WRITEABLE",
+      "LWS_CALLBACK_FILTER_NETWORK_CONNECTION",
+      "LWS_CALLBACK_FILTER_HTTP_CONNECTION",
+      "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED",
+      "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION",
+      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS",
+      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS",
+      "LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION",
+      "LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER",
+      "LWS_CALLBACK_CONFIRM_EXTENSION_OKAY",
+      "LWS_CALLBACK_CLIENT_CONFIRM_EXTENSION_SUPPORTED",
+      "LWS_CALLBACK_PROTOCOL_INIT",
+      "LWS_CALLBACK_PROTOCOL_DESTROY",
+      "LWS_CALLBACK_WSI_CREATE",
+      "LWS_CALLBACK_WSI_DESTROY",
+      "LWS_CALLBACK_GET_THREAD_ID",
+      "LWS_CALLBACK_ADD_POLL_FD",
+      "LWS_CALLBACK_DEL_POLL_FD",
+      "LWS_CALLBACK_CHANGE_MODE_POLL_FD",
+      "LWS_CALLBACK_LOCK_POLL",
+      "LWS_CALLBACK_UNLOCK_POLL",
+      "LWS_CALLBACK_OPENSSL_CONTEXT_REQUIRES_PRIVATE_KEY",
+      "LWS_CALLBACK_WS_PEER_INITIATED_CLOSE",
+      "LWS_CALLBACK_WS_EXT_DEFAULTS",
+      "LWS_CALLBACK_CGI",
+      "LWS_CALLBACK_CGI_TERMINATED",
+      "LWS_CALLBACK_CGI_STDIN_DATA",
+      "LWS_CALLBACK_CGI_STDIN_COMPLETED",
+      "LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP",
+      "LWS_CALLBACK_CLOSED_CLIENT_HTTP",
+      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP",
+      "LWS_CALLBACK_COMPLETED_CLIENT_HTTP",
+      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ",
+      "LWS_CALLBACK_HTTP_BIND_PROTOCOL",
+      "LWS_CALLBACK_HTTP_DROP_PROTOCOL",
+      "LWS_CALLBACK_CHECK_ACCESS_RIGHTS",
+      "LWS_CALLBACK_PROCESS_HTML",
+      "LWS_CALLBACK_ADD_HEADERS",
+      "LWS_CALLBACK_SESSION_INFO",
+      "LWS_CALLBACK_GS_EVENT",
+      "LWS_CALLBACK_HTTP_PMO",
+      "LWS_CALLBACK_CLIENT_HTTP_WRITEABLE",
+      "LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION",
+      "LWS_CALLBACK_RAW_RX",
+      "LWS_CALLBACK_RAW_CLOSE",
+      "LWS_CALLBACK_RAW_WRITEABLE",
+      "LWS_CALLBACK_RAW_ADOPT",
+      "LWS_CALLBACK_RAW_ADOPT_FILE",
+      "LWS_CALLBACK_RAW_RX_FILE",
+      "LWS_CALLBACK_RAW_WRITEABLE_FILE",
+      "LWS_CALLBACK_RAW_CLOSE_FILE",
+      "LWS_CALLBACK_SSL_INFO",
+      0,
+      "LWS_CALLBACK_CHILD_CLOSING",
+      "LWS_CALLBACK_CGI_PROCESS_ATTACH",
+      "LWS_CALLBACK_EVENT_WAIT_CANCELLED",
+      "LWS_CALLBACK_VHOST_CERT_AGING",
+      "LWS_CALLBACK_TIMER",
+      "LWS_CALLBACK_VHOST_CERT_UPDATE",
+      "LWS_CALLBACK_CLIENT_CLOSED",
+      "LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL",
+      "LWS_CALLBACK_WS_SERVER_BIND_PROTOCOL",
+      "LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL",
+      "LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL",
+      "LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_FILE_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_FILE_DROP_PROTOCOL",
+      "LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL",
+      "LWS_CALLBACK_HTTP_CONFIRM_UPGRADE",
+      0,
+      0,
+      "LWS_CALLBACK_RAW_PROXY_CLI_RX",
+      "LWS_CALLBACK_RAW_PROXY_SRV_RX",
+      "LWS_CALLBACK_RAW_PROXY_CLI_CLOSE",
+      "LWS_CALLBACK_RAW_PROXY_SRV_CLOSE",
+      "LWS_CALLBACK_RAW_PROXY_CLI_WRITEABLE",
+      "LWS_CALLBACK_RAW_PROXY_SRV_WRITEABLE",
+      "LWS_CALLBACK_RAW_PROXY_CLI_ADOPT",
+      "LWS_CALLBACK_RAW_PROXY_SRV_ADOPT",
+      "LWS_CALLBACK_RAW_PROXY_CLI_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_PROXY_SRV_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_PROXY_CLI_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_PROXY_SRV_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_CONNECTED",
+      "LWS_CALLBACK_VERIFY_BASIC_AUTHORIZATION",
+      "LWS_CALLBACK_WSI_TX_CREDIT_GET",
+      "LWS_CALLBACK_CLIENT_HTTP_REDIRECT",
+      "LWS_CALLBACK_CONNECTING",
+  })[reason];
+}
+
+void
+lws_print_unhandled(int reason) {
+  printf("Unhandled LWS client event: %i %s\n", reason, lws_callback_name(reason));
+}
+
 JSValue
 minnet_service_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   int32_t rw = 0;
@@ -65,6 +183,36 @@ minnet_service_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
          pfd.revents, args.fd, args.events, args.prev_events);*/
 
   return JS_UNDEFINED;
+}
+
+JSValue
+minnet_make_handler(JSContext* ctx, struct lws_pollargs* pfd, struct lws* wsi, int magic) {
+  JSValue data[5] = {
+      JS_MKVAL(JS_TAG_INT, pfd->fd),
+      JS_MKVAL(JS_TAG_INT, pfd->events),
+      JS_MKPTR(0, lws_get_context(wsi)),
+      JS_MKVAL(JS_TAG_INT, 0),
+      JS_MKPTR(0, *(void**)pfd),
+  };
+
+  return JS_NewCFunctionData(ctx, minnet_service_handler, 0, magic, countof(data), data);
+}
+
+JSValue
+minnet_get_log(JSContext* ctx, JSValueConst this_val) {
+  return JS_DupValue(ctx, minnet_log);
+}
+JSValue
+minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  JSValue ret = minnet_log;
+
+  minnet_log_ctx = ctx;
+  minnet_log = JS_DupValue(ctx, argv[0]);
+  if(argc > 1) {
+    JS_FreeValue(ctx, minnet_log_this);
+    minnet_log_this = JS_DupValue(ctx, argv[1]);
+  }
+  return ret;
 }
 
 void
@@ -398,6 +546,7 @@ static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_PROP_INT32_DEF("HTTP_STATUS_GATEWAY_TIMEOUT", HTTP_STATUS_GATEWAY_TIMEOUT, 0),
     JS_PROP_INT32_DEF("HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED", HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED, 0),
 };
+
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   return JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
@@ -598,80 +747,4 @@ finish:
   JS_SetOpaque(resObj, res);
 
   return resObj;
-}
-
-static JSValue
-minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-  MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res && res->buffer) {
-    JSValue val = JS_NewArrayBufferCopy(ctx, res->buffer, res->size);
-    return val;
-  }
-
-  return JS_EXCEPTION;
-}
-
-static JSValue
-minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-  MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res && res->buffer)
-    return JS_ParseJSON(ctx, (char*)res->buffer, res->size, "<input>");
-
-  return JS_EXCEPTION;
-}
-
-static JSValue
-minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-  MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res && res->buffer)
-    return JS_NewStringLen(ctx, (char*)res->buffer, res->size);
-
-  return JS_EXCEPTION;
-}
-
-static JSValue
-minnet_response_getter_ok(JSContext* ctx, JSValueConst this_val) {
-  MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res)
-    return res->ok;
-
-  return JS_EXCEPTION;
-}
-
-static JSValue
-minnet_response_getter_url(JSContext* ctx, JSValueConst this_val) {
-  MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res)
-    return res->url;
-
-  return JS_EXCEPTION;
-}
-
-static JSValue
-minnet_response_getter_status(JSContext* ctx, JSValueConst this_val) {
-  MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res)
-    return res->status;
-
-  return JS_EXCEPTION;
-}
-
-static JSValue
-minnet_response_getter_type(JSContext* ctx, JSValueConst this_val) {
-  MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res) {
-    return res->type;
-  }
-
-  return JS_EXCEPTION;
-}
-
-static void
-minnet_response_finalizer(JSRuntime* rt, JSValue val) {
-  MinnetResponse* res = JS_GetOpaque(val, minnet_response_class_id);
-  if(res) {
-    if(res->buffer)
-      free(res->buffer);
-    js_free_rt(rt, res);
-  }
 }

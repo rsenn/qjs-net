@@ -1,4 +1,5 @@
 #include "minnet.h"
+#include "websocket.h"
 #include "server.h"
 #include "list.h"
 
@@ -60,7 +61,7 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
 
         http_header_alloc(server_cb_http.ctx, &ws->header, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
 
-        ret = call_ws_callback(&server_cb_http, 2, argv);
+        ret = call_websocket_callback(&server_cb_http, 2, argv);
         JS_FreeValue(server_cb_http.ctx, argv[0]);
         JS_FreeValue(server_cb_http.ctx, argv[1]);
 
@@ -243,7 +244,7 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
     }
 
     default: {
-      minnet_print_unhandled(reason);
+      lws_print_unhandled(reason);
       break;
     }
   }
@@ -262,7 +263,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_ESTABLISHED: {
       if(server_cb_connect.func_obj) {
         JSValue ws_obj = get_websocket_obj(server_cb_connect.ctx, wsi);
-        call_ws_callback(&server_cb_connect, 1, &ws_obj);
+        call_websocket_callback(&server_cb_connect, 1, &ws_obj);
       }
       break;
     }
@@ -273,7 +274,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         // printf("callback CLOSED %d\n", lws_get_socket_fd(wsi));
         JSValue ws_obj = get_websocket_obj(server_cb_close.ctx, wsi);
         JSValue cb_argv[2] = {ws_obj, in ? JS_NewStringLen(server_cb_connect.ctx, in, len) : JS_UNDEFINED};
-        call_ws_callback(&server_cb_close, in ? 2 : 1, cb_argv);
+        call_websocket_callback(&server_cb_close, in ? 2 : 1, cb_argv);
       }
       break;
     }
@@ -286,7 +287,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         JSValue ws_obj = get_websocket_obj(server_cb_message.ctx, wsi);
         JSValue msg = JS_NewStringLen(server_cb_message.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
-        call_ws_callback(&server_cb_message, 2, cb_argv);
+        call_websocket_callback(&server_cb_message, 2, cb_argv);
       }
       break;
     }
@@ -295,7 +296,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         JSValue ws_obj = get_websocket_obj(server_cb_pong.ctx, wsi);
         JSValue msg = JS_NewArrayBufferCopy(server_cb_pong.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
-        call_ws_callback(&server_cb_pong, 2, cb_argv);
+        call_websocket_callback(&server_cb_pong, 2, cb_argv);
       }
       break;
     }
@@ -307,9 +308,9 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       // POLLOUT) ? "OUT" : "", (args->events & POLLERR) ? "ERR" : "");
       if(server_cb_fd.func_obj) {
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
-        minnet_make_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+        make_io_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
-        call_ws_callback(&server_cb_fd, 3, argv);
+        call_websocket_callback(&server_cb_fd, 3, argv);
         JS_FreeValue(server_cb_fd.ctx, argv[0]);
         JS_FreeValue(server_cb_fd.ctx, argv[1]);
         JS_FreeValue(server_cb_fd.ctx, argv[2]);
@@ -322,8 +323,8 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       JSValue argv[3] = {
           JS_NewInt32(server_cb_fd.ctx, args->fd),
       };
-      minnet_make_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
-      call_ws_callback(&server_cb_fd, 3, argv);
+      make_io_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+      call_websocket_callback(&server_cb_fd, 3, argv);
       JS_FreeValue(server_cb_fd.ctx, argv[0]);
 
       break;
@@ -336,9 +337,9 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       if(args->events != args->prev_events) {
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
-        minnet_make_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+        make_io_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
-        call_ws_callback(&server_cb_fd, 3, argv);
+        call_websocket_callback(&server_cb_fd, 3, argv);
         JS_FreeValue(server_cb_fd.ctx, argv[0]);
         JS_FreeValue(server_cb_fd.ctx, argv[1]);
         JS_FreeValue(server_cb_fd.ctx, argv[2]);
@@ -354,7 +355,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
        }*/
 
     default: {
-      //  minnet_print_unhandled(reason);
+      //  lws_print_unhandled(reason);
       break;
     }
   }
