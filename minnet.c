@@ -13,7 +13,6 @@
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
-JSClassID minnet_ws_class_id;
 
 JSValue minnet_log, minnet_log_this;
 JSContext* minnet_log_ctx = 0;
@@ -202,47 +201,6 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return ret;
 }
 
-static const JSCFunctionListEntry minnet_funcs[] = {
-    JS_CFUNC_DEF("server", 1, minnet_ws_server),
-    JS_CFUNC_DEF("client", 1, minnet_ws_client),
-    JS_CFUNC_DEF("fetch", 1, minnet_fetch),
-    JS_CFUNC_DEF("setLog", 1, minnet_set_log),
-};
-
-static int
-js_minnet_init(JSContext* ctx, JSModuleDef* m) {
-  return JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
-}
-
-__attribute__((visibility("default"))) JSModuleDef*
-JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
-  JSModuleDef* m;
-  m = JS_NewCModule(ctx, module_name, js_minnet_init);
-  if(!m)
-    return NULL;
-  JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
-
-  // Add class Response
-  JS_NewClassID(&minnet_response_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
-  JSValue response_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, response_proto, minnet_response_proto_funcs, countof(minnet_response_proto_funcs));
-  JS_SetClassProto(ctx, minnet_response_class_id, response_proto);
-
-  // Add class WebSocket
-  JS_NewClassID(&minnet_ws_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
-  JSValue websocket_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, websocket_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_ws_class_id, websocket_proto);
-
-  minnet_log_ctx = ctx;
-
-  lws_set_log_level(LLL_USER | LLL_ERR | LLL_WARN | LLL_NOTICE, lws_log_callback);
-
-  return m;
-}
-
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   CURL* curl;
@@ -410,6 +368,7 @@ finish:
 
   return resObj;
 }
+
 static inline JSValue
 js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue* func_data) {
   JSValue args[argc + magic];
@@ -455,4 +414,45 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* pfd, JSVal
   out[1] = (pfd->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
 
   JS_FreeValue(ctx, func);
+}
+
+static const JSCFunctionListEntry minnet_funcs[] = {
+    JS_CFUNC_DEF("server", 1, minnet_ws_server),
+    JS_CFUNC_DEF("client", 1, minnet_ws_client),
+    JS_CFUNC_DEF("fetch", 1, minnet_fetch),
+    JS_CFUNC_DEF("setLog", 1, minnet_set_log),
+};
+
+static int
+js_minnet_init(JSContext* ctx, JSModuleDef* m) {
+  return JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
+}
+
+__attribute__((visibility("default"))) JSModuleDef*
+JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
+  JSModuleDef* m;
+  m = JS_NewCModule(ctx, module_name, js_minnet_init);
+  if(!m)
+    return NULL;
+  JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
+
+  // Add class Response
+  JS_NewClassID(&minnet_response_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
+  JSValue response_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, response_proto, minnet_response_proto_funcs, countof(minnet_response_proto_funcs));
+  JS_SetClassProto(ctx, minnet_response_class_id, response_proto);
+
+  // Add class WebSocket
+  JS_NewClassID(&minnet_ws_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
+  JSValue websocket_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, websocket_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_ws_class_id, websocket_proto);
+
+  minnet_log_ctx = ctx;
+
+  lws_set_log_level(LLL_USER | LLL_ERR | LLL_WARN | LLL_NOTICE, lws_log_callback);
+
+  return m;
 }
