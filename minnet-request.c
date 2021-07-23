@@ -11,6 +11,9 @@ minnet_request_dump(MinnetRequest const* r) {
   printf("\n\tpath = %s", r->path);
   printf("\n\ttype = %s", r->type);
   printf("\n\tpeer = %s", r->peer);
+
+  header_dump("header", &r->header);
+  body_dump("body", &r->body);
 }
 
 void
