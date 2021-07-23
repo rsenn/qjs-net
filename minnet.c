@@ -483,7 +483,7 @@ header_tobuffer(JSContext* ctx, struct http_header* hdr) {
   return JS_NewArrayBuffer(ctx, ptr, len, header_finalizer, hdr, FALSE);
 }
 
-enum { REQUEST_METHOD, REQUEST_PEER, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER };
+enum { REQUEST_METHOD, REQUEST_PEER, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_BUFFER };
 
 MinnetHttpRequest*
 minnet_request_new(JSContext* ctx, const char* in, struct lws* wsi) {
@@ -505,6 +505,11 @@ minnet_request_new(JSContext* ctx, const char* in, struct lws* wsi) {
     } else if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
       r->uri = js_strndup(ctx, buf, len);
       r->method = js_strdup(ctx, "POST");
+    }
+
+    if(!header_alloc(ctx, &r->header, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE)) {
+      JS_ThrowOutOfMemory(ctx);
+      return 0;
     }
   }
   return r;
@@ -558,8 +563,11 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_HEADER: {
-      if(req->header.start)
-        ret = header_tobuffer(ctx, &req->header);
+      ret = header_tostring(ctx, &req->header);
+      break;
+    }
+    case REQUEST_BUFFER: {
+      ret = header_tobuffer(ctx, &req->header);
 
       break;
     }
@@ -582,6 +590,7 @@ static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_request_get, 0, REQUEST_PEER, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("header", minnet_request_get, 0, REQUEST_HEADER, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_request_get, 0, REQUEST_BUFFER, JS_PROP_ENUMERABLE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 
