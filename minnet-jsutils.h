@@ -62,7 +62,8 @@ typedef union pointer {
 
 static inline Pointer
 ptr(const void* ptr) {
-  Pointer r = {ptr};
+  Pointer r = {0};
+  r.p = ptr;
   return r;
 }
 
