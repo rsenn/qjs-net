@@ -366,19 +366,18 @@ static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   struct pollfd x = {0, 0, 0};
   uint32_t seq = 0;
-  JS_ToUint32(ctx, &seq, func_data[4]);
+  JS_ToUint32(ctx, &seq, func_data[2]);
   int64_t fd = -1, events = -1, revents = -1;
   int32_t wr = READ_HANDLER;
-  uint32_t calls = ++func_data[3].u.int32;
   MinnetPollFd pfd = {0, 0, 0};
-  JS_ToInt64(ctx, &fd, func_data[0]);
+  JS_ToInt64(ctx, &fd, JS_GetPropertyUint32(ctx, func_data[0], 0));
   pfd.fd = fd;
-  JS_ToInt64(ctx, &events, func_data[1]);
+  JS_ToInt64(ctx, &events, JS_GetPropertyUint32(ctx, func_data[0], 1));
   pfd.events = events & PIO;
-  JS_ToInt64(ctx, &revents, func_data[2]);
+  JS_ToInt64(ctx, &revents, JS_GetPropertyUint32(ctx, func_data[0], 2));
   pfd.revents = revents & PIO;
 
-  struct lws_context* context = value2ptr(ctx, func_data[3]);
+  struct lws_context* context = value2ptr(ctx, func_data[1]);
 
   if(argc >= 1)
     JS_ToInt32(ctx, &wr, argv[0]);
@@ -420,7 +419,7 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   uint32_t seq = handler_seq++;
   struct lws_context* context = lws_get_context(wsi);
   JSValue arr = vector2array(ctx, 5, (JSValueConst[5]){JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)});
-  JSValueConst data[] = {JS_NewInt64(ctx, fd), JS_NewInt64(ctx, events), JS_NewArray(ctx), ptr2value(ctx, context), JS_NewUint32(ctx, seq)};
+  JSValueConst data[] = {arr, ptr2value(ctx, context), JS_NewUint32(ctx, seq)};
   printf("make_handler #%u fd = %d, events = 0x%04x,   context = %p\n", seq, fd, events, context);
   // printf("make_handler fd = %d, events = 0x%04x, context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
