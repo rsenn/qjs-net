@@ -418,7 +418,8 @@ static JSValue
 make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   uint32_t seq = handler_seq++;
   struct lws_context* context = lws_get_context(wsi);
-  JSValue arr = vector2array(ctx, 5, (JSValueConst[5]){JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)});
+  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
+  JSValue arr = vector2array(ctx, countof(items), items);
   JSValueConst data[] = {arr, ptr2value(ctx, context), JS_NewUint32(ctx, seq)};
   printf("make_handler #%u fd = %d, events = 0x%04x,   context = %p\n", seq, fd, events, context);
   // printf("make_handler fd = %d, events = 0x%04x, context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
