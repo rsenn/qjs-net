@@ -388,23 +388,23 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       const char* content_type = "text/plain";
       int32_t http_status = HTTP_STATUS_NOT_FOUND;
 
-      if(ctx) {
-        char buf[1024];
-        ssize_t len;
+      /*  if(ctx) {
+          char buf[1024];
+          ssize_t len;
 
-        lws_snprintf(r->path, sizeof(r->path), "%s", (const char*)in);
-        if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
-          r->peer = js_strdup(ctx, buf);
+          lws_snprintf(r->path, sizeof(r->path), "%s", (const char*)in);
+          if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
+            r->peer = js_strdup(ctx, buf);
 
-        if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
-          r->uri = js_strndup(ctx, buf, len);
-          r->method = js_strdup(ctx, "GET");
-        } else if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
-          r->uri = js_strndup(ctx, buf, len);
-          r->method = js_strdup(ctx, "POST");
+          if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
+            r->uri = js_strndup(ctx, buf, len);
+            r->method = js_strdup(ctx, "GET");
+          } else if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
+            r->uri = js_strndup(ctx, buf, len);
+            r->method = js_strdup(ctx, "POST");
+          }
         }
-      }
-
+  */
       /*      JSValue response = minnet_response_wrap(ctx, &r->response);
        */
       printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method ? r->method : "(null)", r->peer ? r->peer : "(null)", r->uri ? r->uri : "(null)", r->path);
