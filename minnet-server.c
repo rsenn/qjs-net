@@ -321,7 +321,7 @@ static int
 callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSContext* ctx = server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : server_cb_message.ctx ? server_cb_message.ctx : server_cb_connect.ctx ? server_cb_connect.ctx : 0;
 
-  MinnetHttpRequest* r = user ? (MinnetHttpRequest*)user : minnet_request_new(ctx, in, wsi);
+  MinnetRequest* r = user ? (MinnetRequest*)user : minnet_request_new(ctx, in, wsi);
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetHttpHeader* h = &r->header;
   time_t t;
@@ -398,7 +398,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         /* In contains the url part after the place the mount was  positioned at,
          * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath
          */
-        lws_snprintf(r->body.path, sizeof(r->body.path), "%s", (const char*)in);
+        lws_snprintf(r->path, sizeof(r->path), "%s", (const char*)in);
         if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
           r->peer = js_strdup(ctx, buf);
 
@@ -413,7 +413,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       /*      JSValue response = minnet_response_wrap(ctx, &r->response);
        */
-      printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method ? r->method : "(null)", r->peer ? r->peer : "(null)", r->uri ? r->uri : "(null)", r->body.path);
+      printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method ? r->method : "(null)", r->peer ? r->peer : "(null)", r->uri ? r->uri : "(null)", r->path);
 
       { /*  Demonstrates how to retreive a urlarg x=value  */
 
@@ -457,7 +457,6 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         return 1;
 
       r->body.times = 0;
-      // r->body.content_lines = 0;
       if(!(r->body.budget = atoi((char*)in + 1)))
         r->body.budget = 10;
 
@@ -489,7 +488,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
                                "<br>Dynamic content for '%s' from mountpoint."
                                "<br>Time: %s<br><br>"
                                "</body></html>",
-                               r->body.path,
+                               r->path,
 #if defined(LWS_HAVE_CTIME_R)
                                ctime_r(&t, date)
 #else
