@@ -8,7 +8,7 @@ JSValue minnet_response_proto;
 void
 minnet_response_dump(JSContext* ctx, struct http_response* res) {
   printf("{");
-  înt32_t status;
+  int32_t status;
   BOOL ok;
   char *url, *type;
   JS_ToInt32(ctx, &status, res->status);
