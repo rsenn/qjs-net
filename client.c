@@ -7,12 +7,12 @@ static struct lws* client_wsi;
 static int client_server_port = 7981;
 static const char* client_server_address = "localhost";
 
-struct minnet_ws_callback client_cb_message;
-struct minnet_ws_callback client_cb_connect;
-struct minnet_ws_callback client_cb_error;
-struct minnet_ws_callback client_cb_close;
-struct minnet_ws_callback client_cb_pong;
-struct minnet_ws_callback client_cb_fd;
+static struct minnet_ws_callback client_cb_message;
+static struct minnet_ws_callback client_cb_connect;
+static struct minnet_ws_callback client_cb_error;
+static struct minnet_ws_callback client_cb_close;
+static struct minnet_ws_callback client_cb_pong;
+static struct minnet_ws_callback client_cb_fd;
 
 static int lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
@@ -178,7 +178,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       struct lws_pollargs* args = in;
       if(client_cb_fd.func_obj) {
         JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
-        make_io_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+        minnet_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
 
         call_websocket_callback(&client_cb_fd, 3, argv);
         JS_FreeValue(client_cb_fd.ctx, argv[0]);
@@ -193,7 +193,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
         JSValue argv[3] = {
             JS_NewInt32(client_cb_fd.ctx, args->fd),
         };
-        make_io_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+        minnet_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
         call_websocket_callback(&client_cb_fd, 3, argv);
         JS_FreeValue(client_cb_fd.ctx, argv[0]);
       }
@@ -204,7 +204,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
 
       if(client_cb_fd.func_obj && args->events != args->prev_events) {
         JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
-        make_io_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
+        minnet_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
 
         call_websocket_callback(&client_cb_fd, 3, argv);
         JS_FreeValue(client_cb_fd.ctx, argv[0]);

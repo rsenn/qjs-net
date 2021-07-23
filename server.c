@@ -3,13 +3,13 @@
 #include "server.h"
 #include "list.h"
 
-struct minnet_ws_callback server_cb_message;
-struct minnet_ws_callback server_cb_connect;
-struct minnet_ws_callback server_cb_error;
-struct minnet_ws_callback server_cb_close;
-struct minnet_ws_callback server_cb_pong;
-struct minnet_ws_callback server_cb_fd;
-struct minnet_ws_callback server_cb_http;
+static struct minnet_ws_callback server_cb_message;
+static struct minnet_ws_callback server_cb_connect;
+static struct minnet_ws_callback server_cb_error;
+static struct minnet_ws_callback server_cb_close;
+static struct minnet_ws_callback server_cb_pong;
+static struct minnet_ws_callback server_cb_fd;
+static struct minnet_ws_callback server_cb_http;
 
 /*
  * Unlike ws, http is a stateless protocol.  This pss only exists for the
@@ -26,15 +26,6 @@ struct pss {
 };
 
 static int interrupted;
-
-static int lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
-static int lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
-
-static struct lws_protocols lws_server_protocols[] = {
-    {"minnet", lws_ws_callback, 0, 0},
-    {"http", lws_http_callback, 0, 0},
-    {NULL, NULL, 0, 0},
-};
 
 static int
 lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
@@ -308,7 +299,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       // POLLOUT) ? "OUT" : "", (args->events & POLLERR) ? "ERR" : "");
       if(server_cb_fd.func_obj) {
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
-        make_io_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+        minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
         call_websocket_callback(&server_cb_fd, 3, argv);
         JS_FreeValue(server_cb_fd.ctx, argv[0]);
@@ -323,7 +314,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       JSValue argv[3] = {
           JS_NewInt32(server_cb_fd.ctx, args->fd),
       };
-      make_io_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+      minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
       call_websocket_callback(&server_cb_fd, 3, argv);
       JS_FreeValue(server_cb_fd.ctx, argv[0]);
 
@@ -337,7 +328,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       if(args->events != args->prev_events) {
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
-        make_io_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+        minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
         call_websocket_callback(&server_cb_fd, 3, argv);
         JS_FreeValue(server_cb_fd.ctx, argv[0]);
@@ -365,7 +356,7 @@ lws_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 }
 
 static struct lws_http_mount*
-minnet_get_mount(JSContext* ctx, JSValueConst arr) {
+http_mount_get(JSContext* ctx, JSValueConst arr) {
   JSValue mountpoint = JS_GetPropertyUint32(ctx, arr, 0);
   JSValue origin = JS_GetPropertyUint32(ctx, arr, 1);
   JSValue def = JS_GetPropertyUint32(ctx, arr, 2);
@@ -386,7 +377,7 @@ minnet_get_mount(JSContext* ctx, JSValueConst arr) {
 }
 
 static void
-minnet_free_mount(JSContext* ctx, struct lws_http_mount* mount) {
+http_mount_free(JSContext* ctx, struct lws_http_mount* mount) {
   JS_FreeCString(ctx, mount->mountpoint);
   js_free(ctx, (char*)mount->origin);
   if(mount->def)
@@ -403,32 +394,11 @@ typedef struct JSThreadState {
   void *recv_pipe, *send_pipe;
 } JSThreadState;
 
-/*static int minnet_ws_service(struct lws_context *context, uint32_t
-timeout)
-{
-  int ret, i, j = 0, n = FD_SETSIZE;
-  struct pollfd pfds[n];
-  struct lws *wss[n];
-
-  for (i = 0; i < n; i++) {
-    if ((wss[j] = wsi_from_fd(context, i))) {
-      printf("wss[%d] (%d) %i\n", j, i,
-lws_partial_buffered(wss[j]));
-
-      pfds[j] = (struct pollfd){
-        .fd = i,
-        .events = POLLIN | (lws_partial_buffered(wss[j]) ?
-POLLOUT : 0), .revents = 0}; j++;
-    }
-  }
-
-  if ((ret = poll(pfds, j, timeout)) != -1) {
-    for (i = 0; i < j; i++) {
-      lws_service_fd(context, (struct lws_pollfd *)&pfds[i]);
-    }
-  }
-  return ret;
-}*/
+static struct lws_protocols lws_server_protocols[] = {
+    {"minnet", lws_ws_callback, 0, 0},
+    {"http", lws_http_callback, 0, 0},
+    {NULL, NULL, 0, 0},
+};
 
 static const struct lws_http_mount mount_dyn = {
     /* .mount_next */ NULL,   /* linked-list "next" */
@@ -511,7 +481,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       if(JS_IsUndefined(mount))
         break;
 
-      *ptr = minnet_get_mount(ctx, mount);
+      *ptr = http_mount_get(ctx, mount);
       ptr = (const struct lws_http_mount**)&(*ptr)->mount_next;
     }
   }

@@ -2,6 +2,8 @@
 #include "websocket.h"
 #include "response.h"
 
+JSClassID minnet_response_class_id;
+
 JSValue
 minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
