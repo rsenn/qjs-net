@@ -321,16 +321,14 @@ static int
 callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSContext* ctx = server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : server_cb_message.ctx ? server_cb_message.ctx : server_cb_connect.ctx ? server_cb_connect.ctx : 0;
 
-  MinnetRequest* r = user ? (MinnetRequest*)user : minnet_request_new(ctx, in, wsi);
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
-  MinnetHttpHeader* h = &r->header;
+
   time_t t;
   int n;
 #if defined(LWS_HAVE_CTIME_R)
   char date[32];
 #endif
   // MinnetHttpHeader* h = &r->h;
-  header_init(h, buf, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
 
   switch(reason) {
 
@@ -340,6 +338,8 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         JSValue argv[] = {ws_obj, JS_NewString(server_cb_http.ctx, in)};
         int32_t result = 0;
         MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
+        MinnetHttpHeader h;
+        header_init(h, buf, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
         printf("LWS_CALLBACK_FILTER_HTTP_CONNECTION in: %s\n", in);
 
         // ws->h = h;
@@ -385,8 +385,11 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_HTTP: {
       JSValue ret = JS_UNDEFINED;
+      MinnetRequest* r = user ? (MinnetRequest*)user : minnet_request_new(ctx, in, wsi);
       const char* content_type = "text/plain";
       int32_t http_status = HTTP_STATUS_NOT_FOUND;
+      MinnetHttpHeader* h = &r->header;
+      header_init(h, buf, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
 
       /*  if(ctx) {
           char buf[1024];
@@ -407,7 +410,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   */
       /*      JSValue response = minnet_response_wrap(ctx, &r->response);
        */
-      printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method ? r->method : "(null)", r->peer ? r->peer : "(null)", r->uri ? r->uri : "(null)", r->path);
+      printf("LWS_CALLBACK_HTTP HTTP %s: connection %s, URI %s, path %s\n", r->method ? r->method : "(null)", r->peer ? r->peer : "(null)", r->uri ? r->uri : "(null)", r->path ? r->path : "(null)");
 
       { /*  Demonstrates how to retreive a urlarg x=value  */
 
