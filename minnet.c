@@ -370,28 +370,20 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   size_t seq, len;
   intptr_t* values = JS_GetArrayBuffer(ctx, &len, func_data[0]);
   assert(len == sizeof(intptr_t) * 5);
-
-  MinnetPollFd pfd = {0, 0, 0};
-  pfd.fd = values[0];
-  pfd.events = values[1];
-  pfd.revents = values[2];
+  x.fd = values[0];
+  x.events = values[1];
+  x.revents = values[2];
   context = (void*)values[3];
   seq = values[4];
   if(argc >= 1)
     JS_ToInt32(ctx, &wr, argv[0]);
+  if(!x.events)
+    x.events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
 
-  pfd.revents = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
-  pfd.events = (pfd.events | pfd.revents) & PIO;
-
-  if(!(pfd.revents & PIO)) {
-    x.fd = pfd.fd;
-    x.events = pfd.revents;
-    x.revents = 0;
+  if(!(x.revents & PIO)) {
 
     if(poll(&x, 1, 0) < 0) {
       printf("poll error: %s\n", strerror(errno));
-    } else {
-      pfd.revents = x.revents;
     }
   }
 
