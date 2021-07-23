@@ -16,6 +16,9 @@ void
 minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws* wsi) {
   char buf[1024];
   ssize_t len;
+
+  memset(r, 0, sizeof(*r));
+
   /* In contains the url part after the place the mount was  positioned at,
    * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath */
 
@@ -40,7 +43,7 @@ minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws
 MinnetRequest*
 minnet_request_new(JSContext* ctx, const char* in, struct lws* wsi) {
   MinnetRequest* r;
-  if((r = js_mallocz(ctx, sizeof(MinnetRequest))))
+  if((r = js_malloc(ctx, sizeof(MinnetRequest))))
     minnet_request_init(ctx, r, in, wsi);
   return r;
 }

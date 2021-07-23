@@ -13,9 +13,10 @@ typedef struct http_body {
 } MinnetHttpBody;
 
 typedef struct http_request {
-  char *peer, *type, *uri, path[256];
+  char *peer, *type, *uri;
   struct http_header header;
   struct http_body body;
+  char path[256];
   MinnetResponse response;
 } MinnetRequest;
 
