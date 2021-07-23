@@ -26,8 +26,7 @@ lws_log_callback(int level, const char* line) {
 
     if(JS_IsFunction(minnet_log_ctx, minnet_log)) {
       size_t len = strlen(line);
-      JSValueConst argv[2] = {JS_NewString(minnet_log_ctx, "minnet"),
-                              JS_NewStringLen(minnet_log_ctx, line, len > 0 && line[len - 1] == '\n' ? len - 1 : len)};
+      JSValueConst argv[2] = {JS_NewString(minnet_log_ctx, "minnet"), JS_NewStringLen(minnet_log_ctx, line, len > 0 && line[len - 1] == '\n' ? len - 1 : len)};
       JSValue ret = JS_Call(minnet_log_ctx, minnet_log, minnet_log_this, 2, argv);
 
       if(JS_IsException(ret))
@@ -400,14 +399,90 @@ static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, mi
                                                     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
                                                     // JS_CGETSET_DEF("log", get_log, set_log),
                                                     JS_CFUNC_DEF("setLog", 1, minnet_set_log)};
+static JSValue request_proto, websocket_proto;
+
+char*
+header_alloc(JSContext* ctx, struct http_header* hdr, size_t size) {
+  hdr->start = js_malloc(ctx, size);
+  hdr->pos = hdr->start;
+  hdr->end = hdr->start + size;
+  return hdr->start;
+}
+
+char*
+header_append(JSContext* ctx, struct http_header* hdr, const char* x, size_t n) {
+  size_t headroom = hdr->end - hdr->pos;
+  if(n > headroom)
+    if(!header_realloc(ctx, hdr, n + 1))
+      return 0;
+  memcpy(hdr->pos, x, n);
+  hdr->pos[n] = '\0';
+  hdr->pos += n;
+  return hdr->start;
+}
+
+char*
+header_realloc(JSContext* ctx, struct http_header* hdr, size_t size) {
+  hdr->start = js_realloc(ctx, hdr->start, size);
+  hdr->end = hdr->start + size;
+  return hdr->start;
+}
+
+void
+header_free(JSContext* ctx, struct http_header* hdr) {
+  js_free(ctx, hdr->start);
+  hdr->start = 0;
+  hdr->pos = 0;
+  hdr->end = 0;
+}
+enum { REQUEST_METHOD, REQUEST_PEER, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER };
 
 JSValue
-minnet_request_getter_uri(JSContext* ctx, JSValueConst this_val) {
-  MinnetHttpRequest* req = JS_GetOpaque(this_val, minnet_request_class_id);
-  if(req)
-    return JS_NewString(ctx, req->uri);
+minnet_request_wrap(JSContext* ctx, struct http_request* req) {
+  JSValue ret = JS_UNDEFINED;
 
-  return JS_EXCEPTION;
+  ret = JS_NewObjectProtoClass(ctx, request_proto, minnet_request_class_id);
+
+  if(JS_IsException(ret))
+    return JS_EXCEPTION;
+  JS_SetOpaque(ret, req);
+  return ret;
+}
+
+JSValue
+minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
+  MinnetHttpRequest* req;
+  if(!(req = JS_GetOpaque(this_val, minnet_request_class_id)))
+    return JS_EXCEPTION;
+
+  JSValue ret = JS_UNDEFINED;
+  switch(magic) {
+    case REQUEST_METHOD: {
+      if(req->method)
+        ret = JS_NewString(ctx, req->method);
+      break;
+    }
+    case REQUEST_PEER: {
+      if(req->peer)
+        ret = JS_NewString(ctx, req->peer);
+      break;
+    }
+    case REQUEST_URI: {
+      if(req->uri)
+        ret = JS_NewString(ctx, req->uri);
+      break;
+    }
+    case REQUEST_PATH: {
+      ret = JS_NewString(ctx, req->body.path);
+      break;
+    }
+    case REQUEST_HEADER: {
+      if(req->header.start)
+        ret = JS_NewStringLen(ctx, req->header.start, req->header.end - req->header.start);
+      break;
+    }
+  }
+  return ret;
 }
 
 JSValue
@@ -420,8 +495,11 @@ minnet_request_getter_path(JSContext* ctx, JSValueConst this_val) {
 }
 
 static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
-    JS_CGETSET_DEF("uri", minnet_request_getter_uri, 0),
-    JS_CGETSET_DEF("path", minnet_request_getter_path, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, 0, REQUEST_METHOD, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, 0, REQUEST_URI, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_request_get, 0, REQUEST_PEER, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("header", minnet_request_get, 0, REQUEST_HEADER, JS_PROP_ENUMERABLE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 
@@ -457,21 +535,21 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   // Add class Response
   JS_NewClassID(&minnet_response_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
-  JSValue response_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, response_proto, minnet_response_proto_funcs, countof(minnet_response_proto_funcs));
-  JS_SetClassProto(ctx, minnet_response_class_id, response_proto);
+  minnet_response_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_response_proto, minnet_response_proto_funcs, countof(minnet_response_proto_funcs));
+  JS_SetClassProto(ctx, minnet_response_class_id, minnet_response_proto);
 
   // Add class Request
   JS_NewClassID(&minnet_request_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);
-  JSValue request_proto = JS_NewObject(ctx);
+  request_proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, request_proto, minnet_request_proto_funcs, countof(minnet_request_proto_funcs));
   JS_SetClassProto(ctx, minnet_request_class_id, request_proto);
 
   // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
-  JSValue websocket_proto = JS_NewObject(ctx);
+  websocket_proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, websocket_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
   JS_SetClassProto(ctx, minnet_ws_class_id, websocket_proto);
 

@@ -2,6 +2,7 @@
 #define MINNET_WEBSOCKET_H
 
 #include "quickjs.h"
+#include <libwebsockets.h>
 
 struct lws;
 struct http_header;
@@ -31,10 +32,10 @@ typedef struct callback_ws {
   JSValue* func_obj;
 } MinnetWebsocketCallback;
 
-#define GETCB(opt, cb_ptr)                                                                                                     \
-  if(JS_IsFunction(ctx, opt)) {                                                                                                \
-    MinnetWebsocketCallback cb = {ctx, &this_val, &opt};                                                                       \
-    cb_ptr = cb;                                                                                                               \
+#define GETCB(opt, cb_ptr)                                                                                                                                                                             \
+  if(JS_IsFunction(ctx, opt)) {                                                                                                                                                                        \
+    MinnetWebsocketCallback cb = {ctx, &this_val, &opt};                                                                                                                                               \
+    cb_ptr = cb;                                                                                                                                                                                       \
   }
 
 #endif /* MINNET_WEBSOCKET_H */

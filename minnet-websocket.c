@@ -47,7 +47,7 @@ JSValue
 minnet_ws_emit(struct callback_ws* cb, int argc, JSValue* argv) {
   if(!cb->func_obj)
     return JS_UNDEFINED;
-  return JS_Call(cb->ctx, *(cb->func_obj), *(cb->this_obj), argc, argv);
+  return JS_Call(cb->ctx, *cb->func_obj, cb->this_obj ? *cb->this_obj : JS_NULL, argc, argv);
 }
 
 void
@@ -103,21 +103,19 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
   return JS_UNDEFINED;
 }
 
+enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
+
 static JSValue
 minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic) {
   MinnetWebsocket* ws_obj;
   JSValue ret = JS_UNDEFINED;
-  MinnetHttpHeader* header;
 
   if(!(ws_obj = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
-
-  if((header = ws_obj->header) == 0) {
-    header = ws_obj->header = js_mallocz(ctx, sizeof(MinnetHttpHeader));
-  }
+  MinnetHttpHeader header = {0, 0, 0};
 
   switch(magic) {
-    case 0: {
+    case RESPONSE_BODY: {
       const char* msg = 0;
       uint32_t status = 0;
 
@@ -131,7 +129,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
         JS_FreeCString(ctx, msg);
       break;
     }
-    case 1: {
+    case RESPONSE_REDIRECT: {
 
       const char* msg = 0;
       size_t len = 0;
@@ -142,13 +140,14 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       if(argc >= 2)
         msg = JS_ToCStringLen(ctx, &len, argv[1]);
 
-      if(lws_http_redirect(ws_obj->lwsi, status, (unsigned char*)msg, len, &header->pos, header->end) < 0)
+      if(lws_http_redirect(ws_obj->lwsi, status, (unsigned char*)msg, len, &header.pos, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
       if(msg)
         JS_FreeCString(ctx, msg);
       break;
     }
-    case 2: {
+    case RESPONSE_HEADER: {
+
       size_t namelen;
       const char* namestr = JS_ToCStringLen(ctx, &namelen, argv[0]);
       char* name = js_malloc(ctx, namelen + 2);
@@ -159,7 +158,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       name[namelen] = ':';
       name[namelen + 1] = '\0';
 
-      if(lws_add_http_header_by_name(ws_obj->lwsi, name, value, len, &header->pos, header->end) < 0)
+      if(lws_add_http_header_by_name(ws_obj->lwsi, name, value, len, &header.pos, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
 
       js_free(ctx, name);
@@ -318,9 +317,9 @@ JSClassDef minnet_ws_class = {
 
 const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("send", 1, minnet_ws_send),
-    JS_CFUNC_MAGIC_DEF("respond", 1, minnet_ws_respond, 0),
-    JS_CFUNC_MAGIC_DEF("redirect", 2, minnet_ws_respond, 1),
-    JS_CFUNC_MAGIC_DEF("header", 2, minnet_ws_respond, 2),
+    JS_CFUNC_MAGIC_DEF("respond", 1, minnet_ws_respond, RESPONSE_BODY),
+    JS_CFUNC_MAGIC_DEF("redirect", 2, minnet_ws_respond, RESPONSE_REDIRECT),
+    JS_CFUNC_MAGIC_DEF("header", 2, minnet_ws_respond, RESPONSE_HEADER),
     JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
     JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
     JS_CFUNC_DEF("close", 1, minnet_ws_close),

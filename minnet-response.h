@@ -5,7 +5,7 @@
 
 /* class Response */
 
-typedef struct {
+typedef struct http_response {
   uint8_t* buffer;
   long size;
   JSValue status;
@@ -14,14 +14,18 @@ typedef struct {
   JSValue type;
 } MinnetResponse;
 
-JSValue minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
-JSValue minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
-JSValue minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
-JSValue minnet_response_getter_ok(JSContext* ctx, JSValueConst this_val);
-JSValue minnet_response_getter_url(JSContext* ctx, JSValueConst this_val);
-JSValue minnet_response_getter_status(JSContext* ctx, JSValueConst this_val);
-JSValue minnet_response_getter_type(JSContext* ctx, JSValueConst this_val);
-static void minnet_response_finalizer(JSRuntime* rt, JSValue val);
+void minnet_response_init(JSContext*, struct http_response*, int32_t status, BOOL ok, const char* url, const char* type);
+void minnet_response_free(JSRuntime*, struct http_response*);
+JSValue minnet_response_new(JSContext*, int32_t status, BOOL ok, const char* url, const char* type, uint8_t* buf, size_t len);
+JSValue minnet_response_wrap(JSContext*, struct http_response*);
+JSValue minnet_response_buffer(JSContext*, JSValue this_val, int argc, JSValue* argv);
+JSValue minnet_response_json(JSContext*, JSValue this_val, int argc, JSValue* argv);
+JSValue minnet_response_text(JSContext*, JSValue this_val, int argc, JSValue* argv);
+JSValue minnet_response_getter_ok(JSContext*, JSValue this_val);
+JSValue minnet_response_getter_url(JSContext*, JSValue this_val);
+JSValue minnet_response_getter_status(JSContext*, JSValue this_val);
+JSValue minnet_response_getter_type(JSContext*, JSValue this_val);
+void minnet_response_finalizer(JSRuntime*, JSValue val);
 
 extern JSClassDef minnet_response_class;
 
@@ -36,6 +40,7 @@ static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),
 };
 
+extern JSValue minnet_response_proto;
 extern JSClassID minnet_response_class_id;
 
 #endif /* MINNET_RESPONSE_H */

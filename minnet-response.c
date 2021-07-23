@@ -3,6 +3,55 @@
 #include "minnet-response.h"
 
 JSClassID minnet_response_class_id;
+JSValue minnet_response_proto;
+
+void
+minnet_response_init(JSContext* ctx, MinnetResponse* res, int32_t status, BOOL ok, const char* url, const char* type) {
+  res->status = JS_NewInt32(ctx, status);
+  res->ok = JS_NewBool(ctx, ok);
+  res->url = JS_NewString(ctx, url);
+  res->type = JS_NewString(ctx, type);
+  res->buffer = 0;
+  res->size = 0;
+}
+
+void
+minnet_response_free(JSRuntime* rt, MinnetResponse* res) {
+  JS_FreeValueRT(rt, res->status);
+  res->status = JS_UNDEFINED;
+  JS_FreeValueRT(rt, res->ok);
+  res->ok = JS_UNDEFINED;
+  JS_FreeValueRT(rt, res->url);
+  res->url = JS_UNDEFINED;
+  JS_FreeValueRT(rt, res->type);
+  res->type = JS_UNDEFINED;
+
+  /*  res->buffer = 0;
+    res->size = 0;*/
+}
+
+JSValue
+minnet_response_new(JSContext* ctx, int32_t status, BOOL ok, const char* url, const char* type, uint8_t* buf, size_t len) {
+  MinnetResponse* res = js_mallocz(ctx, sizeof(MinnetResponse));
+
+  minnet_response_init(ctx, res, status, ok, url, type);
+
+  if(buf) {
+    res->buffer = js_malloc(ctx, (res->size = len));
+    memcpy(res->buffer, buf, len);
+  }
+  return minnet_response_wrap(ctx, res);
+}
+
+JSValue
+minnet_response_wrap(JSContext* ctx, MinnetResponse* res) {
+  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_response_proto, minnet_response_class_id);
+  if(JS_IsException(ret))
+    return JS_EXCEPTION;
+
+  JS_SetOpaque(ret, res);
+  return ret;
+}
 
 JSValue
 minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
