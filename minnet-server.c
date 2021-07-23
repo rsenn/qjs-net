@@ -338,8 +338,8 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         JSValue argv[] = {ws_obj, JS_NewString(server_cb_http.ctx, in)};
         int32_t result = 0;
         MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
-        MinnetHttpHeader h;
-        header_init(h, buf, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
+        struct http_header h;
+        header_init(&h, buf, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
         printf("LWS_CALLBACK_FILTER_HTTP_CONNECTION in: %s\n", in);
 
         // ws->h = h;
@@ -388,7 +388,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetRequest* r = user ? (MinnetRequest*)user : minnet_request_new(ctx, in, wsi);
       const char* content_type = "text/plain";
       int32_t http_status = HTTP_STATUS_NOT_FOUND;
-      MinnetHttpHeader* h = &r->header;
+      struct http_header* h = &r->header;
       header_init(h, buf, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
 
       /*  if(ctx) {
@@ -463,9 +463,11 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       return 0;
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
+      MinnetRequest* r = user ? (MinnetRequest*)user : minnet_request_new(ctx, in, wsi);
 
       if(!r || r->body.times > r->body.budget)
         break;
+      struct http_header* h = &r->header;
 
       n = LWS_WRITE_HTTP;
       if(r->body.times == r->body.budget)
