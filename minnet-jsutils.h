@@ -1,6 +1,18 @@
 #ifndef JSUTILS_H
 #define JSUTILS_H
 
+#include <quickjs.h>
+#include <list.h>
+
+typedef struct JSThreadState {
+  struct list_head os_rw_handlers;
+  struct list_head os_signal_handlers;
+  struct list_head os_timers;
+  struct list_head port_list;
+  int eval_script_recurse;
+  void *recv_pipe, *send_pipe;
+} JSThreadState;
+
 static void
 js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
   JSValue global = JS_GetGlobalObject(ctx);

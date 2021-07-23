@@ -1,35 +1,17 @@
 #include "minnet.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
+#include "minnet-jsutils.h"
 #include "list.h"
 
 static MinnetWebsocketCallback server_cb_message, server_cb_connect, server_cb_error, server_cb_close, server_cb_pong,
     server_cb_fd, server_cb_http;
-
-/*
- * Unlike ws, http is a stateless protocol.  This pss only exists for the
- * duration of a single http transaction.  With http/1.1 keep-alive and http/2,
- * that is unrelated to (shorter than) the lifetime of the network connection.
- */
-typedef struct pss {
-  char path[128];
-  size_t times, budget, content_lines;
-} MinnetServerRequest;
-
-typedef struct JSThreadState {
-  struct list_head os_rw_handlers;
-  struct list_head os_signal_handlers;
-  struct list_head os_timers;
-  struct list_head port_list;
-  int eval_script_recurse;
-  void *recv_pipe, *send_pipe;
-} JSThreadState;
-
+ 
 static int interrupted;
 
-static struct lws_http_mount*
-create_mount(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, const char* origin_proto) {
-  struct lws_http_mount* ret = js_mallocz(ctx, sizeof(struct lws_http_mount));
+static MinnetHttpMount*
+mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, const char* origin_proto) {
+  MinnetHttpMount* ret = js_mallocz(ctx, sizeof(MinnetHttpMount));
 
   ret->mountpoint = js_strdup(ctx, mountpoint);
   ret->origin = def ? js_strdup(ctx, origin) : 0;
@@ -41,8 +23,8 @@ create_mount(JSContext* ctx, const char* mountpoint, const char* origin, const c
   return ret;
 }
 
-static struct lws_http_mount*
-new_mount(JSContext* ctx, JSValueConst arr) {
+static MinnetHttpMount*
+mount_new(JSContext* ctx, JSValueConst arr) {
   JSValue mnt = JS_GetPropertyUint32(ctx, arr, 0);
   JSValue org = JS_GetPropertyUint32(ctx, arr, 1);
   JSValue def = JS_GetPropertyUint32(ctx, arr, 2);
@@ -51,8 +33,8 @@ new_mount(JSContext* ctx, JSValueConst arr) {
   size_t proto_len = dotslashslash ? dotslashslash - dest : 0;
 
   const char *mountpoint, *default_index = 0;
-  struct lws_http_mount* ret =
-      create_mount(ctx,
+  MinnetHttpMount* ret =
+      mount_create(ctx,
                    mountpoint = JS_ToCString(ctx, mnt),
                    &dest[proto_len ? proto_len + 3 : 0],
                    JS_IsUndefined(def) ? 0 : (default_index = JS_ToCString(ctx, def)),
@@ -66,7 +48,7 @@ new_mount(JSContext* ctx, JSValueConst arr) {
 }
 
 static void
-free_mount(JSContext* ctx, struct lws_http_mount* mount) {
+mount_free(JSContext* ctx, MinnetHttpMount* mount) {
   JS_FreeCString(ctx, mount->mountpoint);
   js_free(ctx, (char*)mount->origin);
   if(mount->def)
@@ -83,7 +65,7 @@ static struct lws_protocols lws_server_protocols[] = {
     {NULL, NULL, 0, 0},
 };
 
-static const struct lws_http_mount* mount_dyn;
+static const MinnetHttpMount* mount_dyn;
 #if 0
  = {
     /* .mount_next */ NULL,   /* linked-list "next" */
@@ -156,7 +138,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
 
   minnet_ws_sslcert(ctx, &info, options);
-  const struct lws_http_mount** ptr = &info.mounts;
+  const MinnetHttpMount** ptr = &info.mounts;
 
   if(JS_IsArray(ctx, opt_mounts)) {
     uint32_t i;
@@ -164,12 +146,12 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       JSValue mount = JS_GetPropertyUint32(ctx, opt_mounts, i);
       if(JS_IsUndefined(mount))
         break;
-      *ptr = new_mount(ctx, mount);
-      ptr = (const struct lws_http_mount**)&(*ptr)->mount_next;
+      *ptr = mount_new(ctx, mount);
+      ptr = (const MinnetHttpMount**)&(*ptr)->mount_next;
     }
   }
 
-  *ptr = create_mount(ctx, "/dyn", 0, 0, LWSMPRO_CALLBACK);
+  *ptr = mount_create(ctx, "/dyn", 0, 0, LWSMPRO_CALLBACK);
   ptr = &(*ptr)->mount_next;
 
   context = lws_create_context(&info);
@@ -196,7 +178,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   lws_context_destroy(context);
 
   if(info.mounts) {
-    const struct lws_http_mount *mount, *next;
+    const MinnetHttpMount *mount, *next;
 
     for(mount = info.mounts; mount; mount = next) {
       next = mount->mount_next;
@@ -318,14 +300,14 @@ lws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
 
 static int
 lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetServerRequest* pss = (MinnetServerRequest*)user;
+  MinnetHttpBody* pss = (MinnetHttpBody*)user;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE], *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
   time_t t;
   int n;
 #if defined(LWS_HAVE_CTIME_R)
   char date[32];
 #endif
-  struct http_header* header = 0;
+  MinnetHttpHeader* header = 0;
 
   switch(reason) {
 
@@ -336,7 +318,7 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
         int32_t result = 0;
         MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
         if(!(header = ws->header))
-          header = ws->header = js_mallocz(server_cb_http.ctx, sizeof(struct http_header));
+          header = ws->header = js_mallocz(server_cb_http.ctx, sizeof(MinnetHttpHeader));
 
         http_header_alloc(server_cb_http.ctx, &ws->header, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
 
@@ -368,7 +350,7 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
         MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
         struct lws_process_html_args* args = (struct lws_process_html_args*)in;
         if(!(header = ws->header))
-          header = ws->header = js_mallocz(server_cb_http.ctx, sizeof(struct http_header));
+          header = ws->header = js_mallocz(server_cb_http.ctx, sizeof(MinnetHttpHeader));
 
         if(header->pos > header->start) {
           size_t len = header->pos - header->start;

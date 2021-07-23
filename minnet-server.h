@@ -3,21 +3,28 @@
 
 #include "cutils.h"
 
-struct http_header {
+typedef struct lws_http_mount MinnetHttpMount;
+
+typedef struct http_body {
+  char path[128];
+  size_t times, budget, content_lines;
+} MinnetHttpBody;
+
+typedef struct http_header {
   unsigned char *start, *pos, *end;
-};
+} MinnetHttpHeader;
 
 JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
-static inline void
-http_header_alloc(JSContext* ctx, struct http_header* hdr, size_t size) {
+static void
+http_header_alloc(JSContext* ctx, MinnetHttpHeader* hdr, size_t size) {
   hdr->start = js_malloc(ctx, size);
   hdr->pos = hdr->start;
   hdr->end = hdr->start + size;
 }
 
-static inline void
-http_header_free(JSContext* ctx, struct http_header* hdr) {
+static void
+http_header_free(JSContext* ctx, MinnetHttpHeader* hdr) {
   js_free(ctx, hdr->start);
   hdr->start = 0;
   hdr->pos = 0;
@@ -25,3 +32,4 @@ http_header_free(JSContext* ctx, struct http_header* hdr) {
 }
 
 #endif /* MINNET_SERVER_H */
+

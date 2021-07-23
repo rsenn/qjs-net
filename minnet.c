@@ -3,7 +3,7 @@
 #include "minnet-client.h"
 #include "minnet-response.h"
 #include "minnet-websocket.h"
-#include "jsutils.h"
+#include "minnet-jsutils.h"
 #include <assert.h>
 #include <curl/curl.h>
 #include <sys/time.h>

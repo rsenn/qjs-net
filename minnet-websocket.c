@@ -107,13 +107,13 @@ static JSValue
 minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic) {
   MinnetWebsocket* ws_obj;
   JSValue ret = JS_UNDEFINED;
-  struct http_header* header;
+  MinnetHttpHeader* header;
 
   if(!(ws_obj = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
 
   if((header = ws_obj->header) == 0) {
-    header = ws_obj->header = js_mallocz(ctx, sizeof(struct http_header));
+    header = ws_obj->header = js_mallocz(ctx, sizeof(MinnetHttpHeader));
   }
 
   switch(magic) {
