@@ -463,6 +463,26 @@ header_free(JSContext* ctx, struct http_header* hdr) {
     js_free(ctx, hdr);
   }
 }
+
+JSValue
+header_tostring(JSContext* ctx, struct http_header* hdr) {
+  void* ptr = hdr->start;
+  size_t len = hdr->pos - hdr->start;
+  return JS_NewStringLen(ctx, ptr, len);
+}
+
+void
+header_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
+  struct http_header* hdr = opaque;
+}
+
+JSValue
+header_tobuffer(JSContext* ctx, struct http_header* hdr) {
+  void* ptr = hdr->start;
+  size_t len = hdr->end - hdr->start;
+  return JS_NewArrayBuffer(ctx, ptr, len, header_finalizer, hdr, FALSE);
+}
+
 enum { REQUEST_METHOD, REQUEST_PEER, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER };
 
 MinnetHttpRequest*
@@ -472,12 +492,12 @@ minnet_request_new(JSContext* ctx, const char* in, struct lws* wsi) {
     char buf[1024];
     ssize_t len;
     /* In contains the url part after the place the mount was  positioned at,
-     * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath
-     */
+     * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath */
+
     lws_snprintf(r->body.path, sizeof(r->body.path), "%s", (const char*)in);
 
-    if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)) > 0)
-      r->peer = js_strdup(ctx, buf);
+    if((len = lws_get_peer_simple(wsi, (char*)buf, sizeof(buf))) > 0)
+      r->peer = js_strndup(ctx, buf, len);
 
     if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
       r->uri = js_strndup(ctx, buf, len);
@@ -510,7 +530,6 @@ minnet_request_wrap(JSContext* ctx, struct http_request* req) {
   JS_SetOpaque(ret, req);
   return ret;
 }
-
 JSValue
 minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetHttpRequest* req;
@@ -540,7 +559,8 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
     }
     case REQUEST_HEADER: {
       if(req->header.start)
-        ret = JS_NewStringLen(ctx, req->header.start, req->header.end - req->header.start);
+        ret = header_tobuffer(ctx, &req->header);
+
       break;
     }
   }
