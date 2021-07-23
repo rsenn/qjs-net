@@ -360,16 +360,18 @@ io_events(int events) {
 
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
-  int32_t fd = -1, events = 0;
+  int64_t fd = -1, events = -1, revents = -1;
   BOOL wr = FALSE;
   uint32_t calls = ++func_data[3].u.int32;
   MinnetPollFd pfd = {0, 0, 0};
-  JS_ToInt32(ctx, &fd, func_data[0]);
+  JS_ToInt64(ctx, &fd, func_data[0]);
   pfd.fd = fd;
-  JS_ToInt32(ctx, &events, func_data[1]);
+  JS_ToInt64(ctx, &events, func_data[1]);
   pfd.events = events & (POLLIN | POLLOUT);
+  JS_ToInt64(ctx, &revents, func_data[2]);
+  pfd.revents = revents & (POLLIN | POLLOUT);
 
-  struct lws_context* context = value2ptr(ctx, func_data[2]);
+  struct lws_context* context = value2ptr(ctx, func_data[3]);
   printf("io_handler fd = %d, events = %s, revents = %s, context = %p\n", pfd.fd, io_events(pfd.events), io_events(pfd.revents), context);
 
   if(argc >= 1)
@@ -397,9 +399,9 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
 static JSValue
 make_handler(JSContext* ctx, struct lws_pollargs* args, struct lws* wsi, int magic) {
   struct lws_context* context = lws_get_context(wsi);
-  JSValueConst data[] = {JS_NewFloat64(ctx, args->fd), JS_NewFloat64(ctx, args->events | args->prev_events), ptr2value(ctx, context)};
+  JSValueConst data[] = {JS_NewInt64(ctx, args->fd), JS_NewInt64(ctx, args->events), JS_NewInt64(ctx, args->prev_events), ptr2value(ctx, context)};
   printf("make_handler fd = %d, events = 0x%04x, prev_events = 0x%04x, context = %p\n", args->fd, args->events, args->prev_events, context);
-  printf("make_handler fd = %d, events = 0x%04x, context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
+  // printf("make_handler fd = %d, events = 0x%04x, context = %p\n", (int)JS_VALUE_GET_FLOAT64(data[0]), (int)JS_VALUE_GET_FLOAT64(data[1]), value2ptr(ctx, data[2]));
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
 
