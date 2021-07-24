@@ -13,7 +13,7 @@ typedef struct JSThreadState {
   void *recv_pipe, *send_pipe;
 } JSThreadState;
 
-static JSValue
+static inline JSValue
 vector2array(JSContext* ctx, int argc, JSValue argv[]) {
   int i;
   JSValue ret = JS_NewArray(ctx);
@@ -21,7 +21,7 @@ vector2array(JSContext* ctx, int argc, JSValue argv[]) {
   return ret;
 }
 
-static void
+static inline void
 js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
   JSValue global = JS_GetGlobalObject(ctx);
   *console = JS_GetPropertyStr(ctx, global, "console");
@@ -29,20 +29,20 @@ js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
   JS_FreeValue(ctx, global);
 }
 
-static JSValue
+static inline JSValue
 js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue* func_data) {
   JSValue args[argc + magic];
-  size_t i, j;
+  int i, j;
   for(i = 0; i < magic; i++) args[i] = func_data[i + 1];
   for(j = 0; j < argc; j++) args[i++] = argv[j];
 
   return JS_Call(ctx, func_data[0], this_val, i, args);
 }
 
-static JSValue
+static inline JSValue
 js_function_bind(JSContext* ctx, JSValueConst func, int argc, JSValueConst argv[]) {
   JSValue data[argc + 1];
-  size_t i;
+  int i;
   data[0] = JS_DupValue(ctx, func);
   for(i = 0; i < argc; i++) data[i + 1] = JS_DupValue(ctx, argv[i]);
   return JS_NewCFunctionData(ctx, js_function_bound, 0, argc, argc + 1, data);
@@ -71,14 +71,13 @@ typedef union pointer {
 static inline Pointer
 ptr(const void* ptr) {
   Pointer r = {0};
-  r.p = ptr;
+  r.p = (void*)ptr;
   return r;
 }
 
 static inline JSValue
 ptr2value(JSContext* ctx, const void* ptr) {
-  Pointer r = {ptr};
-  char buf[128];
+   char buf[128];
   size_t len;
   len = snprintf(buf, sizeof(buf), "0x%llx", (long long)ptr);
   return JS_NewStringLen(ctx, buf, len);
@@ -115,7 +114,7 @@ values32ptr(JSContext* ctx, JSValueConst values[2]) {
 
 static inline JSValue
 ptr32value(JSContext* ctx, const void* ptr, int index) {
-  Pointer r = {ptr};
+  Pointer r = {(void*)ptr};
   return JS_NewUint32(ctx, r.u32[index]);
 }
 

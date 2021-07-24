@@ -5,7 +5,7 @@
 #include <libwebsockets.h>
 
 struct lws;
-struct http_header;
+struct byte_buffer;
 struct callback_ws;
 
 /* class WebSocket */
@@ -13,7 +13,7 @@ struct callback_ws;
 typedef struct {
   struct lws* lwsi;
   size_t ref_count;
-  // struct http_header* header;
+  // struct byte_buffer* header;
 } MinnetWebsocket;
 
 int lws_ws_callback(struct lws*, enum lws_callback_reasons reason, void* user, void* in, size_t len);

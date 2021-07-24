@@ -6,10 +6,10 @@ JSClassID minnet_response_class_id;
 JSValue minnet_response_proto;
 
 void
-minnet_response_dump(JSContext* ctx, struct http_response* res) {
+minnet_response_dump(JSContext* ctx, struct http_response const* res) {
   printf("{");
   int32_t status = -1, ok = -1;
-  char *url = "nil", *type = "nil";
+  const char *url = "nil", *type = "nil";
   JS_ToInt32(ctx, &status, res->status);
   ok = JS_ToBool(ctx, res->ok);
   if(JS_VALUE_GET_TAG(res->url))
@@ -110,7 +110,7 @@ minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 }
 
 JSValue
-minnet_response_getter_ok(JSContext* ctx, JSValueConst this_val) {
+minnet_response_getter_ok(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
   if(res)
     return res->ok;
@@ -119,7 +119,7 @@ minnet_response_getter_ok(JSContext* ctx, JSValueConst this_val) {
 }
 
 JSValue
-minnet_response_getter_url(JSContext* ctx, JSValueConst this_val) {
+minnet_response_getter_url(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
   if(res)
     return res->url;
@@ -128,7 +128,7 @@ minnet_response_getter_url(JSContext* ctx, JSValueConst this_val) {
 }
 
 JSValue
-minnet_response_getter_status(JSContext* ctx, JSValueConst this_val) {
+minnet_response_getter_status(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
   if(res)
     return res->status;
@@ -137,7 +137,7 @@ minnet_response_getter_status(JSContext* ctx, JSValueConst this_val) {
 }
 
 JSValue
-minnet_response_getter_type(JSContext* ctx, JSValueConst this_val) {
+minnet_response_getter_type(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
   if(res) {
     return res->type;

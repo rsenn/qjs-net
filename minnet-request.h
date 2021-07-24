@@ -4,20 +4,17 @@
 #include "quickjs.h"
 #include "minnet-response.h"
 
-typedef struct http_header {
-  uint8_t *start, *pos, *end;
-} MinnetHttpHeader;
-
 typedef struct http_body {
   size_t times, budget /*, content_lines*/;
 } MinnetHttpBody;
 
 typedef struct http_request {
   char *peer, *type, *uri;
-  struct http_header header;
+  struct byte_buffer header;
   struct http_body body;
   char path[256];
   MinnetResponse response;
+  int times, budget, content_lines;
 } MinnetRequest;
 
 void minnet_header_dump(MinnetRequest const*);
@@ -45,10 +42,5 @@ static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 
-static void
-body_dump(const char* n, struct http_body* b) {
-  printf("\n\t%s\t{ times = %zx, budget = %zx }", n, b->times, b->budget);
-  fflush(stdout);
-}
 
 #endif /* MINNET_REQUEST_H */

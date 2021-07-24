@@ -5,6 +5,12 @@
 JSClassID minnet_request_class_id;
 JSValue minnet_request_proto;
 
+static void
+body_dump(const char* n, struct http_body const* b) {
+  printf("\n\t%s\t{ times = %zx, budget = %zx }", n, b->times, b->budget);
+  fflush(stdout);
+}
+
 void
 minnet_request_dump(JSContext* ctx, MinnetRequest const* r) {
   printf("\nMinnetRequest {\n\turi = %s", r->uri);
@@ -12,7 +18,7 @@ minnet_request_dump(JSContext* ctx, MinnetRequest const* r) {
   printf("\n\ttype = %s", r->type);
   printf("\n\tpeer = %s", r->peer);
 
-  header_dump("header", &r->header);
+  buffer_dump("header", &r->header);
   body_dump("body", &r->body);
   fputs("\n\tresponse = ", stdout);
   minnet_response_dump(ctx, &r->response);
@@ -32,8 +38,8 @@ minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws
 
   lws_snprintf(r->path, sizeof(r->path), "%s", (const char*)in);
 
-  if((len = lws_get_peer_simple(wsi, (char*)buf, sizeof(buf))) > 0)
-    r->peer = js_strndup(ctx, buf, len);
+  if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
+    r->peer = js_strdup(ctx, buf);
 
   if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
     r->uri = js_strndup(ctx, buf, len);
@@ -43,9 +49,8 @@ minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws
     r->type = js_strdup(ctx, "POST");
   }
 
-  if(!header_alloc(ctx, &r->header, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE)) {
+  if(!buffer_alloc(ctx, &r->header, LWS_RECOMMENDED_MIN_HEADER_SPACE))
     JS_ThrowOutOfMemory(ctx);
-  }
 
   minnet_response_zero(&r->response);
 }
@@ -107,11 +112,11 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_HEADER: {
-      ret = header_tostring(ctx, &req->header);
+      ret = buffer_tostring(ctx, &req->header);
       break;
     }
     case REQUEST_BUFFER: {
-      ret = header_tobuffer(ctx, &req->header);
+      ret = buffer_tobuffer(ctx, &req->header);
 
       break;
     }

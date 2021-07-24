@@ -350,7 +350,7 @@ finish:
 
   return resObj;
 }
-static const char* const
+static const char*
 io_events(int events) {
   switch(events & (POLLIN | POLLOUT)) {
     case POLLIN | POLLOUT: return "IN|OUT";
@@ -369,7 +369,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   int wr = READ_HANDLER, flags;
   int fd, events, revents;
   size_t seq, len;
-  intptr_t* values = JS_GetArrayBuffer(ctx, &len, func_data[0]);
+  intptr_t* values = (intptr_t*)JS_GetArrayBuffer(ctx, &len, func_data[0]);
   assert(len == sizeof(intptr_t) * 5);
   fd = values[0];
   revents = values[2];
@@ -422,7 +422,7 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
   //  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
-  printf("\nmake_handler #%u fd = %d, events = 0x%04x, revents = 0x%04x, context = %p", values[4], values[0], values[1], values[2], (void*)values[3]);
+  printf("\nmake_handler #%zu fd = %zd, events = 0x%04zx, revents = 0x%04zx, context = %p", values[4], values[0], values[1], values[2], (void*)values[3]);
 
   fflush(stdout);
   JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
@@ -446,41 +446,39 @@ static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, mi
                                                     JS_CFUNC_DEF("setLog", 1, minnet_set_log)};
 static JSValue request_proto, websocket_proto;
 
-struct http_header*
-header_new(JSContext* ctx, size_t size) {
+struct byte_buffer*
+buffer_new(JSContext* ctx, size_t size) {
   if(size == 0)
     size = LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE;
-  struct http_header* hdr = js_mallocz(ctx, sizeof(struct http_header) + size);
+  struct byte_buffer* hdr = js_mallocz(ctx, sizeof(struct byte_buffer) + size);
 
-  hdr->start = (uint8_t*)&hdr[1];
-  hdr->pos = hdr->start;
-  hdr->end = hdr->start + size;
+  buffer_init(hdr, (uint8_t*)&hdr[1], size);
   return hdr;
 }
 
 void
-header_init(struct http_header* hdr, uint8_t* start, size_t len) {
-  hdr->start = start;
+buffer_init(struct byte_buffer* hdr, uint8_t* start, size_t len) {
+  hdr->start = start + LWS_PRE;
   hdr->pos = hdr->start;
-  hdr->end = hdr->start + len;
+  hdr->end = start + len;
 }
 
 BOOL
-header_alloc(JSContext* ctx, struct http_header* hdr, size_t size) {
-
-  if((hdr->start = js_malloc(ctx, size))) {
-    hdr->pos = hdr->start;
-    hdr->end = hdr->start + size;
+buffer_alloc(JSContext* ctx, struct byte_buffer* hdr, size_t size) {
+  uint8_t* p;
+  size += LWS_PRE;
+  if((p = js_malloc(ctx, size))) {
+    buffer_init( hdr, p, size);
     return TRUE;
   }
   return FALSE;
 }
 
 BOOL
-header_append(JSContext* ctx, struct http_header* hdr, const char* x, size_t n) {
+buffer_append(JSContext* ctx, struct byte_buffer* hdr, const char* x, size_t n) {
   size_t headroom = hdr->end - hdr->pos;
   if(n > headroom)
-    if(!header_realloc(ctx, hdr, n + 1))
+    if(!buffer_realloc(ctx, hdr, n + 1))
       return FALSE;
   memcpy(hdr->pos, x, n);
   hdr->pos[n] = '\0';
@@ -488,8 +486,29 @@ header_append(JSContext* ctx, struct http_header* hdr, const char* x, size_t n) 
   return TRUE;
 }
 
-char*
-header_realloc(JSContext* ctx, struct http_header* hdr, size_t size) {
+int
+buffer_printf(struct byte_buffer* hdr, const char* format, ...) {
+  va_list ap;
+  int n;
+  size_t size = lws_ptr_diff_size_t(hdr->end, hdr->pos);
+
+  if(!size)
+    return 0;
+
+  va_start(ap, format);
+  n = vsnprintf((char*)hdr->pos, size, format, ap);
+  va_end(ap);
+
+  if(n >= (int)size)
+    n = size;
+
+  hdr->pos += n;
+
+  return n;
+}
+
+uint8_t*
+buffer_realloc(JSContext* ctx, struct byte_buffer* hdr, size_t size) {
   assert((uint8_t*)&hdr[1] != hdr->start);
   hdr->start = js_realloc(ctx, hdr->start, size);
   hdr->end = hdr->start + size;
@@ -497,11 +516,12 @@ header_realloc(JSContext* ctx, struct http_header* hdr, size_t size) {
 }
 
 void
-header_free(JSContext* ctx, struct http_header* hdr) {
+buffer_free(JSContext* ctx, struct byte_buffer* hdr) {
   uint8_t* start = hdr->start;
   if(start == (uint8_t*)&hdr[1]) {
     js_free(ctx, hdr);
   } else {
+    js_free(ctx, hdr->start);
     hdr->start = 0;
     hdr->pos = 0;
     hdr->end = 0;
@@ -510,26 +530,28 @@ header_free(JSContext* ctx, struct http_header* hdr) {
 }
 
 JSValue
-header_tostring(JSContext* ctx, struct http_header* hdr) {
+buffer_tostring(JSContext* ctx, struct byte_buffer const* hdr) {
   void* ptr = hdr->start;
   size_t len = hdr->pos - hdr->start;
   return JS_NewStringLen(ctx, ptr, len);
 }
 
 void
-header_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
-  struct http_header* hdr = opaque;
+buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
+  struct byte_buffer* hdr = opaque;
+
+
 }
 
 JSValue
-header_tobuffer(JSContext* ctx, struct http_header* hdr) {
+buffer_tobuffer(JSContext* ctx, struct byte_buffer const* hdr) {
   void* ptr = hdr->start;
   size_t len = hdr->end - hdr->start;
-  return JS_NewArrayBuffer(ctx, ptr, len, header_finalizer, hdr, FALSE);
+  return JS_NewArrayBuffer(ctx, ptr, len, buffer_finalizer, (void*)hdr, FALSE);
 }
 
 void
-header_dump(const char* n, struct http_header* hdr) {
+buffer_dump(const char* n, struct byte_buffer const* hdr) {
   printf("\n\t%s\t{ pos = %zx, size = %zx }", n, hdr->pos - hdr->start, hdr->end - hdr->start);
   fflush(stdout);
 }

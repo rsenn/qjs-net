@@ -29,6 +29,10 @@ enum { READ_HANDLER = 0, WRITE_HANDLER };
 
 typedef struct lws_pollfd MinnetPollFd;
 
+typedef struct byte_buffer {
+  uint8_t *start, *pos, *end;
+} MinnetBuffer;
+
 extern JSValue minnet_log, minnet_log_this;
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
@@ -37,17 +41,28 @@ extern JSClassID minnet_request_class_id;
 
 void lws_print_unhandled(int);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);
-struct http_header* header_new(JSContext*, size_t size);
-void header_init(struct http_header*, uint8_t* start, size_t len);
-BOOL header_alloc(JSContext*, struct http_header* hdr, size_t size);
-BOOL header_append(JSContext*, struct http_header* hdr, const char* x, size_t n);
-char* header_realloc(JSContext*, struct http_header* hdr, size_t size);
-void header_free(JSContext*, struct http_header* hdr);
-JSValue header_tostring(JSContext*, struct http_header* hdr);
-void header_finalizer(JSRuntime*, void* opaque, void* ptr);
-JSValue header_tobuffer(JSContext*, struct http_header* hdr);
-void header_dump(const char*, struct http_header* hdr);
-void value_dump(JSContext*, const char* n, JSValueConst const* v);
+struct byte_buffer* buffer_new(JSContext*, size_t size);
+void buffer_init(struct byte_buffer*, uint8_t* start, size_t len);
+BOOL buffer_alloc(JSContext*, struct byte_buffer* hdr, size_t size);
+BOOL buffer_append(JSContext*, struct byte_buffer* hdr, const char* x, size_t n);
+int buffer_printf(struct byte_buffer*, const char* format, ...);
+uint8_t* buffer_realloc(JSContext*, struct byte_buffer* hdr, size_t size);
+void buffer_free(JSContext*, struct byte_buffer* hdr);
+JSValue buffer_tostring(JSContext*, struct byte_buffer const* hdr);
+void buffer_finalizer(JSRuntime*, void* opaque, void* ptr);
+JSValue buffer_tobuffer(JSContext*, struct byte_buffer const* hdr);
+void buffer_dump(const char*, struct byte_buffer const* hdr);
+void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
+
+static inline int
+buffer_avail(struct byte_buffer* hdr) {
+  return lws_ptr_diff_size_t(hdr->end, hdr->pos);
+}
+
+static inline int
+buffer_size(struct byte_buffer* hdr) {
+  return lws_ptr_diff_size_t(hdr->pos, hdr->start);
+}
 
 #endif /* MINNET_H */
