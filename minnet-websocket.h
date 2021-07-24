@@ -1,7 +1,7 @@
 #ifndef MINNET_WEBSOCKET_H
 #define MINNET_WEBSOCKET_H
 
-#include "quickjs.h"
+#include <quickjs.h>
 #include <libwebsockets.h>
 
 struct lws;
@@ -26,7 +26,7 @@ extern JSClassID minnet_ws_class_id;
 
 #define GETCB(opt, cb_ptr)                                                                                                                                                                             \
   if(JS_IsFunction(ctx, opt)) {                                                                                                                                                                        \
-    MinnetCallback cb = {ctx, &this_val, &opt};                                                                                                                                               \
+    MinnetCallback cb = {ctx, &this_val, &opt};                                                                                                                                                        \
     cb_ptr = cb;                                                                                                                                                                                       \
   }
 

@@ -1,9 +1,13 @@
 #ifndef MINNET_RESPONSE_H
 #define MINNET_RESPONSE_H
 
-#include "quickjs.h"
+#include <quickjs.h>
 
-/* class Response */
+/* class MinnetResponse */
+
+typedef struct http_body {
+  size_t times, budget, content_lines;
+} MinnetHttpBody;
 
 typedef struct http_response {
   uint8_t* buffer;
@@ -12,6 +16,7 @@ typedef struct http_response {
   JSValue ok;
   JSValue url;
   JSValue type;
+  struct http_body body;
 } MinnetResponse;
 
 void minnet_response_dump(JSContext*, struct http_response const* res);
@@ -30,18 +35,8 @@ JSValue minnet_response_getter_type(JSContext*, JSValue this_val, int magic);
 void minnet_response_finalizer(JSRuntime*, JSValue val);
 
 extern JSClassDef minnet_response_class;
-
-static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
-    JS_CFUNC_DEF("arrayBuffer", 0, minnet_response_buffer),
-    JS_CFUNC_DEF("json", 0, minnet_response_json),
-    JS_CFUNC_DEF("text", 0, minnet_response_text),
-    JS_CGETSET_FLAGS_DEF("ok", minnet_response_getter_ok, NULL, JS_PROP_ENUMERABLE),
-    JS_CGETSET_FLAGS_DEF("url", minnet_response_getter_url, NULL, JS_PROP_ENUMERABLE),
-    JS_CGETSET_FLAGS_DEF("status", minnet_response_getter_status, NULL, JS_PROP_ENUMERABLE),
-    JS_CGETSET_FLAGS_DEF("type", minnet_response_getter_type, NULL, JS_PROP_ENUMERABLE),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),
-};
-
+extern const JSCFunctionListEntry minnet_response_proto_funcs[];
+extern const size_t minnet_response_proto_funcs_size;
 extern JSValue minnet_response_proto;
 extern JSClassID minnet_response_class_id;
 

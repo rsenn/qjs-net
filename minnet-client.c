@@ -1,7 +1,7 @@
+#include "minnet.h"
 #include "minnet-client.h"
 #include "minnet-websocket.h"
-#include "minnet.h"
-#include "quickjs-libc.h"
+#include <quickjs-libc.h>
 
 static struct lws_context* client_context;
 static struct lws* client_wsi;

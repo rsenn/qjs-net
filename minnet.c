@@ -577,14 +577,14 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_NewClassID(&minnet_response_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
   minnet_response_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_response_proto, minnet_response_proto_funcs, countof(minnet_response_proto_funcs));
+  JS_SetPropertyFunctionList(ctx, minnet_response_proto, minnet_response_proto_funcs, minnet_response_proto_funcs_size);
   JS_SetClassProto(ctx, minnet_response_class_id, minnet_response_proto);
 
   // Add class Request
   JS_NewClassID(&minnet_request_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);
   request_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, request_proto, minnet_request_proto_funcs, countof(minnet_request_proto_funcs));
+  JS_SetPropertyFunctionList(ctx, request_proto, minnet_request_proto_funcs, minnet_request_proto_funcs_size);
   JS_SetClassProto(ctx, minnet_request_class_id, request_proto);
 
   // Add class WebSocket

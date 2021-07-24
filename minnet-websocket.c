@@ -4,6 +4,8 @@
 
 JSClassID minnet_ws_class_id;
 
+enum { WEBSOCKET_FD, WEBSOCKET_ADDRESS, WEBSOCKET_FAMILY, WEBSOCKET_PORT, WEBSOCKET_PEER };
+
 static JSValue
 create_websocket_obj(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* res;
@@ -265,19 +267,19 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
     return JS_EXCEPTION;
 
   switch(magic) {
-    case 0: {
+    case WEBSOCKET_FD: {
       ret = JS_NewInt32(ctx, lws_get_socket_fd(ws_obj->lwsi));
       break;
     }
-    case 1: {
+    case WEBSOCKET_ADDRESS: {
       char address[1024];
       lws_get_peer_simple(ws_obj->lwsi, address, sizeof(address));
 
       ret = JS_NewString(ctx, address);
       break;
     }
-    case 2:
-    case 3: {
+    case WEBSOCKET_FAMILY:
+    case WEBSOCKET_PORT: {
       struct sockaddr_in addr;
       socklen_t addrlen = sizeof(addr);
       int fd = lws_get_socket_fd(ws_obj->lwsi);
@@ -287,7 +289,7 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       }
       break;
     }
-    case 4: {
+    case WEBSOCKET_PEER: {
       struct sockaddr_in addr;
       socklen_t addrlen = sizeof(addr);
       int fd = lws_get_socket_fd(ws_obj->lwsi);
@@ -323,11 +325,13 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
     JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
     JS_CFUNC_DEF("close", 1, minnet_ws_close),
-    JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, 0, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_get, 0, 1, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("family", minnet_ws_get, 0, 2, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_ws_get, 0, 3, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_get, 0, 4, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_get, 0, WEBSOCKET_ADDRESS, JS_PROP_ENUMERABLE),
+    JS_ALIAS_DEF("remoteAddress", "address"),
+    JS_CGETSET_MAGIC_FLAGS_DEF("family", minnet_ws_get, 0, WEBSOCKET_FAMILY, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_ws_get, 0, WEBSOCKET_PORT, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_get, 0, WEBSOCKET_PEER, 0),
+    JS_ALIAS_DEF("remote", "peer"),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebSocket", JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("CLOSE_STATUS_NORMAL", LWS_CLOSE_STATUS_NORMAL, 0),
     JS_PROP_INT32_DEF("CLOSE_STATUS_GOINGAWAY", LWS_CLOSE_STATUS_GOINGAWAY, 0),

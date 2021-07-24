@@ -5,21 +5,13 @@
 JSClassID minnet_request_class_id;
 JSValue minnet_request_proto;
 
-static void
-body_dump(const char* n, struct http_body const* b) {
-  printf("\n\t%s\t{ times = %zx, budget = %zx }", n, b->times, b->budget);
-  fflush(stdout);
-}
-
 void
 minnet_request_dump(JSContext* ctx, MinnetRequest const* r) {
   printf("\nMinnetRequest {\n\turi = %s", r->url);
   printf("\n\tpath = %s", r->path);
   printf("\n\ttype = %s", r->type);
-  printf("\n\tpeer = %s", r->peer);
 
   buffer_dump("header", &r->header);
-  body_dump("body", &r->body);
   fputs("\n\tresponse = ", stdout);
   minnet_response_dump(ctx, &r->response);
   fputs(" }", stdout);
@@ -33,13 +25,15 @@ minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws
 
   memset(r, 0, sizeof(*r));
 
+  r->ws = wsi;
+
   /* In contains the url part after the place the mount was  positioned at,
    * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath */
 
   lws_snprintf(r->path, sizeof(r->path), "%s", (const char*)in);
 
-  if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
-    r->peer = js_strdup(ctx, buf);
+  /*  if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
+      r->peer = js_strdup(ctx, buf);*/
 
   if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
     r->url = js_strndup(ctx, buf, len);
@@ -74,12 +68,11 @@ minnet_request_constructor(JSContext* ctx, const char* in, struct lws* wsi) {
 
 JSValue
 minnet_request_wrap(JSContext* ctx, struct http_request* req) {
-  JSValue ret = JS_UNDEFINED;
-
-  ret = JS_NewObjectProtoClass(ctx, minnet_request_proto, minnet_request_class_id);
+  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_request_proto, minnet_request_class_id);
 
   if(JS_IsException(ret))
     return JS_EXCEPTION;
+
   JS_SetOpaque(ret, req);
   return ret;
 }
@@ -97,9 +90,9 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
         ret = JS_NewString(ctx, req->type);
       break;
     }
-    case REQUEST_PEER: {
-      if(req->peer)
-        ret = JS_NewString(ctx, req->peer);
+    case REQUEST_SOCKET: {
+      if(req->ws)
+        ret = minnet_ws_object(ctx, req->ws);
       break;
     }
     case REQUEST_URI: {
@@ -124,14 +117,14 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-JSValue
+/*JSValue
 minnet_request_getter_path(JSContext* ctx, JSValueConst this_val) {
   MinnetRequest* req = JS_GetOpaque(this_val, minnet_request_class_id);
   if(req)
     return JS_NewString(ctx, req->path);
 
   return JS_EXCEPTION;
-}
+}*/
 
 static void
 minnet_request_finalizer(JSRuntime* rt, JSValue val) {
@@ -148,3 +141,15 @@ JSClassDef minnet_request_class = {
 };
 
 JSClassID minnet_request_class_id;
+
+const JSCFunctionListEntry minnet_request_proto_funcs[] = {
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, 0, REQUEST_METHOD, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, 0, REQUEST_URI, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_request_get, 0, REQUEST_SOCKET, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("header", minnet_request_get, 0, REQUEST_HEADER, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_request_get, 0, REQUEST_BUFFER, 0),
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
+};
+
+const size_t minnet_request_proto_funcs_size = countof(minnet_request_proto_funcs);

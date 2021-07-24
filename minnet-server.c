@@ -3,8 +3,9 @@
 #include "minnet-server.h"
 #include "minnet-jsutils.h"
 #include "minnet-response.h"
-#include "list.h"
-#include "quickjs-libc.h"
+#include "minnet-request.h"
+#include <list.h>
+#include <quickjs-libc.h>
 
 static MinnetCallback server_cb_message, server_cb_connect, server_cb_close, server_cb_pong, server_cb_fd, server_cb_http;
 
@@ -374,8 +375,8 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetRequest* req = minnet_request_new(ctx, in, wsi);
       MinnetBuffer b = BUFFER(buf);
 
-      lws_set_wsi_user(wsi, req);
- 
+      lws_set_wsi_user(wsi, &req->response);
+
       /*
        * In contains the url part after the place the mount was
        * positioned at, eg, if positioned at "/dyn" and given
@@ -418,14 +419,15 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
        */
       if(lws_add_http_common_headers(wsi, HTTP_STATUS_OK, "text/html", LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
         return 1;
+
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 
-      req->times = 0;
-      req->budget = atoi((char*)in + 1);
-      req->content_lines = 0;
-      if(!req->budget)
-        req->budget = 10;
+      req->response.body.times = 0;
+      req->response.body.budget = atoi((char*)in + 1);
+      req->response.body.content_lines = 0;
+      if(!req->response.body.budget)
+        req->response.body.budget = 10;
 
       /* write the body separately */
       lws_callback_on_writable(wsi);
@@ -433,18 +435,18 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       return 0;
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
-      MinnetRequest* req = lws_wsi_user(wsi);
+      MinnetResponse* req = lws_wsi_user(wsi);
       MinnetBuffer b = BUFFER(buf);
       enum lws_write_protocol n;
 
-      if(!req || req->times > req->budget)
+      if(!req || req->body.times > req->body.budget)
         break;
 
       n = LWS_WRITE_HTTP;
-      if(req->times == req->budget)
+      if(req->body.times == req->body.budget)
         n = LWS_WRITE_HTTP_FINAL;
 
-      if(!req->times) {
+      if(!req->body.times) {
         /*
          * the first time, we print some html title
          */
@@ -453,21 +455,18 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * to work with http/2, we must take care about LWS_PRE
          * valid behind the buffer we will send.
          */
-        b.pos += lws_snprintf((char*)b.pos,
-                              lws_ptr_diff_size_t(b.end, b.pos),
-                              "<html>"
-                              "<head><meta charset=utf-8 "
-                              "http-equiv=\"Content-Language\" "
-                              "content=\"en\"/></head><body>"
-                              "<img src=\"/libwebsockets.org-logo.svg\">"
-                              "<br>Dynamic content for '%s' from mountpoint."
-                              "<br>Time: %s<br><br>"
-                              "</body></html>",
-                              req->path,
+        buffer_printf(&b,
+                      "<html>\n"
+                      "  <head>\n    <meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/>\n  </head>\n  <body>\n"
+                      "    <img src=\"/libwebsockets.org-logo.svg\">\n"
+                      "    <br />\n    Dynamic content for '%s' from mountpoint."
+                      "<br />\n    Time: %s    <br />\n    <br />\n  "
+                      "</body>\n</html>\n",
+                      ((MinnetRequest*)((char*)req - offsetof(struct http_request, response)))->path,
 #if defined(LWS_HAVE_CTIME_R)
-                              ctime_r(&t, date));
+                      ctime_r(&t, date));
 #else
-                              ctime(&t));
+                      ctime(&t));
 #endif
       } else {
         /*
@@ -477,13 +476,12 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * buffer we will send.
          */
 
-        while(lws_ptr_diff(b.end, b.pos) > 80) buffer_printf(&b, "%d.%d: this is some content...\n", req->times, req->content_lines++);
-
-        buffer_append(&b, "<br><br>", 8);
+        while(buffer_size(&b) < 300) buffer_printf(&b, "%d.%d: this is some content...<br />\n", req->body.times, req->body.content_lines++);
       }
+      buffer_append(&b, "<br />", 4);
 
-      req->times++;
-      if(lws_write(wsi, b.start, lws_ptr_diff_size_t(b.pos, b.start), n) != lws_ptr_diff(b.pos, b.start))
+      req->body.times++;
+      if(lws_write(wsi, b.start, buffer_size(&b), n) != buffer_size(&b))
         return 1;
 
       /*

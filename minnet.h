@@ -1,8 +1,8 @@
 #ifndef MINNET_H
 #define MINNET_H
 
-#include "cutils.h"
-#include "quickjs.h"
+#include <cutils.h>
+#include <quickjs.h>
 #include <libwebsockets.h>
 
 struct http_request;
