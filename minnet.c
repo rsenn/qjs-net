@@ -5,6 +5,7 @@
 #include "minnet-request.h"
 #include "minnet-websocket.h"
 #include "minnet-jsutils.h"
+#include "buffer.h"
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
@@ -397,7 +398,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
        values[2] = x.revents & PIO;*/
   }
 
-  printf("\nio_handler #%zu fd = %d, events = %s, revents = %s, context = %p", seq, x.fd, io_events(x.events), io_events(x.revents), context);
+  printf("\033[2K\rio_handler #%zu fd = %d, events = %s, revents = %s, context = %p\n", seq, x.fd, io_events(x.events), io_events(x.revents), context);
   fflush(stdout);
   if(revents & PIO) {
     lws_service_fd(context, &x);
@@ -422,7 +423,7 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
   //  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
-  printf("\nmake_handler #%zu fd = %zd, events = 0x%04zx, revents = 0x%04zx, context = %p", values[4], values[0], values[1], values[2], (void*)values[3]);
+  printf("\033[2K\rmake_handler #%zu fd = %zd, events = 0x%04zx, revents = 0x%04zx, context = %p\n", values[4], values[0], values[1], values[2], (void*)values[3]);
 
   fflush(stdout);
   JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
@@ -446,111 +447,6 @@ static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, mi
                                                     JS_CFUNC_DEF("setLog", 1, minnet_set_log)};
 static JSValue request_proto, websocket_proto;
 
-struct byte_buffer*
-buffer_new(JSContext* ctx, size_t size) {
-  if(size < LWS_RECOMMENDED_MIN_HEADER_SPACE)
-    size = LWS_RECOMMENDED_MIN_HEADER_SPACE;
-  size += LWS_PRE;
-  struct byte_buffer* hdr = js_mallocz(ctx, sizeof(struct byte_buffer) + size);
-
-  buffer_init(hdr, (uint8_t*)&hdr[1], size);
-  return hdr;
-}
-
-void
-buffer_init(struct byte_buffer* hdr, uint8_t* start, size_t len) {
-  hdr->start = start + LWS_PRE;
-  hdr->pos = hdr->start;
-  hdr->end = start + len;
-}
-
-BOOL
-buffer_alloc(struct byte_buffer* hdr, size_t size, JSContext* ctx) {
-  uint8_t* p;
-  size += LWS_PRE;
-  if((p = js_malloc(ctx, size))) {
-    buffer_init(hdr, p, size);
-    return TRUE;
-  }
-  return FALSE;
-}
-
-BOOL
-buffer_append(struct byte_buffer* hdr, const char* x, size_t n) {
-  assert(buffer_avail(hdr) >= n);
-  memcpy(hdr->pos, x, n);
-  hdr->pos[n] = '\0';
-  hdr->pos += n;
-  return TRUE;
-}
-
-int
-buffer_printf(struct byte_buffer* hdr, const char* format, ...) {
-  va_list ap;
-  int n;
-  size_t size = lws_ptr_diff_size_t(hdr->end, hdr->pos);
-
-  if(!size)
-    return 0;
-
-  va_start(ap, format);
-  n = vsnprintf((char*)hdr->pos, size, format, ap);
-  va_end(ap);
-
-  if(n >= (int)size)
-    n = size;
-
-  hdr->pos += n;
-
-  return n;
-}
-
-uint8_t*
-buffer_realloc(JSContext* ctx, struct byte_buffer* hdr, size_t size) {
-  assert((uint8_t*)&hdr[1] != hdr->start);
-  hdr->start = js_realloc(ctx, hdr->start, size);
-  hdr->end = hdr->start + size;
-  return hdr->start;
-}
-
-void
-buffer_free(JSContext* ctx, struct byte_buffer* hdr) {
-  uint8_t* start = hdr->start;
-  if(start == (uint8_t*)&hdr[1]) {
-    js_free(ctx, hdr);
-  } else {
-    js_free(ctx, hdr->start);
-    hdr->start = 0;
-    hdr->pos = 0;
-    hdr->end = 0;
-    js_free(ctx, hdr);
-  }
-}
-
-JSValue
-buffer_tostring(JSContext* ctx, struct byte_buffer const* hdr) {
-  void* ptr = hdr->start;
-  size_t len = hdr->pos - hdr->start;
-  return JS_NewStringLen(ctx, ptr, len);
-}
-
-void
-buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
-  struct byte_buffer* hdr = opaque;
-}
-
-JSValue
-buffer_tobuffer(JSContext* ctx, struct byte_buffer const* hdr) {
-  void* ptr = hdr->start;
-  size_t len = hdr->end - hdr->start;
-  return JS_NewArrayBuffer(ctx, ptr, len, buffer_finalizer, (void*)hdr, FALSE);
-}
-
-void
-buffer_dump(const char* n, struct byte_buffer const* hdr) {
-  printf("\n\t%s\t{ pos = %zx, size = %zx }", n, hdr->pos - hdr->start, hdr->end - hdr->start);
-  fflush(stdout);
-}
 
 void
 value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {

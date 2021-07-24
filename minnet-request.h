@@ -3,6 +3,7 @@
 
 #include <quickjs.h>
 #include "minnet-response.h"
+#include "buffer.h"
 
 typedef struct http_request {
   char *type, *url;
