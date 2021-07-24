@@ -362,7 +362,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_HTTP: {
       MinnetRequest* req = minnet_request_new(ctx, in, wsi);
-      uint8_t *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
+      MinnetBuffer b = BUFFER(buf);
 
       lws_set_wsi_user(wsi, req);
       /*
@@ -419,10 +419,10 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
                                      HTTP_STATUS_OK,
                                      "text/html",
                                      LWS_ILLEGAL_HTTP_CONTENT_LEN, /* no content len */
-                                     &p,
-                                     end))
+                                     &b.pos,
+                                     b.end))
         return 1;
-      if(lws_finalize_write_http_header(wsi, start, &p, end))
+      if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 
       req->times = 0;
@@ -438,7 +438,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
       MinnetRequest* req = lws_wsi_user(wsi);
-      MinnetBuffer b = {&buf[LWS_PRE], &buf[LWS_PRE], &buf[sizeof(buf) - 1]};
+      MinnetBuffer b = BUFFER(buf);
       enum lws_write_protocol n;
 
       if(!req || req->times > req->budget)
@@ -481,9 +481,9 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * buffer we will send.
          */
 
-        while(lws_ptr_diff(b.end, b.pos) > 80) b.pos += lws_snprintf((char*)b.pos, lws_ptr_diff_size_t(b.end, b.pos), "%d.%d: this is some content... ", req->times, req->content_lines++);
+        while(lws_ptr_diff(b.end, b.pos) > 80) buffer_printf(&b, "%d.%d: this is some content...\n", req->times, req->content_lines++);
 
-        b.pos += lws_snprintf((char*)b.pos, lws_ptr_diff_size_t(b.end, b.pos), "<br><br>");
+        buffer_append(&b, "<br><br>", 8);
       }
 
       req->times++;

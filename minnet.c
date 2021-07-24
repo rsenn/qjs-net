@@ -476,11 +476,8 @@ buffer_alloc(struct byte_buffer* hdr, size_t size, JSContext* ctx) {
 }
 
 BOOL
-buffer_append(JSContext* ctx, struct byte_buffer* hdr, const char* x, size_t n) {
-  size_t headroom = hdr->end - hdr->pos;
-  if(n > headroom)
-    if(!buffer_realloc(ctx, hdr, n + 1))
-      return FALSE;
+buffer_append(struct byte_buffer* hdr, const char* x, size_t n) {
+  assert(buffer_avail(hdr) >= n);
   memcpy(hdr->pos, x, n);
   hdr->pos[n] = '\0';
   hdr->pos += n;

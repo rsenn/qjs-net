@@ -44,7 +44,7 @@ void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSV
 struct byte_buffer* buffer_new(JSContext*, size_t size);
 void buffer_init(struct byte_buffer*, uint8_t* start, size_t len);
 BOOL buffer_alloc(struct byte_buffer*, size_t size, JSContext* ctx);
-BOOL buffer_append(JSContext*, struct byte_buffer* hdr, const char* x, size_t n);
+BOOL buffer_append(struct byte_buffer*, const char* x, size_t n);
 int buffer_printf(struct byte_buffer*, const char* format, ...);
 uint8_t* buffer_realloc(JSContext*, struct byte_buffer* hdr, size_t size);
 void buffer_free(JSContext*, struct byte_buffer* hdr);
@@ -64,5 +64,8 @@ static inline int
 buffer_size(struct byte_buffer* hdr) {
   return lws_ptr_diff_size_t(hdr->pos, hdr->start);
 }
+
+#define BUFFER(buf)                                                                                                                                                                                    \
+  (MinnetBuffer) { ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + sizeof((buf)) - 1 }
 
 #endif /* MINNET_H */
