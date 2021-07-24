@@ -337,8 +337,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   fclose(fi);
 
   res->ok = JS_TRUE;
-  res->buffer = buffer;
-  res->size = bufSize;
+  res->buffer = BUFFER(buffer);
 
 finish:
   curl_slist_free_all(headerlist);
@@ -446,7 +445,6 @@ static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, mi
                                                     // JS_CGETSET_DEF("log", get_log, set_log),
                                                     JS_CFUNC_DEF("setLog", 1, minnet_set_log)};
 static JSValue request_proto, websocket_proto;
-
 
 void
 value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {

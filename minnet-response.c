@@ -23,7 +23,7 @@ minnet_response_dump(JSContext* ctx, struct http_response const* res) {
   if(JS_IsString(res->type))
     type = JS_ToCString(ctx, res->type);
   printf(" status = %d, ok = %d, url = %s, type = %s", status, ok, url, type);
-  body_dump("body", &res->body);
+  body_dump("state", &res->state);
   printf(" }\n");
   /*
     value_dump(ctx, "status", &res->status);
@@ -35,8 +35,7 @@ minnet_response_dump(JSContext* ctx, struct http_response const* res) {
 }
 void
 minnet_response_zero(struct http_response* res) {
-  res->buffer = 0;
-  res->size = 0;
+  res->buffer = (MinnetBuffer){.start = 0, .pos = 0, .end = 0};
   res->status = res->ok = res->url = res->type = JS_UNDEFINED;
 }
 void
@@ -45,8 +44,7 @@ minnet_response_init(JSContext* ctx, MinnetResponse* res, int32_t status, BOOL o
   res->ok = JS_NewBool(ctx, ok);
   res->url = url ? JS_NewString(ctx, url) : JS_UNDEFINED;
   res->type = type ? JS_NewString(ctx, type) : JS_UNDEFINED;
-  res->buffer = 0;
-  res->size = 0;
+  res->buffer = (MinnetBuffer){.start = 0, .pos = 0, .end = 0};
 }
 
 void
@@ -70,10 +68,8 @@ minnet_response_new(JSContext* ctx, int32_t status, BOOL ok, const char* url, co
 
   minnet_response_init(ctx, res, status, ok, url, type);
 
-  if(buf) {
-    res->buffer = js_malloc(ctx, (res->size = len));
-    memcpy(res->buffer, buf, len);
-  }
+  if(buf)
+    buffer_init(&res->buffer, buf, len);
   return minnet_response_wrap(ctx, res);
 }
 
@@ -90,8 +86,8 @@ minnet_response_wrap(JSContext* ctx, MinnetResponse* res) {
 JSValue
 minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res && res->buffer) {
-    JSValue val = JS_NewArrayBufferCopy(ctx, res->buffer, res->size);
+  if(res) {
+    JSValue val = JS_NewArrayBufferCopy(ctx, res->buffer.start, res->buffer.pos - res->buffer.start);
     return val;
   }
 
@@ -101,8 +97,8 @@ minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 JSValue
 minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res && res->buffer)
-    return JS_ParseJSON(ctx, (char*)res->buffer, res->size, "<input>");
+  if(res)
+    return JS_ParseJSON(ctx, (char*)res->buffer.start, res->buffer.pos - res->buffer.start, "<input>");
 
   return JS_EXCEPTION;
 }
@@ -110,8 +106,8 @@ minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 JSValue
 minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetResponse* res = JS_GetOpaque(this_val, minnet_response_class_id);
-  if(res && res->buffer)
-    return JS_NewStringLen(ctx, (char*)res->buffer, res->size);
+  if(res)
+    return JS_NewStringLen(ctx, (char*)res->buffer.start, res->buffer.pos - res->buffer.start);
 
   return JS_EXCEPTION;
 }
@@ -157,8 +153,8 @@ void
 minnet_response_finalizer(JSRuntime* rt, JSValue val) {
   MinnetResponse* res = JS_GetOpaque(val, minnet_response_class_id);
   if(res) {
-    if(res->buffer)
-      free(res->buffer);
+    if(res->buffer.start)
+      free(res->buffer.start - LWS_PRE);
     js_free_rt(rt, res);
   }
 }

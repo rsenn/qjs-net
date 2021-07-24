@@ -374,7 +374,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetRequest* req = minnet_request_new(ctx, in, wsi);
       MinnetBuffer b = BUFFER(buf);
 
-      lws_set_wsi_user(wsi, &req->response);
+      lws_set_wsi_user(wsi, req);
 
       /*
        * In contains the url part after the place the mount was
@@ -422,31 +422,29 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 
-      req->response.body.times = 0;
-      req->response.body.budget = atoi((char*)in + 1);
-      req->response.body.content_lines = 0;
-      if(!req->response.body.budget)
-        req->response.body.budget = 10;
+      req->response = (MinnetResponse){/*.body= BUFFER(buf),*/ .status = JS_UNDEFINED, .ok = JS_UNDEFINED, .url = JS_UNDEFINED, .type = JS_UNDEFINED};
+      req->response.state = (MinnetHttpBody){.times = 0, .content_lines = 0, .budget = 10};
 
-      /* write the body separately */
+      /* write the state separately */
       lws_callback_on_writable(wsi);
 
       return 0;
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
-      MinnetResponse* req = lws_wsi_user(wsi);
+      MinnetRequest* req = lws_wsi_user(wsi);
+      MinnetResponse* res = &req->response;
       MinnetBuffer b = BUFFER(buf);
       enum lws_write_protocol n;
 
-      if(!req || req->body.times > req->body.budget)
+      if(!res || res->state.times > res->state.budget)
         break;
 
       n = LWS_WRITE_HTTP;
 
-      if(req->body.times == req->body.budget)
+      if(res->state.times == res->state.budget)
         n = LWS_WRITE_HTTP_FINAL;
 
-      if(!req->body.times) {
+      if(!res->state.times) {
         /*
          * to work with http/2, we must take care about LWS_PRE
          * valid behind the buffer we will send.
@@ -456,12 +454,12 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
                       "  <head>\n"
                       "   <meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/>\n"
                       " </head>\n"
-                      " <body>\n"
+                      " <state>\n"
                       "    <img src=\"/libwebsockets.org-logo.svg\"><br />\n"
                       "   Dynamic content for '%s' from mountpoint.<br />\n"
                       "   <br />\n",
-                      ((MinnetRequest*)((char*)req - offsetof(struct http_request, response)))->path);
-      } else if(req->body.times < req->body.budget) {
+                      ((MinnetRequest*)((char*)res - offsetof(struct http_request, response)))->path);
+      } else if(res->state.times < res->state.budget) {
         /*
          * after the first time, we create bulk content.
          *
@@ -469,17 +467,17 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * buffer we will send.
          */
 
-        while(buffer_size(&b) < 300) { buffer_printf(&b, "%d.%d: this is some content...<br />\n", req->body.times, req->body.content_lines++); }
+        while(buffer_SIZE(&b) < 300) { buffer_printf(&b, "%d.%d: this is some content...<br />\n", res->state.times, res->state.content_lines++); }
 
       } else {
         buffer_printf(&b,
                       "<br />"
-                      "</body>\n"
+                      "</state>\n"
                       "</html>\n");
       }
 
-      req->body.times++;
-      if(lws_write(wsi, b.start, buffer_size(&b), n) != buffer_size(&b))
+      res->state.times++;
+      if((size_t)lws_write(wsi, b.start, buffer_SIZE(&b), n) != buffer_SIZE(&b))
         return 1;
 
       /*

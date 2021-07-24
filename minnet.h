@@ -29,7 +29,6 @@ enum { READ_HANDLER = 0, WRITE_HANDLER };
 
 typedef struct lws_pollfd MinnetPollFd;
 
-
 typedef struct callback_ws {
   JSContext* ctx;
   JSValueConst* this_obj;
@@ -44,7 +43,7 @@ extern JSClassID minnet_request_class_id;
 
 void lws_print_unhandled(int);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);
- void value_dump(JSContext*, const char* n, JSValue const* v);
+void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
- 
+
 #endif /* MINNET_H */

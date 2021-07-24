@@ -2,6 +2,7 @@
 #define MINNET_RESPONSE_H
 
 #include <quickjs.h>
+#include "buffer.h"
 
 /* class MinnetResponse */
 
@@ -10,13 +11,9 @@ typedef struct http_body {
 } MinnetHttpBody;
 
 typedef struct http_response {
-  uint8_t* buffer;
-  long size;
-  JSValue status;
-  JSValue ok;
-  JSValue url;
-  JSValue type;
-  struct http_body body;
+  MinnetBuffer buffer;
+  JSValue status, ok, url, type;
+  struct http_body state;
 } MinnetResponse;
 
 void minnet_response_dump(JSContext*, struct http_response const* res);

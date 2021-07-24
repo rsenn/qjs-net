@@ -2,6 +2,8 @@
 #define BUFFER_H
 
 #include <assert.h>
+#include <inttypes.h>
+#include <string.h>
 
 typedef struct byte_buffer {
   uint8_t *start, *pos, *end;
@@ -10,9 +12,9 @@ typedef struct byte_buffer {
 #define BUFFER(buf)                                                                                                                                                                                    \
   (MinnetBuffer) { ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + sizeof((buf)) - 1 }
 
-#define buffer_avail(b) (size_t)((b)->end - (b)->pos)
-#define buffer_size(b) (size_t)((b)->pos - (b)->start)
- 
+#define buffer_AVAIL(b) (size_t)((b)->end - (b)->pos)
+#define buffer_SIZE(b) (size_t)((b)->pos - (b)->start)
+
 static inline void
 buffer_init(struct byte_buffer* hdr, uint8_t* start, size_t len) {
   hdr->start = start + LWS_PRE;
@@ -44,7 +46,7 @@ buffer_alloc(struct byte_buffer* hdr, size_t size, JSContext* ctx) {
 
 static inline BOOL
 buffer_append(struct byte_buffer* hdr, const char* x, size_t n) {
-  assert(buffer_avail(hdr) >= n);
+  assert(buffer_AVAIL(hdr) >= n);
   memcpy(hdr->pos, x, n);
   hdr->pos[n] = '\0';
   hdr->pos += n;
@@ -118,6 +120,5 @@ buffer_dump(const char* n, struct byte_buffer const* hdr) {
   printf("\n\t%s\t{ pos = %zx, size = %zx }", n, hdr->pos - hdr->start, hdr->end - hdr->start);
   fflush(stdout);
 }
-
 
 #endif /* BUFFER_H */
