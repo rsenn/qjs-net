@@ -443,32 +443,26 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         break;
 
       n = LWS_WRITE_HTTP;
+
       if(req->body.times == req->body.budget)
         n = LWS_WRITE_HTTP_FINAL;
 
       if(!req->body.times) {
-        /*
-         * the first time, we print some html title
-         */
-        t = time(NULL);
         /*
          * to work with http/2, we must take care about LWS_PRE
          * valid behind the buffer we will send.
          */
         buffer_printf(&b,
                       "<html>\n"
-                      "  <head>\n    <meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/>\n  </head>\n  <body>\n"
-                      "    <img src=\"/libwebsockets.org-logo.svg\">\n"
-                      "    <br />\n    Dynamic content for '%s' from mountpoint."
-                      "<br />\n    Time: %s    <br />\n    <br />\n  "
-                      "</body>\n</html>\n",
-                      ((MinnetRequest*)((char*)req - offsetof(struct http_request, response)))->path,
-#if defined(LWS_HAVE_CTIME_R)
-                      ctime_r(&t, date));
-#else
-                      ctime(&t));
-#endif
-      } else {
+                      "  <head>\n"
+                      "   <meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/>\n"
+                      " </head>\n"
+                      " <body>\n"
+                      "    <img src=\"/libwebsockets.org-logo.svg\"><br />\n"
+                      "   Dynamic content for '%s' from mountpoint.<br />\n"
+                      "   <br />\n",
+                      ((MinnetRequest*)((char*)req - offsetof(struct http_request, response)))->path);
+      } else if(req->body.times < req->body.budget) {
         /*
          * after the first time, we create bulk content.
          *
@@ -476,9 +470,14 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * buffer we will send.
          */
 
-        while(buffer_size(&b) < 300) buffer_printf(&b, "%d.%d: this is some content...<br />\n", req->body.times, req->body.content_lines++);
+        while(buffer_size(&b) < 300) { buffer_printf(&b, "%d.%d: this is some content...<br />\n", req->body.times, req->body.content_lines++); }
+
+      } else {
+        buffer_printf(&b,
+                      "<br />"
+                      "</body>\n"
+                      "</html>\n");
       }
-      buffer_append(&b, "<br />", 4);
 
       req->body.times++;
       if(lws_write(wsi, b.start, buffer_size(&b), n) != buffer_size(&b))
@@ -492,8 +491,9 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(n == LWS_WRITE_HTTP_FINAL) {
         if(lws_http_transaction_completed(wsi))
           return -1;
-      } else
+      } else {
         lws_callback_on_writable(wsi);
+      }
 
       return 0;
     }
