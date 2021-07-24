@@ -61,10 +61,12 @@ void buffer_dump(const char*, struct byte_buffer const* hdr);
 void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
 
-static inline int
-buffer_avail(struct byte_buffer* hdr) {
-  return lws_ptr_diff_size_t(hdr->end, hdr->pos);
-}
+#define buffer_avail(b) (size_t)((b)->end - (b)->pos)
+
+// static inline int
+// buffer_avail(struct byte_buffer* hdr) {
+//  return lws_ptr_diff_size_t(hdr->end, hdr->pos);
+//}
 
 static inline int
 buffer_size(struct byte_buffer* hdr) {

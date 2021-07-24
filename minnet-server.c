@@ -314,8 +314,7 @@ static int
 callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSContext* ctx = server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : server_cb_message.ctx ? server_cb_message.ctx : server_cb_connect.ctx ? server_cb_connect.ctx : 0;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
-  time_t t;
-  char date[32], *url = 0, *method = 0;
+  char *url = 0, *method = 0;
   url = lws_uri_and_method(wsi, ctx, &method);
 
   switch(reason) {

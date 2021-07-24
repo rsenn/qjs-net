@@ -159,10 +159,10 @@ lws_print_unhandled(int reason) {
   printf("Unhandled LWS client event: %i %s\n", reason, lws_callback_name(reason));
 }
 
-static JSValue
+/*static JSValue
 get_log(JSContext* ctx, JSValueConst this_val) {
   return JS_DupValue(ctx, minnet_log);
-}
+}*/
 
 static JSValue
 set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst thisObj) {
