@@ -381,7 +381,6 @@ lws_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user,
       if(!pss || pss->times > pss->budget)
         break;
 
-
       n = LWS_WRITE_HTTP;
       if(pss->times == pss->budget)
         n = LWS_WRITE_HTTP_FINAL;
