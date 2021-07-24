@@ -302,7 +302,6 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
 
   time_t t;
-  int n;
 #if defined(LWS_HAVE_CTIME_R)
   char date[32];
 #endif
@@ -345,7 +344,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_ADD_HEADERS: {
       if(server_cb_http.func_obj) {
-        JSValue ws_obj = minnet_ws_object(server_cb_http.ctx, wsi);
+        // JSValue ws_obj = minnet_ws_object(server_cb_http.ctx, wsi);
         // MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
         struct lws_process_html_args* args = (struct lws_process_html_args*)in;
 
@@ -362,10 +361,10 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       break;
     }
     case LWS_CALLBACK_HTTP: {
-      MinnetRequest* pss = minnet_request_new(ctx, in, wsi);
+      MinnetRequest* req = minnet_request_new(ctx, in, wsi);
       uint8_t *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
 
-      lws_set_wsi_user(wsi, pss);
+      lws_set_wsi_user(wsi, req);
       /*
        * If you want to know the full url path used, you can get it
        * like this
@@ -381,10 +380,10 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
        * positioned at, eg, if positioned at "/dyn" and given
        * "/dyn/mypath", in will contain /mypath
        */
-      lws_snprintf(pss->path, sizeof(pss->path), "%s", (const char*)in);
+      lws_snprintf(req->path, sizeof(req->path), "%s", (const char*)in);
 
       lws_get_peer_simple(wsi, (char*)buf, sizeof(buf));
-      lwsl_notice("%s: HTTP: connection %s, path %s\n", __func__, (const char*)buf, pss->path);
+      lwsl_notice("%s: HTTP: connection %s, path %s\n", __func__, (const char*)buf, req->path);
 
       /*
        * Demonstrates how to retreive a urlarg x=value
@@ -426,11 +425,11 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(lws_finalize_write_http_header(wsi, start, &p, end))
         return 1;
 
-      pss->times = 0;
-      pss->budget = atoi((char*)in + 1);
-      pss->content_lines = 0;
-      if(!pss->budget)
-        pss->budget = 10;
+      req->times = 0;
+      req->budget = atoi((char*)in + 1);
+      req->content_lines = 0;
+      if(!req->budget)
+        req->budget = 10;
 
       /* write the body separately */
       lws_callback_on_writable(wsi);
@@ -438,17 +437,18 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       return 0;
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
-      MinnetRequest* pss = lws_wsi_user(wsi);
-      uint8_t *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
+      MinnetRequest* req = lws_wsi_user(wsi);
+      MinnetBuffer b = {&buf[LWS_PRE], &buf[LWS_PRE], &buf[sizeof(buf) - 1]};
+      enum lws_write_protocol n;
 
-      if(!pss || pss->times > pss->budget)
+      if(!req || req->times > req->budget)
         break;
 
       n = LWS_WRITE_HTTP;
-      if(pss->times == pss->budget)
+      if(req->times == req->budget)
         n = LWS_WRITE_HTTP_FINAL;
 
-      if(!pss->times) {
+      if(!req->times) {
         /*
          * the first time, we print some html title
          */
@@ -457,21 +457,21 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * to work with http/2, we must take care about LWS_PRE
          * valid behind the buffer we will send.
          */
-        p += lws_snprintf((char*)p,
-                          lws_ptr_diff_size_t(end, p),
-                          "<html>"
-                          "<head><meta charset=utf-8 "
-                          "http-equiv=\"Content-Language\" "
-                          "content=\"en\"/></head><body>"
-                          "<img src=\"/libwebsockets.org-logo.svg\">"
-                          "<br>Dynamic content for '%s' from mountpoint."
-                          "<br>Time: %s<br><br>"
-                          "</body></html>",
-                          pss->path,
+        b.pos += lws_snprintf((char*)b.pos,
+                              lws_ptr_diff_size_t(b.end, b.pos),
+                              "<html>"
+                              "<head><meta charset=utf-8 "
+                              "http-equiv=\"Content-Language\" "
+                              "content=\"en\"/></head><body>"
+                              "<img src=\"/libwebsockets.org-logo.svg\">"
+                              "<br>Dynamic content for '%s' from mountpoint."
+                              "<br>Time: %s<br><br>"
+                              "</body></html>",
+                              req->path,
 #if defined(LWS_HAVE_CTIME_R)
-                          ctime_r(&t, date));
+                              ctime_r(&t, date));
 #else
-                          ctime(&t));
+                              ctime(&t));
 #endif
       } else {
         /*
@@ -481,13 +481,13 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * buffer we will send.
          */
 
-        while(lws_ptr_diff(end, p) > 80) p += lws_snprintf((char*)p, lws_ptr_diff_size_t(end, p), "%d.%d: this is some content... ", pss->times, pss->content_lines++);
+        while(lws_ptr_diff(b.end, b.pos) > 80) b.pos += lws_snprintf((char*)b.pos, lws_ptr_diff_size_t(b.end, b.pos), "%d.%d: this is some content... ", req->times, req->content_lines++);
 
-        p += lws_snprintf((char*)p, lws_ptr_diff_size_t(end, p), "<br><br>");
+        b.pos += lws_snprintf((char*)b.pos, lws_ptr_diff_size_t(b.end, b.pos), "<br><br>");
       }
 
-      pss->times++;
-      if(lws_write(wsi, (uint8_t*)start, lws_ptr_diff_size_t(p, start), (enum lws_write_protocol)n) != lws_ptr_diff(p, start))
+      req->times++;
+      if(lws_write(wsi, b.start, lws_ptr_diff_size_t(b.pos, b.start), n) != lws_ptr_diff(b.pos, b.start))
         return 1;
 
       /*
