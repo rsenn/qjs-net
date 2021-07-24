@@ -77,7 +77,7 @@ ptr(const void* ptr) {
 
 static inline JSValue
 ptr2value(JSContext* ctx, const void* ptr) {
-   char buf[128];
+  char buf[128];
   size_t len;
   len = snprintf(buf, sizeof(buf), "0x%llx", (long long)ptr);
   return JS_NewStringLen(ctx, buf, len);

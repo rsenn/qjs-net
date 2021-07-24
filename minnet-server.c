@@ -6,11 +6,10 @@
 #include "list.h"
 #include "quickjs-libc.h"
 
-static MinnetWebsocketCallback server_cb_message, server_cb_connect,  server_cb_close, server_cb_pong, server_cb_fd, server_cb_http;
+static MinnetWebsocketCallback server_cb_message, server_cb_connect, server_cb_close, server_cb_pong, server_cb_fd, server_cb_http;
 
 static int callback_ws(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 static int callback_http(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-
 
 static MinnetHttpMount*
 mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, enum lws_mount_protocols origin_proto) {
@@ -52,7 +51,7 @@ mount_new(JSContext* ctx, JSValueConst arr) {
 static char*
 lws_get_uri(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
   size_t len;
-  char   buf[1024];
+  char buf[1024];
 
   len = lws_hdr_copy(wsi, buf, sizeof(buf) - 1, token);
   buf[len] = '\0';
@@ -70,9 +69,9 @@ mount_free(JSContext* ctx, MinnetHttpMount* mount) {
 }
 
 static struct lws_protocols protocols[] = {
-    {"minnet", callback_ws, 0, 0,0,0,0},
-    {"http", callback_http, 0, 0,0,0,0},
-    {NULL, NULL, 0,   0,0,0,0},
+    {"minnet", callback_ws, 0, 0, 0, 0, 0},
+    {"http", callback_http, 0, 0, 0, 0, 0},
+    {NULL, NULL, 0, 0, 0, 0, 0},
 };
 
 static const MinnetHttpMount* mount_dyn;
@@ -141,7 +140,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     }
   }
 
-  *ptr = mount_dyn=mount_create(ctx, "/dyn", 0, 0, LWSMPRO_CALLBACK);
+  *ptr = mount_dyn = mount_create(ctx, "/dyn", 0, 0, LWSMPRO_CALLBACK);
   ptr = (MinnetHttpMount const**)&(*ptr)->mount_next;
 
   context = lws_create_context(&info);
@@ -151,7 +150,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     return JS_EXCEPTION;
   }
 
-  //JSThreadState* ts = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+  // JSThreadState* ts = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
   lws_service_adjust_timeout(context, 1, 0);
 
   while(a >= 0) {
@@ -316,7 +315,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         JSValue ret, ws_obj = minnet_ws_object(server_cb_http.ctx, wsi);
         JSValue argv[] = {ws_obj, JS_NewString(server_cb_http.ctx, in)};
         int32_t result = 0;
-       // MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
+        // MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
         struct byte_buffer h;
         buffer_init(&h, buf, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
         printf("LWS_CALLBACK_FILTER_HTTP_CONNECTION in: %s\n", (char*)in);
@@ -347,7 +346,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     case LWS_CALLBACK_ADD_HEADERS: {
       if(server_cb_http.func_obj) {
         JSValue ws_obj = minnet_ws_object(server_cb_http.ctx, wsi);
-        //MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
+        // MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
         struct lws_process_html_args* args = (struct lws_process_html_args*)in;
 
         printf("LWS_CALLBACK_ADD_HEADERS args: %.*s\n", args->len, args->p);
@@ -364,9 +363,9 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_HTTP: {
       MinnetRequest* pss = minnet_request_new(ctx, in, wsi);
+      uint8_t *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
 
       lws_set_wsi_user(wsi, pss);
-
       /*
        * If you want to know the full url path used, you can get it
        * like this
@@ -421,10 +420,10 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
                                      HTTP_STATUS_OK,
                                      "text/html",
                                      LWS_ILLEGAL_HTTP_CONTENT_LEN, /* no content len */
-                                     &pss->header.pos,
-                                     pss->header.end))
+                                     &p,
+                                     end))
         return 1;
-      if(lws_finalize_write_http_header(wsi, pss->header.start, &pss->header.pos, pss->header.end))
+      if(lws_finalize_write_http_header(wsi, start, &p, end))
         return 1;
 
       pss->times = 0;
@@ -440,6 +439,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
       MinnetRequest* pss = lws_wsi_user(wsi);
+      uint8_t *start = &buf[LWS_PRE], *p = start, *end = &buf[sizeof(buf) - 1];
 
       if(!pss || pss->times > pss->budget)
         break;
@@ -457,20 +457,21 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * to work with http/2, we must take care about LWS_PRE
          * valid behind the buffer we will send.
          */
-        buffer_printf(&pss->header,
-                      "<html>"
-                      "<head><meta charset=utf-8 "
-                      "http-equiv=\"Content-Language\" "
-                      "content=\"en\"/></head><body>"
-                      "<img src=\"/libwebsockets.org-logo.svg\">"
-                      "<br>Dynamic content for '%s' from mountpoint."
-                      "<br>Time: %s<br><br>"
-                      "</body></html>",
-                      pss->path,
+        p += lws_snprintf((char*)p,
+                          lws_ptr_diff_size_t(end, p),
+                          "<html>"
+                          "<head><meta charset=utf-8 "
+                          "http-equiv=\"Content-Language\" "
+                          "content=\"en\"/></head><body>"
+                          "<img src=\"/libwebsockets.org-logo.svg\">"
+                          "<br>Dynamic content for '%s' from mountpoint."
+                          "<br>Time: %s<br><br>"
+                          "</body></html>",
+                          pss->path,
 #if defined(LWS_HAVE_CTIME_R)
-                      ctime_r(&t, date));
+                          ctime_r(&t, date));
 #else
-                      ctime(&t));
+                          ctime(&t));
 #endif
       } else {
         /*
@@ -480,13 +481,13 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          * buffer we will send.
          */
 
-        while(buffer_avail(&pss->header) > 80) buffer_printf(&pss->header, "%d.%d: this is some content... ", pss->times, pss->content_lines++);
+        while(lws_ptr_diff(end, p) > 80) p += lws_snprintf((char*)p, lws_ptr_diff_size_t(end, p), "%d.%d: this is some content... ", pss->times, pss->content_lines++);
 
-        buffer_printf(&pss->header, "<br><br>");
+        p += lws_snprintf((char*)p, lws_ptr_diff_size_t(end, p), "<br><br>");
       }
 
       pss->times++;
-      if(lws_write(wsi, pss->header.start, buffer_size(&pss->header), (enum lws_write_protocol)n) != buffer_size(&pss->header))
+      if(lws_write(wsi, (uint8_t*)start, lws_ptr_diff_size_t(p, start), (enum lws_write_protocol)n) != lws_ptr_diff(p, start))
         return 1;
 
       /*

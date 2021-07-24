@@ -49,7 +49,7 @@ minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws
     r->type = js_strdup(ctx, "POST");
   }
 
-  if(!buffer_alloc(ctx, &r->header, LWS_RECOMMENDED_MIN_HEADER_SPACE))
+  if(!buffer_alloc( &r->header, LWS_RECOMMENDED_MIN_HEADER_SPACE, ctx))
     JS_ThrowOutOfMemory(ctx);
 
   minnet_response_zero(&r->response);

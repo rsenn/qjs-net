@@ -42,5 +42,4 @@ static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 
-
 #endif /* MINNET_REQUEST_H */

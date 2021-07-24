@@ -448,8 +448,9 @@ static JSValue request_proto, websocket_proto;
 
 struct byte_buffer*
 buffer_new(JSContext* ctx, size_t size) {
-  if(size == 0)
-    size = LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE;
+  if(size < LWS_RECOMMENDED_MIN_HEADER_SPACE)
+    size = LWS_RECOMMENDED_MIN_HEADER_SPACE;
+  size += LWS_PRE;
   struct byte_buffer* hdr = js_mallocz(ctx, sizeof(struct byte_buffer) + size);
 
   buffer_init(hdr, (uint8_t*)&hdr[1], size);
@@ -464,11 +465,11 @@ buffer_init(struct byte_buffer* hdr, uint8_t* start, size_t len) {
 }
 
 BOOL
-buffer_alloc(JSContext* ctx, struct byte_buffer* hdr, size_t size) {
+buffer_alloc(struct byte_buffer* hdr, size_t size, JSContext* ctx) {
   uint8_t* p;
   size += LWS_PRE;
   if((p = js_malloc(ctx, size))) {
-    buffer_init( hdr, p, size);
+    buffer_init(hdr, p, size);
     return TRUE;
   }
   return FALSE;
@@ -539,8 +540,6 @@ buffer_tostring(JSContext* ctx, struct byte_buffer const* hdr) {
 void
 buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
   struct byte_buffer* hdr = opaque;
-
-
 }
 
 JSValue

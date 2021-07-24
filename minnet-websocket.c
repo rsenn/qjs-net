@@ -69,7 +69,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
   MinnetWebsocket* ws_obj;
   const char* msg;
   uint8_t* data;
-  int  m, n;
+  int m, n;
   size_t len;
 
   if(!(ws_obj = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
@@ -158,7 +158,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       name[namelen] = ':';
       name[namelen + 1] = '\0';
 
-      if(lws_add_http_header_by_name(ws_obj->lwsi, (const uint8_t*)name,  (const uint8_t*)value, len, &header.pos, header.end) < 0)
+      if(lws_add_http_header_by_name(ws_obj->lwsi, (const uint8_t*)name, (const uint8_t*)value, len, &header.pos, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
 
       js_free(ctx, name);

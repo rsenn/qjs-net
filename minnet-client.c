@@ -8,7 +8,7 @@ static struct lws* client_wsi;
 static int client_server_port = 7981;
 static const char* client_server_address = "localhost";
 
-static MinnetWebsocketCallback client_cb_message, client_cb_connect,  client_cb_close, client_cb_pong, client_cb_fd;
+static MinnetWebsocketCallback client_cb_message, client_cb_connect, client_cb_close, client_cb_pong, client_cb_fd;
 
 static int lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
@@ -33,7 +33,7 @@ connect_client(void) {
 
 static const struct lws_protocols client_protocols[] = {
     {"minnet", lws_client_callback, 0, 0, 0, 0, 0},
-    {NULL, NULL, 0, 0, 0, 0,0},
+    {NULL, NULL, 0, 0, 0, 0, 0},
 };
 
 JSValue

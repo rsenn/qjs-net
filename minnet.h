@@ -43,7 +43,7 @@ void lws_print_unhandled(int);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);
 struct byte_buffer* buffer_new(JSContext*, size_t size);
 void buffer_init(struct byte_buffer*, uint8_t* start, size_t len);
-BOOL buffer_alloc(JSContext*, struct byte_buffer* hdr, size_t size);
+BOOL buffer_alloc(struct byte_buffer*, size_t size, JSContext* ctx);
 BOOL buffer_append(JSContext*, struct byte_buffer* hdr, const char* x, size_t n);
 int buffer_printf(struct byte_buffer*, const char* format, ...);
 uint8_t* buffer_realloc(JSContext*, struct byte_buffer* hdr, size_t size);
