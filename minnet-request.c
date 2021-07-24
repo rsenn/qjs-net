@@ -13,7 +13,7 @@ body_dump(const char* n, struct http_body const* b) {
 
 void
 minnet_request_dump(JSContext* ctx, MinnetRequest const* r) {
-  printf("\nMinnetRequest {\n\turi = %s", r->uri);
+  printf("\nMinnetRequest {\n\turi = %s", r->url);
   printf("\n\tpath = %s", r->path);
   printf("\n\ttype = %s", r->type);
   printf("\n\tpeer = %s", r->peer);
@@ -42,10 +42,10 @@ minnet_request_init(JSContext* ctx, MinnetRequest* r, const char* in, struct lws
     r->peer = js_strdup(ctx, buf);
 
   if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
-    r->uri = js_strndup(ctx, buf, len);
+    r->url = js_strndup(ctx, buf, len);
     r->type = js_strdup(ctx, "GET");
   } else if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
-    r->uri = js_strndup(ctx, buf, len);
+    r->url = js_strndup(ctx, buf, len);
     r->type = js_strdup(ctx, "POST");
   }
 
@@ -103,8 +103,8 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_URI: {
-      if(req->uri)
-        ret = JS_NewString(ctx, req->uri);
+      if(req->url)
+        ret = JS_NewString(ctx, req->url);
       break;
     }
     case REQUEST_PATH: {
@@ -137,8 +137,8 @@ static void
 minnet_request_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRequest* req = JS_GetOpaque(val, minnet_request_class_id);
   if(req) {
-    if(req->uri)
-      js_free_rt(rt, req->uri);
+    if(req->url)
+      js_free_rt(rt, req->url);
   }
 }
 

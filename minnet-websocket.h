@@ -6,14 +6,12 @@
 
 struct lws;
 struct byte_buffer;
-struct callback_ws;
 
 /* class WebSocket */
 
 typedef struct {
   struct lws* lwsi;
   size_t ref_count;
-  // struct byte_buffer* header;
 } MinnetWebsocket;
 
 int lws_ws_callback(struct lws*, enum lws_callback_reasons reason, void* user, void* in, size_t len);
@@ -26,15 +24,9 @@ extern const JSCFunctionListEntry minnet_ws_proto_funcs[];
 extern const size_t minnet_ws_proto_funcs_size;
 extern JSClassID minnet_ws_class_id;
 
-typedef struct callback_ws {
-  JSContext* ctx;
-  JSValueConst* this_obj;
-  JSValue* func_obj;
-} MinnetWebsocketCallback;
-
 #define GETCB(opt, cb_ptr)                                                                                                                                                                             \
   if(JS_IsFunction(ctx, opt)) {                                                                                                                                                                        \
-    MinnetWebsocketCallback cb = {ctx, &this_val, &opt};                                                                                                                                               \
+    MinnetCallback cb = {ctx, &this_val, &opt};                                                                                                                                               \
     cb_ptr = cb;                                                                                                                                                                                       \
   }
 

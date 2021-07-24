@@ -33,6 +33,12 @@ typedef struct byte_buffer {
   uint8_t *start, *pos, *end;
 } MinnetBuffer;
 
+typedef struct callback_ws {
+  JSContext* ctx;
+  JSValueConst* this_obj;
+  JSValue* func_obj;
+} MinnetCallback;
+
 extern JSValue minnet_log, minnet_log_this;
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;

@@ -6,7 +6,7 @@
 #include "list.h"
 #include "quickjs-libc.h"
 
-static MinnetWebsocketCallback server_cb_message, server_cb_connect, server_cb_close, server_cb_pong, server_cb_fd, server_cb_http;
+static MinnetCallback server_cb_message, server_cb_connect, server_cb_close, server_cb_pong, server_cb_fd, server_cb_http;
 
 static int callback_ws(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 static int callback_http(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
@@ -53,10 +53,24 @@ lws_get_uri(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
   size_t len;
   char buf[1024];
 
-  len = lws_hdr_copy(wsi, buf, sizeof(buf) - 1, token);
-  buf[len] = '\0';
+  if((len = lws_hdr_copy(wsi, buf, sizeof(buf) - 1, token)) > 0)
+    buf[len] = '\0';
+  else
+    return 0;
 
   return js_strndup(ctx, buf, len);
+}
+
+static char*
+lws_uri_and_method(struct lws* wsi, JSContext* ctx, char** method) {
+  char* url;
+
+  if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_POST_URI)))
+    *method = js_strdup(ctx, "POST");
+  else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI)))
+    *method = js_strdup(ctx, "GET");
+
+  return url;
 }
 
 static void
@@ -298,14 +312,10 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 static int
 callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSContext* ctx = server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : server_cb_message.ctx ? server_cb_message.ctx : server_cb_connect.ctx ? server_cb_connect.ctx : 0;
-
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
-
   time_t t;
-#if defined(LWS_HAVE_CTIME_R)
-  char date[32];
-#endif
-  // MinnetBuffer* h = &r->h;
+  char date[32], *url = 0, *method = 0;
+  url = lws_uri_and_method(wsi, ctx, &method);
 
   switch(reason) {
 
@@ -365,16 +375,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetBuffer b = BUFFER(buf);
 
       lws_set_wsi_user(wsi, req);
-      /*
-       * If you want to know the full url path used, you can get it
-       * like this
-       *
-       * n = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI);
-       *
-       * The base path is the first (n - strlen((const char *)in))
-       * chars in buf.
-       */
-
+ 
       /*
        * In contains the url part after the place the mount was
        * positioned at, eg, if positioned at "/dyn" and given
@@ -415,12 +416,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
        * often you don't know it and avoiding having to compute it
        * at header-time makes life easier at the server.
        */
-      if(lws_add_http_common_headers(wsi,
-                                     HTTP_STATUS_OK,
-                                     "text/html",
-                                     LWS_ILLEGAL_HTTP_CONTENT_LEN, /* no content len */
-                                     &b.pos,
-                                     b.end))
+      if(lws_add_http_common_headers(wsi, HTTP_STATUS_OK, "text/html", LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
         return 1;
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
