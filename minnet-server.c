@@ -376,7 +376,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       break;
     }
     case LWS_CALLBACK_HTTP: {
-      MinnetRequest* req = minnet_request_new(ctx, in, ws);
+      MinnetRequest* req = request_new(ctx, in, ws);
       JSValue ret = JS_UNDEFINED, resp_obj = minnet_response_object(ctx, req->url, 200, TRUE, "text/html");
 
       ++(ws->req = req)->ref_count;
@@ -407,9 +407,9 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
                 return code;
             }
           }*/
-      if(!(ws->rsp = minnet_response_data(ctx, resp_obj)))
-        ws->rsp = response_new(ctx, req->url, 200, TRUE, "text/html");
-
+      /*      if(!(ws->rsp = minnet_response_data(ctx, resp_obj)))
+              ws->rsp = response_new(ctx, req->url, 200, TRUE, "text/html");*/
+      MinnetResponse* resp = minnet_response_data(ctx, resp_obj);
       /*
        * prepare and write http headers... with regards to content-
        * length, there are three approaches:
@@ -428,22 +428,23 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
        * often you don't know it and avoiding having to compute it
        * at header-time makes life easier at the server.
        */
-      if(lws_add_http_common_headers(wsi, ws->rsp->status, ws->rsp->type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
+      if(lws_add_http_common_headers(wsi, resp->status, resp->type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
         return 1;
 
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 
       if(server_cb_body.func_obj) {
-        JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), minnet_response_wrap(server_cb_body.ctx, ws->rsp)};
+        JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), resp_obj};
         JSValue ret = minnet_emit(&server_cb_body, 2, args);
 
-        ws->rsp->iterator = ret; // js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
+        resp->iterator = ret; // js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
       } else {
-        ws->rsp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
+        resp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
       }
 
       lws_callback_on_writable(wsi);
+      JS_FreeValue(ctx, resp_obj);
 
       return 0;
     }

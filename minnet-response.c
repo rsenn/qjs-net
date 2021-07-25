@@ -166,17 +166,19 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
     goto fail;
 
   for(i = 0; i < argc; i++) {
-    if(JS_IsString(argv[argc])) {
-      const char* str = JS_ToCString(ctx, argv[argc]);
-      if(resp->url)
-        resp->type = str;
-      else
-        resp->url = str;
-    } else if(JS_IsBool(argv[argc])) {
-      resp->ok = JS_ToBool(ctx, argv[argc]);
-    } else if(JS_IsNumber(argv[argc])) {
+    if(JS_IsString(argv[i])) {
+      const char* str = JS_ToCString(ctx, argv[i]);
+      if(!resp->url)
+        resp->url = js_strdup(ctx, str);
+      else if(!resp->type)
+        resp->type = js_strdup(ctx, str);
+      JS_FreeCString(ctx, str);
+
+    } else if(JS_IsBool(argv[i])) {
+      resp->ok = JS_ToBool(ctx, argv[i]);
+    } else if(JS_IsNumber(argv[i])) {
       int32_t s;
-      if(!JS_ToInt32(ctx, &s, argv[argc]))
+      if(!JS_ToInt32(ctx, &s, argv[i]))
         resp->status = s;
     }
   }

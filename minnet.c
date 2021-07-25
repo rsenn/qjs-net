@@ -430,6 +430,12 @@ JSValue
 minnet_emit(struct callback_ws* cb, int argc, JSValue* argv) {
   if(!cb->func_obj)
     return JS_UNDEFINED;
+
+  size_t len;
+  const char* str = JS_ToCStringLen(cb->ctx, &len, *cb->func_obj);
+  printf("\nemit [%d] %.*s\n", argc, (const char*)memchr(str, '{', len) - str, str);
+  JS_FreeCString(cb->ctx, str);
+
   return JS_Call(cb->ctx, *cb->func_obj, cb->this_obj ? *cb->this_obj : JS_NULL, argc, argv);
 }
 

@@ -10,14 +10,14 @@ struct http_response;
 typedef struct http_request {
   int ref_count;
   char *type, *url;
-  struct socket* ws;
+  //  struct socket* ws;
   struct byte_buffer header;
   char path[256];
 } MinnetRequest;
 
 void minnet_request_dump(JSContext*, MinnetRequest const* req);
 void minnet_request_init(JSContext*, MinnetRequest* req, const char* in, struct socket* ws);
-MinnetRequest* minnet_request_new(JSContext*, const char* in, struct socket* ws);
+MinnetRequest* request_new(JSContext*, const char* in, struct socket* ws);
 JSValue minnet_request_wrap(JSContext*, struct http_request* req);
 
 extern JSClassDef minnet_request_class;

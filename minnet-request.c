@@ -26,7 +26,6 @@ minnet_request_init(JSContext* ctx, MinnetRequest* req, const char* in, struct s
 
   memset(req, 0, sizeof(*req));
 
-  req->ws = ws;
   req->ref_count = 0;
 
   /* In contains the url part after the place the mount was  positioned at,
@@ -50,7 +49,7 @@ minnet_request_init(JSContext* ctx, MinnetRequest* req, const char* in, struct s
 }
 
 MinnetRequest*
-minnet_request_new(JSContext* ctx, const char* in, struct socket* ws) {
+request_new(JSContext* ctx, const char* in, struct socket* ws) {
   MinnetRequest* req;
 
   if((req = js_mallocz(ctx, sizeof(MinnetRequest))))
@@ -63,7 +62,7 @@ static JSValue
 minnet_request_constructor(JSContext* ctx, const char* in, struct socket* ws) {
   MinnetRequest* req;
 
-  if(!(req = minnet_request_new(ctx, in, ws)))
+  if(!(req = request_new(ctx, in, ws)))
     return JS_EXCEPTION;
 
   req->ref_count = 0;
