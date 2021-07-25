@@ -45,13 +45,6 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
   return create_websocket_obj(ctx, wsi);
 }
 
-JSValue
-minnet_ws_emit(struct callback_ws* cb, int argc, JSValue* argv) {
-  if(!cb->func_obj)
-    return JS_UNDEFINED;
-  return JS_Call(cb->ctx, *cb->func_obj, cb->this_obj ? *cb->this_obj : JS_NULL, argc, argv);
-}
-
 void
 minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValueConst options) {
   JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");

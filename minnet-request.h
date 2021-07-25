@@ -6,6 +6,7 @@
 #include "buffer.h"
 
 typedef struct http_request {
+  int ref_count;
   char *type, *url;
   struct lws* ws;
   struct byte_buffer header;

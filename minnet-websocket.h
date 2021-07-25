@@ -16,7 +16,6 @@ typedef struct {
 
 int lws_ws_callback(struct lws*, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 JSValue minnet_ws_object(JSContext*, struct lws* wsi);
-JSValue minnet_ws_emit(struct callback_ws*, int argc, JSValue* argv);
 void minnet_ws_sslcert(JSContext*, struct lws_context_creation_info* info, JSValue options);
 
 extern JSClassDef minnet_ws_class;

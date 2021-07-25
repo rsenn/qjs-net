@@ -7,7 +7,7 @@
 #include <list.h>
 #include <quickjs-libc.h>
 
-static MinnetCallback server_cb_message, server_cb_connect, server_cb_close, server_cb_pong, server_cb_fd, server_cb_http;
+static MinnetCallback server_cb_message, server_cb_connect, server_cb_close, server_cb_pong, server_cb_fd, server_cb_http, server_cb_body;
 
 static int callback_ws(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 static int callback_http(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
@@ -111,6 +111,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
   JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
+  JSValue opt_on_body = JS_GetPropertyStr(ctx, options, "onBody");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
 
   if(!JS_IsUndefined(opt_port))
@@ -127,6 +128,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   GETCB(opt_on_message, server_cb_message)
   GETCB(opt_on_fd, server_cb_fd)
   GETCB(opt_on_http, server_cb_http)
+  GETCB(opt_on_body, server_cb_body)
 
   SETLOG
 
@@ -215,7 +217,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_ESTABLISHED: {
       if(server_cb_connect.func_obj) {
         JSValue ws_obj = minnet_ws_object(server_cb_connect.ctx, wsi);
-        minnet_ws_emit(&server_cb_connect, 1, &ws_obj);
+        minnet_emit(&server_cb_connect, 1, &ws_obj);
       }
       break;
     }
@@ -226,7 +228,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         // printf("callback CLOSED %d\n", lws_get_socket_fd(wsi));
         JSValue ws_obj = minnet_ws_object(server_cb_close.ctx, wsi);
         JSValue cb_argv[2] = {ws_obj, in ? JS_NewStringLen(server_cb_connect.ctx, in, len) : JS_UNDEFINED};
-        minnet_ws_emit(&server_cb_close, in ? 2 : 1, cb_argv);
+        minnet_emit(&server_cb_close, in ? 2 : 1, cb_argv);
       }
       break;
     }
@@ -239,7 +241,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         JSValue ws_obj = minnet_ws_object(server_cb_message.ctx, wsi);
         JSValue msg = JS_NewStringLen(server_cb_message.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
-        minnet_ws_emit(&server_cb_message, 2, cb_argv);
+        minnet_emit(&server_cb_message, 2, cb_argv);
       }
       break;
     }
@@ -248,7 +250,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         JSValue ws_obj = minnet_ws_object(server_cb_pong.ctx, wsi);
         JSValue msg = JS_NewArrayBufferCopy(server_cb_pong.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
-        minnet_ws_emit(&server_cb_pong, 2, cb_argv);
+        minnet_emit(&server_cb_pong, 2, cb_argv);
       }
       break;
     }
@@ -265,7 +267,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
         minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
-        minnet_ws_emit(&server_cb_fd, 3, argv);
+        minnet_emit(&server_cb_fd, 3, argv);
         JS_FreeValue(server_cb_fd.ctx, argv[0]);
         JS_FreeValue(server_cb_fd.ctx, argv[1]);
         JS_FreeValue(server_cb_fd.ctx, argv[2]);
@@ -280,7 +282,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
             JS_NewInt32(server_cb_fd.ctx, args->fd),
         };
         minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
-        minnet_ws_emit(&server_cb_fd, 3, argv);
+        minnet_emit(&server_cb_fd, 3, argv);
         JS_FreeValue(server_cb_fd.ctx, argv[0]);
       }
       break;
@@ -293,7 +295,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
           JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
           minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
-          minnet_ws_emit(&server_cb_fd, 3, argv);
+          minnet_emit(&server_cb_fd, 3, argv);
           JS_FreeValue(server_cb_fd.ctx, argv[0]);
           JS_FreeValue(server_cb_fd.ctx, argv[1]);
           JS_FreeValue(server_cb_fd.ctx, argv[2]);
@@ -331,7 +333,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
         // ws->h = h;
 
-        ret = minnet_ws_emit(&server_cb_http, 2, argv);
+        ret = minnet_emit(&server_cb_http, 2, argv);
         JS_FreeValue(server_cb_http.ctx, argv[0]);
         JS_FreeValue(server_cb_http.ctx, argv[1]);
 
@@ -372,30 +374,13 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_HTTP: {
       MinnetRequest* req = minnet_request_new(ctx, in, wsi);
+      lws_set_wsi_user(wsi, req);
       MinnetBuffer b = BUFFER(buf);
 
-      lws_set_wsi_user(wsi, req);
-
-      /*
-       * In contains the url part after the place the mount was
-       * positioned at, eg, if positioned at "/dyn" and given
-       * "/dyn/mypath", in will contain /mypath
-       */
-      lws_snprintf(req->path, sizeof(req->path), "%s", (const char*)in);
-
-      lws_get_peer_simple(wsi, (char*)buf, sizeof(buf));
-      lwsl_notice("%s: HTTP: connection %s, path %s\n", __func__, (const char*)buf, req->path);
-
-      /*
-       * Demonstrates how to retreive a urlarg x=value
-       */
-
-      {
-        char value[100];
-        int z = lws_get_urlarg_by_name_safe(wsi, "x", value, sizeof(value) - 1);
-
-        if(z >= 0)
-          lwsl_hexdump_notice(value, (size_t)z);
+      if(server_cb_http.func_obj) {
+        JSValueConst args[] = {minnet_request_wrap(ctx, req)};
+        minnet_emit(&server_cb_http, countof(args), args);
+        JS_FreeValue(ctx, args[0]);
       }
 
       /*
@@ -432,49 +417,63 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
       MinnetRequest* req = lws_wsi_user(wsi);
-      MinnetResponse* res = &req->response;
       MinnetBuffer b = BUFFER(buf);
       enum lws_write_protocol n = LWS_WRITE_HTTP;
 
-      if(!res || res->state.times > res->state.budget)
-        break;
+      if(!server_cb_body.func_obj) {
+        MinnetResponse* res = &req->response;
 
-      if(res->state.times == res->state.budget)
-        n = LWS_WRITE_HTTP_FINAL;
+        if(!res || res->state.times > res->state.budget)
+          break;
 
-      if(!res->state.times) {
-        /*
-         * to work with http/2, we must take care about LWS_PRE
-         * valid behind the buffer we will send.
-         */
-        buffer_printf(&b,
-                      "<html>\n"
-                      "  <head>\n"
-                      "   <meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/>\n"
-                      " </head>\n"
-                      " <state>\n"
-                      "    <img src=\"/libwebsockets.org-logo.svg\"><br />\n"
-                      "   Dynamic content for '%s' from mountpoint.<br />\n"
-                      "   <br />\n",
-                      ((MinnetRequest*)((char*)res - offsetof(struct http_request, response)))->path);
-      } else if(res->state.times < res->state.budget) {
-        /*
-         * after the first time, we create bulk content.
-         *
-         * Again we take care about LWS_PRE valid behind the
-         * buffer we will send.
-         */
+        if(res->state.times == res->state.budget)
+          n = LWS_WRITE_HTTP_FINAL;
 
-        while(buffer_SIZE(&b) < 300) { buffer_printf(&b, "%d.%d: this is some content...<br />\n", res->state.times, res->state.content_lines++); }
+        if(!res->state.times) {
+          /*
+           * to work with http/2, we must take care about LWS_PRE
+           * valid behind the buffer we will send.
+           */
+          buffer_printf(&b,
+                        "<html>\n"
+                        "  <head>\n"
+                        "   <meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/>\n"
+                        " </head>\n"
+                        " <state>\n"
+                        "    <img src=\"/libwebsockets.org-logo.svg\"><br />\n"
+                        "   Dynamic content for '%s' from mountpoint.<br />\n"
+                        "   <br />\n",
+                        ((MinnetRequest*)((char*)res - offsetof(struct http_request, response)))->path);
+        } else if(res->state.times < res->state.budget) {
+          /*
+           * after the first time, we create bulk content.
+           *
+           * Again we take care about LWS_PRE valid behind the
+           * buffer we will send.
+           */
 
+          while(buffer_SIZE(&b) < 300) { buffer_printf(&b, "%d.%d: this is some content...<br />\n", res->state.times, res->state.content_lines++); }
+
+        } else {
+          buffer_printf(&b,
+                        "<br />"
+                        "</state>\n"
+                        "</html>\n");
+        }
+
+        res->state.times++;
       } else {
-        buffer_printf(&b,
-                      "<br />"
-                      "</state>\n"
-                      "</html>\n");
+        JSValueConst args[] = {};
+        JSValue ws_obj = minnet_ws_object(server_cb_body.ctx, wsi);
+        JSValue ret = minnet_emit(&server_cb_body, 1, &ws_obj);
+
+        if(JS_IsString(ret)) {
+          size_t len;
+          const char* str = JS_ToCStringLen(server_cb_body.ctx, &len, ret);
+          buffer_append(&req->response.buffer, str, len);
+        }
       }
 
-      res->state.times++;
       if(lws_write(wsi, buffer_PTR(&b), buffer_SIZE(&b), n) != buffer_SIZE(&b))
         return 1;
 

@@ -45,5 +45,6 @@ void lws_print_unhandled(int);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);
 void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
+JSValue minnet_emit(struct callback_ws*, int argc, JSValue* argv);
 
 #endif /* MINNET_H */

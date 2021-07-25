@@ -350,6 +350,7 @@ finish:
 
   return resObj;
 }
+
 static const char*
 io_events(int events) {
   switch(events & (POLLIN | POLLOUT)) {
@@ -427,6 +428,13 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   fflush(stdout);
   JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
+}
+
+JSValue
+minnet_emit(struct callback_ws* cb, int argc, JSValue* argv) {
+  if(!cb->func_obj)
+    return JS_UNDEFINED;
+  return JS_Call(cb->ctx, *cb->func_obj, cb->this_obj ? *cb->this_obj : JS_NULL, argc, argv);
 }
 
 void
