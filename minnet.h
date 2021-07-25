@@ -25,6 +25,12 @@ struct http_request;
 
 #define SETLOG lws_set_log_level(LLL_ERR, NULL);
 
+#define GETCB(opt, cb_ptr)                                                                                                                                                                             \
+  if(JS_IsFunction(ctx, opt)) {                                                                                                                                                                        \
+    MinnetCallback cb = {ctx, &this_val, &opt};                                                                                                                                                        \
+    cb_ptr = cb;                                                                                                                                                                                       \
+  }
+
 enum { READ_HANDLER = 0, WRITE_HANDLER };
 
 typedef struct lws_pollfd MinnetPollFd;

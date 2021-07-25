@@ -11,8 +11,10 @@ typedef struct http_state {
 } MinnetHttpState;
 
 typedef struct http_response {
-  MinnetBuffer buffer;
-  JSValue status, ok, url, type;
+  MinnetBuffer body;
+  int status;
+  BOOL ok;
+  const char *url, *type;
   struct http_state state;
 } MinnetResponse;
 
@@ -20,15 +22,8 @@ void minnet_response_dump(JSContext*, struct http_response const* res);
 void minnet_response_zero(struct http_response*);
 void minnet_response_init(JSContext*, MinnetResponse* res, int32_t status, BOOL ok, const char* url, const char* type);
 void minnet_response_free(JSRuntime*, MinnetResponse* res);
-JSValue minnet_response_new(JSContext*, int32_t status, BOOL ok, const char* url, const char* type, uint8_t* buf, size_t len);
+MinnetResponse* minnet_response_new(JSContext*, int32_t status, BOOL ok, const char* url, const char* type);
 JSValue minnet_response_wrap(JSContext*, MinnetResponse* res);
-JSValue minnet_response_buffer(JSContext*, JSValue this_val, int argc, JSValue* argv);
-JSValue minnet_response_json(JSContext*, JSValue this_val, int argc, JSValue* argv);
-JSValue minnet_response_text(JSContext*, JSValue this_val, int argc, JSValue* argv);
-JSValue minnet_response_getter_ok(JSContext*, JSValue this_val, int magic);
-JSValue minnet_response_getter_url(JSContext*, JSValue this_val, int magic);
-JSValue minnet_response_getter_status(JSContext*, JSValue this_val, int magic);
-JSValue minnet_response_getter_type(JSContext*, JSValue this_val, int magic);
 void minnet_response_finalizer(JSRuntime*, JSValue val);
 
 extern JSClassDef minnet_response_class;

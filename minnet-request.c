@@ -5,6 +5,8 @@
 JSClassID minnet_request_class_id;
 JSValue minnet_request_proto;
 
+enum { REQUEST_METHOD, REQUEST_SOCKET, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_BODY };
+
 void
 minnet_request_dump(JSContext* ctx, MinnetRequest const* req) {
   printf("\nMinnetRequest {\n\turi = %s", req->url);
@@ -58,7 +60,7 @@ minnet_request_new(JSContext* ctx, const char* in, struct lws* wsi) {
   return req;
 }
 
-JSValue
+static JSValue
 minnet_request_constructor(JSContext* ctx, const char* in, struct lws* wsi) {
   MinnetRequest* req;
   if(!(req = minnet_request_new(ctx, in, wsi)))
@@ -83,7 +85,7 @@ minnet_request_wrap(JSContext* ctx, struct http_request* req) {
   return ret;
 }
 
-JSValue
+static JSValue
 minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetRequest* req;
   if(!(req = JS_GetOpaque(this_val, minnet_request_class_id)))
@@ -97,8 +99,8 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_SOCKET: {
-      if(req->ws)
-        ret = minnet_ws_object(ctx, req->ws);
+      /*if(req->ws)
+        ret = minnet_ws_object(ctx, req->ws);*/
       break;
     }
     case REQUEST_URI: {
@@ -111,26 +113,17 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_HEADER: {
-      ret = buffer_tostring(ctx, &req->header);
+      ret = buffer_tostring(&req->header, ctx);
       break;
     }
-    case REQUEST_BUFFER: {
-      ret = buffer_tobuffer(ctx, &req->header);
+    case REQUEST_BODY: {
+      ret = buffer_tobuffer(&req->header, ctx);
 
       break;
     }
   }
   return ret;
 }
-
-/*JSValue
-minnet_request_getter_path(JSContext* ctx, JSValueConst this_val) {
-  MinnetRequest* req = JS_GetOpaque(this_val, minnet_request_class_id);
-  if(req)
-    return JS_NewString(ctx, req->path);
-
-  return JS_EXCEPTION;
-}*/
 
 static void
 minnet_request_finalizer(JSRuntime* rt, JSValue val) {
@@ -148,15 +141,13 @@ JSClassDef minnet_request_class = {
     .finalizer = minnet_request_finalizer,
 };
 
-JSClassID minnet_request_class_id;
-
 const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, 0, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, 0, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_request_get, 0, REQUEST_SOCKET, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("header", minnet_request_get, 0, REQUEST_HEADER, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_request_get, 0, REQUEST_BUFFER, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 

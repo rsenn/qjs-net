@@ -214,8 +214,8 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   if(!JS_IsString(argv[0]))
     return JS_EXCEPTION;
 
-  res->url = argv[0];
   url = JS_ToCString(ctx, argv[0]);
+  res->url = js_strdup(ctx, url);
 
   if(argc > 1 && JS_IsObject(argv[1])) {
     JSValue method, body, headers;
@@ -307,12 +307,12 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
 
   curlRes = curl_easy_perform(curl);
   if(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status) == CURLE_OK)
-    res->status = JS_NewInt32(ctx, (int32_t)status);
+    res->status = status;
 
   if(curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &type) == CURLE_OK)
-    res->type = type ? JS_NewString(ctx, type) : JS_NULL;
+    res->type = type ? js_strdup(ctx, type) : 0;
 
-  res->ok = JS_FALSE;
+  res->ok = FALSE;
 
   if(curlRes != CURLE_OK) {
     fprintf(stderr, "CURL failed: %s\n", curl_easy_strerror(curlRes));
@@ -336,8 +336,8 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
 
   fclose(fi);
 
-  res->ok = JS_TRUE;
-  res->buffer = BUFFER(buffer);
+  res->ok = TRUE;
+  res->body = BUFFER(buffer);
 
 finish:
   curl_slist_free_all(headerlist);
@@ -452,7 +452,6 @@ static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, mi
                                                     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
                                                     // JS_CGETSET_DEF("log", get_log, set_log),
                                                     JS_CFUNC_DEF("setLog", 1, minnet_set_log)};
-static JSValue request_proto, websocket_proto;
 
 void
 value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
@@ -485,16 +484,16 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   // Add class Request
   JS_NewClassID(&minnet_request_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);
-  request_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, request_proto, minnet_request_proto_funcs, minnet_request_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_request_class_id, request_proto);
+  minnet_request_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_request_proto, minnet_request_proto_funcs, minnet_request_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_request_class_id, minnet_request_proto);
 
   // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
-  websocket_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, websocket_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_ws_class_id, websocket_proto);
+  minnet_ws_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_ws_class_id, minnet_ws_proto);
 
   minnet_log_ctx = ctx;
 
