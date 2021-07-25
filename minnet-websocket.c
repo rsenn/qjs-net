@@ -33,7 +33,7 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
 }
 
 MinnetWebsocket*
-lws_wsi_ws2(struct lws* wsi, JSContext* ctx) {
+minnet_ws_get(struct lws* wsi, JSContext* ctx) {
   JSValue ws_obj = minnet_ws_object(ctx, wsi);
 
   return JS_GetOpaque(ws_obj, minnet_ws_class_id);
@@ -274,7 +274,7 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* a
 }
 
 static JSValue
-minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
+minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
   if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
@@ -339,12 +339,12 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
     JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
     JS_CFUNC_DEF("close", 1, minnet_ws_close),
-    JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_get, 0, WEBSOCKET_ADDRESS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_getter, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_getter, 0, WEBSOCKET_ADDRESS, JS_PROP_ENUMERABLE),
     JS_ALIAS_DEF("remoteAddress", "address"),
-    JS_CGETSET_MAGIC_FLAGS_DEF("family", minnet_ws_get, 0, WEBSOCKET_FAMILY, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_ws_get, 0, WEBSOCKET_PORT, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_get, 0, WEBSOCKET_PEER, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("family", minnet_ws_getter, 0, WEBSOCKET_FAMILY, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_ws_getter, 0, WEBSOCKET_PORT, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_getter, 0, WEBSOCKET_PEER, 0),
     JS_ALIAS_DEF("remote", "peer"),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebSocket", JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("CLOSE_STATUS_NORMAL", LWS_CLOSE_STATUS_NORMAL, 0),

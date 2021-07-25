@@ -25,6 +25,7 @@ minnet_response_dump(JSContext* ctx, struct http_response const* res) {
 
   fflush(stdout);
 }
+
 void
 minnet_response_zero(struct http_response* res) {
   memset(res, 0, sizeof(MinnetResponse));
@@ -139,7 +140,8 @@ minnet_response_finalizer(JSRuntime* rt, JSValue val) {
   MinnetResponse* res = JS_GetOpaque(val, minnet_response_class_id);
   if(res) {
     if(res->body.start)
-      free(res->body.start - LWS_PRE);
+      js_free_rt(rt, res->body.start - LWS_PRE);
+
     js_free_rt(rt, res);
   }
 }

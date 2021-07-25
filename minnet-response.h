@@ -39,4 +39,9 @@ extern const size_t minnet_response_proto_funcs_size;
 extern JSValue minnet_response_proto;
 extern JSClassID minnet_response_class_id;
 
+static inline MinnetResponse*
+minnet_response_data(JSContext* ctx, JSValueConst obj) {
+  return JS_GetOpaque2(ctx, obj, minnet_response_class_id);
+}
+
 #endif /* MINNET_RESPONSE_H */

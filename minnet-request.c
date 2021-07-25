@@ -1,7 +1,6 @@
 #include "minnet.h"
 #include "minnet-websocket.h"
 #include "minnet-request.h"
-#include "minnet-response.h"
 
 JSClassID minnet_request_class_id;
 JSValue minnet_request_proto;
@@ -16,7 +15,6 @@ minnet_request_dump(JSContext* ctx, MinnetRequest const* req) {
 
   buffer_dump("header", &req->header);
   fputs("\n\tresponse = ", stdout);
-  minnet_response_dump(ctx, (MinnetResponse const*)&req->rsp);
   fputs(" }", stdout);
   fflush(stdout);
 }
@@ -49,8 +47,6 @@ minnet_request_init(JSContext* ctx, MinnetRequest* req, const char* in, struct s
 
   if(!buffer_alloc(&req->header, LWS_RECOMMENDED_MIN_HEADER_SPACE, ctx))
     JS_ThrowOutOfMemory(ctx);
-
-  req->rsp = 0;
 }
 
 MinnetRequest*

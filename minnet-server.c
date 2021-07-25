@@ -318,7 +318,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   JSContext* ctx = server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : server_cb_message.ctx ? server_cb_message.ctx : server_cb_connect.ctx ? server_cb_connect.ctx : 0;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   char *url = 0, *method = 0;
-  MinnetWebsocket* ws = lws_wsi_ws2(wsi, ctx);
+  MinnetWebsocket* ws = lws_wsi_ws(wsi);
 
   url = lws_uri_and_method(wsi, ctx, &method);
 
@@ -376,9 +376,14 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       break;
     }
     case LWS_CALLBACK_HTTP: {
-      JSValue ret = JS_UNDEFINED;
-      MinnetRequest* req = minnet_request_new(ctx, in, ws);
-      // lws_set_wsi_user(wsi, req);
+      MinnetRequest* req;
+       JSValue ret = JS_UNDEFINED;
+      if(!ws)
+        ws = minnet_ws_get(wsi, ctx);
+
+       req = minnet_request_new(ctx, in, ws);
+
+       // lws_set_wsi_user(wsi, req);
 
       ++(ws->req = req)->ref_count;
 
@@ -391,12 +396,18 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       }
 
       if(!JS_IsUndefined(ret)) {
-        int32_t code = 0;
-        JS_ToInt32(ctx, &code, ret);
+        int32_t code;
 
-        if(code > 0)
-          return code;
+        if((ws->rsp = minnet_response_data(ctx, ret))) {
+
+        } else if(!JS_ToInt32(ctx, &code, ret)) {
+          if(code > 0)
+            return code;
+        }
       }
+
+      if(!ws->rsp)
+        ws->rsp = minnet_response_new(ctx, req->url, HTTP_STATUS_OK, TRUE, "text/html");
 
       /*
        * prepare and write http headers... with regards to content-
@@ -416,35 +427,34 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
        * often you don't know it and avoiding having to compute it
        * at header-time makes life easier at the server.
        */
-      if(lws_add_http_common_headers(wsi, HTTP_STATUS_OK, "text/html", LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
+      if(lws_add_http_common_headers(wsi, ws->rsp->status, ws->rsp->type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
         return 1;
 
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 
-      if(!req->rsp) {
-        req->rsp = minnet_response_new(ctx, url, 200, TRUE, "text/html");
-        req->rsp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
+      if(!ws->rsp) {
+        ws->rsp = minnet_response_new(ctx, url, 200, TRUE, "text/html");
 
         if(server_cb_body.func_obj) {
-          JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), minnet_response_wrap(server_cb_body.ctx, req->rsp)};
+          JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), minnet_response_wrap(server_cb_body.ctx, ws->rsp)};
           JSValue ret = minnet_emit(&server_cb_body, 2, args);
 
-          req->rsp->iterator = js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
+          ws->rsp->iterator = js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
+        } else {
+          ws->rsp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
         }
       }
 
-      if(req->rsp)
-        lws_callback_on_writable(wsi);
+      if(ws->rsp) lws_callback_on_writable(wsi);
 
       return 0;
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
-      MinnetRequest* req = ws->req;
-      MinnetBuffer b = BUFFER(buf);
+      MinnetResponse* res = ws->rsp;
       enum lws_write_protocol n = LWS_WRITE_HTTP;
       JSValue ret = JS_UNDEFINED;
-      MinnetResponse* res = req->rsp;
+       MinnetBuffer b = BUFFER(buf);
 
       if(server_cb_body.func_obj) {
         BOOL done = FALSE;
@@ -456,10 +466,11 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
           printf("Exception: %s\n", JS_ToCString(ctx, exception));
           n = LWS_WRITE_HTTP_FINAL;
         } else if(!done) {
-          if(JS_IsString(ret)) {
+          if(1 || JS_IsString(ret)) {
             size_t len;
             const char* str = JS_ToCStringLen(server_cb_body.ctx, &len, ret);
-            buffer_append(&b, str, len);
+              printf("Data: %s\n", str);
+        buffer_append(&b, str, len);
             res->body.pos += len;
             JS_FreeCString(ctx, str);
           }
@@ -468,6 +479,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
           n = LWS_WRITE_HTTP_FINAL;
         }
       } else {
+
         if(!res || res->state.times > res->state.budget)
           break;
 
@@ -488,7 +500,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
                         "    <img src=\"/libwebsockets.org-logo.svg\"><br />\n"
                         "   Dynamic content for '%s' from mountpoint.<br />\n"
                         "   <br />\n",
-                        req->path); // ((MinnetRequest*)((char*)res - offsetof(struct http_request, rsp)))->path);
+                        res->url); // ((MinnetRequest*)((char*)res - offsetof(struct http_request, rsp)))->path);
         } else if(res->state.times < res->state.budget) {
           /*
            * after the first time, we create bulk content.

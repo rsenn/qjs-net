@@ -16,7 +16,7 @@ typedef struct socket {
   struct http_response* rsp;
 } MinnetWebsocket;
 
-MinnetWebsocket* lws_wsi_ws2(struct lws*, JSContext* ctx);
+MinnetWebsocket* minnet_ws_get(struct lws*, JSContext* ctx);
 JSValue minnet_ws_object(JSContext*, struct lws* wsi);
 JSValue minnet_ws_wrap(JSContext*, MinnetWebsocket* ws);
 void minnet_ws_sslcert(JSContext*, struct lws_context_creation_info* info, JSValue options);

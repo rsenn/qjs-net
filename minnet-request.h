@@ -13,7 +13,6 @@ typedef struct http_request {
   struct socket* ws;
   struct byte_buffer header;
   char path[256];
-  struct http_response* rsp;
 } MinnetRequest;
 
 void minnet_request_dump(JSContext*, MinnetRequest const* req);
