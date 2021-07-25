@@ -79,17 +79,26 @@ js_is_iterator(JSContext* ctx, JSValueConst obj) {
 }
 
 JSValue
-js_iterator_next(JSContext* ctx, JSValueConst obj, BOOL* done_p) {
+js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p) {
   JSValue fn, result, done, value;
-  if(!JS_IsObject(obj))
-    return JS_ThrowTypeError(ctx, "argument is not an object");
 
-  fn = JS_GetPropertyStr(ctx, obj, "next");
-  if(!JS_IsFunction(ctx, fn))
-    return JS_ThrowTypeError(ctx, "object does not have 'next' method");
+  if(!JS_IsObject(obj))
+    return JS_ThrowTypeError(ctx, "argument is not an object (%d) \"%s\"", JS_VALUE_GET_TAG(obj), JS_ToCString(ctx, obj));
+
+  if(JS_IsObject(*next) && JS_IsFunction(ctx, *next)) {
+    fn = *next;
+  } else {
+    fn = JS_GetPropertyStr(ctx, obj, "next");
+
+    if(JS_IsUndefined(fn))
+      return JS_ThrowTypeError(ctx, "object does not have 'next' method");
+
+    if(!JS_IsFunction(ctx, fn))
+      return JS_ThrowTypeError(ctx, "object.next is not a function");
+  }
 
   result = JS_Call(ctx, fn, obj, 0, 0);
-  JS_FreeValue(ctx, fn);
+  // JS_FreeValue(ctx, fn);
 
   if(JS_IsException(result))
     return JS_EXCEPTION;

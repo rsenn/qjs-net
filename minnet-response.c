@@ -32,14 +32,14 @@ minnet_response_zero(struct http_response* res) {
   res->body = BUFFER_0();
 }
 
-void
-minnet_response_init(JSContext* ctx, MinnetResponse* res, const char* url, int32_t status, BOOL ok, const char* type) {
+static void
+minnet_response_init(MinnetResponse* res, const char* url, int32_t status, BOOL ok, const char* type) {
   memset(res, 0, sizeof(MinnetResponse));
 
   res->status = status;
   res->ok = ok;
-  res->url = url ? js_strdup(ctx, url) : 0;
-  res->type = type ? js_strdup(ctx, type) : 0;
+  res->url = url;
+  res->type = type;
   res->body = BUFFER_0();
 }
 
@@ -57,9 +57,18 @@ MinnetResponse*
 minnet_response_new(JSContext* ctx, const char* url, int32_t status, BOOL ok, const char* type) {
   MinnetResponse* res = js_mallocz(ctx, sizeof(MinnetResponse));
 
-  minnet_response_init(ctx, res, url, status, ok, type);
+  minnet_response_init(res, url, status, ok, type);
 
   return res;
+}
+
+JSValue
+minnet_response_object(JSContext* ctx, const char* url, int32_t status, BOOL ok, const char* type) {
+  MinnetResponse* res;
+
+  if((res = minnet_response_new(ctx, url, status, ok, type)))
+    return minnet_response_wrap(ctx, res);
+  return JS_NULL;
 }
 
 JSValue

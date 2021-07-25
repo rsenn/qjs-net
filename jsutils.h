@@ -15,12 +15,12 @@ typedef struct JSThreadState {
 } JSThreadState;
 
 JSValue vector2array(JSContext*, int argc, JSValue argv[]);
-void    js_console_log(JSContext*, JSValue* console, JSValue* console_log);
+void js_console_log(JSContext*, JSValue* console, JSValue* console_log);
 JSValue js_function_bound(JSContext*, JSValue this_val, int argc, JSValue argv[], int magic, JSValue* func_data);
 JSValue js_function_bind(JSContext*, JSValue func, int argc, JSValue argv[]);
 JSValue js_function_bind_1(JSContext*, JSValue func, JSValue arg);
-BOOL    js_is_iterator(JSContext*, JSValue obj);
-JSValue js_iterator_next(JSContext*, JSValue obj, BOOL* done_p);
+BOOL js_is_iterator(JSContext*, JSValue obj);
+JSValue js_iterator_next(JSContext*, JSValue obj, JSValue* next, BOOL* done_p);
 
 typedef union pointer {
   void* p;

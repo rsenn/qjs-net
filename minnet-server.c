@@ -377,22 +377,23 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_HTTP: {
       MinnetRequest* req;
-       JSValue ret = JS_UNDEFINED;
+      JSValue ret = JS_UNDEFINED;
       if(!ws)
         ws = minnet_ws_get(wsi, ctx);
 
-       req = minnet_request_new(ctx, in, ws);
+      req = minnet_request_new(ctx, in, ws);
 
-       // lws_set_wsi_user(wsi, req);
+      // lws_set_wsi_user(wsi, req);
 
       ++(ws->req = req)->ref_count;
 
       MinnetBuffer b = BUFFER(buf);
 
       if(server_cb_http.func_obj) {
-        JSValueConst args[] = {minnet_request_wrap(ctx, req), JS_NewString(ctx, in)};
+        JSValue args[2] = {minnet_request_wrap(ctx, req), minnet_response_object(ctx, req->url, 404, FALSE, "text/html")};
         ret = minnet_emit(&server_cb_http, 2, args);
         JS_FreeValue(ctx, args[0]);
+        JS_FreeValue(ctx, args[1]);
       }
 
       if(!JS_IsUndefined(ret)) {
@@ -433,20 +434,21 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 
-      if(!ws->rsp) {
+      if(!ws->rsp)
         ws->rsp = minnet_response_new(ctx, url, 200, TRUE, "text/html");
 
+      if(ws->rsp) {
         if(server_cb_body.func_obj) {
           JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), minnet_response_wrap(server_cb_body.ctx, ws->rsp)};
           JSValue ret = minnet_emit(&server_cb_body, 2, args);
 
-          ws->rsp->iterator = js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
+          ws->rsp->iterator = ret; // js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
         } else {
           ws->rsp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
         }
-      }
 
-      if(ws->rsp) lws_callback_on_writable(wsi);
+        lws_callback_on_writable(wsi);
+      }
 
       return 0;
     }
@@ -454,24 +456,31 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetResponse* res = ws->rsp;
       enum lws_write_protocol n = LWS_WRITE_HTTP;
       JSValue ret = JS_UNDEFINED;
-       MinnetBuffer b = BUFFER(buf);
+      MinnetBuffer b = BUFFER(buf);
 
       if(server_cb_body.func_obj) {
         BOOL done = FALSE;
-        JSValue ret = js_iterator_next(server_cb_body.ctx, res->iterator, &done);
+        JSValue next = JS_UNDEFINED;
+        // printf("res->iterator %s\n", JS_ToCString(ctx, res->iterator));
+        JSValue ret = js_iterator_next(server_cb_body.ctx, res->iterator, &next, &done);
 
         if(JS_IsException(ret)) {
           JSValue exception = JS_GetException(ctx);
 
-          printf("Exception: %s\n", JS_ToCString(ctx, exception));
+          fprintf(stderr, "Exception: %s\n", JS_ToCString(ctx, exception));
           n = LWS_WRITE_HTTP_FINAL;
         } else if(!done) {
           if(1 || JS_IsString(ret)) {
             size_t len;
             const char* str = JS_ToCStringLen(server_cb_body.ctx, &len, ret);
-              printf("Data: %s\n", str);
-        buffer_append(&b, str, len);
+            buffer_append(&b, str, len);
             res->body.pos += len;
+
+            if(len && str[len - 1] == '\n')
+              len--;
+
+            // printf("Data: %.*s\n", (int)len, str);
+
             JS_FreeCString(ctx, str);
           }
 
