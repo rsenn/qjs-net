@@ -18,10 +18,10 @@ typedef struct http_response {
   BOOL ok;
   const char* type;
   union {
-    struct byte_buffer body;
-    JSValue iterator;
     struct http_state state;
+    JSValue iterator;
   };
+  struct byte_buffer body;
   struct http_request* req;
 } MinnetResponse;
 

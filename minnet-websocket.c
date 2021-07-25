@@ -58,6 +58,16 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
   return minnet_ws_new(ctx, wsi);
 }
 
+JSValue
+minnet_ws_wrap(JSContext* ctx, MinnetWebsocket* ws) {
+  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
+  if(JS_IsException(ret))
+    return JS_EXCEPTION;
+
+  JS_SetOpaque(ret, ws);
+  return ret;
+}
+
 void
 minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValueConst options) {
   JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");

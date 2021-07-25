@@ -103,6 +103,10 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, BOOL* done_p) {
 
   result = JS_Call(ctx, fn, obj, 0, 0);
   JS_FreeValue(ctx, fn);
+
+  if(JS_IsException(result))
+    return JS_EXCEPTION;
+
   done = JS_GetPropertyStr(ctx, result, "done");
   value = JS_GetPropertyStr(ctx, result, "value");
   JS_FreeValue(ctx, result);
