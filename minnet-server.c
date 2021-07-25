@@ -423,7 +423,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         return 1;
 
       req->response = (MinnetResponse){/*.body= BUFFER(buf),*/ .status = JS_UNDEFINED, .ok = JS_UNDEFINED, .url = JS_UNDEFINED, .type = JS_UNDEFINED};
-      req->response.state = (MinnetHttpBody){.times = 0, .content_lines = 0, .budget = 10};
+      req->response.state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
 
       /* write the state separately */
       lws_callback_on_writable(wsi);
@@ -434,12 +434,10 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetRequest* req = lws_wsi_user(wsi);
       MinnetResponse* res = &req->response;
       MinnetBuffer b = BUFFER(buf);
-      enum lws_write_protocol n;
+      enum lws_write_protocol n = LWS_WRITE_HTTP;
 
       if(!res || res->state.times > res->state.budget)
         break;
-
-      n = LWS_WRITE_HTTP;
 
       if(res->state.times == res->state.budget)
         n = LWS_WRITE_HTTP_FINAL;
@@ -477,7 +475,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       }
 
       res->state.times++;
-      if((size_t)lws_write(wsi, b.start, buffer_SIZE(&b), n) != buffer_SIZE(&b))
+      if(lws_write(wsi, buffer_PTR(&b), buffer_SIZE(&b), n) != buffer_SIZE(&b))
         return 1;
 
       /*

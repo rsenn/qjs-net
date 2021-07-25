@@ -6,14 +6,14 @@
 
 /* class MinnetResponse */
 
-typedef struct http_body {
+typedef struct http_state {
   size_t times, budget, content_lines;
-} MinnetHttpBody;
+} MinnetHttpState;
 
 typedef struct http_response {
   MinnetBuffer buffer;
   JSValue status, ok, url, type;
-  struct http_body state;
+  struct http_state state;
 } MinnetResponse;
 
 void minnet_response_dump(JSContext*, struct http_response const* res);

@@ -6,7 +6,7 @@ JSClassID minnet_response_class_id;
 JSValue minnet_response_proto;
 
 static void
-body_dump(const char* n, struct http_body const* b) {
+body_dump(const char* n, struct http_state const* b) {
   printf("\n\t%s\t{ times = %zx, budget = %zx }", n, b->times, b->budget);
   fflush(stdout);
 }
