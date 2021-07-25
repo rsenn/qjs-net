@@ -1,6 +1,7 @@
 #include "minnet.h"
 #include "minnet-websocket.h"
 #include "minnet-request.h"
+#include "jsutils.h"
 
 JSClassID minnet_request_class_id;
 JSValue minnet_request_proto, minnet_request_ctor;
@@ -8,7 +9,7 @@ JSValue minnet_request_proto, minnet_request_ctor;
 enum { REQUEST_METHOD, REQUEST_SOCKET, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_BODY };
 
 void
-minnet_request_dump(JSContext* ctx, MinnetRequest const* req) {
+request_dump(MinnetRequest const* req) {
   printf("\nMinnetRequest {\n\turi = %s", req->url);
   printf("\n\tpath = %s", req->path);
   printf("\n\ttype = %s", req->type);
@@ -44,8 +45,8 @@ minnet_request_init(JSContext* ctx, MinnetRequest* req, const char* in, struct s
     req->type = js_strdup(ctx, "POST");
   }
 
-  if(!buffer_alloc(&req->header, LWS_RECOMMENDED_MIN_HEADER_SPACE, ctx))
-    JS_ThrowOutOfMemory(ctx);
+  /* if(!buffer_alloc(&req->header, LWS_RECOMMENDED_MIN_HEADER_SPACE, ctx))
+     JS_ThrowOutOfMemory(ctx);*/
 }
 
 MinnetRequest*
@@ -58,11 +59,17 @@ request_new(JSContext* ctx, const char* in, struct socket* ws) {
   return req;
 }
 
+void
+request_zero(struct http_request* req) {
+  memset(req, 0, sizeof(MinnetRequest));
+  req->header = BUFFER_0();
+  req->body = BUFFER_0();
+}
+
 JSValue
 minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetRequest* req;
-  int i;
 
   if(!(req = js_mallocz(ctx, sizeof(MinnetRequest))))
     return JS_ThrowOutOfMemory(ctx);
@@ -87,8 +94,11 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   }
 
   if(argc >= 2) {
-    if(JS_IsObject(argv[1]) && !JS_IsNull(argv[1])) {}
+    if(JS_IsObject(argv[1]) && !JS_IsNull(argv[1]))
+      js_copy_properties(ctx, obj, argv[1], JS_GPN_STRING_MASK);
   }
+
+  req->read_only = TRUE;
 
   JS_SetOpaque(obj, req);
 
@@ -108,6 +118,7 @@ minnet_request_new(JSContext* ctx, const char* in, struct socket* ws) {
     return JS_EXCEPTION;
 
   req->ref_count = 0;
+  req->read_only = TRUE;
 
   return minnet_request_wrap(ctx, req);
 }
@@ -129,7 +140,7 @@ minnet_request_wrap(JSContext* ctx, struct http_request* req) {
 static JSValue
 minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetRequest* req;
-  if(!(req = JS_GetOpaque(this_val, minnet_request_class_id)))
+  if(!(req = JS_GetOpaque2(ctx, this_val, minnet_request_class_id)))
     return JS_EXCEPTION;
 
   JSValue ret = JS_UNDEFINED;
@@ -158,7 +169,59 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_BODY: {
-      ret = buffer_tobuffer(&req->header, ctx);
+      ret = buffer_toarraybuffer(&req->header, ctx);
+
+      break;
+    }
+  }
+  return ret;
+}
+
+static JSValue
+minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+  MinnetRequest* req;
+  JSValue ret = JS_UNDEFINED;
+  const char* str;
+  size_t len;
+  if(!(req = JS_GetOpaque2(ctx, this_val, minnet_request_class_id)))
+    return JS_EXCEPTION;
+
+  if(req->read_only)
+    return JS_ThrowReferenceError(ctx, "Request object is read-only");
+
+  str = JS_ToCStringLen(ctx, &len, value);
+
+  switch(magic) {
+    case REQUEST_METHOD: {
+      if(req->type) {
+        js_free(ctx, req->type);
+        req->type = 0;
+      }
+      req->type = js_strdup(ctx, str);
+      break;
+    }
+    case REQUEST_SOCKET: {
+      /*if(req->ws)
+        ret = minnet_ws_object(ctx, req->ws);*/
+      break;
+    }
+    case REQUEST_URI: {
+      if(req->url) {
+        js_free(ctx, req->url);
+        req->url = 0;
+      }
+      req->url = js_strdup(ctx, str);
+      break;
+    }
+    case REQUEST_PATH: {
+      pstrcpy(req->path, sizeof(req->path), str);
+      break;
+    }
+    case REQUEST_HEADER: {
+      ret = JS_ThrowReferenceError(ctx, "Cannot set headers");
+      break;
+    }
+    case REQUEST_BODY: {
 
       break;
     }
@@ -183,12 +246,12 @@ JSClassDef minnet_request_class = {
 };
 
 const JSCFunctionListEntry minnet_request_proto_funcs[] = {
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, 0, REQUEST_METHOD, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, 0, REQUEST_URI, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_request_get, 0, REQUEST_SOCKET, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("header", minnet_request_get, 0, REQUEST_HEADER, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_request_get, minnet_request_set, REQUEST_SOCKET, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("header", minnet_request_get, minnet_request_set, REQUEST_HEADER, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, minnet_request_set, REQUEST_BODY, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 

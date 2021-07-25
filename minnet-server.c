@@ -376,7 +376,9 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       break;
     }
     case LWS_CALLBACK_HTTP: {
-      MinnetRequest* req = request_new(ctx, in, ws);
+      JSValue request = minnet_request_new(ctx, in, ws);
+      MinnetRequest* req = minnet_request_data(ctx, request);
+
       JSValue ret = JS_UNDEFINED, resp_obj = minnet_response_object(ctx, req->url, 200, TRUE, "text/html");
 
       ++req->ref_count;
@@ -384,7 +386,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetBuffer b = BUFFER(buf);
 
       if(server_cb_http.func_obj) {
-        JSValue args[2] = {minnet_request_wrap(ctx, req), resp_obj};
+        JSValue args[2] = {request, resp_obj};
         ret = minnet_emit(&server_cb_http, 2, args);
         if(JS_IsObject(ret) && minnet_response_data(ctx, ret)) {
           JS_FreeValue(ctx, resp_obj);
@@ -393,8 +395,6 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         } else {
           JS_FreeValue(ctx, ret);
         }
-        JS_FreeValue(ctx, args[0]);
-        JS_FreeValue(ctx, args[1]);
       }
 
       /*    if(!JS_IsUndefined(ret)) {

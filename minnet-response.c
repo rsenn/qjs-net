@@ -26,13 +26,13 @@ response_dump(struct http_response const* res) {
   fflush(stdout);
 }
 
-static void
+void
 response_zero(struct http_response* res) {
   memset(res, 0, sizeof(MinnetResponse));
   res->body = BUFFER_0();
 }
 
-static void
+void
 response_init(MinnetResponse* res, const char* url, int32_t status, BOOL ok, const char* type) {
   memset(res, 0, sizeof(MinnetResponse));
 
@@ -69,6 +69,7 @@ minnet_response_object(JSContext* ctx, const char* url, int32_t status, BOOL ok,
 
   if((res = response_new(ctx, url, status, ok, type)))
     return minnet_response_wrap(ctx, res);
+
   return JS_NULL;
 }
 

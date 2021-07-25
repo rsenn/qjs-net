@@ -110,3 +110,18 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p) 
   JS_FreeValue(ctx, done);
   return value;
 }
+
+int
+js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags) {
+  JSPropertyEnum* tab;
+  uint32_t tab_len, i;
+
+  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, src, flags))
+    return -1;
+
+  for(i = 0; i < tab_len; i++) {
+    JSValue value = JS_GetProperty(ctx, src, tab[i].atom);
+    JS_SetProperty(ctx, dst, tab[i].atom, value);
+  }
+  return i;
+}

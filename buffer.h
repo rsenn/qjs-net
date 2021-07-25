@@ -117,10 +117,23 @@ buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
 }
 
 static inline JSValue
-buffer_tobuffer(struct byte_buffer const* buf, JSContext* ctx) {
+buffer_toarraybuffer(struct byte_buffer const* buf, JSContext* ctx) {
   void* ptr = buf->start;
   size_t len = buf->end - buf->start;
   return JS_NewArrayBuffer(ctx, ptr, len, buffer_finalizer, (void*)buf, FALSE);
+}
+
+static inline int
+buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
+  void* ptr;
+  size_t len;
+  if((ptr = JS_GetArrayBuffer(ctx, &len, value))) {
+    buf->start = ptr;
+    buf->pos = ptr;
+    buf->end = buf->start + len;
+    return 0;
+  }
+  return 1;
 }
 
 static inline void

@@ -21,6 +21,7 @@ JSValue js_function_bind(JSContext*, JSValue func, int argc, JSValue argv[]);
 JSValue js_function_bind_1(JSContext*, JSValue func, JSValue arg);
 BOOL js_is_iterator(JSContext*, JSValue obj);
 JSValue js_iterator_next(JSContext*, JSValue obj, JSValue* next, BOOL* done_p);
+int js_copy_properties(JSContext*, JSValue dst, JSValue src, int flags);
 
 typedef union pointer {
   void* p;
