@@ -53,10 +53,54 @@ js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
   return js_function_bind(ctx, func, 1, &arg);
 }
 
-JSValue
-js_iterator_next(JSContext* ctx, JSValueConst obj, BOOL*done_p) {
-  JSValue fn, result, done,value;
+/*static inline JSValue
+js_iterator_method(JSContext* ctx, JSValueConst obj) {
+  JSAtom atom;
+  JSValue ret = JS_UNDEFINED;
+  atom = js_symbol_static_atom(ctx, "iterator");
+  if(JS_HasProperty(ctx, obj, atom))
+    ret = JS_GetProperty(ctx, obj, atom);
+
+  JS_FreeAtom(ctx, atom);
+  if(!JS_IsFunction(ctx, ret)) {
+    atom = js_symbol_static_atom(ctx, "asyncIterator");
+    if(JS_HasProperty(ctx, obj, atom))
+      ret = JS_GetProperty(ctx, obj, atom);
+
+    JS_FreeAtom(ctx, atom);
+  }
+  return ret;
+}
+
+static inline JSValue
+js_iterator_new(JSContext* ctx, JSValueConst obj) {
+  JSValue fn, ret;
+  fn = js_iterator_method(ctx, obj);
+  ret = JS_Call(ctx, fn, obj, 0, 0);
+  JS_FreeValue(ctx, fn);
+  return ret;
+}*/
+
+static inline BOOL
+js_is_iterator(JSContext* ctx, JSValueConst obj) {
+  if(JS_IsObject(obj)) {
+    JSValue next = JS_GetPropertyStr(ctx, obj, "next");
+    if(JS_IsFunction(ctx, next))
+      return TRUE;
+  }
+  return FALSE;
+}
+
+static inline JSValue
+js_iterator_next(JSContext* ctx, JSValueConst obj, BOOL* done_p) {
+  JSValue fn, result, done, value;
+  if(!JS_IsObject(obj))
+    return JS_ThrowTypeError(ctx, "argument is not an object");
+
   fn = JS_GetPropertyStr(ctx, obj, "next");
+  if(!JS_IsFunction(ctx, fn))
+    return JS_ThrowTypeError(ctx, "object does not have 'next' method");
+
   result = JS_Call(ctx, fn, obj, 0, 0);
   JS_FreeValue(ctx, fn);
   done = JS_GetPropertyStr(ctx, result, "done");

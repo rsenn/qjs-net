@@ -7,7 +7,7 @@
 JSClassID minnet_response_class_id;
 JSValue minnet_response_proto;
 
-enum { RESPONSE_BUFFER,  RESPONSE_JSON, RESPONSE_TEXT};
+enum { RESPONSE_BUFFER, RESPONSE_JSON, RESPONSE_TEXT };
 enum { RESPONSE_OK, RESPONSE_URL, RESPONSE_STATUS, RESPONSE_TYPE, RESPONSE_OFFSET };
 
 static void
@@ -22,7 +22,7 @@ minnet_response_dump(JSContext* ctx, struct http_response const* res) {
   state_dump("state", &res->state);
   buffer_dump("buffer", &res->body);
   printf(" }\n");
-   
+
   fflush(stdout);
 }
 void
@@ -32,7 +32,7 @@ minnet_response_zero(struct http_response* res) {
 }
 
 void
-minnet_response_init(JSContext* ctx, MinnetResponse* res, const char* url, int32_t status, BOOL ok , const char* type) {
+minnet_response_init(JSContext* ctx, MinnetResponse* res, const char* url, int32_t status, BOOL ok, const char* type) {
   memset(res, 0, sizeof(MinnetResponse));
 
   res->status = status;
@@ -53,10 +53,10 @@ minnet_response_free(JSRuntime* rt, MinnetResponse* res) {
 }
 
 MinnetResponse*
-minnet_response_new(JSContext* ctx,const char* url,  int32_t status, BOOL ok, const char* type) {
+minnet_response_new(JSContext* ctx, const char* url, int32_t status, BOOL ok, const char* type) {
   MinnetResponse* res = js_mallocz(ctx, sizeof(MinnetResponse));
 
-  minnet_response_init(ctx, res, status, ok, url, type);
+  minnet_response_init(ctx, res, url, status, ok, type);
 
   return res;
 }
@@ -76,7 +76,7 @@ minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   MinnetResponse* res;
 
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id))) {
-    JSValue val = JS_NewArrayBuffer  /*Copy*/(ctx, buffer_START(&res->body), buffer_SIZE(&res->body),0,0,0);
+    JSValue val = JS_NewArrayBuffer /*Copy*/ (ctx, buffer_START(&res->body), buffer_SIZE(&res->body), 0, 0, 0);
     return val;
   }
 

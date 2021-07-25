@@ -4,14 +4,18 @@
 #include <quickjs.h>
 
 struct lws;
+struct http_request;
 
 /* class WebSocket */
 
 typedef struct {
-  struct lws* lwsi;
   size_t ref_count;
+  struct lws* lwsi;
+  struct http_request* req;
 } MinnetWebsocket;
 
+MinnetWebsocket* lws_wsi_ws(struct lws*);
+MinnetWebsocket* lws_wsi_ws2(struct lws*, JSContext* ctx);
 JSValue minnet_ws_object(JSContext*, struct lws* wsi);
 void minnet_ws_sslcert(JSContext*, struct lws_context_creation_info* info, JSValue options);
 

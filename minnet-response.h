@@ -11,17 +11,20 @@ typedef struct http_state {
 } MinnetHttpState;
 
 typedef struct http_response {
-  const char *url;
+  const char* url;
   int status;
   BOOL ok;
-  const char*type;
-  struct byte_buffer body;
-  struct http_state state;
+  const char* type;
+  union {
+    struct byte_buffer body;
+    JSValue iterator;
+    struct http_state state;
+  };
 } MinnetResponse;
 
 void minnet_response_dump(JSContext*, struct http_response const* res);
 void minnet_response_zero(struct http_response*);
-void minnet_response_init(JSContext*, MinnetResponse* res,  const char* url,int32_t status, BOOL ok, const char* type);
+void minnet_response_init(JSContext*, MinnetResponse* res, const char* url, int32_t status, BOOL ok, const char* type);
 void minnet_response_free(JSRuntime*, MinnetResponse* res);
 MinnetResponse* minnet_response_new(JSContext*, const char* url, int32_t status, BOOL ok, const char* type);
 JSValue minnet_response_wrap(JSContext*, MinnetResponse* res);
