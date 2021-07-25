@@ -4,20 +4,21 @@
 #include <quickjs.h>
 #include "buffer.h"
 
+struct socket;
 struct http_response;
 
 typedef struct http_request {
   int ref_count;
   char *type, *url;
-  struct lws* ws;
+  struct socket* ws;
   struct byte_buffer header;
   char path[256];
-  struct http_response* response;
+  struct http_response* rsp;
 } MinnetRequest;
 
-void minnet_request_dump(JSContext*, struct http_request const* req);
-void minnet_request_init(JSContext*, struct http_request* req, const char* in, struct lws* wsi);
-MinnetRequest* minnet_request_new(JSContext*, const char* in, struct lws* wsi);
+void minnet_request_dump(JSContext*, MinnetRequest const* req);
+void minnet_request_init(JSContext*, MinnetRequest* req, const char* in, struct socket* ws);
+MinnetRequest* minnet_request_new(JSContext*, const char* in, struct socket* ws);
 JSValue minnet_request_wrap(JSContext*, struct http_request* req);
 
 extern JSClassDef minnet_request_class;

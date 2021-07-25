@@ -9,14 +9,14 @@ enum { WEBSOCKET_FD, WEBSOCKET_ADDRESS, WEBSOCKET_FAMILY, WEBSOCKET_PORT, WEBSOC
 enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
 
 static JSValue
-create_websocket_obj(JSContext* ctx, struct lws* wsi) {
+minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
   JSValue ws_obj = JS_NewObjectClass(ctx, minnet_ws_class_id);
 
   if(JS_IsException(ws_obj))
     return JS_EXCEPTION;
 
-  if(!(ws = js_mallocz(ctx, sizeof(*ws)))) {
+  if(!(ws = js_mallocz(ctx, sizeof(MinnetWebsocket)))) {
     JS_FreeValue(ctx, ws_obj);
     return JS_EXCEPTION;
   }
@@ -30,19 +30,6 @@ create_websocket_obj(JSContext* ctx, struct lws* wsi) {
   //  lws_set_opaque_user_data(wsi,ws);
 
   return ws_obj;
-}
-
-MinnetWebsocket*
-lws_wsi_ws(struct lws* wsi) {
-  JSObject* obj;
-  MinnetWebsocket* ws = 0;
-
-  // ws =lws_get_opaque_user_data(wsi);
-  if((obj = lws_get_opaque_user_data(wsi))) {
-    JSValue ws_obj = JS_MKPTR(JS_TAG_OBJECT, obj);
-    ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
-  }
-  return ws;
 }
 
 MinnetWebsocket*
@@ -68,7 +55,7 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
     return ws_obj;
   }
 
-  return create_websocket_obj(ctx, wsi);
+  return minnet_ws_new(ctx, wsi);
 }
 
 void

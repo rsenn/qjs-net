@@ -16,19 +16,19 @@ minnet_request_dump(JSContext* ctx, MinnetRequest const* req) {
 
   buffer_dump("header", &req->header);
   fputs("\n\tresponse = ", stdout);
-  minnet_response_dump(ctx, &req->response);
+  minnet_response_dump(ctx, (MinnetResponse const*)&req->rsp);
   fputs(" }", stdout);
   fflush(stdout);
 }
 
 void
-minnet_request_init(JSContext* ctx, MinnetRequest* req, const char* in, struct lws* wsi) {
+minnet_request_init(JSContext* ctx, MinnetRequest* req, const char* in, struct socket* ws) {
   char buf[1024];
   ssize_t len;
 
   memset(req, 0, sizeof(*req));
 
-  req->ws = wsi;
+  req->ws = ws;
   req->ref_count = 0;
 
   /* In contains the url part after the place the mount was  positioned at,
@@ -39,10 +39,10 @@ minnet_request_init(JSContext* ctx, MinnetRequest* req, const char* in, struct l
   /*  if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
       req->peer = js_strdup(ctx, buf);*/
 
-  if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
+  if((len = lws_hdr_copy(ws->lwsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
     req->url = js_strndup(ctx, buf, len);
     req->type = js_strdup(ctx, "GET");
-  } else if((len = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
+  } else if((len = lws_hdr_copy(ws->lwsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
     req->url = js_strndup(ctx, buf, len);
     req->type = js_strdup(ctx, "POST");
   }
@@ -50,21 +50,24 @@ minnet_request_init(JSContext* ctx, MinnetRequest* req, const char* in, struct l
   if(!buffer_alloc(&req->header, LWS_RECOMMENDED_MIN_HEADER_SPACE, ctx))
     JS_ThrowOutOfMemory(ctx);
 
-  req->response = 0;
+  req->rsp = 0;
 }
 
 MinnetRequest*
-minnet_request_new(JSContext* ctx, const char* in, struct lws* wsi) {
+minnet_request_new(JSContext* ctx, const char* in, struct socket* ws) {
   MinnetRequest* req;
-  if((req = js_malloc(ctx, sizeof(MinnetRequest))))
-    minnet_request_init(ctx, req, in, wsi);
+
+  if((req = js_mallocz(ctx, sizeof(MinnetRequest))))
+    minnet_request_init(ctx, req, in, ws);
+
   return req;
 }
 
 static JSValue
-minnet_request_constructor(JSContext* ctx, const char* in, struct lws* wsi) {
+minnet_request_constructor(JSContext* ctx, const char* in, struct socket* ws) {
   MinnetRequest* req;
-  if(!(req = minnet_request_new(ctx, in, wsi)))
+
+  if(!(req = minnet_request_new(ctx, in, ws)))
     return JS_EXCEPTION;
 
   req->ref_count = 0;

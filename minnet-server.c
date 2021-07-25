@@ -318,7 +318,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   JSContext* ctx = server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : server_cb_message.ctx ? server_cb_message.ctx : server_cb_connect.ctx ? server_cb_connect.ctx : 0;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   char *url = 0, *method = 0;
-  MinnetWebsocket* ws = lws_wsi_ws(wsi);
+  MinnetWebsocket* ws = lws_wsi_ws2(wsi, ctx);
 
   url = lws_uri_and_method(wsi, ctx, &method);
 
@@ -377,7 +377,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
     case LWS_CALLBACK_HTTP: {
       JSValue ret = JS_UNDEFINED;
-      MinnetRequest* req = minnet_request_new(ctx, in, wsi);
+      MinnetRequest* req = minnet_request_new(ctx, in, ws);
       // lws_set_wsi_user(wsi, req);
 
       ws->req = req;
@@ -422,14 +422,14 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 
-      req->response = minnet_response_new(ctx, url, 200, TRUE, "text/html");
-      req->response->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
+      req->rsp = minnet_response_new(ctx, url, 200, TRUE, "text/html");
+      req->rsp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
 
       if(server_cb_body.func_obj) {
-        JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), minnet_response_wrap(server_cb_body.ctx, req->response)};
+        JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), minnet_response_wrap(server_cb_body.ctx, req->rsp)};
         JSValue ret = minnet_emit(&server_cb_body, 2, args);
 
-        req->response->iterator = js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
+        req->rsp->iterator = js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
       }
 
       /* write the state separately */
@@ -442,7 +442,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetBuffer b = BUFFER(buf);
       enum lws_write_protocol n = LWS_WRITE_HTTP;
       JSValue ret = JS_UNDEFINED;
-      MinnetResponse* res = req->response;
+      MinnetResponse* res = req->rsp;
 
       if(!server_cb_body.func_obj) {
 
@@ -466,7 +466,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
                         "    <img src=\"/libwebsockets.org-logo.svg\"><br />\n"
                         "   Dynamic content for '%s' from mountpoint.<br />\n"
                         "   <br />\n",
-                        ((MinnetRequest*)((char*)res - offsetof(struct http_request, response)))->path);
+                        req->path); // ((MinnetRequest*)((char*)res - offsetof(struct http_request, rsp)))->path);
         } else if(res->state.times < res->state.budget) {
           /*
            * after the first time, we create bulk content.

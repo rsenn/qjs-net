@@ -4,6 +4,8 @@
 #include <quickjs.h>
 #include "buffer.h"
 
+struct http_request;
+
 /* class MinnetResponse */
 
 typedef struct http_state {
@@ -20,6 +22,7 @@ typedef struct http_response {
     JSValue iterator;
     struct http_state state;
   };
+  struct http_request* req;
 } MinnetResponse;
 
 void minnet_response_dump(JSContext*, struct http_response const* res);
