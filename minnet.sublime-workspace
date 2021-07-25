@@ -11845,7 +11845,7 @@
 		"/home/roman/Projects/plot-cv/quickjs/net/minnet-server.h",
 		"/home/roman/Projects/plot-cv/quickjs/net/minnet-response.h",
 		"/home/roman/Projects/plot-cv/quickjs/net/build/x86_64-linux-release/libwebsockets/include/libwebsockets/lws-network-helper.h",
-		"/home/roman/Projects/plot-cv/quickjs/net/minnet-jsutils.h",
+		"/home/roman/Projects/plot-cv/quickjs/net/jsutils.h",
 		"/home/roman/Projects/plot-cv/quickjs/net/minnet-client.c",
 		"/home/roman/Projects/plot-cv/quickjs/net/libwebsockets/include/libwebsockets.h",
 		"/home/roman/Projects/plot-cv/quickjs/net/libwebsockets/minimal-examples/http-server/minimal-http-server-dynamic/minimal-http-server-dynamic.c",
@@ -12811,7 +12811,7 @@
 			],
 			[
 				"jsutil",
-				"minnet-jsutils.h"
+				"jsutils.h"
 			],
 			[
 				"minnet",

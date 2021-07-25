@@ -4,7 +4,7 @@
 #include "minnet-response.h"
 #include "minnet-request.h"
 #include "minnet-websocket.h"
-#include "minnet-jsutils.h"
+#include "jsutils.h"
 #include "buffer.h"
 #include <assert.h>
 #include <errno.h>
@@ -337,7 +337,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   fclose(fi);
 
   res->ok = TRUE;
-  res->body = BUFFER(buffer);
+  res->body = BUFFER_N(buffer, bufSize);
 
 finish:
   curl_slist_free_all(headerlist);
@@ -393,12 +393,9 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     } else {
       revents = x.revents;
     }
-
-    /* if(x.revents & PIO)
-       values[2] = x.revents & PIO;*/
   }
 
-  printf("\033[2K\rio_handler #%zu fd = %d, events = %s, revents = %s, context = %p\n", seq, x.fd, io_events(x.events), io_events(x.revents), context);
+ // printf("\033[2K\rio_handler #%zu fd = %d, events = %s, revents = %s, context = %p\n", seq, x.fd, io_events(x.events), io_events(x.revents), context);
   fflush(stdout);
   if(revents & PIO) {
     lws_service_fd(context, &x);
@@ -422,8 +419,7 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   intptr_t values[] = {fd, events, 0, (intptr_t)context, seq};
   JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
-  //  JSValue items[] = {JS_NewInt32(ctx, fd), JS_NewInt32(ctx, events), JS_NewInt32(ctx, 0)};
-  printf("\033[2K\rmake_handler #%zu fd = %zd, events = 0x%04zx, revents = 0x%04zx, context = %p\n", values[4], values[0], values[1], values[2], (void*)values[3]);
+ //  printf("\033[2K\rmake_handler #%zu fd = %zd, events = 0x%04zx, revents = 0x%04zx, context = %p\n", values[4], values[0], values[1], values[2], (void*)values[3]);
 
   fflush(stdout);
   JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};

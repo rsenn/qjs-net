@@ -12,10 +12,16 @@ typedef struct byte_buffer {
 #define BUFFER(buf)                                                                                                                                                                                    \
   (MinnetBuffer) { ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + sizeof((buf)) - 1 }
 
-#define buffer_AVAIL(b)  ((b)->end - (b)->pos)
-#define buffer_OFFSET(b)   ((b)->pos - (b)->start)
-#define buffer_SIZE(b)  ((b)->end - (b)->start)
-#define buffer_PTR(b) (void*)(b)->start
+#define BUFFER_0()                                                                                                                                                                                     \
+  (MinnetBuffer) { 0, 0, 0 }
+
+#define BUFFER_N(buf, n)                                                                                                                                                                               \
+  (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, ((uint8_t*)(buf)) + n }
+
+#define buffer_AVAIL(b) ((b)->end - (b)->pos)
+#define buffer_OFFSET(b) ((b)->pos - (b)->start)
+#define buffer_SIZE(b) ((b)->end - (b)->start)
+#define buffer_START(b) (void*)(b)->start
 
 static inline void
 buffer_init(struct byte_buffer* buf, uint8_t* start, size_t len) {

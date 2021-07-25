@@ -1,7 +1,7 @@
 #include "minnet.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
-#include "minnet-jsutils.h"
+#include "jsutils.h"
 #include "minnet-response.h"
 #include "minnet-request.h"
 #include <list.h>
@@ -417,7 +417,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 
-      req->response = minnet_response_new(ctx, 200, TRUE, req->url, "text/html");
+      req->response = minnet_response_new(ctx, 200, TRUE, url, "text/html");
       req->response->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
 
       /* write the state separately */
@@ -485,12 +485,16 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
           buffer_append(&b, str, len);
 
+          res->body.pos += len;
+
+          JS_FreeCString(ctx, str);
+
         } else {
           n = LWS_WRITE_HTTP_FINAL;
         }
       }
 
-      if(lws_write(wsi, buffer_PTR(&b), buffer_OFFSET(&b), n) != buffer_OFFSET(&b))
+      if(lws_write(wsi, buffer_START(&b), buffer_OFFSET(&b), n) != buffer_OFFSET(&b))
         return 1;
 
       /*

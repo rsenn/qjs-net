@@ -53,6 +53,20 @@ js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
   return js_function_bind(ctx, func, 1, &arg);
 }
 
+JSValue
+js_iterator_next(JSContext* ctx, JSValueConst obj, BOOL*done_p) {
+  JSValue fn, result, done,value;
+  fn = JS_GetPropertyStr(ctx, obj, "next");
+  result = JS_Call(ctx, fn, obj, 0, 0);
+  JS_FreeValue(ctx, fn);
+  done = JS_GetPropertyStr(ctx, result, "done");
+  value = JS_GetPropertyStr(ctx, result, "value");
+  JS_FreeValue(ctx, result);
+  *done_p = JS_ToBool(ctx, done);
+  JS_FreeValue(ctx, done);
+  return value;
+}
+
 typedef union pointer {
   void* p;
   struct {
