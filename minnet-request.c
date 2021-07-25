@@ -3,7 +3,7 @@
 #include "minnet-request.h"
 
 JSClassID minnet_request_class_id;
-JSValue minnet_request_proto;
+JSValue minnet_request_proto, minnet_request_ctor;
 
 enum { REQUEST_METHOD, REQUEST_SOCKET, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_BODY };
 
@@ -58,8 +58,50 @@ request_new(JSContext* ctx, const char* in, struct socket* ws) {
   return req;
 }
 
-static JSValue
-minnet_request_constructor(JSContext* ctx, const char* in, struct socket* ws) {
+JSValue
+minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+  JSValue proto, obj;
+  MinnetRequest* req;
+  int i;
+
+  if(!(req = js_mallocz(ctx, sizeof(MinnetRequest))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  /* using new_target to get the prototype is necessary when the
+     class is extended. */
+  proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+  if(JS_IsException(proto))
+    proto = JS_DupValue(ctx, minnet_request_proto);
+
+  obj = JS_NewObjectProtoClass(ctx, proto, minnet_request_class_id);
+  JS_FreeValue(ctx, proto);
+  if(JS_IsException(obj))
+    goto fail;
+
+  if(argc >= 1) {
+    if(JS_IsString(argv[0])) {
+      const char* str = JS_ToCString(ctx, argv[0]);
+      req->url = js_strdup(ctx, str);
+      JS_FreeCString(ctx, str);
+    }
+  }
+
+  if(argc >= 2) {
+    if(JS_IsObject(argv[1]) && !JS_IsNull(argv[1])) {}
+  }
+
+  JS_SetOpaque(obj, req);
+
+  return obj;
+
+fail:
+  js_free(ctx, req);
+  JS_FreeValue(ctx, obj);
+  return JS_EXCEPTION;
+}
+
+JSValue
+minnet_request_new(JSContext* ctx, const char* in, struct socket* ws) {
   MinnetRequest* req;
 
   if(!(req = request_new(ctx, in, ws)))

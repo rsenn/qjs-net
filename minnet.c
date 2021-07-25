@@ -490,6 +490,9 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   JS_SetPropertyFunctionList(ctx, minnet_request_proto, minnet_request_proto_funcs, minnet_request_proto_funcs_size);
   JS_SetClassProto(ctx, minnet_request_class_id, minnet_request_proto);
 
+  minnet_request_ctor = JS_NewCFunction2(ctx, minnet_request_constructor, "MinnetRequest", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_request_ctor, minnet_request_proto);
+
   // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);

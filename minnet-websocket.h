@@ -12,8 +12,7 @@ struct http_response;
 typedef struct socket {
   size_t ref_count;
   struct lws* lwsi;
-  struct http_request* req;
-  struct http_response* rsp;
+  JSValue request, response;
 } MinnetWebsocket;
 
 MinnetWebsocket* minnet_ws_get(struct lws*, JSContext* ctx);

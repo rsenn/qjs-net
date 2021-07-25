@@ -379,7 +379,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetRequest* req = request_new(ctx, in, ws);
       JSValue ret = JS_UNDEFINED, resp_obj = minnet_response_object(ctx, req->url, 200, TRUE, "text/html");
 
-      ++(ws->req = req)->ref_count;
+      ++req->ref_count;
 
       MinnetBuffer b = BUFFER(buf);
 
@@ -410,6 +410,10 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       /*      if(!(ws->rsp = minnet_response_data(ctx, resp_obj)))
               ws->rsp = response_new(ctx, req->url, 200, TRUE, "text/html");*/
       MinnetResponse* resp = minnet_response_data(ctx, resp_obj);
+
+      if(resp)
+        ws->response = JS_DupValue(ctx, resp_obj);
+
       /*
        * prepare and write http headers... with regards to content-
        * length, there are three approaches:
@@ -449,7 +453,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       return 0;
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
-      MinnetResponse* res = ws->rsp;
+      MinnetResponse* res = minnet_response_data(ctx, ws->response);
       enum lws_write_protocol n = LWS_WRITE_HTTP;
       JSValue ret = JS_UNDEFINED;
       MinnetBuffer b = BUFFER(buf);
