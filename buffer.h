@@ -12,8 +12,9 @@ typedef struct byte_buffer {
 #define BUFFER(buf)                                                                                                                                                                                    \
   (MinnetBuffer) { ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + sizeof((buf)) - 1 }
 
-#define buffer_AVAIL(b) (size_t)((b)->end - (b)->pos)
-#define buffer_SIZE(b) /*(size_t)*/ ((b)->pos - (b)->start)
+#define buffer_AVAIL(b)  ((b)->end - (b)->pos)
+#define buffer_OFFSET(b)   ((b)->pos - (b)->start)
+#define buffer_SIZE(b)  ((b)->end - (b)->start)
 #define buffer_PTR(b) (void*)(b)->start
 
 static inline void
@@ -47,7 +48,7 @@ buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
 
 static inline BOOL
 buffer_append(struct byte_buffer* buf, const char* x, size_t n) {
-  assert(buffer_AVAIL(buf) >= n);
+  assert((size_t)buffer_AVAIL(buf) >= n);
   memcpy(buf->pos, x, n);
   buf->pos[n] = '\0';
   buf->pos += n;

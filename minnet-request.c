@@ -1,6 +1,7 @@
 #include "minnet.h"
 #include "minnet-websocket.h"
 #include "minnet-request.h"
+#include "minnet-response.h"
 
 JSClassID minnet_request_class_id;
 JSValue minnet_request_proto;

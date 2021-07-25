@@ -129,7 +129,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case RESPONSE_LENGTH: {
-      ret = JS_NewInt64(ctx, buffer_SIZE(&res->body));
+      ret = JS_NewInt64(ctx, buffer_OFFSET(&res->body));
       break;
     }
   }

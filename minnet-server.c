@@ -349,7 +349,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
          }*/
 
         if(result)
-          buffer_free(server_cb_http.ctx, &h);
+          buffer_free(&h, JS_GetRuntime(server_cb_http.ctx));
 
         return result;
       }
@@ -430,7 +430,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetBuffer b = BUFFER(buf);
       enum lws_write_protocol n = LWS_WRITE_HTTP;
       JSValue ret = JS_UNDEFINED;
-      MinnetResponse* res = &req->response;
+      MinnetResponse* res = req->response;
 
       if(!server_cb_body.func_obj) {
 
@@ -463,7 +463,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
            * buffer we will send.
            */
 
-          while(buffer_SIZE(&b) < 300) { buffer_printf(&b, "%d.%d: this is some content...<br />\n", res->state.times, res->state.content_lines++); }
+          while(buffer_OFFSET(&b) < 300) { buffer_printf(&b, "%d.%d: this is some content...<br />\n", res->state.times, res->state.content_lines++); }
 
         } else {
           buffer_printf(&b,
@@ -490,7 +490,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         }
       }
 
-      if(lws_write(wsi, buffer_PTR(&b), buffer_SIZE(&b), n) != buffer_SIZE(&b))
+      if(lws_write(wsi, buffer_PTR(&b), buffer_OFFSET(&b), n) != buffer_OFFSET(&b))
         return 1;
 
       /*
