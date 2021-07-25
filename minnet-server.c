@@ -384,11 +384,12 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetBuffer b = BUFFER(buf);
 
       if(server_cb_http.func_obj) {
-        JSValue ret, args[2] = {minnet_request_wrap(ctx, req), resp_obj};
+        JSValue args[2] = {minnet_request_wrap(ctx, req), resp_obj};
         ret = minnet_emit(&server_cb_http, 2, args);
         if(JS_IsObject(ret) && minnet_response_data(ctx, ret)) {
           JS_FreeValue(ctx, resp_obj);
           resp_obj = ret;
+          response_dump(minnet_response_data(ctx, ret));
         } else {
           JS_FreeValue(ctx, ret);
         }
@@ -406,7 +407,8 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
                 return code;
             }
           }*/
-      ws->rsp = minnet_response_data(ctx, resp_obj);
+      if(!(ws->rsp = minnet_response_data(ctx, resp_obj)))
+        ws->rsp = response_new(ctx, req->url, 200, TRUE, "text/html");
 
       /*
        * prepare and write http headers... with regards to content-
@@ -432,21 +434,16 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 
-      if(!ws->rsp)
-        ws->rsp = minnet_response_new(ctx, url, 200, TRUE, "text/html");
+      if(server_cb_body.func_obj) {
+        JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), minnet_response_wrap(server_cb_body.ctx, ws->rsp)};
+        JSValue ret = minnet_emit(&server_cb_body, 2, args);
 
-      if(ws->rsp) {
-        if(server_cb_body.func_obj) {
-          JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), minnet_response_wrap(server_cb_body.ctx, ws->rsp)};
-          JSValue ret = minnet_emit(&server_cb_body, 2, args);
-
-          ws->rsp->iterator = ret; // js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
-        } else {
-          ws->rsp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
-        }
-
-        lws_callback_on_writable(wsi);
+        ws->rsp->iterator = ret; // js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
+      } else {
+        ws->rsp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
       }
+
+      lws_callback_on_writable(wsi);
 
       return 0;
     }

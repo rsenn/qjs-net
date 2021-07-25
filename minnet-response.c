@@ -5,7 +5,7 @@
 #include <cutils.h>
 
 JSClassID minnet_response_class_id;
-JSValue minnet_response_proto;
+JSValue minnet_response_proto, minnet_response_ctor;
 
 enum { RESPONSE_BUFFER, RESPONSE_JSON, RESPONSE_TEXT };
 enum { RESPONSE_OK, RESPONSE_URL, RESPONSE_STATUS, RESPONSE_TYPE, RESPONSE_OFFSET };
@@ -17,7 +17,7 @@ state_dump(const char* n, struct http_state const* b) {
 }
 
 void
-minnet_response_dump(JSContext* ctx, struct http_response const* res) {
+response_dump(struct http_response const* res) {
   printf("{\n  url = %s, status = %d, ok = %d, type = %s, ", res->url, res->status, res->ok, res->type);
   state_dump("state", &res->state);
   buffer_dump("buffer", &res->body);
@@ -26,14 +26,14 @@ minnet_response_dump(JSContext* ctx, struct http_response const* res) {
   fflush(stdout);
 }
 
-void
-minnet_response_zero(struct http_response* res) {
+static void
+response_zero(struct http_response* res) {
   memset(res, 0, sizeof(MinnetResponse));
   res->body = BUFFER_0();
 }
 
 static void
-minnet_response_init(MinnetResponse* res, const char* url, int32_t status, BOOL ok, const char* type) {
+response_init(MinnetResponse* res, const char* url, int32_t status, BOOL ok, const char* type) {
   memset(res, 0, sizeof(MinnetResponse));
 
   res->status = status;
@@ -44,20 +44,21 @@ minnet_response_init(MinnetResponse* res, const char* url, int32_t status, BOOL 
 }
 
 void
-minnet_response_free(JSRuntime* rt, MinnetResponse* res) {
-  js_free_rt(rt, res->url);
+response_free(JSRuntime* rt, MinnetResponse* res) {
+  js_free_rt(rt, (void*)res->url);
   res->url = 0;
-  js_free_rt(rt, res->type);
+  js_free_rt(rt, (void*)res->type);
   res->type = 0;
 
   buffer_free(&res->body, rt);
 }
 
 MinnetResponse*
-minnet_response_new(JSContext* ctx, const char* url, int32_t status, BOOL ok, const char* type) {
-  MinnetResponse* res = js_mallocz(ctx, sizeof(MinnetResponse));
+response_new(JSContext* ctx, const char* url, int32_t status, BOOL ok, const char* type) {
+  MinnetResponse* res;
 
-  minnet_response_init(res, url, status, ok, type);
+  if((res = js_mallocz(ctx, sizeof(MinnetResponse))))
+    response_init(res, url, status, ok, type);
 
   return res;
 }
@@ -66,7 +67,7 @@ JSValue
 minnet_response_object(JSContext* ctx, const char* url, int32_t status, BOOL ok, const char* type) {
   MinnetResponse* res;
 
-  if((res = minnet_response_new(ctx, url, status, ok, type)))
+  if((res = response_new(ctx, url, status, ok, type)))
     return minnet_response_wrap(ctx, res);
   return JS_NULL;
 }
@@ -142,6 +143,52 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
   }
 
   return ret;
+}
+
+JSValue
+minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+  JSValue proto, obj;
+  MinnetResponse* resp;
+  int i;
+
+  if(!(resp = js_mallocz(ctx, sizeof(MinnetResponse))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  /* using new_target to get the prototype is necessary when the
+     class is extended. */
+  proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+  if(JS_IsException(proto))
+    proto = JS_DupValue(ctx, minnet_response_proto);
+
+  obj = JS_NewObjectProtoClass(ctx, proto, minnet_response_class_id);
+  JS_FreeValue(ctx, proto);
+  if(JS_IsException(obj))
+    goto fail;
+
+  for(i = 0; i < argc; i++) {
+    if(JS_IsString(argv[argc])) {
+      const char* str = JS_ToCString(ctx, argv[argc]);
+      if(resp->url)
+        resp->type = str;
+      else
+        resp->url = str;
+    } else if(JS_IsBool(argv[argc])) {
+      resp->ok = JS_ToBool(ctx, argv[argc]);
+    } else if(JS_IsNumber(argv[argc])) {
+      int32_t s;
+      if(!JS_ToInt32(ctx, &s, argv[argc]))
+        resp->status = s;
+    }
+  }
+
+  JS_SetOpaque(obj, resp);
+
+  return obj;
+
+fail:
+  js_free(ctx, resp);
+  JS_FreeValue(ctx, obj);
+  return JS_EXCEPTION;
 }
 
 void

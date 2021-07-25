@@ -459,26 +459,26 @@ value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
-  return JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
-}
 
-__attribute__((visibility("default"))) JSModuleDef*
-JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
-  JSModuleDef* m;
-  m = JS_NewCModule(ctx, module_name, js_minnet_init);
-  if(!m)
-    return NULL;
-  JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
+  JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
   // Add class Response
   JS_NewClassID(&minnet_response_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
+
   minnet_response_proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, minnet_response_proto, minnet_response_proto_funcs, minnet_response_proto_funcs_size);
   JS_SetClassProto(ctx, minnet_response_class_id, minnet_response_proto);
 
+  minnet_response_ctor = JS_NewCFunction2(ctx, minnet_response_constructor, "MinnetResponse", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_response_ctor, minnet_response_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Response", minnet_response_ctor);
+
   // Add class Request
   JS_NewClassID(&minnet_request_class_id);
+
   JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);
   minnet_request_proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, minnet_request_proto, minnet_request_proto_funcs, minnet_request_proto_funcs_size);
@@ -490,6 +490,18 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   minnet_ws_proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
   JS_SetClassProto(ctx, minnet_ws_class_id, minnet_ws_proto);
+
+  return 0;
+}
+
+__attribute__((visibility("default"))) JSModuleDef*
+JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
+  JSModuleDef* m;
+  m = JS_NewCModule(ctx, module_name, js_minnet_init);
+  if(!m)
+    return NULL;
+  JS_AddModuleExport(ctx, m, "Response");
+  JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
   minnet_log_ctx = ctx;
 

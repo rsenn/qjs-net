@@ -25,18 +25,18 @@ typedef struct http_response {
   struct http_request* req;
 } MinnetResponse;
 
-void minnet_response_dump(JSContext*, struct http_response const* res);
-void minnet_response_zero(struct http_response*);
-void minnet_response_free(JSRuntime*, MinnetResponse* res);
-MinnetResponse* minnet_response_new(JSContext*, const char* url, int32_t status, BOOL ok, const char* type);
+void response_dump(struct http_response const*);
+void response_free(JSRuntime*, MinnetResponse* res);
+MinnetResponse* response_new(JSContext*, const char* url, int32_t status, BOOL ok, const char* type);
 JSValue minnet_response_object(JSContext*, const char* url, int32_t status, BOOL ok, const char* type);
 JSValue minnet_response_wrap(JSContext*, MinnetResponse* res);
+JSValue minnet_response_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
 void minnet_response_finalizer(JSRuntime*, JSValue val);
 
 extern JSClassDef minnet_response_class;
 extern const JSCFunctionListEntry minnet_response_proto_funcs[];
 extern const size_t minnet_response_proto_funcs_size;
-extern JSValue minnet_response_proto;
+extern JSValue minnet_response_proto, minnet_response_ctor;
 extern JSClassID minnet_response_class_id;
 
 static inline MinnetResponse*
