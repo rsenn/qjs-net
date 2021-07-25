@@ -318,7 +318,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   JSContext* ctx = server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : server_cb_message.ctx ? server_cb_message.ctx : server_cb_connect.ctx ? server_cb_connect.ctx : 0;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   char *url = 0, *method = 0;
-  MinnetWebsocket* ws = lws_wsi_ws(wsi);
+  MinnetWebsocket* ws = minnet_ws_get(wsi, ctx);
 
   url = lws_uri_and_method(wsi, ctx, &method);
 
@@ -376,39 +376,37 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       break;
     }
     case LWS_CALLBACK_HTTP: {
-      MinnetRequest* req;
-      JSValue ret = JS_UNDEFINED;
-      if(!ws)
-        ws = minnet_ws_get(wsi, ctx);
-
-      req = minnet_request_new(ctx, in, ws);
-
-      // lws_set_wsi_user(wsi, req);
+      MinnetRequest* req = minnet_request_new(ctx, in, ws);
+      JSValue ret = JS_UNDEFINED, resp_obj = minnet_response_object(ctx, req->url, 200, TRUE, "text/html");
 
       ++(ws->req = req)->ref_count;
 
       MinnetBuffer b = BUFFER(buf);
 
       if(server_cb_http.func_obj) {
-        JSValue args[2] = {minnet_request_wrap(ctx, req), minnet_response_object(ctx, req->url, 404, FALSE, "text/html")};
+        JSValue ret, args[2] = {minnet_request_wrap(ctx, req), resp_obj};
         ret = minnet_emit(&server_cb_http, 2, args);
+        if(JS_IsObject(ret) && minnet_response_data(ctx, ret)) {
+          JS_FreeValue(ctx, resp_obj);
+          resp_obj = ret;
+        } else {
+          JS_FreeValue(ctx, ret);
+        }
         JS_FreeValue(ctx, args[0]);
         JS_FreeValue(ctx, args[1]);
       }
 
-      if(!JS_IsUndefined(ret)) {
-        int32_t code;
+      /*    if(!JS_IsUndefined(ret)) {
+            int32_t code;
 
-        if((ws->rsp = minnet_response_data(ctx, ret))) {
+            if((ws->rsp = minnet_response_data(ctx, ret))) {
 
-        } else if(!JS_ToInt32(ctx, &code, ret)) {
-          if(code > 0)
-            return code;
-        }
-      }
-
-      if(!ws->rsp)
-        ws->rsp = minnet_response_new(ctx, req->url, HTTP_STATUS_OK, TRUE, "text/html");
+            } else if(!JS_ToInt32(ctx, &code, ret)) {
+              if(code > 0)
+                return code;
+            }
+          }*/
+      ws->rsp = minnet_response_data(ctx, resp_obj);
 
       /*
        * prepare and write http headers... with regards to content-
