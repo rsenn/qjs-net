@@ -128,8 +128,8 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   GETCB(opt_on_connect, server_cb_connect)
   GETCB(opt_on_message, server_cb_message)
   GETCB(opt_on_fd, server_cb_fd)
-  GETCB(opt_on_http, server_cb_http)
-  GETCB(opt_on_body, server_cb_body)
+  GETCBTHIS(opt_on_http, server_cb_http, 0)
+  GETCBTHIS(opt_on_body, server_cb_body, 0)
 
   SETLOG
 
@@ -318,7 +318,8 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   JSContext* ctx = server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : server_cb_message.ctx ? server_cb_message.ctx : server_cb_connect.ctx ? server_cb_connect.ctx : 0;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   char *url = 0, *method = 0;
-  MinnetWebsocket* ws = minnet_ws_get(wsi, ctx);
+  JSValue ws_obj = minnet_ws_object(ctx, wsi);
+  MinnetWebsocket* ws = minnet_ws_data(ctx, ws_obj);
 
   url = lws_uri_and_method(wsi, ctx, &method);
 
@@ -376,16 +377,25 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       break;
     }
     case LWS_CALLBACK_HTTP: {
-      JSValue req_obj = minnet_request_new(ctx, in, ws);
-      MinnetRequest* req = minnet_request_data(ctx, req_obj);
+      /*      JSValue req_obj = minnet_request_new(ctx, in, ws);
+            MinnetRequest* req = minnet_request_data(ctx, req_obj);*/
+      MinnetRequest* req;
       MinnetResponse* resp = 0;
-      JSValue ret = JS_UNDEFINED, resp_obj = minnet_response_object(ctx, req->url, 200, TRUE, "text/html");
+      JSValue ret = JS_UNDEFINED, req_obj = JS_UNDEFINED, resp_obj = JS_UNDEFINED;
+      MinnetBuffer b = BUFFER(buf);
+
+      if((req = request_new(ctx))) {
+        request_init(req, in, url, method);
+
+        req_obj = minnet_request_wrap(ctx, req);
+      }
+
+      resp_obj = minnet_response_new(ctx, req->url, 200, TRUE, "text/html");
+      resp = minnet_response_data(ctx, resp_obj);
 
       assert(req);
 
       ++req->ref_count;
-
-      MinnetBuffer b = BUFFER(buf);
 
       if(server_cb_http.func_obj) {
         JSValue args[2] = {req_obj, resp_obj};
@@ -430,15 +440,16 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         return 1;
 
       if(server_cb_body.func_obj) {
-        JSValueConst args[] = {minnet_request_wrap(server_cb_body.ctx, req), resp_obj};
-        JSValue ret = minnet_emit(&server_cb_body, 2, args);
+        JSValueConst args[] = {req_obj, resp_obj};
+        JSValue ret = minnet_emit_this(&server_cb_body, ws_obj, 2, args);
 
-        resp->iterator = ret; // js_is_iterator(ctx, ret) ? ret : JS_UNDEFINED;
+        resp->generator = ret;
       } else {
         resp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
       }
 
       lws_callback_on_writable(wsi);
+      JS_FreeValue(ctx, req_obj);
       JS_FreeValue(ctx, resp_obj);
 
       return 0;
@@ -453,7 +464,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         BOOL done = FALSE;
         JSValue next = JS_UNDEFINED;
         // printf("res->iterator %s\n", JS_ToCString(ctx, res->iterator));
-        JSValue ret = js_iterator_next(server_cb_body.ctx, res->iterator, &next, &done, 0, 0);
+        JSValue ret = js_iterator_next(server_cb_body.ctx, res->generator, &next, &done, 0, 0);
 
         if(JS_IsException(ret)) {
           JSValue exception = JS_GetException(ctx);

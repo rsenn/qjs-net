@@ -27,6 +27,11 @@ extern const size_t minnet_ws_proto_funcs_size;
 extern JSClassID minnet_ws_class_id;
 
 static inline MinnetWebsocket*
+minnet_ws_data(JSContext* ctx, JSValueConst obj) {
+  return JS_GetOpaque2(ctx, obj, minnet_ws_class_id);
+}
+
+static inline MinnetWebsocket*
 lws_wsi_ws(struct lws* wsi) {
   JSObject* obj;
   MinnetWebsocket* ws = 0;

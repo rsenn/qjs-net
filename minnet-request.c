@@ -1,7 +1,7 @@
 #include "minnet.h"
-#include "minnet-websocket.h"
 #include "minnet-request.h"
 #include "jsutils.h"
+#include <cutils.h>
 
 JSClassID minnet_request_class_id;
 JSValue minnet_request_proto, minnet_request_ctor;
@@ -9,7 +9,7 @@ JSValue minnet_request_proto, minnet_request_ctor;
 enum { REQUEST_METHOD, REQUEST_SOCKET, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_BODY };
 
 void
-request_dump(MinnetRequest const* req) {
+request_dump(struct http_request const* req) {
   printf("\nMinnetRequest {\n\turi = %s", req->url);
   printf("\n\tpath = %s", req->path);
   printf("\n\ttype = %s", req->type);
@@ -21,41 +21,24 @@ request_dump(MinnetRequest const* req) {
 }
 
 void
-minnet_request_init(JSContext* ctx, MinnetRequest* req, const char* in, struct socket* ws) {
-  char buf[1024];
-  ssize_t len;
-
+request_init(struct http_request* req, const char* path, char* url, char* method) {
   memset(req, 0, sizeof(*req));
 
   req->ref_count = 0;
 
-  /* In contains the url part after the place the mount was  positioned at,
-   * eg, if positioned at "/dyn" and given  "/dyn/mypath", in will contain /mypath */
+  pstrcpy(req->path, sizeof(req->path), path);
 
-  lws_snprintf(req->path, sizeof(req->path), "%s", (const char*)in);
-
-  /*  if(lws_get_peer_simple(wsi, (char*)buf, sizeof(buf)))
-      req->peer = js_strdup(ctx, buf);*/
-
-  if((len = lws_hdr_copy(ws->lwsi, buf, sizeof(buf), WSI_TOKEN_GET_URI)) > 0) {
-    req->url = js_strndup(ctx, buf, len);
-    req->type = js_strdup(ctx, "GET");
-  } else if((len = lws_hdr_copy(ws->lwsi, buf, sizeof(buf), WSI_TOKEN_POST_URI)) > 0) {
-    req->url = js_strndup(ctx, buf, len);
-    req->type = js_strdup(ctx, "POST");
-  }
-
-  /* if(!buffer_alloc(&req->header, LWS_RECOMMENDED_MIN_HEADER_SPACE, ctx))
-     JS_ThrowOutOfMemory(ctx);*/
+  req->url = url;
+  req->type = method;
 }
 
-MinnetRequest*
-request_new(JSContext* ctx, const char* in, struct socket* ws) {
+struct http_request*
+request_new(JSContext* ctx) {
   MinnetRequest* req;
 
-  if((req = js_mallocz(ctx, sizeof(MinnetRequest))))
-    minnet_request_init(ctx, req, in, ws);
-
+  if((req = js_mallocz(ctx, sizeof(MinnetRequest)))) {
+    req->ref_count = 1;
+  }
   return req;
 }
 
@@ -114,20 +97,6 @@ fail:
   JS_FreeValue(ctx, obj);
   return JS_EXCEPTION;
 }
-
-JSValue
-minnet_request_new(JSContext* ctx, const char* in, struct socket* ws) {
-  MinnetRequest* req;
-
-  if(!(req = request_new(ctx, in, ws)))
-    return JS_EXCEPTION;
-
-  req->ref_count = 0;
-  req->read_only = TRUE;
-
-  return minnet_request_wrap(ctx, req);
-}
-
 JSValue
 minnet_request_wrap(JSContext* ctx, struct http_request* req) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_request_proto, minnet_request_class_id);
