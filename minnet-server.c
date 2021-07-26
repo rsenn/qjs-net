@@ -436,6 +436,17 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(lws_add_http_common_headers(wsi, resp->status, resp->type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
         return 1;
 
+      if(server_cb_body.func_obj) {
+        struct list_head* el;
+
+        list_for_each(el, &resp->headers) {
+          struct http_header* hdr = list_entry(el, struct http_header, link);
+
+          if((lws_add_http_header_by_name(wsi, (const unsigned char*)hdr->name, (const unsigned char*)hdr->value, strlen(hdr->value), &b.pos, b.end)))
+            JS_ThrowInternalError(server_cb_body.ctx, "lws_add_http_header_by_name failed");
+        }
+      }
+
       if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end))
         return 1;
 

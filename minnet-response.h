@@ -14,8 +14,8 @@ typedef struct http_state {
 } MinnetHttpState;
 
 typedef struct http_header {
-  struct list_head link;
   char *name, *value;
+  struct list_head link;
 } MinnetHttpHeader;
 
 typedef struct http_response {
