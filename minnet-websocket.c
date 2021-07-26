@@ -2,11 +2,16 @@
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 
-JSValue minnet_ws_proto;
+JSValue minnet_ws_proto, minnet_ws_ctor;
 JSClassID minnet_ws_class_id;
 
 enum { WEBSOCKET_FD, WEBSOCKET_ADDRESS, WEBSOCKET_FAMILY, WEBSOCKET_PORT, WEBSOCKET_PEER };
 enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
+
+struct wsi_opaque_user_data {
+  JSObject* obj;
+  struct socket* sock;
+};
 
 static JSValue
 minnet_ws_new(JSContext* ctx, struct lws* wsi) {
@@ -23,19 +28,34 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
 
   ws->lwsi = wsi;
   ws->ref_count = 1;
+  ws->handlers[0] = JS_UNDEFINED;
+  ws->handlers[1] = JS_UNDEFINED;
 
   JS_SetOpaque(ws_obj, ws);
 
-  lws_set_opaque_user_data(wsi, JS_VALUE_GET_OBJ(JS_DupValue(ctx, ws_obj)));
+  struct wsi_opaque_user_data* opaque = js_malloc(ctx, sizeof(struct wsi_opaque_user_data));
+  opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, ws_obj));
+  // opaque->sock = ws;
+
+  lws_set_opaque_user_data(wsi, opaque);
   //  lws_set_opaque_user_data(wsi,ws);
 
   return ws_obj;
 }
 
 MinnetWebsocket*
+lws_wsi_ws(struct lws* wsi) {
+  struct wsi_opaque_user_data* opaque;
+
+  if((opaque = lws_get_opaque_user_data(wsi)))
+    return JS_GetOpaque(JS_MKPTR(JS_TAG_OBJECT, opaque->obj), minnet_ws_class_id);
+
+  return 0;
+}
+
+MinnetWebsocket*
 minnet_ws_get(struct lws* wsi, JSContext* ctx) {
   JSValue ws_obj = minnet_ws_object(ctx, wsi);
-
   return JS_GetOpaque(ws_obj, minnet_ws_class_id);
 }
 
@@ -347,6 +367,14 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_getter, 0, WEBSOCKET_PEER, 0),
     JS_ALIAS_DEF("remote", "peer"),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebSocket", JS_PROP_CONFIGURABLE),
+
+};
+
+const JSCFunctionListEntry minnet_ws_static_funcs[] = {
+
+};
+
+const JSCFunctionListEntry minnet_ws_proto_defs[] = {
     JS_PROP_INT32_DEF("CLOSE_STATUS_NORMAL", LWS_CLOSE_STATUS_NORMAL, 0),
     JS_PROP_INT32_DEF("CLOSE_STATUS_GOINGAWAY", LWS_CLOSE_STATUS_GOINGAWAY, 0),
     JS_PROP_INT32_DEF("CLOSE_STATUS_PROTOCOL_ERR", LWS_CLOSE_STATUS_PROTOCOL_ERR, 0),
@@ -395,3 +423,5 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
 };
 
 const size_t minnet_ws_proto_funcs_size = countof(minnet_ws_proto_funcs);
+const size_t minnet_ws_static_funcs_size = countof(minnet_ws_static_funcs);
+const size_t minnet_ws_proto_defs_size = countof(minnet_ws_proto_defs);

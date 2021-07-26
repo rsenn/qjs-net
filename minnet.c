@@ -357,8 +357,19 @@ io_events(int events) {
     case POLLIN | POLLOUT: return "IN|OUT";
     case POLLIN: return "IN";
     case POLLOUT: return "OUT";
+    case 0: return "0";
   }
   return "";
+}
+static int
+io_parse_events(const char* str) {
+  int events = 0;
+
+  if(strstr(str, "IN"))
+    events |= POLLIN;
+  if(strstr(str, "OUT"))
+    events |= POLLOUT;
+  return events;
 }
 
 #define PIO (POLLIN | POLLOUT)
@@ -366,22 +377,18 @@ io_events(int events) {
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   struct pollfd x = {0, 0, 0};
-  struct lws_context* context;
-  int wr = READ_HANDLER, flags;
-  int fd, events, revents;
-  size_t seq, len;
-  intptr_t* values = (intptr_t*)JS_GetArrayBuffer(ctx, &len, func_data[0]);
-  assert(len == sizeof(intptr_t) * 5);
-  fd = values[0];
-  revents = values[2];
-  context = (void*)values[3];
-  seq = values[4];
-  if(argc >= 1)
-    JS_ToInt32(ctx, &wr, argv[0]);
-  flags = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+  struct lws_context* context = value2ptr(ctx, func_data[2]);
+  uint32_t fd, events, revents;
+  int32_t wr;
+  static int calls = 0;
 
-  if(!(events = (values[1] & PIO)))
-    values[1] = events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+  const char* io = JS_ToCString(ctx, func_data[1]);
+  revents = io_parse_events(io);
+
+  JS_ToUint32(ctx, &fd, func_data[0]);
+  JS_ToInt32(ctx, &wr, argv[0]);
+
+  events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
 
   if(!(revents & PIO)) {
     x.fd = fd;
@@ -395,17 +402,23 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     }
   }
 
-  // printf("\033[2K\rio_handler #%zu fd = %d, events = %s, revents = %s, context = %p\n", seq, x.fd, io_events(x.events), io_events(x.revents), context);
-  fflush(stdout);
+  if(++calls <= 100)
+    printf("io_handler #%i fd = %d, wr = %s, events = %s, revents = %s, context = %p\n", calls, fd, wr ? "W" : "R", io_events(events), io_events(revents), context);
+
   if(revents & PIO) {
     lws_service_fd(context, &x);
   }
-
-  /*if (calls <= 100)
-    printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
-         "%d %d]\n",
-         rw ? "writable" : "readable", calls, pfd.fd, pfd.events,
-         pfd.revents, args.fd, args.events, args.prev_events);*/
+  /*  if(++calls <= 100)
+      printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
+             "%d %d]\n",
+             wr == WRITE_HANDLER ? "writable" : "readable",
+             calls,
+             fd,
+             events,
+             revents,
+             x.fd,
+             x.events,
+             x.revents);*/
 
   return JS_UNDEFINED;
 }
@@ -419,11 +432,21 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   intptr_t values[] = {fd, events, 0, (intptr_t)context, seq};
   JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
-  //  printf("\033[2K\rmake_handler #%zu fd = %zd, events = 0x%04zx, revents = 0x%04zx, context = %p\n", values[4], values[0], values[1], values[2], (void*)values[3]);
+  printf("make_handler fd = %d, events = %s, context = %p\n", fd, io_events(events), context);
 
-  fflush(stdout);
-  JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
+  // JSValueConst data[] = {buffer /*, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
+  JSValue data[3] = {JS_NewUint32(ctx, fd), JS_NewString(ctx, io_events(events)), ptr2value(ctx, context)};
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
+}
+
+void
+minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
+  JSValue func = make_handler(ctx, args->fd, args->events | args->prev_events, wsi, 0);
+
+  out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, JS_DupValue(ctx, func), JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
+  out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, JS_DupValue(ctx, func), JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
+
+  JS_FreeValue(ctx, func);
 }
 
 JSValue
@@ -442,16 +465,6 @@ minnet_emit_this(struct callback_ws* cb, JSValueConst this_obj, int argc, JSValu
 JSValue
 minnet_emit(struct callback_ws* cb, int argc, JSValue* argv) {
   return minnet_emit_this(cb, cb->this_obj ? *cb->this_obj : JS_NULL, argc, argv);
-}
-
-void
-minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
-  JSValue func = make_handler(ctx, args->fd, args->events | args->prev_events, wsi, 0);
-
-  out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
-  out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
-
-  JS_FreeValue(ctx, func);
 }
 
 static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, minnet_ws_server),
@@ -498,12 +511,22 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   minnet_request_ctor = JS_NewCFunction2(ctx, minnet_request_constructor, "MinnetRequest", 0, JS_CFUNC_constructor, 0);
   JS_SetConstructor(ctx, minnet_request_ctor, minnet_request_proto);
 
+  if(m)
+    JS_SetModuleExport(ctx, m, "Request", minnet_request_ctor);
+
   // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
   minnet_ws_proto = JS_NewObject(ctx);
+  minnet_ws_ctor = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
+  JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
   JS_SetClassProto(ctx, minnet_ws_class_id, minnet_ws_proto);
+
+  JS_SetPropertyFunctionList(ctx, minnet_ws_ctor, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Socket", minnet_ws_ctor);
 
   return 0;
 }
@@ -515,6 +538,8 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   if(!m)
     return NULL;
   JS_AddModuleExport(ctx, m, "Response");
+  JS_AddModuleExport(ctx, m, "Request");
+  JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
   minnet_log_ctx = ctx;

@@ -208,7 +208,8 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
 static int
 callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  // JSContext* ctx = protocols[0].user;
+  JSValue ws_obj = JS_UNDEFINED;
+  MinnetWebsocket* ws = 0;
 
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT:
@@ -217,7 +218,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_ESTABLISHED: {
       if(server_cb_connect.func_obj) {
-        JSValue ws_obj = minnet_ws_object(server_cb_connect.ctx, wsi);
+        ws_obj = minnet_ws_object(server_cb_connect.ctx, wsi);
         minnet_emit(&server_cb_connect, 1, &ws_obj);
       }
       break;
@@ -227,7 +228,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       if(server_cb_close.func_obj && (!res || res->lwsi)) {
         // printf("callback CLOSED %d\n", lws_get_socket_fd(wsi));
-        JSValue ws_obj = minnet_ws_object(server_cb_close.ctx, wsi);
+        ws_obj = minnet_ws_object(server_cb_close.ctx, wsi);
         JSValue cb_argv[2] = {ws_obj, in ? JS_NewStringLen(server_cb_connect.ctx, in, len) : JS_UNDEFINED};
         minnet_emit(&server_cb_close, in ? 2 : 1, cb_argv);
       }
@@ -239,7 +240,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
     case LWS_CALLBACK_RECEIVE: {
       if(server_cb_message.func_obj) {
-        JSValue ws_obj = minnet_ws_object(server_cb_message.ctx, wsi);
+        ws_obj = minnet_ws_object(server_cb_message.ctx, wsi);
         JSValue msg = JS_NewStringLen(server_cb_message.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
         minnet_emit(&server_cb_message, 2, cb_argv);
@@ -248,7 +249,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
     case LWS_CALLBACK_RECEIVE_PONG: {
       if(server_cb_pong.func_obj) {
-        JSValue ws_obj = minnet_ws_object(server_cb_pong.ctx, wsi);
+        ws_obj = minnet_ws_object(server_cb_pong.ctx, wsi);
         JSValue msg = JS_NewArrayBufferCopy(server_cb_pong.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
         minnet_emit(&server_cb_pong, 2, cb_argv);
@@ -265,6 +266,8 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       struct lws_pollargs* args = in;
 
       if(server_cb_fd.func_obj) {
+
+        ws_obj = minnet_ws_object(server_cb_fd.ctx, wsi);
         JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
         minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
 
@@ -409,6 +412,8 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         }
       }
 
+      resp->read_only = TRUE;
+
       resp = minnet_response_data(ctx, resp_obj);
       assert(resp);
 
@@ -436,7 +441,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(lws_add_http_common_headers(wsi, resp->status, resp->type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
         return 1;
 
-      if(server_cb_body.func_obj) {
+      {
         struct list_head* el;
 
         list_for_each(el, &resp->headers) {
@@ -455,8 +460,6 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         JSValue ret = minnet_emit_this(&server_cb_body, ws_obj, 2, args);
 
         resp->generator = ret;
-      } else {
-        resp->state = (MinnetHttpState){.times = 0, .content_lines = 0, .budget = 10};
       }
 
       lws_callback_on_writable(wsi);
@@ -474,12 +477,10 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(server_cb_body.func_obj) {
         BOOL done = FALSE;
         JSValue next = JS_UNDEFINED;
-        // printf("res->iterator %s\n", JS_ToCString(ctx, res->iterator));
         JSValue ret = js_iterator_next(server_cb_body.ctx, res->generator, &next, &done, 0, 0);
 
         if(JS_IsException(ret)) {
           JSValue exception = JS_GetException(ctx);
-
           fprintf(stderr, "Exception: %s\n", JS_ToCString(ctx, exception));
           n = LWS_WRITE_HTTP_FINAL;
         } else if(!done) {
@@ -488,59 +489,15 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
             const char* str = JS_ToCStringLen(server_cb_body.ctx, &len, ret);
             buffer_append(&b, str, len);
             res->body.pos += len;
-
             if(len && str[len - 1] == '\n')
               len--;
-
-            // printf("Data: %.*s\n", (int)len, str);
-
             JS_FreeCString(ctx, str);
           }
-
         } else {
           n = LWS_WRITE_HTTP_FINAL;
         }
       } else {
-
-        if(!res || res->state.times > res->state.budget)
-          break;
-
-        if(res->state.times == res->state.budget)
-          n = LWS_WRITE_HTTP_FINAL;
-
-        if(!res->state.times) {
-          /*
-           * to work with http/2, we must take care about LWS_PRE
-           * valid behind the buffer we will send.
-           */
-          buffer_printf(&b,
-                        "<html>\n"
-                        "  <head>\n"
-                        "   <meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/>\n"
-                        " </head>\n"
-                        " <state>\n"
-                        "    <img src=\"/libwebsockets.org-logo.svg\"><br />\n"
-                        "   Dynamic content for '%s' from mountpoint.<br />\n"
-                        "   <br />\n",
-                        res->url); // ((MinnetRequest*)((char*)res - offsetof(struct http_request, rsp)))->path);
-        } else if(res->state.times < res->state.budget) {
-          /*
-           * after the first time, we create bulk content.
-           *
-           * Again we take care about LWS_PRE valid behind the
-           * buffer we will send.
-           */
-
-          while(buffer_OFFSET(&b) < 300) { buffer_printf(&b, "%d.%d: this is some content...<br />\n", res->state.times, res->state.content_lines++); }
-
-        } else {
-          buffer_printf(&b,
-                        "<br />"
-                        "</state>\n"
-                        "</html>\n");
-        }
-
-        res->state.times++;
+        printf("LWS_CALLBACK_HTTP_WRITEABLE unhandled\n");
       }
 
       if(lws_write(wsi, buffer_START(&b), buffer_OFFSET(&b), n) != buffer_OFFSET(&b))

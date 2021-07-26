@@ -349,7 +349,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_DEF("offset", minnet_response_get, minnet_response_set, RESPONSE_OFFSET),
-    JS_CGETSET_MAGIC_DEF("headers", minnet_response_get, minnet_response_set, RESPONSE_HEADERS),
+    JS_CGETSET_MAGIC_DEF("headers", minnet_response_get, 0, RESPONSE_HEADERS),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),
 };
 
