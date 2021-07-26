@@ -2,6 +2,7 @@
 #include "minnet-websocket.h"
 #include "minnet-response.h"
 #include "buffer.h"
+#include "jsutils.h"
 #include <cutils.h>
 
 JSClassID minnet_response_class_id;
@@ -33,7 +34,7 @@ response_zero(struct http_response* res) {
 }
 
 void
-response_init(MinnetResponse* res, const char* url, int32_t status, BOOL ok, const char* type) {
+response_init(struct http_response* res, const char* url, int32_t status, BOOL ok, const char* type) {
   memset(res, 0, sizeof(MinnetResponse));
 
   res->status = status;
@@ -44,7 +45,7 @@ response_init(MinnetResponse* res, const char* url, int32_t status, BOOL ok, con
 }
 
 void
-response_free(JSRuntime* rt, MinnetResponse* res) {
+response_free(JSRuntime* rt, struct http_response* res) {
   js_free_rt(rt, (void*)res->url);
   res->url = 0;
   js_free_rt(rt, (void*)res->type);
@@ -53,12 +54,12 @@ response_free(JSRuntime* rt, MinnetResponse* res) {
   buffer_free(&res->body, rt);
 }
 
-MinnetResponse*
+struct http_response*
 response_new(JSContext* ctx, const char* url, int32_t status, BOOL ok, const char* type) {
   MinnetResponse* res;
 
   if((res = js_mallocz(ctx, sizeof(MinnetResponse))))
-    response_init(res, url, status, ok, type);
+    response_init(res, js_strdup(ctx, url), status, ok, js_strdup(ctx, type));
 
   return res;
 }
@@ -74,7 +75,7 @@ minnet_response_object(JSContext* ctx, const char* url, int32_t status, BOOL ok,
 }
 
 JSValue
-minnet_response_wrap(JSContext* ctx, MinnetResponse* res) {
+minnet_response_wrap(JSContext* ctx, struct http_response* res) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_response_proto, minnet_response_class_id);
   if(JS_IsException(ret))
     return JS_EXCEPTION;
@@ -146,6 +147,50 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
+static JSValue
+minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+  MinnetResponse* resp;
+  JSValue ret = JS_UNDEFINED;
+  const char* str;
+  size_t len;
+  if(!(resp = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
+    return JS_EXCEPTION;
+
+  if(resp->read_only)
+    return JS_ThrowReferenceError(ctx, "Response object is read-only");
+
+  str = JS_ToCStringLen(ctx, &len, value);
+
+  switch(magic) {
+    case RESPONSE_STATUS: {
+      int32_t s;
+      if(!JS_ToInt32(ctx, &s, value))
+        resp->status = s;
+      break;
+    }
+    case RESPONSE_OK: {
+      resp->ok = JS_ToBool(ctx, value);
+      break;
+    }
+    case RESPONSE_URL: {
+      resp->url = js_strdup(ctx, str);
+      break;
+    }
+    case RESPONSE_TYPE: {
+      resp->type = js_strdup(ctx, str);
+      break;
+    }
+    case RESPONSE_OFFSET: {
+      uint64_t o;
+      if(!JS_ToIndex(ctx, &o, value))
+        resp->body.pos = resp->body.start + o;
+      break;
+    }
+  }
+  JS_FreeCString(ctx, str);
+  return ret;
+}
+
 JSValue
 minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
@@ -166,8 +211,21 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
   if(JS_IsException(obj))
     goto fail;
 
+  if(argc >= 1 && argc < 3) {
+
+    if(!js_is_nullish(argv[0]))
+      buffer_fromvalue(&resp->body, argv[0], ctx);
+
+    argc--;
+    argv++;
+  }
+
   for(i = 0; i < argc; i++) {
-    if(JS_IsString(argv[i])) {
+    if(JS_IsObject(argv[i]) && !JS_IsNull(argv[i])) {
+      js_copy_properties(ctx, obj, argv[i], JS_GPN_STRING_MASK);
+      argc--;
+      argv++;
+    } else if(JS_IsString(argv[i])) {
       const char* str = JS_ToCString(ctx, argv[i]);
       if(!resp->url)
         resp->url = js_strdup(ctx, str);

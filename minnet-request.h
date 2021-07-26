@@ -12,7 +12,6 @@ typedef struct http_request {
   int ref_count;
   BOOL read_only;
   char *type, *url;
-  //  struct socket* ws;
   struct byte_buffer header, body;
   char path[256];
 } MinnetRequest;
@@ -28,7 +27,6 @@ JSValue minnet_request_wrap(JSContext*, struct http_request* req);
 extern JSClassDef minnet_request_class;
 extern JSValue minnet_request_proto, minnet_request_ctor;
 extern JSClassID minnet_request_class_id;
-
 extern const JSCFunctionListEntry minnet_request_proto_funcs[];
 extern const size_t minnet_request_proto_funcs_size;
 

@@ -79,7 +79,7 @@ js_is_iterator(JSContext* ctx, JSValueConst obj) {
 }
 
 JSValue
-js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p) {
+js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
   JSValue fn, result, done, value;
 
   if(!JS_IsObject(obj))
@@ -97,7 +97,7 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p) 
       return JS_ThrowTypeError(ctx, "object.next is not a function");
   }
 
-  result = JS_Call(ctx, fn, obj, 0, 0);
+  result = JS_Call(ctx, fn, obj, argc, argv);
   // JS_FreeValue(ctx, fn);
 
   if(JS_IsException(result))

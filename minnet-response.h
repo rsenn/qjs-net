@@ -13,6 +13,7 @@ typedef struct http_state {
 } MinnetHttpState;
 
 typedef struct http_response {
+  BOOL read_only;
   const char* url;
   int status;
   BOOL ok;
@@ -22,16 +23,15 @@ typedef struct http_response {
     JSValue iterator;
   };
   struct byte_buffer body;
-  struct http_request* req;
 } MinnetResponse;
 
 void response_dump(struct http_response const*);
 void response_zero(struct http_response*);
-void response_init(MinnetResponse*, const char* url, int32_t status, BOOL ok, const char* type);
-void response_free(JSRuntime*, MinnetResponse* res);
-MinnetResponse* response_new(JSContext*, const char* url, int32_t status, BOOL ok, const char* type);
+void response_init(struct http_response*, const char* url, int32_t status, BOOL ok, const char* type);
+void response_free(JSRuntime*, struct http_response* res);
+struct http_response* response_new(JSContext*, const char* url, int32_t status, BOOL ok, const char* type);
 JSValue minnet_response_object(JSContext*, const char* url, int32_t status, BOOL ok, const char* type);
-JSValue minnet_response_wrap(JSContext*, MinnetResponse* res);
+JSValue minnet_response_wrap(JSContext*, struct http_response* res);
 JSValue minnet_response_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
 void minnet_response_finalizer(JSRuntime*, JSValue val);
 

@@ -136,6 +136,18 @@ buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* c
   return 1;
 }
 
+static inline int
+buffer_fromvalue(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
+  if(buffer_fromarraybuffer(buf, value, ctx)) {
+    size_t len;
+    const char* str = JS_ToCStringLen(ctx, &len, value);
+
+    buf->pos = buf->start = (uint8_t*)str;
+    buf->end = buf->start + len;
+  }
+  return 0;
+}
+
 static inline void
 buffer_dump(const char* n, struct byte_buffer const* buf) {
   fprintf(stderr, "%s\t{ pos = %zu, size = %zu }\n", n, buf->pos - buf->start, buf->end - buf->start);

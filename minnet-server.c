@@ -376,17 +376,19 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       break;
     }
     case LWS_CALLBACK_HTTP: {
-      JSValue request = minnet_request_new(ctx, in, ws);
-      MinnetRequest* req = minnet_request_data(ctx, request);
-
+      JSValue req_obj = minnet_request_new(ctx, in, ws);
+      MinnetRequest* req = minnet_request_data(ctx, req_obj);
+      MinnetResponse* resp = 0;
       JSValue ret = JS_UNDEFINED, resp_obj = minnet_response_object(ctx, req->url, 200, TRUE, "text/html");
+
+      assert(req);
 
       ++req->ref_count;
 
       MinnetBuffer b = BUFFER(buf);
 
       if(server_cb_http.func_obj) {
-        JSValue args[2] = {request, resp_obj};
+        JSValue args[2] = {req_obj, resp_obj};
         ret = minnet_emit(&server_cb_http, 2, args);
         if(JS_IsObject(ret) && minnet_response_data(ctx, ret)) {
           JS_FreeValue(ctx, resp_obj);
@@ -397,22 +399,11 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         }
       }
 
-      /*    if(!JS_IsUndefined(ret)) {
-            int32_t code;
+      resp = minnet_response_data(ctx, resp_obj);
+      assert(resp);
 
-            if((ws->rsp = minnet_response_data(ctx, ret))) {
-
-            } else if(!JS_ToInt32(ctx, &code, ret)) {
-              if(code > 0)
-                return code;
-            }
-          }*/
-      /*      if(!(ws->rsp = minnet_response_data(ctx, resp_obj)))
-              ws->rsp = response_new(ctx, req->url, 200, TRUE, "text/html");*/
-      MinnetResponse* resp = minnet_response_data(ctx, resp_obj);
-
-      if(resp)
-        ws->response = JS_DupValue(ctx, resp_obj);
+      ws->request = JS_DupValue(ctx, req_obj);
+      ws->response = JS_DupValue(ctx, resp_obj);
 
       /*
        * prepare and write http headers... with regards to content-
@@ -462,7 +453,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         BOOL done = FALSE;
         JSValue next = JS_UNDEFINED;
         // printf("res->iterator %s\n", JS_ToCString(ctx, res->iterator));
-        JSValue ret = js_iterator_next(server_cb_body.ctx, res->iterator, &next, &done);
+        JSValue ret = js_iterator_next(server_cb_body.ctx, res->iterator, &next, &done, 0, 0);
 
         if(JS_IsException(ret)) {
           JSValue exception = JS_GetException(ctx);

@@ -20,7 +20,7 @@ JSValue js_function_bound(JSContext*, JSValue this_val, int argc, JSValue argv[]
 JSValue js_function_bind(JSContext*, JSValue func, int argc, JSValue argv[]);
 JSValue js_function_bind_1(JSContext*, JSValue func, JSValue arg);
 BOOL js_is_iterator(JSContext*, JSValue obj);
-JSValue js_iterator_next(JSContext*, JSValue obj, JSValue* next, BOOL* done_p);
+JSValue js_iterator_next(JSContext*, JSValue obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValue dst, JSValue src, int flags);
 
 typedef union pointer {
@@ -86,6 +86,11 @@ static inline JSValue
 ptr32value(JSContext* ctx, const void* ptr, int index) {
   Pointer r = {(void*)ptr};
   return JS_NewUint32(ctx, r.u32[index]);
+}
+
+static inline BOOL
+js_is_nullish(JSValueConst value) {
+  return JS_IsNull(value) || JS_IsUndefined(value);
 }
 
 #endif /* MINNET_JS_UTILS_H */

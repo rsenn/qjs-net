@@ -91,11 +91,16 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
       req->url = js_strdup(ctx, str);
       JS_FreeCString(ctx, str);
     }
+    argc--;
+    argv++;
   }
 
-  if(argc >= 2) {
-    if(JS_IsObject(argv[1]) && !JS_IsNull(argv[1]))
-      js_copy_properties(ctx, obj, argv[1], JS_GPN_STRING_MASK);
+  if(argc >= 1) {
+    if(JS_IsObject(argv[0]) && !JS_IsNull(argv[0])) {
+      js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);
+      argc--;
+      argv++;
+    }
   }
 
   req->read_only = TRUE;
@@ -226,6 +231,9 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
       break;
     }
   }
+
+  JS_FreeCString(ctx, str);
+
   return ret;
 }
 
