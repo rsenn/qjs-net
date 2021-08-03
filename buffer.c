@@ -28,6 +28,33 @@ buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   return FALSE;
 }
 
+ssize_t
+buffer_write(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) {
+  ssize_t ret = -1;
+  if((size_t)buffer_AVAIL(buf) < n) {
+    if(!buffer_realloc(buf, buffer_OFFSET(buf) + n + 1, ctx))
+      return ret;
+  }
+  memcpy(buf->pos, x, n);
+  buf->pos[n] = '\0';
+  buf->pos += n;
+  return n;
+}
+
+void
+buffer_free(struct byte_buffer* buf, JSRuntime* rt) {
+  uint8_t* start = buf->start;
+  if(start == (uint8_t*)&buf[1]) {
+    js_free_rt(rt, buf);
+  } else {
+    js_free_rt(rt, buf->start);
+    buf->start = 0;
+    buf->pos = 0;
+    buf->end = 0;
+    js_free_rt(rt, buf);
+  }
+}
+
 BOOL
 buffer_append(struct byte_buffer* buf, const char* x, size_t n) {
   assert((size_t)buffer_AVAIL(buf) >= n);
@@ -101,6 +128,25 @@ buffer_fromvalue(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
     buf->end = buf->start + len;
   }
   return 0;
+}
+
+JSValue
+buffer_tostring(struct byte_buffer const* buf, JSContext* ctx) {
+  void* ptr = buf->start;
+  size_t len = buf->pos - buf->start;
+  return JS_NewStringLen(ctx, ptr, len);
+}
+
+void
+buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
+  struct byte_buffer* buf = opaque;
+}
+
+JSValue
+buffer_toarraybuffer(struct byte_buffer const* buf, JSContext* ctx) {
+  void* ptr = buf->start;
+  size_t len = buf->end - buf->start;
+  return JS_NewArrayBuffer(ctx, ptr, len, buffer_finalizer, (void*)buf, FALSE);
 }
 
 void
