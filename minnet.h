@@ -66,6 +66,7 @@ JSValue minnet_emit(const struct callback_ws*, int argc, JSValue* argv);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);
 void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
+const char* lws_callback_name(int);
 
 static inline size_t
 byte_chr(const char* str, size_t len, char c) {

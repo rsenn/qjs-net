@@ -108,7 +108,7 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
     js_free(ctx, (void*)m->lws.origin);
 
   if(m->lws.def)
-    JS_FreeCString(ctx, m->lws.def);
+    js_free(ctx, m->lws.def);
 
   js_free(ctx, (void*)m);
 }
@@ -264,6 +264,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
+      printf("lws_callback_on_writable %d\n", lws_get_socket_fd(wsi));
       lws_callback_on_writable(wsi);
       break;
     }
@@ -502,6 +503,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
             if(lws_http_transaction_completed(wsi))
               return -1;
           }
+          printf("lws_callback_on_writable %d\n", lws_get_socket_fd(wsi));
           lws_callback_on_writable(wsi);
         }
 
@@ -577,8 +579,10 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         //   lws_write(wsi, "unhandled\n", strlen("unhandled\n"), n);
       }
 
-      if(!done)
+      if(!done) {
+        printf("lws_callback_on_writable %d\n", lws_get_socket_fd(wsi));
         lws_callback_on_writable(wsi);
+      }
 
       /*
        * HTTP/1.0 no keepalive: close network connection

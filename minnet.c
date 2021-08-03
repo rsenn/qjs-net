@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <string.h>
 #include <curl/curl.h>
+#include <ctype.h>
 #include <sys/time.h>
 
 #ifdef JS_SHARED_LIBRARY
@@ -18,20 +19,33 @@
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
-JSValue minnet_log = JS_UNDEFINED, minnet_log_this = JS_UNDEFINED;
+JSValue minnet_log_cb = JS_UNDEFINED, minnet_log_this = JS_UNDEFINED;
+int32_t minnet_log_level = 0;
 JSContext* minnet_log_ctx = 0;
 BOOL minnet_exception = FALSE;
 
 static void
 lws_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
-    if(JS_IsUndefined(minnet_log))
-      js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log);
+    if(JS_IsUndefined(minnet_log_cb))
+      js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log_cb);
 
-    if(JS_IsFunction(minnet_log_ctx, minnet_log)) {
-      size_t len = strlen(line);
-      JSValueConst argv[2] = {JS_NewString(minnet_log_ctx, "minnet"), JS_NewStringLen(minnet_log_ctx, line, len > 0 && line[len - 1] == '\n' ? len - 1 : len)};
-      JSValue ret = JS_Call(minnet_log_ctx, minnet_log, minnet_log_this, 2, argv);
+    if(JS_IsFunction(minnet_log_ctx, minnet_log_cb)) {
+      size_t n = 0, len = strlen(line);
+
+      if(len > 0 && line[0] == '[') {
+        if((n = byte_chr(line, len, ']')) < len)
+          n++;
+        while(n < len && isspace(line[n])) n++;
+        if(n + 1 < len && line[n + 1] == ':')
+          n += 2;
+        while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
+      }
+      if(len > 0 && line[len - 1] == '\n')
+        len--;
+
+      JSValueConst argv[2] = {JS_NewInt32(minnet_log_ctx, level), JS_NewStringLen(minnet_log_ctx, line + n, len - n)};
+      JSValue ret = JS_Call(minnet_log_ctx, minnet_log_cb, minnet_log_this, 2, argv);
 
       if(JS_IsException(ret))
         minnet_exception = TRUE;
@@ -43,118 +57,6 @@ lws_log_callback(int level, const char* line) {
   }
 }
 
-static const char*
-lws_callback_name(int reason) {
-  return ((const char* const[]){
-      "LWS_CALLBACK_ESTABLISHED",
-      "LWS_CALLBACK_CLIENT_CONNECTION_ERROR",
-      "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH",
-      "LWS_CALLBACK_CLIENT_ESTABLISHED",
-      "LWS_CALLBACK_CLOSED",
-      "LWS_CALLBACK_CLOSED_HTTP",
-      "LWS_CALLBACK_RECEIVE",
-      "LWS_CALLBACK_RECEIVE_PONG",
-      "LWS_CALLBACK_CLIENT_RECEIVE",
-      "LWS_CALLBACK_CLIENT_RECEIVE_PONG",
-      "LWS_CALLBACK_CLIENT_WRITEABLE",
-      "LWS_CALLBACK_SERVER_WRITEABLE",
-      "LWS_CALLBACK_HTTP",
-      "LWS_CALLBACK_HTTP_BODY",
-      "LWS_CALLBACK_HTTP_BODY_COMPLETION",
-      "LWS_CALLBACK_HTTP_FILE_COMPLETION",
-      "LWS_CALLBACK_HTTP_WRITEABLE",
-      "LWS_CALLBACK_FILTER_NETWORK_CONNECTION",
-      "LWS_CALLBACK_FILTER_HTTP_CONNECTION",
-      "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED",
-      "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION",
-      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS",
-      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS",
-      "LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION",
-      "LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER",
-      "LWS_CALLBACK_CONFIRM_EXTENSION_OKAY",
-      "LWS_CALLBACK_CLIENT_CONFIRM_EXTENSION_SUPPORTED",
-      "LWS_CALLBACK_PROTOCOL_INIT",
-      "LWS_CALLBACK_PROTOCOL_DESTROY",
-      "LWS_CALLBACK_WSI_CREATE",
-      "LWS_CALLBACK_WSI_DESTROY",
-      "LWS_CALLBACK_GET_THREAD_ID",
-      "LWS_CALLBACK_ADD_POLL_FD",
-      "LWS_CALLBACK_DEL_POLL_FD",
-      "LWS_CALLBACK_CHANGE_MODE_POLL_FD",
-      "LWS_CALLBACK_LOCK_POLL",
-      "LWS_CALLBACK_UNLOCK_POLL",
-      "LWS_CALLBACK_OPENSSL_CONTEXT_REQUIRES_PRIVATE_KEY",
-      "LWS_CALLBACK_WS_PEER_INITIATED_CLOSE",
-      "LWS_CALLBACK_WS_EXT_DEFAULTS",
-      "LWS_CALLBACK_CGI",
-      "LWS_CALLBACK_CGI_TERMINATED",
-      "LWS_CALLBACK_CGI_STDIN_DATA",
-      "LWS_CALLBACK_CGI_STDIN_COMPLETED",
-      "LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP",
-      "LWS_CALLBACK_CLOSED_CLIENT_HTTP",
-      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP",
-      "LWS_CALLBACK_COMPLETED_CLIENT_HTTP",
-      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ",
-      "LWS_CALLBACK_HTTP_BIND_PROTOCOL",
-      "LWS_CALLBACK_HTTP_DROP_PROTOCOL",
-      "LWS_CALLBACK_CHECK_ACCESS_RIGHTS",
-      "LWS_CALLBACK_PROCESS_HTML",
-      "LWS_CALLBACK_ADD_HEADERS",
-      "LWS_CALLBACK_SESSION_INFO",
-      "LWS_CALLBACK_GS_EVENT",
-      "LWS_CALLBACK_HTTP_PMO",
-      "LWS_CALLBACK_CLIENT_HTTP_WRITEABLE",
-      "LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION",
-      "LWS_CALLBACK_RAW_RX",
-      "LWS_CALLBACK_RAW_CLOSE",
-      "LWS_CALLBACK_RAW_WRITEABLE",
-      "LWS_CALLBACK_RAW_ADOPT",
-      "LWS_CALLBACK_RAW_ADOPT_FILE",
-      "LWS_CALLBACK_RAW_RX_FILE",
-      "LWS_CALLBACK_RAW_WRITEABLE_FILE",
-      "LWS_CALLBACK_RAW_CLOSE_FILE",
-      "LWS_CALLBACK_SSL_INFO",
-      0,
-      "LWS_CALLBACK_CHILD_CLOSING",
-      "LWS_CALLBACK_CGI_PROCESS_ATTACH",
-      "LWS_CALLBACK_EVENT_WAIT_CANCELLED",
-      "LWS_CALLBACK_VHOST_CERT_AGING",
-      "LWS_CALLBACK_TIMER",
-      "LWS_CALLBACK_VHOST_CERT_UPDATE",
-      "LWS_CALLBACK_CLIENT_CLOSED",
-      "LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL",
-      "LWS_CALLBACK_WS_SERVER_BIND_PROTOCOL",
-      "LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL",
-      "LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL",
-      "LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_FILE_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_FILE_DROP_PROTOCOL",
-      "LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL",
-      "LWS_CALLBACK_HTTP_CONFIRM_UPGRADE",
-      0,
-      0,
-      "LWS_CALLBACK_RAW_PROXY_CLI_RX",
-      "LWS_CALLBACK_RAW_PROXY_SRV_RX",
-      "LWS_CALLBACK_RAW_PROXY_CLI_CLOSE",
-      "LWS_CALLBACK_RAW_PROXY_SRV_CLOSE",
-      "LWS_CALLBACK_RAW_PROXY_CLI_WRITEABLE",
-      "LWS_CALLBACK_RAW_PROXY_SRV_WRITEABLE",
-      "LWS_CALLBACK_RAW_PROXY_CLI_ADOPT",
-      "LWS_CALLBACK_RAW_PROXY_SRV_ADOPT",
-      "LWS_CALLBACK_RAW_PROXY_CLI_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_PROXY_SRV_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_PROXY_CLI_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_PROXY_SRV_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_CONNECTED",
-      "LWS_CALLBACK_VERIFY_BASIC_AUTHORIZATION",
-      "LWS_CALLBACK_WSI_TX_CREDIT_GET",
-      "LWS_CALLBACK_CLIENT_HTTP_REDIRECT",
-      "LWS_CALLBACK_CONNECTING",
-  })[reason];
-}
-
 int
 minnet_lws_unhandled(const char* handler, int reason) {
   printf("Unhandled %s client event: %i %s\n", handler, reason, lws_callback_name(reason));
@@ -163,15 +65,15 @@ minnet_lws_unhandled(const char* handler, int reason) {
 
 /*static JSValue
 get_log(JSContext* ctx, JSValueConst this_val) {
-  return JS_DupValue(ctx, minnet_log);
+  return JS_DupValue(ctx, minnet_log_cb);
 }*/
 
 static JSValue
 set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst thisObj) {
-  JSValue ret = minnet_log;
+  JSValue ret = minnet_log_cb;
 
   minnet_log_ctx = ctx;
-  minnet_log = JS_DupValue(ctx, value);
+  minnet_log_cb = JS_DupValue(ctx, value);
   if(!JS_IsUndefined(minnet_log_this) || !JS_IsNull(minnet_log_this))
     JS_FreeValue(ctx, minnet_log_this);
 
@@ -182,7 +84,15 @@ set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst 
 
 static JSValue
 minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  return set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
+JSValue ret;
+  if(argc >= 1 && JS_IsNumber(argv[0])) {
+    JS_ToInt32(ctx, &minnet_log_level, argv[0]);
+    argc--;
+    argv++;
+  }
+  ret= set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
+  lws_set_log_level(minnet_log_level, lws_log_callback);
+  return ret;
 }
 
 static JSValue
@@ -471,11 +381,26 @@ minnet_emit(const struct callback_ws* cb, int argc, JSValue* argv) {
   return minnet_emit_this(cb, cb->this_obj /* ? *cb->this_obj : JS_NULL*/, argc, argv);
 }
 
-static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, minnet_ws_server),
-                                                    JS_CFUNC_DEF("client", 1, minnet_ws_client),
-                                                    JS_CFUNC_DEF("fetch", 1, minnet_fetch),
-                                                    // JS_CGETSET_DEF("log", get_log, set_log),
-                                                    JS_CFUNC_DEF("setLog", 1, minnet_set_log)};
+static const JSCFunctionListEntry minnet_funcs[] = {
+    JS_CFUNC_DEF("server", 1, minnet_ws_server),
+    JS_CFUNC_DEF("client", 1, minnet_ws_client),
+    JS_CFUNC_DEF("fetch", 1, minnet_fetch),
+    // JS_CGETSET_DEF("log", get_log, set_log),
+    JS_CFUNC_DEF("setLog", 1, minnet_set_log),
+    JS_PROP_INT32_DEF("LLL_ERR", LLL_ERR, 0),
+    JS_PROP_INT32_DEF("LLL_WARN", LLL_WARN, 0),
+    JS_PROP_INT32_DEF("LLL_NOTICE", LLL_NOTICE, 0),
+    JS_PROP_INT32_DEF("LLL_INFO", LLL_INFO, 0),
+    JS_PROP_INT32_DEF("LLL_DEBUG", LLL_DEBUG, 0),
+    JS_PROP_INT32_DEF("LLL_PARSER", LLL_PARSER, 0),
+    JS_PROP_INT32_DEF("LLL_HEADER", LLL_HEADER, 0),
+    JS_PROP_INT32_DEF("LLL_EXT", LLL_EXT, 0),
+    JS_PROP_INT32_DEF("LLL_CLIENT", LLL_CLIENT, 0),
+    JS_PROP_INT32_DEF("LLL_LATENCY", LLL_LATENCY, 0),
+    JS_PROP_INT32_DEF("LLL_USER", LLL_USER, 0),
+    JS_PROP_INT32_DEF("LLL_THREAD", LLL_THREAD, 0),
+    JS_PROP_INT32_DEF("LLL_ALL", ~((~0u) << LLL_COUNT), 0),
+};
 
 void
 value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
@@ -548,7 +473,119 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
 
   minnet_log_ctx = ctx;
 
-  lws_set_log_level(LLL_USER | LLL_ERR | LLL_WARN | LLL_NOTICE, lws_log_callback);
+  lws_set_log_level(minnet_log_level, lws_log_callback);
 
   return m;
+}
+
+const char*
+lws_callback_name(int reason) {
+  return ((const char* const[]){
+      "LWS_CALLBACK_ESTABLISHED",
+      "LWS_CALLBACK_CLIENT_CONNECTION_ERROR",
+      "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH",
+      "LWS_CALLBACK_CLIENT_ESTABLISHED",
+      "LWS_CALLBACK_CLOSED",
+      "LWS_CALLBACK_CLOSED_HTTP",
+      "LWS_CALLBACK_RECEIVE",
+      "LWS_CALLBACK_RECEIVE_PONG",
+      "LWS_CALLBACK_CLIENT_RECEIVE",
+      "LWS_CALLBACK_CLIENT_RECEIVE_PONG",
+      "LWS_CALLBACK_CLIENT_WRITEABLE",
+      "LWS_CALLBACK_SERVER_WRITEABLE",
+      "LWS_CALLBACK_HTTP",
+      "LWS_CALLBACK_HTTP_BODY",
+      "LWS_CALLBACK_HTTP_BODY_COMPLETION",
+      "LWS_CALLBACK_HTTP_FILE_COMPLETION",
+      "LWS_CALLBACK_HTTP_WRITEABLE",
+      "LWS_CALLBACK_FILTER_NETWORK_CONNECTION",
+      "LWS_CALLBACK_FILTER_HTTP_CONNECTION",
+      "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED",
+      "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION",
+      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS",
+      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS",
+      "LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION",
+      "LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER",
+      "LWS_CALLBACK_CONFIRM_EXTENSION_OKAY",
+      "LWS_CALLBACK_CLIENT_CONFIRM_EXTENSION_SUPPORTED",
+      "LWS_CALLBACK_PROTOCOL_INIT",
+      "LWS_CALLBACK_PROTOCOL_DESTROY",
+      "LWS_CALLBACK_WSI_CREATE",
+      "LWS_CALLBACK_WSI_DESTROY",
+      "LWS_CALLBACK_GET_THREAD_ID",
+      "LWS_CALLBACK_ADD_POLL_FD",
+      "LWS_CALLBACK_DEL_POLL_FD",
+      "LWS_CALLBACK_CHANGE_MODE_POLL_FD",
+      "LWS_CALLBACK_LOCK_POLL",
+      "LWS_CALLBACK_UNLOCK_POLL",
+      "LWS_CALLBACK_OPENSSL_CONTEXT_REQUIRES_PRIVATE_KEY",
+      "LWS_CALLBACK_WS_PEER_INITIATED_CLOSE",
+      "LWS_CALLBACK_WS_EXT_DEFAULTS",
+      "LWS_CALLBACK_CGI",
+      "LWS_CALLBACK_CGI_TERMINATED",
+      "LWS_CALLBACK_CGI_STDIN_DATA",
+      "LWS_CALLBACK_CGI_STDIN_COMPLETED",
+      "LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP",
+      "LWS_CALLBACK_CLOSED_CLIENT_HTTP",
+      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP",
+      "LWS_CALLBACK_COMPLETED_CLIENT_HTTP",
+      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ",
+      "LWS_CALLBACK_HTTP_BIND_PROTOCOL",
+      "LWS_CALLBACK_HTTP_DROP_PROTOCOL",
+      "LWS_CALLBACK_CHECK_ACCESS_RIGHTS",
+      "LWS_CALLBACK_PROCESS_HTML",
+      "LWS_CALLBACK_ADD_HEADERS",
+      "LWS_CALLBACK_SESSION_INFO",
+      "LWS_CALLBACK_GS_EVENT",
+      "LWS_CALLBACK_HTTP_PMO",
+      "LWS_CALLBACK_CLIENT_HTTP_WRITEABLE",
+      "LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION",
+      "LWS_CALLBACK_RAW_RX",
+      "LWS_CALLBACK_RAW_CLOSE",
+      "LWS_CALLBACK_RAW_WRITEABLE",
+      "LWS_CALLBACK_RAW_ADOPT",
+      "LWS_CALLBACK_RAW_ADOPT_FILE",
+      "LWS_CALLBACK_RAW_RX_FILE",
+      "LWS_CALLBACK_RAW_WRITEABLE_FILE",
+      "LWS_CALLBACK_RAW_CLOSE_FILE",
+      "LWS_CALLBACK_SSL_INFO",
+      0,
+      "LWS_CALLBACK_CHILD_CLOSING",
+      "LWS_CALLBACK_CGI_PROCESS_ATTACH",
+      "LWS_CALLBACK_EVENT_WAIT_CANCELLED",
+      "LWS_CALLBACK_VHOST_CERT_AGING",
+      "LWS_CALLBACK_TIMER",
+      "LWS_CALLBACK_VHOST_CERT_UPDATE",
+      "LWS_CALLBACK_CLIENT_CLOSED",
+      "LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL",
+      "LWS_CALLBACK_WS_SERVER_BIND_PROTOCOL",
+      "LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL",
+      "LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL",
+      "LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_FILE_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_FILE_DROP_PROTOCOL",
+      "LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL",
+      "LWS_CALLBACK_HTTP_CONFIRM_UPGRADE",
+      0,
+      0,
+      "LWS_CALLBACK_RAW_PROXY_CLI_RX",
+      "LWS_CALLBACK_RAW_PROXY_SRV_RX",
+      "LWS_CALLBACK_RAW_PROXY_CLI_CLOSE",
+      "LWS_CALLBACK_RAW_PROXY_SRV_CLOSE",
+      "LWS_CALLBACK_RAW_PROXY_CLI_WRITEABLE",
+      "LWS_CALLBACK_RAW_PROXY_SRV_WRITEABLE",
+      "LWS_CALLBACK_RAW_PROXY_CLI_ADOPT",
+      "LWS_CALLBACK_RAW_PROXY_SRV_ADOPT",
+      "LWS_CALLBACK_RAW_PROXY_CLI_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_PROXY_SRV_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_PROXY_CLI_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_PROXY_SRV_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_CONNECTED",
+      "LWS_CALLBACK_VERIFY_BASIC_AUTHORIZATION",
+      "LWS_CALLBACK_WSI_TX_CREDIT_GET",
+      "LWS_CALLBACK_CLIENT_HTTP_REDIRECT",
+      "LWS_CALLBACK_CONNECTING",
+  })[reason];
 }
