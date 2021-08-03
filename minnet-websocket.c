@@ -61,10 +61,10 @@ minnet_ws_get(struct lws* wsi, JSContext* ctx) {
 
 JSValue
 minnet_ws_object(JSContext* ctx, struct lws* wsi) {
-  JSObject* obj;
+  struct wsi_opaque_user_data* opaque;
 
-  if((obj = lws_get_opaque_user_data(wsi))) {
-    JSValue ws_obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, obj));
+  if((opaque = lws_get_opaque_user_data(wsi))) {
+    JSValue ws_obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, opaque->obj));
     MinnetWebsocket* ws = JS_GetOpaque2(ctx, ws_obj, minnet_ws_class_id);
 
     if(!ws)

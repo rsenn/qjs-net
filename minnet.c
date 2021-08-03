@@ -18,14 +18,14 @@
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
-JSValue minnet_log, minnet_log_this;
+JSValue minnet_log = JS_UNDEFINED, minnet_log_this = JS_UNDEFINED;
 JSContext* minnet_log_ctx = 0;
 BOOL minnet_exception = FALSE;
 
 static void
 lws_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
-    if(JS_VALUE_GET_TAG(minnet_log) == 0 && JS_VALUE_GET_TAG(minnet_log_this) == 0)
+    if(JS_IsUndefined(minnet_log))
       js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log);
 
     if(JS_IsFunction(minnet_log_ctx, minnet_log)) {
@@ -402,10 +402,14 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     }
   }
 
-  if(++calls <= 100)
-    printf("io_handler #%i fd = %d, wr = %s, events = %s, revents = %s, context = %p\n", calls, fd, wr ? "W" : "R", io_events(events), io_events(revents), context);
+  //  if(++calls <= 100)
+  // printf("io_handler #%i fd = %d, wr = %s, events = %s, revents = %s, context = %p\n", ++calls, fd, wr ? "W" : "R", io_parse_events(io), io_events(revents), context);
 
   if(revents & PIO) {
+    x.fd = fd;
+    x.events = events;
+    x.revents = revents;
+
     lws_service_fd(context, &x);
   }
   /*  if(++calls <= 100)
@@ -432,9 +436,8 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   intptr_t values[] = {fd, events, 0, (intptr_t)context, seq};
   JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
-  printf("make_handler fd = %d, events = %s, context = %p\n", fd, io_events(events), context);
+  // printf("make_handler fd = %d, events = %s, context = %p\n", fd, io_events(events), context);
 
-  // JSValueConst data[] = {buffer /*, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
   JSValue data[3] = {JS_NewUint32(ctx, fd), JS_NewString(ctx, io_events(events)), ptr2value(ctx, context)};
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
 }
@@ -450,21 +453,21 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
 }
 
 JSValue
-minnet_emit_this(struct callback_ws* cb, JSValueConst this_obj, int argc, JSValue* argv) {
-  if(!cb->func_obj)
+minnet_emit_this(const struct callback_ws* cb, JSValueConst this_obj, int argc, JSValue* argv) {
+  if(!cb->ctx)
     return JS_UNDEFINED;
 
   size_t len;
-  const char* str = JS_ToCStringLen(cb->ctx, &len, *cb->func_obj);
-  printf("\nemit [%d] %.*s\n", argc, (int)((const char*)memchr(str, '{', len) - str), str);
+  const char* str = JS_ToCStringLen(cb->ctx, &len, cb->func_obj);
+  // printf("emit %s [%d] \"%.*s\"\n", cb->name, argc, (int)((const char*)memchr(str, '{', len) - str), str);
   JS_FreeCString(cb->ctx, str);
 
-  return JS_Call(cb->ctx, *cb->func_obj, this_obj, argc, argv);
+  return JS_Call(cb->ctx, cb->func_obj, this_obj, argc, argv);
 }
 
 JSValue
-minnet_emit(struct callback_ws* cb, int argc, JSValue* argv) {
-  return minnet_emit_this(cb, cb->this_obj ? *cb->this_obj : JS_NULL, argc, argv);
+minnet_emit(const struct callback_ws* cb, int argc, JSValue* argv) {
+  return minnet_emit_this(cb, cb->this_obj /* ? *cb->this_obj : JS_NULL*/, argc, argv);
 }
 
 static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, minnet_ws_server),

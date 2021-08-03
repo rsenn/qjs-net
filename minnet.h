@@ -25,10 +25,10 @@ struct http_request;
 
 #define SETLOG lws_set_log_level(LLL_ERR, NULL);
 
-#define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, &this_val)
+#define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj)                                                                                                                                                               \
   if(JS_IsFunction(ctx, opt)) {                                                                                                                                                                        \
-    MinnetCallback cb = {ctx, this_obj, &opt};                                                                                                                                                         \
+    MinnetCallback cb = {ctx, JS_DupValue(ctx, this_obj), JS_DupValue(ctx, opt), #cb_ptr};                                                                                                             \
     cb_ptr = cb;                                                                                                                                                                                       \
   }
 
@@ -38,8 +38,9 @@ typedef struct lws_pollfd MinnetPollFd;
 
 typedef struct callback_ws {
   JSContext* ctx;
-  JSValueConst* this_obj;
-  JSValue* func_obj;
+  JSValue this_obj;
+  JSValue func_obj;
+  const char* name;
 } MinnetCallback;
 
 extern JSValue minnet_log, minnet_log_this;
@@ -49,8 +50,8 @@ extern BOOL minnet_exception;
 extern JSClassID minnet_request_class_id;
 
 void lws_print_unhandled(int);
-JSValue minnet_emit_this(struct callback_ws*, JSValueConst this_obj, int argc, JSValue* argv);
-JSValue minnet_emit(struct callback_ws*, int argc, JSValue* argv);
+JSValue minnet_emit_this(const struct callback_ws*, JSValueConst this_obj, int argc, JSValue* argv);
+JSValue minnet_emit(const struct callback_ws*, int argc, JSValue* argv);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);
 void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);

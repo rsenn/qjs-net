@@ -31,16 +31,9 @@ header_free(JSRuntime* rt, struct http_header* hdr) {
   js_free_rt(rt, hdr);
 }
 
-static void
-state_dump(const char* n, struct http_state const* b) {
-  printf("%s\t{ times = %zx, budget = %zx }\n", n, b->times, b->budget);
-  fflush(stdout);
-}
-
 void
 response_dump(struct http_response const* res) {
   printf("{\n  url = %s, status = %d, ok = %d, type = %s, ", res->url, res->status, res->ok, res->type);
-  state_dump("state", &res->state);
   buffer_dump("buffer", &res->body);
   printf(" }\n");
 

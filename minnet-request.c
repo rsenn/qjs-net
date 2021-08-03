@@ -97,6 +97,18 @@ fail:
   JS_FreeValue(ctx, obj);
   return JS_EXCEPTION;
 }
+
+JSValue
+minnet_request_new(JSContext* ctx, const char* path, const char* url, const char* method) {
+  struct http_request* req;
+
+  if(!(req = request_new(ctx)))
+    return JS_ThrowOutOfMemory(ctx);
+
+  request_init(req, path, js_strdup(ctx, url), js_strdup(ctx, method));
+  return minnet_request_wrap(ctx, req);
+}
+
 JSValue
 minnet_request_wrap(JSContext* ctx, struct http_request* req) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_request_proto, minnet_request_class_id);

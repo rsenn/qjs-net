@@ -21,7 +21,7 @@ void request_init(struct http_request*, const char* path, char* url, char* metho
 struct http_request* request_new(JSContext*);
 void request_zero(struct http_request*);
 JSValue minnet_request_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
-JSValue minnet_request_new(JSContext*, const char* in, struct socket* ws);
+JSValue minnet_request_new(JSContext*, const char* path, const char* url, const char* method);
 JSValue minnet_request_wrap(JSContext*, struct http_request* req);
 
 extern JSClassDef minnet_request_class;

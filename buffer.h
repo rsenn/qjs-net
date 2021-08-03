@@ -25,7 +25,7 @@ typedef struct byte_buffer {
 
 static inline void
 buffer_init(struct byte_buffer* buf, uint8_t* start, size_t len) {
-  buf->start = start + LWS_PRE;
+  buf->start = start;
   buf->pos = buf->start;
   buf->end = start + len;
 }
@@ -34,19 +34,17 @@ static inline struct byte_buffer*
 buffer_new(JSContext* ctx, size_t size) {
   if(size < LWS_RECOMMENDED_MIN_HEADER_SPACE)
     size = LWS_RECOMMENDED_MIN_HEADER_SPACE;
-  size += LWS_PRE;
-  struct byte_buffer* buf = js_mallocz(ctx, sizeof(struct byte_buffer) + size);
+  struct byte_buffer* buf = js_mallocz(ctx, sizeof(struct byte_buffer) + size + LWS_PRE);
 
-  buffer_init(buf, (uint8_t*)&buf[1], size);
+  buffer_init(buf, (uint8_t*)&buf[1] + LWS_PRE, size);
   return buf;
 }
 
 static inline BOOL
 buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   uint8_t* p;
-  size += LWS_PRE;
-  if((p = js_malloc(ctx, size))) {
-    buffer_init(buf, p, size);
+  if((p = js_malloc(ctx, size + LWS_PRE))) {
+    buffer_init(buf, p + LWS_PRE, size);
     return TRUE;
   }
   return FALSE;
@@ -83,11 +81,33 @@ buffer_printf(struct byte_buffer* buf, const char* format, ...) {
 }
 
 static inline uint8_t*
-buffer_realloc(JSContext* ctx, struct byte_buffer* buf, size_t size) {
+buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   assert((uint8_t*)&buf[1] != buf->start);
-  buf->start = js_realloc(ctx, buf->start, size);
-  buf->end = buf->start + size;
-  return buf->start;
+  size_t offset = buf->pos - buf->start;
+  assert(size >= offset);
+
+  uint8_t* x = js_realloc(ctx, buf->start - LWS_PRE, size + LWS_PRE);
+
+  if(x) {
+    buf->start = x + LWS_PRE;
+    buf->pos = buf->start + offset;
+    buf->end = buf->start + size;
+    return buf->start;
+  }
+  return 0;
+}
+
+static inline ssize_t
+buffer_write(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) {
+  ssize_t ret = -1;
+  if((size_t)buffer_AVAIL(buf) < n) {
+    if(!buffer_realloc(buf, buffer_OFFSET(buf) + n + 1, ctx))
+      return ret;
+  }
+  memcpy(buf->pos, x, n);
+  buf->pos[n] = '\0';
+  buf->pos += n;
+  return n;
 }
 
 static inline void
