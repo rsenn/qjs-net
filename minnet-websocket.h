@@ -10,10 +10,10 @@ struct http_response;
 /* class WebSocket */
 
 typedef struct socket {
-  size_t ref_count;
   struct lws* lwsi;
-  JSValue handlers[2];
   JSValue request, response;
+  size_t ref_count;
+  JSValue handlers[2];
 } MinnetWebsocket;
 
 MinnetWebsocket* minnet_ws_from_wsi(struct lws*);

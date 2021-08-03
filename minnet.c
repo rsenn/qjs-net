@@ -84,13 +84,13 @@ set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst 
 
 static JSValue
 minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-JSValue ret;
+  JSValue ret;
   if(argc >= 1 && JS_IsNumber(argv[0])) {
     JS_ToInt32(ctx, &minnet_log_level, argv[0]);
     argc--;
     argv++;
   }
-  ret= set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
+  ret = set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
   lws_set_log_level(minnet_log_level, lws_log_callback);
   return ret;
 }

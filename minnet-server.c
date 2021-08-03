@@ -114,10 +114,9 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
 }
 
 static struct lws_protocols protocols[] = {
-    {"minnet", callback_ws, 0, 0, 0, 0, 0},
-    {"http", callback_http, 0, 0, 0, 0, 0},
-    {"h2", callback_http, 0, 0, 0, 0, 0},
-    {NULL, NULL, 0, 0, 0, 0, 0},
+    {"minnet", callback_ws, sizeof(MinnetWebsocket), 0, 0, 0, 1024},
+    {"http", callback_http, sizeof(MinnetWebsocket), 0, 0, 0, 1024},
+    LWS_PROTOCOL_LIST_TERM,
 };
 
 // static const MinnetHttpMount* mount_dyn;
@@ -241,9 +240,8 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
   switch(reason) {
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
-    case LWS_CALLBACK_PROTOCOL_INIT: {
-      return 0;
-    }
+    case LWS_CALLBACK_PROTOCOL_INIT: return 0;
+
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_ESTABLISHED: {
       if(server.cb_connect.ctx) {
@@ -260,13 +258,13 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         JSValue cb_argv[2] = {ws_obj, in ? JS_NewStringLen(server.cb_connect.ctx, in, len) : JS_UNDEFINED};
         minnet_emit(&server.cb_close, in ? 2 : 1, cb_argv);
       }
-      break;
+      return 0;
     }
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
       printf("lws_callback_on_writable %d\n", lws_get_socket_fd(wsi));
       lws_callback_on_writable(wsi);
-      break;
+      return 0;
     }
     case LWS_CALLBACK_RECEIVE: {
       if(server.cb_message.ctx) {
@@ -275,7 +273,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         JSValue cb_argv[2] = {ws_obj, msg};
         minnet_emit(&server.cb_message, 2, cb_argv);
       }
-      break;
+      return 0;
     }
     case LWS_CALLBACK_RECEIVE_PONG: {
       if(server.cb_pong.ctx) {
@@ -284,13 +282,11 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         JSValue cb_argv[2] = {ws_obj, msg};
         minnet_emit(&server.cb_pong, 2, cb_argv);
       }
-      break;
+      return 0;
     }
 
     case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL: {
-      return 0;
-    }
+    case LWS_CALLBACK_UNLOCK_POLL: return 0;
 
     case LWS_CALLBACK_ADD_POLL_FD: {
       struct lws_pollargs* args = in;
@@ -349,18 +345,19 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
     case LWS_CALLBACK_CLOSED_HTTP:
-    case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+    case LWS_CALLBACK_FILTER_HTTP_CONNECTION:
+    case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
       return callback_http(wsi, reason, user, in, len);
     }
-
-    default: {
-      minnet_lws_unhandled("WS", reason);
-      return 0;
-    }
+      /*
+          default: {
+            minnet_lws_unhandled("WS", reason);
+            return 0;
+          }*/
   }
-  return minnet_lws_unhandled("WS2", reason);
-
-  return lws_callback_http_dummy(wsi, reason, user, in, len);
+  minnet_lws_unhandled("WS", reason);
+  return 0;
+  //  return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
 
 static int
@@ -374,12 +371,12 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   url = lws_uri_and_method(wsi, ctx, &method);
 
   switch(reason) {
-    case LWS_CALLBACK_PROTOCOL_INIT: break;
-    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: break;
-    case LWS_CALLBACK_HTTP_BIND_PROTOCOL: break;
-    case LWS_CALLBACK_HTTP_DROP_PROTOCOL: break;
-    case LWS_CALLBACK_CLOSED_HTTP: break;
-    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: break;
+    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: // return 0;
+    case LWS_CALLBACK_PROTOCOL_INIT:
+    case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+    case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
+    case LWS_CALLBACK_CLOSED_HTTP:
+    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
 
@@ -600,8 +597,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         if(r)
           return -1;
       }
-
-      return 0;
+      break;
     }
     default: {
       minnet_lws_unhandled("HTTP", reason);

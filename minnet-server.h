@@ -24,6 +24,11 @@ typedef struct http_server {
   MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd, cb_http, cb_body;
 } MinnetHttpServer;
 
+typedef struct http_session {
+  struct lws* lwsi;
+  JSValue request, response;
+} MinnetHttpSession;
+
 JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
 #endif /* MINNET_SERVER_H */
