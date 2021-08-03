@@ -60,7 +60,7 @@ extern BOOL minnet_exception;
 
 extern JSClassID minnet_request_class_id;
 
-void minnet_lws_unhandled(const char* handler, int);
+int minnet_lws_unhandled(const char* handler, int);
 JSValue minnet_emit_this(const struct callback_ws*, JSValueConst this_obj, int argc, JSValue* argv);
 JSValue minnet_emit(const struct callback_ws*, int argc, JSValue* argv);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);

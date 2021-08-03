@@ -261,7 +261,7 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, JS_PROP_ENUMERABLE),
     // JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_request_get, minnet_request_set, REQUEST_SOCKET, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("header", minnet_request_get, minnet_request_set, REQUEST_HEADER, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, minnet_request_set, REQUEST_HEADER, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, minnet_request_set, REQUEST_BODY, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
