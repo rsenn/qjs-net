@@ -113,34 +113,10 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
   js_free(ctx, (void*)m);
 }
 
-static char*
-lws_get_uri(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
-  size_t len;
-  char buf[1024];
-
-  if((len = lws_hdr_copy(wsi, buf, sizeof(buf) - 1, token)) > 0)
-    buf[len] = '\0';
-  else
-    return 0;
-
-  return js_strndup(ctx, buf, len);
-}
-
-static char*
-lws_uri_and_method(struct lws* wsi, JSContext* ctx, char** method) {
-  char* url;
-
-  if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_POST_URI)))
-    *method = js_strdup(ctx, "POST");
-  else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI)))
-    *method = js_strdup(ctx, "GET");
-
-  return url;
-}
-
 static struct lws_protocols protocols[] = {
     {"minnet", callback_ws, 0, 0, 0, 0, 0},
     {"http", callback_http, 0, 0, 0, 0, 0},
+    {"h2", callback_http, 0, 0, 0, 0, 0},
     {NULL, NULL, 0, 0, 0, 0, 0},
 };
 

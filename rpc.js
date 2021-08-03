@@ -857,6 +857,7 @@ export function define(obj, ...args) {
 
 export function setHandlers(os, handlers) {
   handlers.onFd = function(fd, readable, writable) {
+    console.log("onFd(", fd,',',readable,',',writable,')');
     os.setReadHandler(fd, readable);
     os.setWriteHandler(fd, writable);
   };

@@ -9,7 +9,7 @@
 #include <cutils.h>
 
 typedef struct byte_buffer {
-  uint8_t *start, *wrpos,*rdpos, *end;
+  uint8_t *start, *wrpos, *rdpos, *end;
 } MinnetBuffer;
 
 #define BUFFER(buf)                                                                                                                                                                                    \
@@ -29,9 +29,9 @@ typedef struct byte_buffer {
 void buffer_init(struct byte_buffer*, uint8_t* start, size_t len);
 struct byte_buffer* buffer_new(JSContext*, size_t size);
 BOOL buffer_alloc(struct byte_buffer*, size_t size, JSContext* ctx);
-ssize_t buffer_write(struct byte_buffer*, const void* x, size_t n, JSContext* ctx);
+ssize_t buffer_append(struct byte_buffer*, const void* x, size_t n, JSContext* ctx);
 void buffer_free(struct byte_buffer*, JSRuntime* rt);
-BOOL buffer_append(struct byte_buffer*, const char* x, size_t n);
+BOOL buffer_write(struct byte_buffer*, const char* x, size_t n);
 int buffer_printf(struct byte_buffer*, const char* format, ...);
 uint8_t* buffer_realloc(struct byte_buffer*, size_t size, JSContext* ctx);
 int buffer_fromarraybuffer(struct byte_buffer*, JSValue value, JSContext* ctx);

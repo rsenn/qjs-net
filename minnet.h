@@ -76,4 +76,28 @@ byte_chr(const char* str, size_t len, char c) {
   return s - str;
 }
 
+static inline char*
+lws_get_uri(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
+  size_t len;
+  char buf[1024];
+
+  if((len = lws_hdr_copy(wsi, buf, sizeof(buf) - 1, token)) > 0)
+    buf[len] = '\0';
+  else
+    return 0;
+
+  return js_strndup(ctx, buf, len);
+}
+
+static inline char*
+lws_uri_and_method(struct lws* wsi, JSContext* ctx, char** method) {
+  char* url;
+
+  if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_POST_URI)))
+    *method = js_strdup(ctx, "POST");
+  else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI)))
+    *method = js_strdup(ctx, "GET");
+
+  return url;
+}
 #endif /* MINNET_H */

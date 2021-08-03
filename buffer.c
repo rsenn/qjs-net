@@ -30,7 +30,7 @@ buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
 }
 
 ssize_t
-buffer_write(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) {
+buffer_append(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) {
   ssize_t ret = -1;
   if((size_t)buffer_AVAIL(buf) < n) {
     if(!buffer_realloc(buf, buffer_OFFSET(buf) + n + 1, ctx))
@@ -58,7 +58,7 @@ buffer_free(struct byte_buffer* buf, JSRuntime* rt) {
 }
 
 BOOL
-buffer_append(struct byte_buffer* buf, const char* x, size_t n) {
+buffer_write(struct byte_buffer* buf, const char* x, size_t n) {
   assert((size_t)buffer_AVAIL(buf) >= n);
   memcpy(buf->wrpos, x, n);
   buf->wrpos[n] = '\0';
