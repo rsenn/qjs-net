@@ -9,7 +9,7 @@
 #include <cutils.h>
 
 typedef struct byte_buffer {
-  uint8_t *start, *pos, *end;
+  uint8_t *start, *wrpos,*rdpos, *end;
 } MinnetBuffer;
 
 #define BUFFER(buf)                                                                                                                                                                                    \
@@ -21,8 +21,8 @@ typedef struct byte_buffer {
 #define BUFFER_N(buf, n)                                                                                                                                                                               \
   (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, ((uint8_t*)(buf)) + n }
 
-#define buffer_AVAIL(b) ((b)->end - (b)->pos)
-#define buffer_OFFSET(b) ((b)->pos - (b)->start)
+#define buffer_AVAIL(b) ((b)->end - (b)->wrpos)
+#define buffer_OFFSET(b) ((b)->wrpos - (b)->start)
 #define buffer_SIZE(b) ((b)->end - (b)->start)
 #define buffer_START(b) (void*)(b)->start
 

@@ -176,7 +176,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       if(argc >= 2)
         msg = JS_ToCStringLen(ctx, &len, argv[1]);
 
-      if(lws_http_redirect(ws->lwsi, status, (unsigned char*)msg, len, &header.pos, header.end) < 0)
+      if(lws_http_redirect(ws->lwsi, status, (unsigned char*)msg, len, &header.wrpos, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
       if(msg)
         JS_FreeCString(ctx, msg);
@@ -194,7 +194,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       name[namelen] = ':';
       name[namelen + 1] = '\0';
 
-      if(lws_add_http_header_by_name(ws->lwsi, (const uint8_t*)name, (const uint8_t*)value, len, &header.pos, header.end) < 0)
+      if(lws_add_http_header_by_name(ws->lwsi, (const uint8_t*)name, (const uint8_t*)value, len, &header.wrpos, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
 
       js_free(ctx, name);
