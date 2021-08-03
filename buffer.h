@@ -65,12 +65,15 @@ buffer_printf(struct byte_buffer* buf, const char* format, ...) {
   int n;
   size_t size = lws_ptr_diff_size_t(buf->end, buf->pos);
 
-  if(!size)
-    return 0;
+  /* if(!(size = lws_ptr_diff_size_t(buf->end, buf->pos)))
+     return 0;*/
 
   va_start(ap, format);
   n = vsnprintf((char*)buf->pos, size, format, ap);
   va_end(ap);
+
+  if(n > size)
+    return 0;
 
   if(n >= (int)size)
     n = size;
@@ -95,6 +98,11 @@ buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
     return buf->start;
   }
   return 0;
+}
+
+static inline uint8_t*
+buffer_grow(struct byte_buffer* buf, size_t size, JSContext* ctx) {
+  return buffer_realloc(buf, (buf->end - buf->start) + size, ctx);
 }
 
 static inline ssize_t

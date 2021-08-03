@@ -11,9 +11,7 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-static MinnetCallback server_cb_message, server_cb_connect, server_cb_close, server_cb_pong, server_cb_fd, server_cb_http, server_cb_body;
-
-static struct lws_context_creation_info* server_info;
+static MinnetHttpServer server;
 
 static int callback_ws(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 static int callback_http(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
@@ -22,8 +20,10 @@ static MinnetHttpMount*
 mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, enum lws_mount_protocols origin_proto) {
   MinnetHttpMount* ret = js_mallocz(ctx, sizeof(MinnetHttpMount));
 
+  printf("mount_create mnt=%s org=%s def=%s\n", mountpoint, origin, def);
+
   ret->lws.mountpoint = js_strdup(ctx, mountpoint);
-  ret->lws.origin = def ? js_strdup(ctx, origin) : 0;
+  ret->lws.origin = origin ? js_strdup(ctx, origin) : 0;
   ret->lws.def = def ? js_strdup(ctx, def) : 0;
   ret->lws.protocol = "http";
   ret->lws.origin_protocol = origin_proto;
@@ -38,32 +38,29 @@ mount_new(JSContext* ctx, JSValueConst arr) {
   JSValue mnt = JS_GetPropertyUint32(ctx, arr, 0);
   JSValue org = JS_GetPropertyUint32(ctx, arr, 1);
   JSValue def = JS_GetPropertyUint32(ctx, arr, 2);
-  const char* mountpoint = JS_ToCString(ctx, mnt);
+  const char* path = JS_ToCString(ctx, mnt);
 
   if(JS_IsFunction(ctx, org)) {
-    ret = mount_create(ctx, mountpoint, 0, 0, LWSMPRO_CALLBACK);
+    ret = mount_create(ctx, path, 0, 0, LWSMPRO_CALLBACK);
 
     GETCBTHIS(org, ret->callback, JS_UNDEFINED);
 
   } else {
     const char* dest = JS_ToCString(ctx, org);
     const char* dotslashslash = strstr(dest, "://");
-    size_t proto_len = dotslashslash ? dotslashslash - dest : 0;
+    size_t plen = dotslashslash ? dotslashslash - dest : 0;
+    const char* origin = &dest[plen ? plen + 3 : 0];
+    const char* index = JS_IsUndefined(def) ? 0 : JS_ToCString(ctx, def);
+    enum lws_mount_protocols proto = plen == 0 ? LWSMPRO_FILE : !strncmp(dest, "https", plen) ? LWSMPRO_HTTPS : LWSMPRO_HTTP;
 
-    const char* default_index = 0;
+    ret = mount_create(ctx, path, origin, index, proto);
 
-    ret = mount_create(ctx,
-                       mountpoint,
-                       &dest[proto_len ? proto_len + 3 : 0],
-                       JS_IsUndefined(def) ? 0 : (default_index = JS_ToCString(ctx, def)),
-                       proto_len == 0 ? LWSMPRO_FILE : !strncmp(dest, "https", proto_len) ? LWSMPRO_HTTPS : LWSMPRO_HTTP);
-
-    if(default_index)
-      JS_FreeCString(ctx, default_index);
+    if(index)
+      JS_FreeCString(ctx, index);
     JS_FreeCString(ctx, dest);
   }
 
-  JS_FreeCString(ctx, mountpoint);
+  JS_FreeCString(ctx, path);
 
   JS_FreeValue(ctx, mnt);
   JS_FreeValue(ctx, org);
@@ -74,11 +71,18 @@ mount_new(JSContext* ctx, JSValueConst arr) {
 
 static MinnetHttpMount const*
 mount_find(const char* x, size_t n) {
-
-  const MinnetHttpMount *ptr, *mount = 0;
+  MinnetHttpMount const *ptr, *mount = 0;
   size_t mount_len = 0;
 
-  for(ptr = server_info ? (MinnetHttpMount*)server_info->mounts : 0; ptr; ptr = ptr->next) {
+  if(n == 0)
+    n = strlen(x);
+
+  if(x[0] == '/') {
+    x++;
+    n--;
+  }
+
+  for(ptr = (MinnetHttpMount const*)&server.info.mounts; ptr; ptr = ptr->next) {
 
     if(ptr->lws.origin_protocol == LWSMPRO_CALLBACK) {
       const char* mnt = ptr->lws.mountpoint;
@@ -99,6 +103,19 @@ mount_find(const char* x, size_t n) {
   }
 
   return mount;
+}
+
+static void
+mount_free(JSContext* ctx, MinnetHttpMount const* mount) {
+  js_free(ctx, (void*)mount->lws.mountpoint);
+
+  if(mount->lws.origin)
+    js_free(ctx, (void*)mount->lws.origin);
+
+  if(mount->lws.def)
+    JS_FreeCString(ctx, mount->lws.def);
+
+  js_free(ctx, (void*)mount);
 }
 
 static char*
@@ -126,30 +143,19 @@ lws_uri_and_method(struct lws* wsi, JSContext* ctx, char** method) {
   return url;
 }
 
-static void
-mount_free(JSContext* ctx, MinnetHttpMount* mount) {
-  JS_FreeCString(ctx, mount->lws.mountpoint);
-  js_free(ctx, (char*)mount->lws.origin);
-  if(mount->lws.def)
-    JS_FreeCString(ctx, mount->lws.def);
-  js_free(ctx, mount);
-}
-
 static struct lws_protocols protocols[] = {
     {"minnet", callback_ws, 0, 0, 0, 0, 0},
     {"http", callback_http, 0, 0, 0, 0, 0},
     {NULL, NULL, 0, 0, 0, 0, 0},
 };
 
-static const MinnetHttpMount* mount_dyn;
+// static const MinnetHttpMount* mount_dyn;
 
 JSValue
 minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   int a = 0;
   int port = 7981;
-  const char* host;
-  struct lws_context* context;
-  struct lws_context_creation_info info;
+  memset(&server, 0, sizeof server);
 
   lwsl_user("Minnet WebSocket Server\n");
   JSValue ret = JS_NewInt32(ctx, 0);
@@ -170,60 +176,54 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     JS_ToInt32(ctx, &port, opt_port);
 
   if(JS_IsString(opt_host))
-    host = JS_ToCString(ctx, opt_host);
+    server.info.vhost_name = js_to_string(ctx, opt_host);
   else
-    host = "localhost";
+    server.info.vhost_name = js_strdup(ctx, "localhost");
 
-  GETCB(opt_on_pong, server_cb_pong)
-  GETCB(opt_on_close, server_cb_close)
-  GETCB(opt_on_connect, server_cb_connect)
-  GETCB(opt_on_message, server_cb_message)
-  GETCB(opt_on_fd, server_cb_fd)
-  GETCBTHIS(opt_on_http, server_cb_http, JS_UNDEFINED)
-  // GETCBTHIS(opt_on_body, server_cb_body, 0)
-
-  //  SETLOG
-  // lws_set_log_level(LLL_USER | LLL_ERR | LLL_WARN | LLL_NOTICE, lws_log_callback);
-
-  memset(&info, 0, sizeof info);
-
-  server_info = &info;
+  GETCB(opt_on_pong, server.cb_pong)
+  GETCB(opt_on_close, server.cb_close)
+  GETCB(opt_on_connect, server.cb_connect)
+  GETCB(opt_on_message, server.cb_message)
+  GETCB(opt_on_fd, server.cb_fd)
+  GETCB(opt_on_http, server.cb_http)
 
   protocols[0].user = ctx;
   protocols[1].user = ctx;
 
-  info.port = port;
-  info.protocols = protocols;
-  info.mounts = 0;
-  info.vhost_name = host;
-  info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
+  server.ctx = ctx;
+  server.info.port = port;
+  server.info.protocols = protocols;
+  server.info.mounts = 0;
+  server.info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
 
-  minnet_ws_sslcert(ctx, &info, options);
-  MinnetHttpMount const** ptr = (MinnetHttpMount const**)&info.mounts;
+  minnet_ws_sslcert(ctx, &server.info, options);
 
   if(JS_IsArray(ctx, opt_mounts)) {
+    MinnetHttpMount** ptr = (MinnetHttpMount**)&server.info.mounts;
     uint32_t i;
+
     for(i = 0;; i++) {
       JSValue mount = JS_GetPropertyUint32(ctx, opt_mounts, i);
+
       if(JS_IsUndefined(mount))
         break;
-      *ptr = mount_new(ctx, mount);
-      ptr = (MinnetHttpMount const**)&(*ptr)->next;
+
+      ADD(ptr, mount_new(ctx, mount), next);
+
+      /**ptr = mount_new(ctx, mount);
+      ptr = (MinnetHttpMount const**)&(*ptr)->next;*/
     }
   }
 
-  /**ptr = mount_dyn = mount_create(ctx, "/dyn", 0, 0, LWSMPRO_CALLBACK);
-  ptr = (MinnetHttpMount const**)&(*ptr)->lws.mount_next;*/
+  server.context = lws_create_context(&server.info);
 
-  context = lws_create_context(&info);
-
-  if(!context) {
+  if(!server.context) {
     lwsl_err("Libwebsockets init failed\n");
     return JS_EXCEPTION;
   }
 
   // JSThreadState* ts = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
-  lws_service_adjust_timeout(context, 1, 0);
+  lws_service_adjust_timeout(server.context, 1, 0);
 
   while(a >= 0) {
     if(minnet_exception) {
@@ -231,33 +231,37 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       break;
     }
 
-    if(server_cb_fd.ctx)
+    if(server.cb_fd.ctx)
       js_std_loop(ctx);
     else
-      a = lws_service(context, 20);
+      a = lws_service(server.context, 20);
   }
-  lws_context_destroy(context);
 
-  if(info.mounts) {
+  lws_context_destroy(server.context);
+
+  if(server.info.mounts) {
     const MinnetHttpMount *mount, *next;
 
-    for(mount = (MinnetHttpMount*)info.mounts; mount; mount = next) {
+    for(mount = (MinnetHttpMount*)server.info.mounts; mount; mount = next) {
       next = (MinnetHttpMount*)mount->lws.mount_next;
-      JS_FreeCString(ctx, mount->lws.mountpoint);
-      js_free(ctx, (void*)mount->lws.origin);
-      if(mount->lws.def)
-        JS_FreeCString(ctx, mount->lws.def);
-      js_free(ctx, (void*)mount);
+      mount_free(ctx, mount);
     }
   }
 
-  if(info.ssl_cert_filepath)
-    JS_FreeCString(ctx, info.ssl_cert_filepath);
+  if(server.info.ssl_cert_filepath)
+    JS_FreeCString(ctx, server.info.ssl_cert_filepath);
 
-  if(info.ssl_private_key_filepath)
-    JS_FreeCString(ctx, info.ssl_private_key_filepath);
+  if(server.info.ssl_private_key_filepath)
+    JS_FreeCString(ctx, server.info.ssl_private_key_filepath);
 
-  server_info = 0;
+  js_free(ctx, (void*)server.info.vhost_name);
+
+  FREECB(server.cb_pong)
+  FREECB(server.cb_close)
+  FREECB(server.cb_connect)
+  FREECB(server.cb_message)
+  FREECB(server.cb_fd)
+  FREECB(server.cb_http)
 
   return ret;
 }
@@ -268,113 +272,132 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   MinnetWebsocket* ws = 0;
 
   switch(reason) {
-    case LWS_CALLBACK_PROTOCOL_INIT:
-      // printf("callback PROTOCOL_INIT\n");
-      break;
+    case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+    case LWS_CALLBACK_PROTOCOL_INIT: {
+      return 0;
+    }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_ESTABLISHED: {
-      if(server_cb_connect.ctx) {
-        ws_obj = minnet_ws_object(server_cb_connect.ctx, wsi);
-        minnet_emit(&server_cb_connect, 1, &ws_obj);
+      if(server.cb_connect.ctx) {
+        ws_obj = minnet_ws_object(server.cb_connect.ctx, wsi);
+        minnet_emit(&server.cb_connect, 1, &ws_obj);
       }
-      break;
+      return 0;
     }
     case LWS_CALLBACK_CLOSED: {
       MinnetWebsocket* res = lws_wsi_user(wsi);
 
-      if(server_cb_close.ctx && (!res || res->lwsi)) {
+      if(server.cb_close.ctx && (!res || res->lwsi)) {
         // printf("callback CLOSED %d\n", lws_get_socket_fd(wsi));
-        ws_obj = minnet_ws_object(server_cb_close.ctx, wsi);
-        JSValue cb_argv[2] = {ws_obj, in ? JS_NewStringLen(server_cb_connect.ctx, in, len) : JS_UNDEFINED};
-        minnet_emit(&server_cb_close, in ? 2 : 1, cb_argv);
+        ws_obj = minnet_ws_object(server.cb_close.ctx, wsi);
+        JSValue cb_argv[2] = {ws_obj, in ? JS_NewStringLen(server.cb_connect.ctx, in, len) : JS_UNDEFINED};
+        minnet_emit(&server.cb_close, in ? 2 : 1, cb_argv);
       }
       break;
     }
+
     case LWS_CALLBACK_SERVER_WRITEABLE: {
       lws_callback_on_writable(wsi);
       break;
     }
     case LWS_CALLBACK_RECEIVE: {
-      if(server_cb_message.ctx) {
-        ws_obj = minnet_ws_object(server_cb_message.ctx, wsi);
-        JSValue msg = JS_NewStringLen(server_cb_message.ctx, in, len);
+      if(server.cb_message.ctx) {
+        ws_obj = minnet_ws_object(server.cb_message.ctx, wsi);
+        JSValue msg = JS_NewStringLen(server.cb_message.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
-        minnet_emit(&server_cb_message, 2, cb_argv);
+        minnet_emit(&server.cb_message, 2, cb_argv);
       }
       break;
     }
     case LWS_CALLBACK_RECEIVE_PONG: {
-      if(server_cb_pong.ctx) {
-        ws_obj = minnet_ws_object(server_cb_pong.ctx, wsi);
-        JSValue msg = JS_NewArrayBufferCopy(server_cb_pong.ctx, in, len);
+      if(server.cb_pong.ctx) {
+        ws_obj = minnet_ws_object(server.cb_pong.ctx, wsi);
+        JSValue msg = JS_NewArrayBufferCopy(server.cb_pong.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
-        minnet_emit(&server_cb_pong, 2, cb_argv);
+        minnet_emit(&server.cb_pong, 2, cb_argv);
       }
       break;
     }
 
     case LWS_CALLBACK_LOCK_POLL:
     case LWS_CALLBACK_UNLOCK_POLL: {
-      break;
+      return 0;
     }
 
     case LWS_CALLBACK_ADD_POLL_FD: {
       struct lws_pollargs* args = in;
 
-      if(server_cb_fd.ctx) {
+      if(server.cb_fd.ctx) {
 
-        ws_obj = minnet_ws_object(server_cb_fd.ctx, wsi);
-        JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
-        minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+        ws_obj = minnet_ws_object(server.cb_fd.ctx, wsi);
+        JSValue argv[3] = {JS_NewInt32(server.cb_fd.ctx, args->fd)};
+        minnet_handlers(server.cb_fd.ctx, wsi, args, &argv[1]);
 
-        minnet_emit(&server_cb_fd, 3, argv);
-        JS_FreeValue(server_cb_fd.ctx, argv[0]);
-        JS_FreeValue(server_cb_fd.ctx, argv[1]);
-        JS_FreeValue(server_cb_fd.ctx, argv[2]);
+        minnet_emit(&server.cb_fd, 3, argv);
+
+        JS_FreeValue(server.cb_fd.ctx, argv[0]);
+        JS_FreeValue(server.cb_fd.ctx, argv[1]);
+        JS_FreeValue(server.cb_fd.ctx, argv[2]);
       }
-      break;
+      return 0;
     }
     case LWS_CALLBACK_DEL_POLL_FD: {
       struct lws_pollargs* args = in;
 
-      if(server_cb_fd.ctx) {
+      if(server.cb_fd.ctx) {
         JSValue argv[3] = {
-            JS_NewInt32(server_cb_fd.ctx, args->fd),
+            JS_NewInt32(server.cb_fd.ctx, args->fd),
         };
-        minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
-        minnet_emit(&server_cb_fd, 3, argv);
-        JS_FreeValue(server_cb_fd.ctx, argv[0]);
+        minnet_handlers(server.cb_fd.ctx, wsi, args, &argv[1]);
+        minnet_emit(&server.cb_fd, 3, argv);
+        JS_FreeValue(server.cb_fd.ctx, argv[0]);
       }
-      break;
+      return 0;
     }
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
       struct lws_pollargs* args = in;
 
-      if(server_cb_fd.ctx) {
+      if(server.cb_fd.ctx) {
         if(args->events != args->prev_events) {
-          JSValue argv[3] = {JS_NewInt32(server_cb_fd.ctx, args->fd)};
-          minnet_handlers(server_cb_fd.ctx, wsi, args, &argv[1]);
+          JSValue argv[3] = {JS_NewInt32(server.cb_fd.ctx, args->fd)};
+          minnet_handlers(server.cb_fd.ctx, wsi, args, &argv[1]);
 
-          minnet_emit(&server_cb_fd, 3, argv);
-          JS_FreeValue(server_cb_fd.ctx, argv[0]);
-          JS_FreeValue(server_cb_fd.ctx, argv[1]);
-          JS_FreeValue(server_cb_fd.ctx, argv[2]);
+          minnet_emit(&server.cb_fd, 3, argv);
+          JS_FreeValue(server.cb_fd.ctx, argv[0]);
+          JS_FreeValue(server.cb_fd.ctx, argv[1]);
+          JS_FreeValue(server.cb_fd.ctx, argv[2]);
         }
       }
-      break;
+      return 0;
     }
+
+    case LWS_CALLBACK_WSI_CREATE:
+    case LWS_CALLBACK_WSI_DESTROY:
+    case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
+      return 0;
+    }
+
+    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
+    case LWS_CALLBACK_CLOSED_HTTP:
+    case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+      return callback_http(wsi, reason, user, in, len);
+    }
+
     default: {
-      // lws_print_unhandled(reason);
-      break;
+      minnet_lws_unhandled("WS", reason);
+      return 0;
     }
   }
+  minnet_lws_unhandled("WS2", reason);
 
-  return lws_callback_http_dummy(wsi, reason, user, in, len);
+  return 0;
+
+  //  return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
 
 static int
 callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  JSContext* ctx = server_cb_fd.ctx ? server_cb_fd.ctx : server_cb_http.ctx ? server_cb_http.ctx : server_cb_message.ctx ? server_cb_message.ctx : server_cb_connect.ctx ? server_cb_connect.ctx : 0;
+  JSContext* ctx = server.ctx;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   char *url = 0, *method = 0;
   JSValue ws_obj = minnet_ws_object(ctx, wsi);
@@ -383,188 +406,173 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   url = lws_uri_and_method(wsi, ctx, &method);
 
   switch(reason) {
+    case LWS_CALLBACK_PROTOCOL_INIT: break;
+    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: break;
+    case LWS_CALLBACK_HTTP_BIND_PROTOCOL: break;
+    case LWS_CALLBACK_HTTP_DROP_PROTOCOL: break;
+    case LWS_CALLBACK_CLOSED_HTTP: break;
+    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: break;
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-      if(server_cb_http.ctx) {
-        JSValue ret, ws_obj = minnet_ws_object(server_cb_http.ctx, wsi);
-        JSValue argv[] = {ws_obj, JS_NewString(server_cb_http.ctx, in)};
-        int32_t result = 0;
-        // MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
-        struct byte_buffer h;
-        buffer_init(&h, buf, LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE);
-        printf("LWS_CALLBACK_FILTER_HTTP_CONNECTION in: %s\n", (char*)in);
 
-        // ws->h = h;
-
-        ret = minnet_emit(&server_cb_http, 2, argv);
-        JS_FreeValue(server_cb_http.ctx, argv[0]);
-        JS_FreeValue(server_cb_http.ctx, argv[1]);
-
-        if(JS_IsNumber(ret))
-          JS_ToInt32(server_cb_http.ctx, &result, ret);
-        JS_FreeValue(server_cb_http.ctx, ret);
-
-        /* if(!result) {
-           if(h->pos > h->start)
-             lws_finalize_write_http_header(ws->lwsi, h->start,
-         &h->pos, h->end);
-         }*/
-
-        if(result)
-          buffer_free(&h, JS_GetRuntime(server_cb_http.ctx));
-
-        return result;
-      }
       break;
     }
+
     case LWS_CALLBACK_ADD_HEADERS: {
-      if(server_cb_http.ctx) {
-        // JSValue ws_obj = minnet_ws_object(server_cb_http.ctx, wsi);
-        // MinnetWebsocket* ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
-        struct lws_process_html_args* args = (struct lws_process_html_args*)in;
+      struct lws_process_html_args* args = (struct lws_process_html_args*)in;
 
-        printf("LWS_CALLBACK_ADD_HEADERS args: %.*s\n", args->len, args->p);
-        /*  if(h->pos > h->start) {
-            size_t len = h->pos - h->start;
-
-
-            memcpy(args->p, h->start, len);
-            args->p += len;
-          }*/
-      }
+      printf("LWS_CALLBACK_ADD_HEADERS args: %.*s\n", args->len, args->p);
 
       break;
     }
+
     case LWS_CALLBACK_HTTP: {
-      /*      JSValue req_obj = minnet_request_new(ctx, in, ws);
-            MinnetRequest* req = minnet_request_data(ctx, req_obj);*/
       MinnetHttpMount const* mount;
-      MinnetRequest* req;
-      MinnetCallback const* cb = &server_cb_body;
-      MinnetResponse* resp = 0;
-      JSValue ret = JS_UNDEFINED, req_obj = JS_UNDEFINED, resp_obj = JS_UNDEFINED;
+      MinnetCallback const* cb = &server.cb_body;
       MinnetBuffer b = BUFFER(buf);
 
-      if((mount = mount_find(in, len))) {
+      if((mount = mount_find(len ? in : url, len))) {
+        JSValue ret = JS_UNDEFINED, args[2];
+        MinnetRequest* req;
+        MinnetResponse* resp;
+
+        args[0] = minnet_request_new(ctx, in, url, method);
+        req = minnet_request_data(ctx, args[0]);
+        args[1] = minnet_response_new(ctx, req->url, 200, TRUE, "text/html");
+        resp = minnet_response_data(ctx, args[1]);
+
+        {
+          int tok;
+          buffer_alloc(&req->header, 1024, ctx);
+          for(tok = WSI_TOKEN_HOST; tok < WSI_TOKEN_COUNT; tok++) {
+            int len;
+            if((len = lws_hdr_total_length(wsi, tok)) > 0) {
+              char hdr[len + 1];
+              lws_hdr_copy(wsi, hdr, len + 1, tok);
+              hdr[len] = '\0';
+              // printf("HEADER %s %s\n", lws_token_to_string(tok), hdr);
+              for(;;) {
+                if(buffer_printf(&req->header, "%s %s\n", lws_token_to_string(tok), hdr))
+                  break;
+                buffer_grow(&req->header, 1024, ctx);
+              }
+            }
+          }
+        }
+
+        ws_obj = minnet_ws_object(ctx, wsi);
+        ws = minnet_ws_data(ctx, ws_obj);
+
         cb = &mount->callback;
-        server_cb_body = *cb;
+        server.cb_body = *cb;
+
+        printf("LWS_CALLBACK_HTTP in: %s\n", *(char*)in ? (char*)in : req->path);
+
+        assert(req);
+
+        ++req->ref_count;
+
+        if(server.cb_http.ctx) {
+          ret = minnet_emit_this(&server.cb_http, ws_obj, 2, args);
+          if(JS_IsObject(ret) && minnet_response_data(ctx, ret)) {
+            JS_FreeValue(ctx, args[1]);
+            args[1] = ret;
+            resp = minnet_response_data(ctx, ret);
+            response_dump(resp);
+          } else {
+            JS_FreeValue(ctx, ret);
+          }
+        }
+
+        assert(resp);
+        assert(ws);
+
+        resp->read_only = TRUE;
+
+        ws->request = JS_DupValue(ctx, args[0]);
+        ws->response = JS_DupValue(ctx, args[1]);
+
+        /*
+         * prepare and write http headers... with regards to content-
+         * length, there are three approaches:
+         *
+         *  - http/1.0 or connection:close: no need, but no pipelining
+         *  - http/1.1 or connected:keep-alive
+         *     (keep-alive is default for 1.1): content-length required
+         *  - http/2: no need, LWS_WRITE_HTTP_FINAL closes the stream
+         *
+         * giving the api below LWS_ILLEGAL_HTTP_CONTENT_LEN instead of
+         * a content length forces the connection response headers to
+         * send back "connection: close", disabling keep-alive.
+         *
+         * If you know the final content-length, it's always OK to give
+         * it and keep-alive can work then if otherwise possible.  But
+         * often you don't know it and avoiding having to compute it
+         * at header-time makes life easier at the server.
+         */
+        if(lws_add_http_common_headers(wsi, resp->status, resp->type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
+          return 1;
+
+        {
+          struct list_head* el;
+
+          list_for_each(el, &resp->headers) {
+            struct http_header* hdr = list_entry(el, struct http_header, link);
+
+            if((lws_add_http_header_by_name(wsi, (const unsigned char*)hdr->name, (const unsigned char*)hdr->value, strlen(hdr->value), &b.pos, b.end)))
+              JS_ThrowInternalError(server.cb_body.ctx, "lws_add_http_header_by_name failed");
+          }
+        }
+
+        if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end)) {
+          JS_FreeValue(ctx, args[0]);
+          JS_FreeValue(ctx, args[1]);
+          JS_FreeValue(ctx, ws_obj);
+          return 1;
+        }
+
+        {
+
+          if(cb && cb->ctx) {
+            JSValue ret = minnet_emit_this(cb, ws_obj, 2, args);
+
+            resp->generator = ret;
+
+          } /* else {
+             if(lws_http_transaction_completed(wsi))
+               return -1;
+           }*/
+          lws_callback_on_writable(wsi);
+        }
+
+        JS_FreeValue(ctx, args[0]);
+        JS_FreeValue(ctx, args[1]);
+        JS_FreeValue(ctx, ws_obj);
       } else {
-        lws_callback_on_writable(wsi);
-        server_cb_body.ctx = 0;
+        // lws_callback_on_writable(wsi);
+        server.cb_body.ctx = 0;
         break;
       }
-
-      req_obj = minnet_request_new(ctx, in, url, method);
-      req = minnet_request_data(ctx, req_obj);
-
-      resp_obj = minnet_response_new(ctx, req->url, 200, TRUE, "text/html");
-      resp = minnet_response_data(ctx, resp_obj);
-
-      printf("LWS_CALLBACK_HTTP in: %s\n", *(char*)in ? (char*)in : req->path);
-
-      assert(req);
-
-      ++req->ref_count;
-
-      if(server_cb_http.ctx) {
-        JSValue args[2] = {req_obj, resp_obj};
-        ret = minnet_emit(&server_cb_http, 2, args);
-        if(JS_IsObject(ret) && minnet_response_data(ctx, ret)) {
-          JS_FreeValue(ctx, resp_obj);
-          resp_obj = ret;
-          response_dump(minnet_response_data(ctx, ret));
-        } else {
-          JS_FreeValue(ctx, ret);
-        }
-      }
-
-      resp = minnet_response_data(ctx, resp_obj);
-      assert(resp);
-      assert(ws);
-
-      resp->read_only = TRUE;
-
-      ws_obj = minnet_ws_object(ctx, wsi);
-      ws = minnet_ws_data(ctx, ws_obj);
-
-      ws->request = JS_DupValue(ctx, req_obj);
-      ws->response = JS_DupValue(ctx, resp_obj);
-
-      /*
-       * prepare and write http headers... with regards to content-
-       * length, there are three approaches:
-       *
-       *  - http/1.0 or connection:close: no need, but no pipelining
-       *  - http/1.1 or connected:keep-alive
-       *     (keep-alive is default for 1.1): content-length required
-       *  - http/2: no need, LWS_WRITE_HTTP_FINAL closes the stream
-       *
-       * giving the api below LWS_ILLEGAL_HTTP_CONTENT_LEN instead of
-       * a content length forces the connection response headers to
-       * send back "connection: close", disabling keep-alive.
-       *
-       * If you know the final content-length, it's always OK to give
-       * it and keep-alive can work then if otherwise possible.  But
-       * often you don't know it and avoiding having to compute it
-       * at header-time makes life easier at the server.
-       */
-      if(lws_add_http_common_headers(wsi, resp->status, resp->type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &b.pos, b.end))
-        return 1;
-
-      {
-        struct list_head* el;
-
-        list_for_each(el, &resp->headers) {
-          struct http_header* hdr = list_entry(el, struct http_header, link);
-
-          if((lws_add_http_header_by_name(wsi, (const unsigned char*)hdr->name, (const unsigned char*)hdr->value, strlen(hdr->value), &b.pos, b.end)))
-            JS_ThrowInternalError(server_cb_body.ctx, "lws_add_http_header_by_name failed");
-        }
-      }
-
-      if(lws_finalize_write_http_header(wsi, b.start, &b.pos, b.end)) {
-        JS_FreeValue(ctx, req_obj);
-        JS_FreeValue(ctx, resp_obj);
-        return 1;
-      }
-
-      {
-
-        if(cb && cb->ctx) {
-          JSValueConst args[] = {req_obj, resp_obj};
-          JSValue ret = minnet_emit_this(cb, ws_obj, 2, args);
-
-          resp->generator = ret;
-
-        } /* else {
-           if(lws_http_transaction_completed(wsi))
-             return -1;
-         }*/
-        lws_callback_on_writable(wsi);
-      }
-
-      JS_FreeValue(ctx, req_obj);
-      JS_FreeValue(ctx, resp_obj);
 
       return 0;
     }
     case LWS_CALLBACK_HTTP_WRITEABLE: {
-      if(server_cb_body.ctx == 0)
+      if(server.cb_body.ctx == 0)
         break;
 
-      MinnetResponse* res = minnet_response_data(server_cb_body.ctx, ws->response);
+      MinnetResponse* res = minnet_response_data(server.cb_body.ctx, ws->response);
       enum lws_write_protocol n = LWS_WRITE_HTTP;
       JSValue ret = JS_UNDEFINED;
 
       /* if(!res->body.start)
-         buffer_alloc(&res->body, LWS_RECOMMENDED_MIN_HEADER_SPACE, server_cb_body.ctx);*/
+         buffer_alloc(&res->body, LWS_RECOMMENDED_MIN_HEADER_SPACE, server.cb_body.ctx);*/
 
-      if(server_cb_body.ctx) {
+      if(server.cb_body.ctx) {
         BOOL done = FALSE;
         JSValue next = JS_UNDEFINED;
         JSValue ret;
 
-        ret = js_iterator_next(server_cb_body.ctx, res->generator, &next, &done, 0, 0);
+        ret = js_iterator_next(server.cb_body.ctx, res->generator, &next, &done, 0, 0);
 
         if(JS_IsException(ret)) {
           JSValue exception = JS_GetException(ctx);
@@ -574,7 +582,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
           if(1 || JS_IsString(ret)) {
             size_t len;
             int r;
-            const char *x, *str = JS_ToCStringLen(server_cb_body.ctx, &len, ret);
+            const char *x, *str = JS_ToCStringLen(server.cb_body.ctx, &len, ret);
 
             // lwsl_warn("len: %zu\n", len);
 
@@ -622,7 +630,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       return 0;
     }
     default: {
-      // lws_print_unhandled(reason);
+      minnet_lws_unhandled("HTTP", reason);
       break;
     }
   }

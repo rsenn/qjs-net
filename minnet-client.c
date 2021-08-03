@@ -211,7 +211,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
 
     default: {
-      // lws_print_unhandled(reason);
+      // minnet_lws_unhandled(reason);
       break;
     }
   }

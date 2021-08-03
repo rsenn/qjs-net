@@ -33,9 +33,9 @@ header_free(JSRuntime* rt, struct http_header* hdr) {
 
 void
 response_dump(struct http_response const* res) {
-  printf("{\n  url = %s, status = %d, ok = %d, type = %s, ", res->url, res->status, res->ok, res->type);
-  buffer_dump("buffer", &res->body);
-  printf(" }\n");
+  printf("\033[38;5;226mMinnetResponse\033[0m {\n  url: '%s',\n  status: %d,\n  ok: %s,\n  type: '%s'", res->url, res->status, res->ok ? "true" : "false", res->type);
+  //  buffer_dump("buffer", &res->body);
+  printf("\n}\n");
 
   fflush(stdout);
 }

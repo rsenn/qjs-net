@@ -28,9 +28,20 @@ struct http_request;
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj)                                                                                                                                                               \
   if(JS_IsFunction(ctx, opt)) {                                                                                                                                                                        \
-    MinnetCallback cb = {ctx, JS_DupValue(ctx, this_obj), JS_DupValue(ctx, opt), #cb_ptr};                                                                                                             \
-    cb_ptr = cb;                                                                                                                                                                                       \
+    cb_ptr = (MinnetCallback){ctx, JS_DupValue(ctx, this_obj), JS_DupValue(ctx, opt), #cb_ptr};                                                                                                        \
   }
+
+#define FREECB(cb_ptr)                                                                                                                                                                                 \
+  do {                                                                                                                                                                                                 \
+    JS_FreeValue(ctx, cb_ptr.this_obj);                                                                                                                                                                \
+    JS_FreeValue(ctx, cb_ptr.func_obj);                                                                                                                                                                \
+  } while(0);
+
+#define ADD(ptr, inst, member)                                                                                                                                                                         \
+  do {                                                                                                                                                                                                 \
+    (*(ptr)) = (inst);                                                                                                                                                                                 \
+    (ptr) = &(*(ptr))->member;                                                                                                                                                                         \
+  } while(0);
 
 enum { READ_HANDLER = 0, WRITE_HANDLER };
 
@@ -49,11 +60,20 @@ extern BOOL minnet_exception;
 
 extern JSClassID minnet_request_class_id;
 
-void lws_print_unhandled(int);
+void minnet_lws_unhandled(const char* handler, int);
 JSValue minnet_emit_this(const struct callback_ws*, JSValueConst this_obj, int argc, JSValue* argv);
 JSValue minnet_emit(const struct callback_ws*, int argc, JSValue* argv);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);
 void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
+
+static inline size_t
+byte_chr(const char* str, size_t len, char c) {
+  const char *s, *t;
+  for(s = str, t = s + len; s < t; ++s)
+    if(*s == c)
+      break;
+  return s - str;
+}
 
 #endif /* MINNET_H */

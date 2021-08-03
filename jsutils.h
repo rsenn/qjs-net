@@ -23,6 +23,18 @@ BOOL js_is_iterator(JSContext*, JSValue obj);
 JSValue js_iterator_next(JSContext*, JSValue obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValue dst, JSValue src, int flags);
 
+static inline char*
+js_to_string(JSContext* ctx, JSValueConst value) {
+  const char* s;
+  char* ret = 0;
+
+  if((s = JS_ToCString(ctx, value))) {
+    ret = js_strdup(ctx, s);
+    JS_FreeCString(ctx, s);
+  }
+  return ret;
+}
+
 typedef union pointer {
   void* p;
   struct {

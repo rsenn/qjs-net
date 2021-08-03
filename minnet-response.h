@@ -22,7 +22,7 @@ typedef struct http_response {
   BOOL ok;
   struct list_head headers;
   JSValue generator;
-  struct lws_ring* ring;
+  /* struct lws_ring* ring;*/
   struct byte_buffer body;
 } MinnetResponse;
 

@@ -151,7 +151,29 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_HEADER: {
-      ret = buffer_tostring(&req->header, ctx);
+      size_t len, namelen;
+      char *x, *end;
+      ret = JS_NewObject(ctx);
+
+      for(x = req->header.start, end = req->header.pos; x < end; x += len + 1) {
+        len = byte_chr(x, end - x, '\n');
+        namelen = byte_chr(x, len, ':');
+
+        if(namelen >= len)
+          continue;
+
+        char* prop = js_strndup(ctx, x, namelen);
+
+        if(x[namelen] == ':')
+          namelen++;
+        if(isspace(x[namelen]))
+          namelen++;
+
+        JS_SetPropertyStr(ctx, ret, prop, JS_NewStringLen(ctx, &x[namelen], len - namelen));
+        js_free(ctx, prop);
+      }
+
+      //      ret = buffer_tostring(&req->header, ctx);
       break;
     }
     case REQUEST_BODY: {
@@ -238,7 +260,7 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_request_get, minnet_request_set, REQUEST_SOCKET, JS_PROP_ENUMERABLE),
+    // JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_request_get, minnet_request_set, REQUEST_SOCKET, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("header", minnet_request_get, minnet_request_set, REQUEST_HEADER, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, minnet_request_set, REQUEST_BODY, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),

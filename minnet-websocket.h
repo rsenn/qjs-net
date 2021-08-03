@@ -16,7 +16,7 @@ typedef struct socket {
   JSValue request, response;
 } MinnetWebsocket;
 
-MinnetWebsocket* lws_wsi_ws(struct lws*);
+MinnetWebsocket* minnet_ws_from_wsi(struct lws*);
 MinnetWebsocket* minnet_ws_get(struct lws*, JSContext* ctx);
 JSValue minnet_ws_object(JSContext*, struct lws* wsi);
 JSValue minnet_ws_wrap(JSContext*, MinnetWebsocket* ws);

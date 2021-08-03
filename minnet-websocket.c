@@ -44,7 +44,7 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
 }
 
 MinnetWebsocket*
-lws_wsi_ws(struct lws* wsi) {
+minnet_ws_from_wsi(struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = lws_get_opaque_user_data(wsi)))

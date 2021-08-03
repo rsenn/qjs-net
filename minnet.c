@@ -156,8 +156,8 @@ lws_callback_name(int reason) {
 }
 
 void
-lws_print_unhandled(int reason) {
-  printf("Unhandled LWS client event: %i %s\n", reason, lws_callback_name(reason));
+minnet_lws_unhandled(const char* handler, int reason) {
+  printf("Unhandled %s client event: %i %s\n", handler, reason, lws_callback_name(reason));
 }
 
 /*static JSValue
