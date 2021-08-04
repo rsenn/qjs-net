@@ -28,8 +28,8 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
 
   ws->lwsi = wsi;
   ws->ref_count = 1;
-  ws->handlers[0] = JS_UNDEFINED;
-  ws->handlers[1] = JS_UNDEFINED;
+  ws->handlers[0] = JS_NULL;
+  ws->handlers[1] = JS_NULL;
 
   JS_SetOpaque(ws_obj, ws);
 
@@ -79,10 +79,18 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
 }
 
 JSValue
-minnet_ws_wrap(JSContext* ctx, MinnetWebsocket* ws) {
+minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
+  MinnetWebsocket* ws;
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
+
   if(JS_IsException(ret))
     return JS_EXCEPTION;
+
+  ws = js_mallocz(ctx, sizeof(MinnetWebsocket));
+
+  ws->lwsi = wsi;
+  ws->handlers[0] = JS_NULL;
+  ws->handlers[1] = JS_NULL;
 
   JS_SetOpaque(ret, ws);
   return ret;
@@ -176,7 +184,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       if(argc >= 2)
         msg = JS_ToCStringLen(ctx, &len, argv[1]);
 
-      if(lws_http_redirect(ws->lwsi, status, (unsigned char*)msg, len, &header.wrpos, header.end) < 0)
+      if(lws_http_redirect(ws->lwsi, status, (unsigned char*)msg, len, &header.write, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
       if(msg)
         JS_FreeCString(ctx, msg);
@@ -194,7 +202,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       name[namelen] = ':';
       name[namelen + 1] = '\0';
 
-      if(lws_add_http_header_by_name(ws->lwsi, (const uint8_t*)name, (const uint8_t*)value, len, &header.wrpos, header.end) < 0)
+      if(lws_add_http_header_by_name(ws->lwsi, (const uint8_t*)name, (const uint8_t*)value, len, &header.write, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
 
       js_free(ctx, name);
@@ -335,6 +343,54 @@ minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
     }
   }
   return ret;
+}
+
+JSValue
+minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+  JSValue proto, obj;
+  MinnetWebsocket* ws;
+  int i;
+
+  if(!(ws = js_mallocz(ctx, sizeof(MinnetWebsocket))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  /* using new_target to get the prototype is necessary when the
+     class is extended. */
+  proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+  if(JS_IsException(proto))
+    proto = JS_DupValue(ctx, minnet_ws_proto);
+
+  obj = JS_NewObjectProtoClass(ctx, proto, minnet_ws_class_id);
+  JS_FreeValue(ctx, proto);
+  if(JS_IsException(obj))
+    goto fail;
+
+  ws->handlers[0] = JS_NULL;
+  ws->handlers[1] = JS_NULL;
+
+  if(argc > 0) {
+    if(JS_IsNumber(argv[0])) {
+      uint32_t fd;
+      JS_ToUint32(ctx, &fd, argv[0]);
+      ws->lwsi = lws_adopt_socket(minnet_server.context, fd);
+    }
+  }
+
+  JS_SetOpaque(obj, ws);
+
+  if(ws->lwsi) {
+    struct wsi_opaque_user_data* opaque = js_malloc(ctx, sizeof(struct wsi_opaque_user_data));
+    opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, obj));
+
+    lws_set_opaque_user_data(ws->lwsi, opaque);
+  }
+
+  return obj;
+
+fail:
+  js_free(ctx, ws);
+  JS_FreeValue(ctx, obj);
+  return JS_EXCEPTION;
 }
 
 static void

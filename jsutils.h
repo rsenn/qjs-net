@@ -14,14 +14,31 @@ typedef struct JSThreadState {
   void *recv_pipe, *send_pipe;
 } JSThreadState;
 
+typedef struct input_buffer {
+  uint8_t* data;
+  size_t size;
+  void (*free)(JSContext*, uint8_t*, JSValue);
+  JSValue value;
+} JSBuffer;
+
 JSValue vector2array(JSContext*, int argc, JSValue argv[]);
 void js_console_log(JSContext*, JSValue* console, JSValue* console_log);
 JSValue js_function_bound(JSContext*, JSValue this_val, int argc, JSValue argv[], int magic, JSValue* func_data);
 JSValue js_function_bind(JSContext*, JSValue func, int argc, JSValue argv[]);
 JSValue js_function_bind_1(JSContext*, JSValue func, JSValue arg);
-BOOL js_is_iterator(JSContext*, JSValue obj);
-JSValue js_iterator_next(JSContext*, JSValue obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
+JSValue js_iterator_next(JSContext*, JSValue obj, JSValue* next, BOOL* done_p, int argc, JSValue argv[]);
 int js_copy_properties(JSContext*, JSValue dst, JSValue src, int flags);
+JSBuffer js_buffer_from(JSContext*, JSValue value);
+BOOL js_buffer_valid(const JSBuffer*);
+JSBuffer js_buffer_clone(const JSBuffer*, JSContext* ctx);
+void js_buffer_dump(const JSBuffer*, DynBuf* db);
+void js_buffer_free(JSBuffer*, JSContext* ctx);
+BOOL js_is_iterable(JSContext*, JSValue obj);
+BOOL js_is_iterator(JSContext*, JSValue obj);
+JSAtom js_symbol_static_atom(JSContext*, const char* name);
+JSValue js_symbol_static_value(JSContext*, const char* name);
+JSValue js_symbol_ctor(JSContext*);
+JSValue js_global_get(JSContext*, const char* prop);
 
 static inline void
 js_dump_string(const char* str, size_t len, size_t maxlen) {
@@ -124,6 +141,26 @@ ptr32value(JSContext* ctx, const void* ptr, int index) {
 static inline BOOL
 js_is_nullish(JSValueConst value) {
   return JS_IsNull(value) || JS_IsUndefined(value);
+}
+
+static inline void
+js_buffer_free_default(JSContext* ctx, uint8_t* data, JSValue val) {
+
+  if(JS_IsString(val))
+    JS_FreeCString(ctx, data);
+
+  if(!JS_IsUndefined(val))
+    JS_FreeValue(ctx, val);
+}
+
+static inline const uint8_t*
+js_buffer_begin(const JSBuffer* in) {
+  return in->data;
+}
+
+static inline const uint8_t*
+js_buffer_end(const JSBuffer* in) {
+  return in->data + in->size;
 }
 
 #endif /* MINNET_JS_UTILS_H */

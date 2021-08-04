@@ -458,10 +458,12 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_ws_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
   minnet_ws_proto = JS_NewObject(ctx);
-  minnet_ws_ctor = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
   JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
-  JS_SetClassProto(ctx, minnet_ws_class_id, minnet_ws_proto);
+
+  minnet_ws_ctor = JS_NewCFunction2(ctx, minnet_ws_constructor, "MinnetWebsocket", 0, JS_CFUNC_constructor, 0);
+
+  JS_SetConstructor(ctx, minnet_ws_ctor, minnet_ws_proto);
 
   JS_SetPropertyFunctionList(ctx, minnet_ws_ctor, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
 

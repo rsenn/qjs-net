@@ -41,8 +41,12 @@ typedef struct server_context {
   };
   struct http_mount* mount;
   uint32_t serial;
+  JSValue generator;
+
 } MinnetServerContext;
 
 JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+
+extern MinnetHttpServer minnet_server;
 
 #endif /* MINNET_SERVER_H */
