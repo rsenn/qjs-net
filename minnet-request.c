@@ -175,7 +175,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       char *x, *end;
       ret = JS_NewObject(ctx);
 
-      for(x = req->header.start, end = req->header.wrpos; x < end; x += len + 1) {
+      for(x = req->header.start, end = req->header.write; x < end; x += len + 1) {
         len = byte_chr(x, end - x, '\n');
         namelen = byte_chr(x, len, ':');
 

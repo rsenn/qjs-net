@@ -4,8 +4,8 @@
 void
 buffer_init(struct byte_buffer* buf, uint8_t* start, size_t len) {
   buf->start = start;
-  buf->rdpos = buf->start;
-  buf->wrpos = buf->start;
+  buf->read = buf->start;
+  buf->write = buf->start;
   buf->end = start + len;
 }
 
@@ -36,9 +36,9 @@ buffer_append(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) 
     if(!buffer_realloc(buf, buffer_OFFSET(buf) + n + 1, ctx))
       return ret;
   }
-  memcpy(buf->wrpos, x, n);
-  buf->wrpos[n] = '\0';
-  buf->wrpos += n;
+  memcpy(buf->write, x, n);
+  buf->write[n] = '\0';
+  buf->write += n;
   return n;
 }
 
@@ -48,21 +48,21 @@ buffer_free(struct byte_buffer* buf, JSRuntime* rt) {
   if(start == (uint8_t*)&buf[1]) {
     js_free_rt(rt, buf);
   } else {
-    js_free_rt(rt, buf->start);
+    js_free_rt(rt, buf->start - LWS_PRE);
     buf->start = 0;
-    buf->rdpos = 0;
-    buf->wrpos = 0;
+    buf->read = 0;
+    buf->write = 0;
     buf->end = 0;
-    js_free_rt(rt, buf);
+    //  js_free_rt(rt, buf);
   }
 }
 
 BOOL
 buffer_write(struct byte_buffer* buf, const char* x, size_t n) {
   assert((size_t)buffer_AVAIL(buf) >= n);
-  memcpy(buf->wrpos, x, n);
-  buf->wrpos[n] = '\0';
-  buf->wrpos += n;
+  memcpy(buf->write, x, n);
+  buf->write[n] = '\0';
+  buf->write += n;
   return TRUE;
 }
 
@@ -70,39 +70,31 @@ int
 buffer_printf(struct byte_buffer* buf, const char* format, ...) {
   va_list ap;
   int n;
-  size_t size = lws_ptr_diff_size_t(buf->end, buf->wrpos);
-
-  /* if(!(size = lws_ptr_diff_size_t(buf->end, buf->wrpos)))
-     return 0;*/
-
+  size_t size = lws_ptr_diff_size_t(buf->end, buf->write);
   va_start(ap, format);
-  n = vsnprintf((char*)buf->wrpos, size, format, ap);
+  n = vsnprintf((char*)buf->write, size, format, ap);
   va_end(ap);
-
   if(n > size)
     return 0;
-
   if(n >= (int)size)
     n = size;
-
-  buf->wrpos += n;
-
+  buf->write += n;
   return n;
 }
 
 uint8_t*
 buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   assert((uint8_t*)&buf[1] != buf->start);
-  size_t wrofs = buf->wrpos - buf->start;
-  size_t rdofs = buf->rdpos - buf->start;
+  size_t wrofs = buf->write - buf->start;
+  size_t rdofs = buf->read - buf->start;
   assert(size >= wrofs);
 
   uint8_t* x = js_realloc(ctx, buf->start ? buf->start - LWS_PRE : 0, size + LWS_PRE);
 
   if(x) {
     buf->start = x + LWS_PRE;
-    buf->wrpos = buf->start + wrofs;
-    buf->rdpos = buf->start + rdofs;
+    buf->write = buf->start + wrofs;
+    buf->read = buf->start + rdofs;
     buf->end = buf->start + size;
     return buf->start;
   }
@@ -115,8 +107,8 @@ buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* c
   size_t len;
   if((ptr = JS_GetArrayBuffer(ctx, &len, value))) {
     buf->start = ptr;
-    buf->rdpos = ptr;
-    buf->wrpos = ptr;
+    buf->read = ptr;
+    buf->write = ptr;
     buf->end = buf->start + len;
     return 0;
   }
@@ -129,7 +121,7 @@ buffer_fromvalue(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
     size_t len;
     const char* str = JS_ToCStringLen(ctx, &len, value);
 
-    buf->wrpos = buf->start = (uint8_t*)str;
+    buf->write = buf->start = (uint8_t*)str;
     buf->end = buf->start + len;
   }
   return 0;
@@ -138,7 +130,7 @@ buffer_fromvalue(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
 JSValue
 buffer_tostring(struct byte_buffer const* buf, JSContext* ctx) {
   void* ptr = buf->start;
-  size_t len = buf->wrpos - buf->start;
+  size_t len = buf->write - buf->start;
   return JS_NewStringLen(ctx, ptr, len);
 }
 
@@ -156,6 +148,6 @@ buffer_toarraybuffer(struct byte_buffer const* buf, JSContext* ctx) {
 
 void
 buffer_dump(const char* n, struct byte_buffer const* buf) {
-  fprintf(stderr, "%s\t{ wrpos = %zu, size = %zu }\n", n, buf->wrpos - buf->start, buf->end - buf->start);
+  fprintf(stderr, "%s\t{ write = %zu, size = %zu }\n", n, buf->write - buf->start, buf->end - buf->start);
   fflush(stderr);
 }

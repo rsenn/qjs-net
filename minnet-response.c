@@ -247,7 +247,7 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
     case RESPONSE_OFFSET: {
       uint64_t o;
       if(!JS_ToIndex(ctx, &o, value))
-        resp->body.wrpos = resp->body.start + o;
+        resp->body.write = resp->body.start + o;
       break;
     }
   }

@@ -9,7 +9,7 @@
 #include <cutils.h>
 
 typedef struct byte_buffer {
-  uint8_t *start, *wrpos, *rdpos, *end;
+  uint8_t *start, *write, *read, *end;
 } MinnetBuffer;
 
 #define BUFFER(buf)                                                                                                                                                                                    \
@@ -21,8 +21,9 @@ typedef struct byte_buffer {
 #define BUFFER_N(buf, n)                                                                                                                                                                               \
   (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, ((uint8_t*)(buf)) + n }
 
-#define buffer_AVAIL(b) ((b)->end - (b)->wrpos)
-#define buffer_OFFSET(b) ((b)->wrpos - (b)->start)
+#define buffer_AVAIL(b) ((b)->end - (b)->write)
+#define buffer_OFFSET(b) ((b)->write - (b)->start)
+#define buffer_REMAIN(b) ((b)->write - (b)->read)
 #define buffer_SIZE(b) ((b)->end - (b)->start)
 #define buffer_START(b) (void*)(b)->start
 
@@ -44,6 +45,13 @@ void buffer_dump(const char*, struct byte_buffer const* buf);
 static inline uint8_t*
 buffer_grow(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   return buffer_realloc(buf, (buf->end - buf->start) + size, ctx);
+}
+
+static inline uint8_t*
+buffer_skip(struct byte_buffer* buf, size_t size) {
+  assert(buf->read + size <= buf->write);
+  buf->read += size;
+  return buf->read;
 }
 
 #endif /* BUFFER_H */

@@ -127,3 +127,47 @@ js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags
   }
   return i;
 }
+
+JSBuffer
+js_buffer_from(JSContext* ctx, JSValueConst value) {
+  JSBuffer ret = {0, 0, &js_buffer_free_default, JS_UNDEFINED};
+  ret.value = JS_DupValue(ctx, value);
+  ret.free = &js_buffer_free_default;
+
+  if(JS_IsString(value)) {
+    ret.data = (uint8_t*)JS_ToCStringLen(ctx, &ret.size, value);
+  } else {
+    ret.data = JS_GetArrayBuffer(ctx, &ret.size, ret.value);
+  }
+  return ret;
+}
+
+BOOL
+js_buffer_valid(const JSBuffer* in) {
+  return !JS_IsException(in->value);
+}
+
+JSBuffer
+js_buffer_clone(const JSBuffer* in, JSContext* ctx) {
+  JSBuffer ret = js_buffer_from(ctx, in->value);
+
+  /*  ret.size = in->size;
+   ret.free = in->free;*/
+
+  return ret;
+}
+
+void
+js_buffer_dump(const JSBuffer* in, DynBuf* db) {
+  dbuf_printf(db, "(JSBuffer){ .data = %p, .size = %zu, .free = %p }", in->data, in->size, in->free);
+}
+
+void
+js_buffer_free(JSBuffer* in, JSContext* ctx) {
+  if(in->data) {
+    in->free(ctx, in->data, in->value);
+    in->data = 0;
+    in->size = 0;
+    in->value = JS_UNDEFINED;
+  }
+}
