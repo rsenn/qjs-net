@@ -272,7 +272,9 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case(int)LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case(int)LWS_CALLBACK_ESTABLISHED: {
       if(server.cb_connect.ctx) {
+        
         ws_obj = minnet_ws_object(server.cb_connect.ctx, wsi);
+
         minnet_emit(&server.cb_connect, 1, &ws_obj);
       }
       return 0;
@@ -509,7 +511,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     case(int)LWS_CALLBACK_HTTP_BODY_COMPLETION: {
       MinnetRequest* req = minnet_request_data(ctx, serv->req_obj);
 
-      MinnetCallback const* cb = serv->mount ? &serv->mount->callback : &server.cb_http;
+      MinnetCallback const* cb = server.cb_body.ctx ? &server.cb_body : serv->mount ? &serv->mount->callback : 0;
       MinnetBuffer b = BUFFER(buf);
       MinnetResponse* resp = request(cb, ws_obj, serv->args);
 
@@ -520,6 +522,8 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       if(cb && cb->ctx) {
         JSValue ret = minnet_emit_this(cb, ws_obj, 2, serv->args);
+
+        assert(js_is_iterator(ctx, ret));
         serv->generator = ret;
       } else if(lws_http_transaction_completed(wsi)) {
         return -1;
@@ -593,6 +597,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
           }
           if(cb && cb->ctx) {
             JSValue ret = minnet_emit_this(cb, ws_obj, 2, args);
+            assert(js_is_iterator(ctx, ret));
             serv->generator = ret;
           } else {
             if(lws_http_transaction_completed(wsi))
@@ -630,19 +635,19 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       printf("LWS_CALLBACK_HTTP_WRITEABLE[%zu]\tcb_body.ctx=%p url=%s path=%s mountpoint=%s mount=%s\n", serv->serial++, server.cb_body.ctx, url, path, mountpoint, serv->mount ? serv->mount->mnt : 0);
 
-      if(server.cb_body.ctx) {
+      if(JS_IsObject(serv->generator)) {
         JSValue ret, next = JS_UNDEFINED;
 
-        ret = js_iterator_next(server.cb_body.ctx, serv->generator, &next, &done, 0, 0);
+        ret = js_iterator_next(server.ctx, serv->generator, &next, &done, 0, 0);
 
         if(JS_IsException(ret)) {
           JSValue exception = JS_GetException(ctx);
           fprintf(stderr, "Exception: %s\n", JS_ToCString(ctx, exception));
           n = LWS_WRITE_HTTP_FINAL;
         } else if(!js_is_nullish(ret)) {
-          JSBuffer buf = js_buffer_from(server.cb_body.ctx, ret);
+          JSBuffer buf = js_buffer_from(server.ctx, ret);
           buffer_append(&resp->body, buf.data, buf.size, ctx);
-          js_buffer_free(&buf, server.cb_body.ctx);
+          js_buffer_free(&buf, server.ctx);
         }
 
       } else {

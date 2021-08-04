@@ -337,7 +337,9 @@ export class Connection extends MessageTransceiver {
     throw new Error("Virtual method");
   }
 
-  onconnect = LogWrap("Connection.onconnect");
+  onconnect(...args) {
+    console.log("Connection.onconnect", { args }, this);
+  } //= LogWrap('Connection.onconnect');
   onopen = LogWrap("Connection.onopen");
 
   /*  onopen(arg) {
@@ -410,7 +412,7 @@ export class Connection extends MessageTransceiver {
     };
     return {
       onConnect(sock) {
-        verbose(`Connected`, { fd: sock.fd }, ctor.name);
+        verbose(`Connected`, { fd: sock.fd, sock }, ctor.name);
         let connection = fdlist[sock.fd];
         if(!connection) connection = new ctor(sock, instance, log, "json", classes);
         verbose(`Connected`, { connection });
@@ -857,7 +859,7 @@ export function define(obj, ...args) {
 
 export function setHandlers(os, handlers) {
   handlers.onFd = function(fd, readable, writable) {
-    console.log("onFd(", fd, ",", readable, ",", writable, ")");
+    //console.log('\x1b[38;5;82monFd\x1b[0m(', fd, ',', readable, ',', writable, ')');
     os.setReadHandler(fd, readable);
     os.setWriteHandler(fd, writable);
   };
