@@ -262,7 +262,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
-      printf("lws_callback_on_writable %d\n", lws_get_socket_fd(wsi));
+      printf("lws_callback_on_writable(1) %d\n", lws_get_socket_fd(wsi));
       lws_callback_on_writable(wsi);
       return 0;
     }
@@ -365,31 +365,50 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   JSContext* ctx = server.ctx;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   char *url = 0, *method = 0;
-  JSValue ws_obj = minnet_ws_object(ctx, wsi);
-  MinnetWebsocket* ws = minnet_ws_data(ctx, ws_obj);
+  MinnetHttpSession* sess = (MinnetHttpSession*)user;
+  JSValue ws_obj = sess && sess->ws ? minnet_ws_wrap(ctx, sess->ws) : minnet_ws_object(ctx, wsi);
+  MinnetWebsocket* ws = sess && sess->ws ? sess->ws : minnet_ws_data(ctx, ws_obj);
 
   url = lws_uri_and_method(wsi, ctx, &method);
 
+  if(sess && sess->ws == 0)
+    sess->ws = ws;
+
   switch(reason) {
-    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: // return 0;
-    case LWS_CALLBACK_PROTOCOL_INIT:
-    case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
-    case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
-    case LWS_CALLBACK_CLOSED_HTTP:
-    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
+      /*   case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
+         case LWS_CALLBACK_PROTOCOL_INIT:
+         case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+         case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
+         case LWS_CALLBACK_CLOSED_HTTP:
+         case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
+         case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+           break;
+         }*/
 
-    case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+      /* case LWS_CALLBACK_ADD_HEADERS: {
+        struct lws_process_html_args* args = (struct lws_process_html_args*)in;
+         printf("LWS_CALLBACK_ADD_HEADERS args: %.*s\n", args->len, args->p);
+         break;
+       }*/
 
-      break;
+    case LWS_CALLBACK_HTTP_BODY_COMPLETION:
+    case LWS_CALLBACK_HTTP_BODY: {
+      MinnetRequest* req = sess->req ? sess->req : (sess->req = request_new(ctx));
+
+      buffer_append(&req->body, in, len, ctx);
+
+      printf("%s len: %zu, size: %zu, in: ", lws_callback_name(reason), len, buffer_OFFSET(&req->body));
+      js_dump_string(in, len, 80);
+      puts("");
+      return 0;
     }
 
-    case LWS_CALLBACK_ADD_HEADERS: {
-      /*struct lws_process_html_args* args = (struct lws_process_html_args*)in;
+      /*   case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
+               printf("LWS_CALLBACK_HTTP_BODY len: %zu, size: %zu, in: ", len, buffer_OFFSET(&req->body));
 
-      printf("LWS_CALLBACK_ADD_HEADERS args: %.*s\n", args->len, args->p);*/
-      break;
-    }
-
+                 return 0;
+         }
+     */
     case LWS_CALLBACK_HTTP: {
       MinnetHttpMount const* mount;
       MinnetCallback const* cb = &server.cb_body;
@@ -447,6 +466,11 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
         resp->read_only = TRUE;
 
+        if(sess->req == 0)
+          sess->req = req;
+        if(sess->resp == 0)
+          sess->resp = resp;
+
         ws->request = JS_DupValue(ctx, args[0]);
         ws->response = JS_DupValue(ctx, args[1]);
 
@@ -500,7 +524,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
             if(lws_http_transaction_completed(wsi))
               return -1;
           }
-          printf("lws_callback_on_writable %d\n", lws_get_socket_fd(wsi));
+          printf("lws_callback_on_writable(2) %d\n", lws_get_socket_fd(wsi));
           lws_callback_on_writable(wsi);
         }
 
@@ -543,18 +567,11 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
             size_t len;
             int r;
             const char *x, *str = JS_ToCStringLen(server.cb_body.ctx, &len, ret);
-
-            // lwsl_warn("len: %zu\n", len);
-
             for(x = str; len > 0; x += r, len -= r) {
               size_t l = len > 1024 ? 1024 : len;
-
-              /*if(l == len)
-                n = LWS_WRITE_HTTP_FINAL;*/
-
               r = lws_write(wsi, (uint8_t*)x, l, n);
 
-              printf("lws_write(wsi, '%.*s', %zu) = %i (done = %i)\n", l, x, l, r, done);
+              // printf("lws_write(wsi, "); js_dump_string(x, l, l == 1024 ? 100 : 0); printf(", %zu) = %i (done = %i)\n", l, r, done);
 
               if(r <= 0)
                 break;
@@ -577,7 +594,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       }
 
       if(!done) {
-        printf("lws_callback_on_writable %d\n", lws_get_socket_fd(wsi));
+        printf("lws_callback_on_writable(3) %d\n", lws_get_socket_fd(wsi));
         lws_callback_on_writable(wsi);
       }
 
@@ -588,9 +605,9 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
        */
       if(n == LWS_WRITE_HTTP_FINAL) {
         int r;
-        r = lws_write(wsi, "", 0, n);
-        printf("lws_write() = %i\n", r);
-
+        /*    r = lws_write(wsi, "", 0, n);
+            printf("lws_write() = %i\n", r);
+    */
         r = lws_http_transaction_completed(wsi);
         printf("LWS_WRITE_HTTP_FINAL r=%i\n", r);
 

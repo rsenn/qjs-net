@@ -25,8 +25,9 @@ typedef struct http_server {
 } MinnetHttpServer;
 
 typedef struct http_session {
-  struct lws* lwsi;
-  JSValue request, response;
+  struct socket* ws;
+  struct http_request* req;
+  struct http_response* resp;
 } MinnetHttpSession;
 
 JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);

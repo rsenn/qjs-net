@@ -23,6 +23,27 @@ BOOL js_is_iterator(JSContext*, JSValue obj);
 JSValue js_iterator_next(JSContext*, JSValue obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValue dst, JSValue src, int flags);
 
+static inline void
+js_dump_string(const char* str, size_t len, size_t maxlen) {
+  size_t i, n = 2;
+  putchar('\'');
+  for(i = 0; i < len; i++) {
+    if(str[i] == '\n') {
+      putchar('\\');
+      putchar('n');
+      n += 2;
+    } else {
+      putchar(str[i]);
+      n++;
+    }
+    if(maxlen > 0 && n + 1 >= maxlen) {
+      fputs("'...", stdout);
+      return;
+    }
+  }
+  putchar('\'');
+}
+
 static inline char*
 js_to_string(JSContext* ctx, JSValueConst value) {
   const char* s;

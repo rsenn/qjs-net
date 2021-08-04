@@ -97,7 +97,7 @@ buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   size_t rdofs = buf->rdpos - buf->start;
   assert(size >= wrofs);
 
-  uint8_t* x = js_realloc(ctx, buf->start - LWS_PRE, size + LWS_PRE);
+  uint8_t* x = js_realloc(ctx, buf->start ? buf->start - LWS_PRE : 0, size + LWS_PRE);
 
   if(x) {
     buf->start = x + LWS_PRE;
