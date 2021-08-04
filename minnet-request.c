@@ -6,13 +6,32 @@
 JSClassID minnet_request_class_id;
 JSValue minnet_request_proto, minnet_request_ctor;
 
-enum { REQUEST_METHOD, REQUEST_SOCKET, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_BODY };
+enum { REQUEST_TYPE, REQUEST_METHOD, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_BODY };
+
+static const char* const method_names[] = {"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE", "CONNECT", "HEAD"};
+
+static const char*
+method2name(enum http_method m) {
+  if(m >= 0 && m < countof(method_names))
+    return method_names[m];
+  return 0;
+}
+
+static enum http_method
+name2method(const char* name) {
+  int i;
+  for(i = 0; i < countof(method_names); i++) {
+    if(!strcasecmp(name, method_names[i]))
+      return i;
+  }
+  return -1;
+}
 
 void
 request_dump(struct http_request const* req) {
   printf("\nMinnetRequest {\n\turi = %s", req->url);
   printf("\n\tpath = %s", req->path);
-  printf("\n\ttype = %s", req->type);
+  printf("\n\ttype = %s", method_name(req->method));
 
   buffer_dump("header", &req->header);
   fputs("\n\tresponse = ", stdout);
@@ -29,7 +48,7 @@ request_init(struct http_request* req, const char* path, char* url, char* method
   pstrcpy(req->path, sizeof(req->path), path);
 
   req->url = url;
-  req->type = method;
+  // req->type = method;
 }
 
 struct http_request*
@@ -99,13 +118,16 @@ fail:
 }
 
 JSValue
-minnet_request_new(JSContext* ctx, const char* path, const char* url, const char* method) {
+minnet_request_new(JSContext* ctx, const char* path, const char* url, enum http_method method) {
   struct http_request* req;
 
   if(!(req = request_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  request_init(req, path, js_strdup(ctx, url), js_strdup(ctx, method));
+  request_init(req, path, js_strdup(ctx, url), js_strdup(ctx, method == METHOD_POST ? "POST" : "GET"));
+
+  req->method = method;
+
   return minnet_request_wrap(ctx, req);
 }
 
@@ -131,14 +153,12 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
 
   JSValue ret = JS_UNDEFINED;
   switch(magic) {
-    case REQUEST_METHOD: {
-      if(req->type)
-        ret = JS_NewString(ctx, req->type);
+    case REQUEST_TYPE: {
+      ret = JS_NewString(ctx, method_name(req->method));
       break;
     }
-    case REQUEST_SOCKET: {
-      /*if(req->ws)
-        ret = minnet_ws_object(ctx, req->ws);*/
+    case REQUEST_METHOD: {
+      ret = JS_NewInt32(ctx, req->method);
       break;
     }
     case REQUEST_URI: {
@@ -177,7 +197,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_BODY: {
-      ret = buffer_toarraybuffer(&req->header, ctx);
+      ret = buffer_toarraybuffer(&req->body, ctx);
 
       break;
     }
@@ -200,17 +220,15 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
   str = JS_ToCStringLen(ctx, &len, value);
 
   switch(magic) {
-    case REQUEST_METHOD: {
-      if(req->type) {
-        js_free(ctx, req->type);
-        req->type = 0;
-      }
-      req->type = js_strdup(ctx, str);
-      break;
-    }
-    case REQUEST_SOCKET: {
-      /*if(req->ws)
-        ret = minnet_ws_object(ctx, req->ws);*/
+    case REQUEST_METHOD:
+    case REQUEST_TYPE: {
+      int32_t m = -1;
+      if(JS_IsNumber(value))
+        JS_ToInt32(ctx, &m, value);
+      else
+        m = name2method(str);
+      if(m >= 0 && method2name(m))
+        req->method = m;
       break;
     }
     case REQUEST_URI: {
@@ -257,10 +275,10 @@ JSClassDef minnet_request_class = {
 };
 
 const JSCFunctionListEntry minnet_request_proto_funcs[] = {
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, JS_PROP_ENUMERABLE),
-    // JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_request_get, minnet_request_set, REQUEST_SOCKET, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, minnet_request_set, REQUEST_HEADER, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, minnet_request_set, REQUEST_BODY, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),

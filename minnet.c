@@ -19,7 +19,7 @@
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
-JSValue minnet_log_cb = JS_UNDEFINED, minnet_log_this = JS_UNDEFINED;
+static JSValue minnet_log_cb, minnet_log_this;
 int32_t minnet_log_level = 0;
 JSContext* minnet_log_ctx = 0;
 BOOL minnet_exception = FALSE;
@@ -387,6 +387,15 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
     // JS_CGETSET_DEF("log", get_log, set_log),
     JS_CFUNC_DEF("setLog", 1, minnet_set_log),
+    JS_PROP_INT32_DEF("METHOD_GET", METHOD_GET, 0),
+    JS_PROP_INT32_DEF("METHOD_POST", METHOD_POST, 0),
+    JS_PROP_INT32_DEF("METHOD_OPTIONS", METHOD_OPTIONS, 0),
+    JS_PROP_INT32_DEF("METHOD_PUT", METHOD_PUT, 0),
+    JS_PROP_INT32_DEF("METHOD_PATCH", METHOD_PATCH, 0),
+    JS_PROP_INT32_DEF("METHOD_DELETE", METHOD_DELETE, 0),
+    JS_PROP_INT32_DEF("METHOD_CONNECT", METHOD_CONNECT, 0),
+    JS_PROP_INT32_DEF("METHOD_HEAD", METHOD_HEAD, 0),
+
     JS_PROP_INT32_DEF("LLL_ERR", LLL_ERR, 0),
     JS_PROP_INT32_DEF("LLL_WARN", LLL_WARN, 0),
     JS_PROP_INT32_DEF("LLL_NOTICE", LLL_NOTICE, 0),
@@ -412,6 +421,8 @@ value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
+  minnet_log_cb = JS_UNDEFINED;
+  minnet_log_this = JS_UNDEFINED;
 
   JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 

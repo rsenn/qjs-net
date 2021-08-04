@@ -8,11 +8,11 @@
 
 typedef struct http_mount {
   union {
-    struct lws_http_mount lws;
     struct {
       struct http_mount* next;
-      const char *mountpoint, *origin, *def, *protocol;
+      const char *mnt, *org, *def, *pro;
     };
+    struct lws_http_mount lws;
   };
   MinnetCallback callback;
 } MinnetHttpMount;
@@ -29,6 +29,19 @@ typedef struct http_session {
   struct http_request* req;
   struct http_response* resp;
 } MinnetHttpSession;
+
+typedef struct server_context {
+  JSValue ws_obj;
+  union {
+    struct {
+      JSValue req_obj;
+      JSValue resp_obj;
+    };
+    JSValue args[2];
+  };
+  struct http_mount* mount;
+  uint32_t serial;
+} MinnetServerContext;
 
 JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
