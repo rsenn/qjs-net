@@ -289,6 +289,9 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* a
         rlen = 124;
     }
 
+    printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
+    //  return JS_ThrowInternalError(ctx, "minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
+
     if(reason)
       lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
 
