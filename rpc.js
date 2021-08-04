@@ -30,9 +30,7 @@ export const VfnDecorator = vfn => define(vfn, VfnAdapter(vfn));
 export const Memoize = (globalThis.memoize = function memoize(fn) {
   let self,
     storage = {};
-  const v = VfnDecorator((key, value) =>
-    value !== undefined ? (storage[key] = value) : storage[key]
-  );
+  const v = VfnDecorator((key, value) => (value !== undefined ? (storage[key] = value) : storage[key]));
   self = function(key, ...args) {
     let r;
 
@@ -45,7 +43,6 @@ export const Memoize = (globalThis.memoize = function memoize(fn) {
   return Object.freeze(self);
 });
 
-<<<<<<< HEAD
 export const DebugFlags = (globalThis.DebugFlags = Util.memoize((environ = (globalThis.process && process.env['DEBUG']) || '') => {
   let a = Array.isArray(environ) ? environ : environ.split(/[^A-Za-z0-9_]+/g);
   a = a.filter(n => n !== '');
@@ -55,19 +52,6 @@ export const DebugFlags = (globalThis.DebugFlags = Util.memoize((environ = (glob
   }, {});
   return a;
 }));
-=======
-export const DebugFlags = (globalThis.DebugFlags = Util.memoize(
-  (environ = (globalThis.process && process.env["DEBUG"]) || "") => {
-    let a = Array.isArray(environ) ? environ : environ.split(/[^A-Za-z0-9_]+/g);
-    a = a.filter(n => n !== "");
-    a = a.reduce((acc, n) => {
-      acc[n] = true;
-      return acc;
-    }, {});
-    return a;
-  }
-));
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
 
 globalThis.GetClasses = function* GetClasses(obj) {
   let keys = GetKeys(obj);
@@ -113,14 +97,7 @@ export function DefaultConstructor(mapper, fn = (...args) => new Object(...args)
 DefaultConstructor.prototype = new Function();
 DefaultConstructor.prototype.constructor = DefaultConstructor;
 
-<<<<<<< HEAD
 export function EventLogger(instance = {}, callback = (name, event, thisObj) => console.log('EventLogger', { name, event, thisObj })) {
-=======
-export function EventLogger(
-  instance = {},
-  callback = (name, event, thisObj) => console.log("EventLogger", { name, event, thisObj })
-) {
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
   function WrapEvent(handler, name) {
     return function(e) {
       return callback(name, e, this);
@@ -167,15 +144,10 @@ export class MessageTransmitter {
  */
 export function MessageTransceiver() {}
 
-Object.assign(
-  MessageTransceiver.prototype,
-  MessageReceiver.prototype,
-  MessageTransmitter.prototype
-);
+Object.assign(MessageTransceiver.prototype, MessageReceiver.prototype, MessageTransmitter.prototype);
 
 Object.defineProperty(MessageTransceiver, Symbol.hasInstance, {
-  value: instance =>
-    [MessageReceiver, MessageTransmitter].every(ctor => ctor[Symbol.hasInstance](instance))
+  value: instance => [MessageReceiver, MessageTransmitter].every(ctor => ctor[Symbol.hasInstance](instance))
 });
 
 const codecs = {
@@ -222,23 +194,7 @@ export function RPCApi(c) {
   return api;
 }
 
-<<<<<<< HEAD
 for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get']) RPCApi.prototype[cmd] = MakeCommandFunction(cmd, o => o.connection);
-=======
-for(let cmd of [
-  "list",
-  "new",
-  "methods",
-  "properties",
-  "keys",
-  "names",
-  "symbols",
-  "call",
-  "set",
-  "get"
-])
-  RPCApi.prototype[cmd] = MakeCommandFunction(cmd, o => o.connection);
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
 
 export function RPCProxy(c) {
   let obj = define(new.target ? this : new RPCProxy(c), { connection: c });
@@ -281,13 +237,7 @@ export class Connection extends MessageTransceiver {
   lastSeq = 0;
 
   static equal(a, b) {
-<<<<<<< HEAD
     return (a.socket != null && a.socket === b.socket) || (typeof a.fd == 'number' && a.fd === b.fd);
-=======
-    return (
-      (a.socket != null && a.socket === b.socket) || (typeof a.fd == "number" && a.fd === b.fd)
-    );
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
   }
   static get last() {
     return this.list.last;
@@ -309,23 +259,15 @@ export class Connection extends MessageTransceiver {
       },
       messages: { requests: {}, responses: {} }
     });
-<<<<<<< HEAD
     define(this, typeof codec == 'string' && codecs[codec] ? { codecName: codec, codec: codecs[codec]() } : {});
     define(this, typeof codec == 'object' && codec.name ? { codecName: codec.name, codec } : {});
-=======
-    define(
-      this,
-      typeof codec == "string" && codecs[codec] ? { codecName: codec, codec: codecs[codec]() } : {}
-    );
-    define(this, typeof codec == "object" && codec.name ? { codecName: codec.name, codec } : {});
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
     Connection.set.add(this);
     Connection.fromSocket.set(socket, this);
   }
 
   error(message) {
     const { socket } = this;
-    this.log(`ERROR: ${message}`);
+    console.log(`ERROR: ${message}`);
     this.exception = new Error(message);
     this.close(socket.CLOSE_STATUS_PROTOCOL_ERR || 1000, message.slice(0, 128));
     return this.exception;
@@ -333,7 +275,7 @@ export class Connection extends MessageTransceiver {
 
   close(...args) {
     const { socket } = this;
-    this.log('close(', ...args, ')');
+    console.log('close(', ...args, ')');
     socket.close();
     delete this.socket;
     delete this.fd;
@@ -349,10 +291,7 @@ export class Connection extends MessageTransceiver {
     try {
       data = codec.decode((msg && msg.data) || msg);
     } catch(err) {
-      throw this.error(
-        `Connection.onmessage ${this.codec.name} parse error: '${(err && err.message) || msg}'` +
-          err.stack
-      );
+      throw this.error(`Connection.onmessage ${this.codec.name} parse error: '${(err && err.message) || msg}'` + err.stack);
       return this.exception;
     }
     let response = this.processMessage(data);
@@ -376,17 +315,17 @@ console.log("Connection.onconnect", {args}, this);
   }*/
 
   onpong(data) {
-    this.log('Connection.onpong:', data);
+    console.log('Connection.onpong:', data);
   }
 
   onerror(error) {
-    this.log('Connection.onerror', error ? ` (${error})` : '');
+    console.log('Connection.onerror', error ? ` (${error})` : '');
     this.connected = false;
     this.cleanup();
   }
 
   onclose(reason) {
-    this.log('Connection.onclose', reason ? ` (${reason})` : '');
+    console.log('Connection.onclose', reason ? ` (${reason})` : '');
     this.connected = false;
     this.cleanup();
   }
@@ -410,17 +349,9 @@ console.log("Connection.onconnect", {args}, this);
 
   sendCommand(command, params = {}) {
     let message = { command, ...params };
-<<<<<<< HEAD
     this.log('Connection.sendCommand', { command, params, message });
     if(typeof params == 'object' && params != null && typeof params.seq != 'number') params.seq = this.seq = (this.seq | 0) + 1;
     if(this.messages && this.messages.requests) if (typeof params.seq == 'number') this.messages.requests[params.seq] = message;
-=======
-    this.log("Connection.sendCommand", { command, params, message });
-    if(typeof params == "object" && params != null && typeof params.seq != "number")
-      params.seq = this.seq = (this.seq | 0) + 1;
-    if(this.messages && this.messages.requests)
-      if(typeof params.seq == "number") this.messages.requests[params.seq] = message;
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
     if(this.messages && this.messages.requests) this.messages.requests[params.seq] = message;
     this.sendMessage(message);
   }
@@ -433,7 +364,7 @@ console.log("Connection.onconnect", {args}, this);
     const handle = (sock, event, ...args) => {
       let conn, obj;
       if((conn = fdlist[sock.fd])) {
-        verbose(`Handle fd #${sock.fd} ${event}`);
+        //verbose(`Handle fd #${sock.fd} ${event}`);
         callHandler(conn, event, ...args);
       } else {
         throw new Error(`No connection for fd #${sock.fd}!`);
@@ -447,20 +378,22 @@ console.log("Connection.onconnect", {args}, this);
     };
     return {
       onConnect(sock) {
-        verbose(`Connected`, { fd: sock.fd, sock }, ctor.name);
+        verbose(`Connected`,sock);
         let connection = fdlist[sock.fd];
         if(!connection) connection = new ctor(sock, instance, log, 'json', classes);
-        verbose(`Connected`, { connection });
+        connection.socket ??= sock;
+        verbose(`Connected`, { sock, connection });
         fdlist[sock.fd] = connection;
-        handle(sock, 'connect');
+        handle(sock, 'connect', sock);
       },
       onOpen(sock) {
         verbose(`Opened`, { fd: sock.fd }, ctor.name);
         fdlist[sock.fd] = new ctor(sock, instance, log, 'json', classes);
+        fdlist[sock.fd].socket ??= sock;
         handle(sock, 'open');
       },
       onMessage(sock, msg) {
-        verbose(`Message`, { fd: sock.fd }, msg);
+        verbose(`Message`, { fd: sock.fd, sock }, msg);
         handle(sock, 'message', msg);
       },
       onError(sock, error) {
@@ -512,20 +445,13 @@ function RPCServerEndpoint(classes = {}) {
     call: objectCommand(({ obj, method, args = [] }, respond) => {
       if(method in obj && typeof obj[method] == 'function') {
         const result = obj[method](...args);
-        if(isThenable(result))
-          return result.then(result => respond(true, result)).catch(error => respond(false, error));
+        if(isThenable(result)) return result.then(result => respond(true, result)).catch(error => respond(false, error));
         return respond(true, result);
       }
       return respond(false, `No such method on object #${id}: ${method}`);
     }),
     keys: objectCommand(({ obj, enumerable = true }, respond) => {
-      return respond(
-        true,
-        GetProperties(
-          obj,
-          enumerable ? obj => Object.keys(obj) : obj => Object.getOwnPropertyNames(obj)
-        )
-      );
+      return respond(true, GetProperties(obj, enumerable ? obj => Object.keys(obj) : obj => Object.getOwnPropertyNames(obj)));
     }),
     names: objectCommand(({ obj, enumerable = true }, respond) => {
       return respond(
@@ -800,15 +726,8 @@ export function parseURL(url_or_port) {
   let protocol, host, port;
   if(!isNaN(+url_or_port)) [protocol, host, port] = ['ws', '0.0.0.0', url_or_port];
   else {
-<<<<<<< HEAD
     [protocol = 'ws', host, port = 80] = [.../(.*:\/\/|)([^:/]*)(:[0-9]+|).*/.exec(url_or_port)].slice(1);
     if(typeof port == 'string') port = port.slice(1);
-=======
-    [protocol = "ws", host, port = 80] = [
-      .../(.*:\/\/|)([^:/]*)(:[0-9]+|).*/.exec(url_or_port)
-    ].slice(1);
-    if(typeof port == "string") port = port.slice(1);
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
   }
   port = +port;
   if(protocol) {
@@ -833,11 +752,7 @@ export function parseURL(url_or_port) {
   );
 }
 
-export function GetProperties(
-  obj,
-  method = obj => Object.getOwnPropertyNames(obj),
-  pred = (obj, depth) => obj !== Object.prototype
-) {
+export function GetProperties(obj, method = obj => Object.getOwnPropertyNames(obj), pred = (obj, depth) => obj !== Object.prototype) {
   let set = new Set();
   let depth = 0;
   do {
@@ -877,8 +792,7 @@ export function getPropertyDescriptors(obj, merge = true, pred = (proto, depth) 
   if(merge) {
     let i = 0;
     let result = {};
-    for(let desc of a)
-      for(let prop of GetKeys(desc)) if(!(prop in result)) result[prop] = desc[prop];
+    for(let desc of a) for (let prop of GetKeys(desc)) if(!(prop in result)) result[prop] = desc[prop];
     return result;
   }
   return a;
@@ -899,11 +813,7 @@ export function define(obj, ...args) {
 
 export function setHandlers(os, handlers) {
   handlers.onFd = function(fd, readable, writable) {
-<<<<<<< HEAD
     //console.log('\x1b[38;5;82monFd\x1b[0m(', fd, ',', readable, ',', writable, ')');
-=======
-    console.log("onFd(", fd, ",", readable, ",", writable, ")");
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
     os.setReadHandler(fd, readable);
     os.setWriteHandler(fd, writable);
   };
@@ -928,28 +838,11 @@ export function objectCommand(fn) {
   };
 }
 
-<<<<<<< HEAD
 export function MakeListCommand(pred = v => typeof v != 'function', defaults = { maxDepth: Infinity }) {
-=======
-export function MakeListCommand(
-  pred = v => typeof v != "function",
-  defaults = { maxDepth: Infinity }
-) {
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
   return objectCommand((data, respond) => {
-    const {
-      obj,
-      enumerable = true,
-      source = false,
-      keyDescriptor = true,
-      valueDescriptor = true
-    } = data;
+    const { obj, enumerable = true, source = false, keyDescriptor = true, valueDescriptor = true } = data;
     defaults = { enumerable: true, writable: true, configurable: true, ...defaults };
-    let propDesc = getPropertyDescriptors(
-      obj,
-      true,
-      (proto, depth) => depth < (defaults.maxDepth ?? Infinity)
-    );
+    let propDesc = getPropertyDescriptors(obj, true, (proto, depth) => depth < (defaults.maxDepth ?? Infinity));
     let keys = GetKeys(propDesc);
     let map = keys.reduce((acc, key) => {
       const desc = propDesc[key];
@@ -957,17 +850,9 @@ export function MakeListCommand(
       if(pred(value)) {
         if(valueDescriptor) {
           value = SerializeValue(value, source);
-<<<<<<< HEAD
           for(let flag of ['enumerable', 'writable', 'configurable']) if(desc[flag] !== undefined) if (desc[flag] != defaults[flag]) value[flag] = desc[flag];
         } else if(typeof value == 'function') {
           value = value + '';
-=======
-          for(let flag of ["enumerable", "writable", "configurable"])
-            if(desc[flag] !== undefined)
-              if(desc[flag] != defaults[flag]) value[flag] = desc[flag];
-        } else if(typeof value == "function") {
-          value = value + "";
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
         }
         acc.push([keyDescriptor ? SerializeValue(key) : key, value]);
       }
@@ -1015,13 +900,7 @@ function ForwardObject(e, thisObj) {
 function MakeCommandFunction(cmd, getConnection, thisObj, t) {
   const pfx = [`RESPONSE to`, typeof cmd == 'symbol' ? cmd : `"${cmd}"`];
   t ??= { methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
-<<<<<<< HEAD
   if(typeof getConnection != 'function') getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
-=======
-  if(typeof getConnection != "function")
-    getConnection = obj =>
-      (typeof obj == "object" && obj != null && "connection" in obj && obj.connection) || obj;
->>>>>>> 70bc84d2a1a442d584cbbf65814616c25fdd15ad
   //console.log("MakeCommandFunction",{cmd,getConnection,thisObj});
   return function(params = {}) {
     thisObj = thisObj || this;
