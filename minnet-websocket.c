@@ -2,62 +2,69 @@
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 
-JSValue minnet_ws_proto;
+JSValue minnet_ws_proto, minnet_ws_ctor;
 JSClassID minnet_ws_class_id;
 
 enum { WEBSOCKET_FD, WEBSOCKET_ADDRESS, WEBSOCKET_FAMILY, WEBSOCKET_PORT, WEBSOCKET_PEER };
 enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
 
+struct wsi_opaque_user_data {
+  JSObject* obj;
+  struct socket* sock;
+};
+
 static JSValue
-create_websocket_obj(JSContext* ctx, struct lws* wsi) {
+minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
   JSValue ws_obj = JS_NewObjectClass(ctx, minnet_ws_class_id);
 
   if(JS_IsException(ws_obj))
     return JS_EXCEPTION;
 
-  if(!(ws = js_mallocz(ctx, sizeof(*ws)))) {
+  if(!(ws = js_mallocz(ctx, sizeof(MinnetWebsocket)))) {
     JS_FreeValue(ctx, ws_obj);
     return JS_EXCEPTION;
   }
 
   ws->lwsi = wsi;
   ws->ref_count = 1;
+  ws->handlers[0] = JS_UNDEFINED;
+  ws->handlers[1] = JS_UNDEFINED;
 
   JS_SetOpaque(ws_obj, ws);
 
-  lws_set_opaque_user_data(wsi, JS_VALUE_GET_OBJ(JS_DupValue(ctx, ws_obj)));
+  struct wsi_opaque_user_data* opaque = js_malloc(ctx, sizeof(struct wsi_opaque_user_data));
+  opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, ws_obj));
+  // opaque->sock = ws;
+
+  lws_set_opaque_user_data(wsi, opaque);
   //  lws_set_opaque_user_data(wsi,ws);
 
   return ws_obj;
 }
 
 MinnetWebsocket*
-lws_wsi_ws(struct lws* wsi) {
-  JSObject* obj;
-  MinnetWebsocket* ws = 0;
+minnet_ws_from_wsi(struct lws* wsi) {
+  struct wsi_opaque_user_data* opaque;
 
-  // ws =lws_get_opaque_user_data(wsi);
-  if((obj = lws_get_opaque_user_data(wsi))) {
-    JSValue ws_obj = JS_MKPTR(JS_TAG_OBJECT, obj);
-    ws = JS_GetOpaque(ws_obj, minnet_ws_class_id);
-  }
-  return ws;
+  if((opaque = lws_get_opaque_user_data(wsi)))
+    return JS_GetOpaque(JS_MKPTR(JS_TAG_OBJECT, opaque->obj), minnet_ws_class_id);
+
+  return 0;
 }
 
 MinnetWebsocket*
-lws_wsi_ws2(struct lws* wsi, JSContext* ctx) {
+minnet_ws_get(struct lws* wsi, JSContext* ctx) {
   JSValue ws_obj = minnet_ws_object(ctx, wsi);
-
   return JS_GetOpaque(ws_obj, minnet_ws_class_id);
 }
 
 JSValue
 minnet_ws_object(JSContext* ctx, struct lws* wsi) {
-  JSObject* obj;
+  struct wsi_opaque_user_data* opaque;
 
-  if((obj = lws_get_opaque_user_data(wsi))) {
-    JSValue ws_obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, obj));
+  if((opaque = lws_get_opaque_user_data(wsi))) {
+    JSValue ws_obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, opaque->obj));
     MinnetWebsocket* ws = JS_GetOpaque2(ctx, ws_obj, minnet_ws_class_id);
 
     if(!ws)
@@ -68,7 +75,17 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
     return ws_obj;
   }
 
-  return create_websocket_obj(ctx, wsi);
+  return minnet_ws_new(ctx, wsi);
+}
+
+JSValue
+minnet_ws_wrap(JSContext* ctx, MinnetWebsocket* ws) {
+  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
+  if(JS_IsException(ret))
+    return JS_EXCEPTION;
+
+  JS_SetOpaque(ret, ws);
+  return ret;
 }
 
 void
@@ -159,7 +176,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       if(argc >= 2)
         msg = JS_ToCStringLen(ctx, &len, argv[1]);
 
-      if(lws_http_redirect(ws->lwsi, status, (unsigned char*)msg, len, &header.pos, header.end) < 0)
+      if(lws_http_redirect(ws->lwsi, status, (unsigned char*)msg, len, &header.wrpos, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
       if(msg)
         JS_FreeCString(ctx, msg);
@@ -177,7 +194,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       name[namelen] = ':';
       name[namelen + 1] = '\0';
 
-      if(lws_add_http_header_by_name(ws->lwsi, (const uint8_t*)name, (const uint8_t*)value, len, &header.pos, header.end) < 0)
+      if(lws_add_http_header_by_name(ws->lwsi, (const uint8_t*)name, (const uint8_t*)value, len, &header.wrpos, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
 
       js_free(ctx, name);
@@ -277,7 +294,7 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* a
 }
 
 static JSValue
-minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
+minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
   if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
@@ -342,14 +359,22 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
     JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
     JS_CFUNC_DEF("close", 1, minnet_ws_close),
-    JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_get, 0, WEBSOCKET_ADDRESS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_getter, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_getter, 0, WEBSOCKET_ADDRESS, JS_PROP_ENUMERABLE),
     JS_ALIAS_DEF("remoteAddress", "address"),
-    JS_CGETSET_MAGIC_FLAGS_DEF("family", minnet_ws_get, 0, WEBSOCKET_FAMILY, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_ws_get, 0, WEBSOCKET_PORT, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_get, 0, WEBSOCKET_PEER, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("family", minnet_ws_getter, 0, WEBSOCKET_FAMILY, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_ws_getter, 0, WEBSOCKET_PORT, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_getter, 0, WEBSOCKET_PEER, 0),
     JS_ALIAS_DEF("remote", "peer"),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebSocket", JS_PROP_CONFIGURABLE),
+
+};
+
+const JSCFunctionListEntry minnet_ws_static_funcs[] = {
+
+};
+
+const JSCFunctionListEntry minnet_ws_proto_defs[] = {
     JS_PROP_INT32_DEF("CLOSE_STATUS_NORMAL", LWS_CLOSE_STATUS_NORMAL, 0),
     JS_PROP_INT32_DEF("CLOSE_STATUS_GOINGAWAY", LWS_CLOSE_STATUS_GOINGAWAY, 0),
     JS_PROP_INT32_DEF("CLOSE_STATUS_PROTOCOL_ERR", LWS_CLOSE_STATUS_PROTOCOL_ERR, 0),
@@ -398,3 +423,5 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
 };
 
 const size_t minnet_ws_proto_funcs_size = countof(minnet_ws_proto_funcs);
+const size_t minnet_ws_static_funcs_size = countof(minnet_ws_static_funcs);
+const size_t minnet_ws_proto_defs_size = countof(minnet_ws_proto_defs);

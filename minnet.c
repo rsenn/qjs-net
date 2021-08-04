@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <string.h>
 #include <curl/curl.h>
+#include <ctype.h>
 #include <sys/time.h>
 
 #ifdef JS_SHARED_LIBRARY
@@ -18,20 +19,33 @@
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
-JSValue minnet_log, minnet_log_this;
+static JSValue minnet_log_cb, minnet_log_this;
+int32_t minnet_log_level = 0;
 JSContext* minnet_log_ctx = 0;
 BOOL minnet_exception = FALSE;
 
 static void
 lws_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
-    if(JS_VALUE_GET_TAG(minnet_log) == 0 && JS_VALUE_GET_TAG(minnet_log_this) == 0)
-      js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log);
+    if(JS_IsUndefined(minnet_log_cb))
+      js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log_cb);
 
-    if(JS_IsFunction(minnet_log_ctx, minnet_log)) {
-      size_t len = strlen(line);
-      JSValueConst argv[2] = {JS_NewString(minnet_log_ctx, "minnet"), JS_NewStringLen(minnet_log_ctx, line, len > 0 && line[len - 1] == '\n' ? len - 1 : len)};
-      JSValue ret = JS_Call(minnet_log_ctx, minnet_log, minnet_log_this, 2, argv);
+    if(JS_IsFunction(minnet_log_ctx, minnet_log_cb)) {
+      size_t n = 0, len = strlen(line);
+
+      if(len > 0 && line[0] == '[') {
+        if((n = byte_chr(line, len, ']')) < len)
+          n++;
+        while(n < len && isspace(line[n])) n++;
+        if(n + 1 < len && line[n + 1] == ':')
+          n += 2;
+        while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
+      }
+      if(len > 0 && line[len - 1] == '\n')
+        len--;
+
+      JSValueConst argv[2] = {JS_NewInt32(minnet_log_ctx, level), JS_NewStringLen(minnet_log_ctx, line + n, len - n)};
+      JSValue ret = JS_Call(minnet_log_ctx, minnet_log_cb, minnet_log_this, 2, argv);
 
       if(JS_IsException(ret))
         minnet_exception = TRUE;
@@ -43,134 +57,23 @@ lws_log_callback(int level, const char* line) {
   }
 }
 
-static const char*
-lws_callback_name(int reason) {
-  return ((const char* const[]){
-      "LWS_CALLBACK_ESTABLISHED",
-      "LWS_CALLBACK_CLIENT_CONNECTION_ERROR",
-      "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH",
-      "LWS_CALLBACK_CLIENT_ESTABLISHED",
-      "LWS_CALLBACK_CLOSED",
-      "LWS_CALLBACK_CLOSED_HTTP",
-      "LWS_CALLBACK_RECEIVE",
-      "LWS_CALLBACK_RECEIVE_PONG",
-      "LWS_CALLBACK_CLIENT_RECEIVE",
-      "LWS_CALLBACK_CLIENT_RECEIVE_PONG",
-      "LWS_CALLBACK_CLIENT_WRITEABLE",
-      "LWS_CALLBACK_SERVER_WRITEABLE",
-      "LWS_CALLBACK_HTTP",
-      "LWS_CALLBACK_HTTP_BODY",
-      "LWS_CALLBACK_HTTP_BODY_COMPLETION",
-      "LWS_CALLBACK_HTTP_FILE_COMPLETION",
-      "LWS_CALLBACK_HTTP_WRITEABLE",
-      "LWS_CALLBACK_FILTER_NETWORK_CONNECTION",
-      "LWS_CALLBACK_FILTER_HTTP_CONNECTION",
-      "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED",
-      "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION",
-      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS",
-      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS",
-      "LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION",
-      "LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER",
-      "LWS_CALLBACK_CONFIRM_EXTENSION_OKAY",
-      "LWS_CALLBACK_CLIENT_CONFIRM_EXTENSION_SUPPORTED",
-      "LWS_CALLBACK_PROTOCOL_INIT",
-      "LWS_CALLBACK_PROTOCOL_DESTROY",
-      "LWS_CALLBACK_WSI_CREATE",
-      "LWS_CALLBACK_WSI_DESTROY",
-      "LWS_CALLBACK_GET_THREAD_ID",
-      "LWS_CALLBACK_ADD_POLL_FD",
-      "LWS_CALLBACK_DEL_POLL_FD",
-      "LWS_CALLBACK_CHANGE_MODE_POLL_FD",
-      "LWS_CALLBACK_LOCK_POLL",
-      "LWS_CALLBACK_UNLOCK_POLL",
-      "LWS_CALLBACK_OPENSSL_CONTEXT_REQUIRES_PRIVATE_KEY",
-      "LWS_CALLBACK_WS_PEER_INITIATED_CLOSE",
-      "LWS_CALLBACK_WS_EXT_DEFAULTS",
-      "LWS_CALLBACK_CGI",
-      "LWS_CALLBACK_CGI_TERMINATED",
-      "LWS_CALLBACK_CGI_STDIN_DATA",
-      "LWS_CALLBACK_CGI_STDIN_COMPLETED",
-      "LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP",
-      "LWS_CALLBACK_CLOSED_CLIENT_HTTP",
-      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP",
-      "LWS_CALLBACK_COMPLETED_CLIENT_HTTP",
-      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ",
-      "LWS_CALLBACK_HTTP_BIND_PROTOCOL",
-      "LWS_CALLBACK_HTTP_DROP_PROTOCOL",
-      "LWS_CALLBACK_CHECK_ACCESS_RIGHTS",
-      "LWS_CALLBACK_PROCESS_HTML",
-      "LWS_CALLBACK_ADD_HEADERS",
-      "LWS_CALLBACK_SESSION_INFO",
-      "LWS_CALLBACK_GS_EVENT",
-      "LWS_CALLBACK_HTTP_PMO",
-      "LWS_CALLBACK_CLIENT_HTTP_WRITEABLE",
-      "LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION",
-      "LWS_CALLBACK_RAW_RX",
-      "LWS_CALLBACK_RAW_CLOSE",
-      "LWS_CALLBACK_RAW_WRITEABLE",
-      "LWS_CALLBACK_RAW_ADOPT",
-      "LWS_CALLBACK_RAW_ADOPT_FILE",
-      "LWS_CALLBACK_RAW_RX_FILE",
-      "LWS_CALLBACK_RAW_WRITEABLE_FILE",
-      "LWS_CALLBACK_RAW_CLOSE_FILE",
-      "LWS_CALLBACK_SSL_INFO",
-      0,
-      "LWS_CALLBACK_CHILD_CLOSING",
-      "LWS_CALLBACK_CGI_PROCESS_ATTACH",
-      "LWS_CALLBACK_EVENT_WAIT_CANCELLED",
-      "LWS_CALLBACK_VHOST_CERT_AGING",
-      "LWS_CALLBACK_TIMER",
-      "LWS_CALLBACK_VHOST_CERT_UPDATE",
-      "LWS_CALLBACK_CLIENT_CLOSED",
-      "LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL",
-      "LWS_CALLBACK_WS_SERVER_BIND_PROTOCOL",
-      "LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL",
-      "LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL",
-      "LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_FILE_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_FILE_DROP_PROTOCOL",
-      "LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL",
-      "LWS_CALLBACK_HTTP_CONFIRM_UPGRADE",
-      0,
-      0,
-      "LWS_CALLBACK_RAW_PROXY_CLI_RX",
-      "LWS_CALLBACK_RAW_PROXY_SRV_RX",
-      "LWS_CALLBACK_RAW_PROXY_CLI_CLOSE",
-      "LWS_CALLBACK_RAW_PROXY_SRV_CLOSE",
-      "LWS_CALLBACK_RAW_PROXY_CLI_WRITEABLE",
-      "LWS_CALLBACK_RAW_PROXY_SRV_WRITEABLE",
-      "LWS_CALLBACK_RAW_PROXY_CLI_ADOPT",
-      "LWS_CALLBACK_RAW_PROXY_SRV_ADOPT",
-      "LWS_CALLBACK_RAW_PROXY_CLI_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_PROXY_SRV_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_PROXY_CLI_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_PROXY_SRV_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_CONNECTED",
-      "LWS_CALLBACK_VERIFY_BASIC_AUTHORIZATION",
-      "LWS_CALLBACK_WSI_TX_CREDIT_GET",
-      "LWS_CALLBACK_CLIENT_HTTP_REDIRECT",
-      "LWS_CALLBACK_CONNECTING",
-  })[reason];
-}
-
-void
-lws_print_unhandled(int reason) {
-  printf("Unhandled LWS client event: %i %s\n", reason, lws_callback_name(reason));
+int
+minnet_lws_unhandled(const char* handler, int reason) {
+  printf("Unhandled %s client event: %i %s\n", handler, reason, lws_callback_name(reason));
+  return -1;
 }
 
 /*static JSValue
 get_log(JSContext* ctx, JSValueConst this_val) {
-  return JS_DupValue(ctx, minnet_log);
+  return JS_DupValue(ctx, minnet_log_cb);
 }*/
 
 static JSValue
 set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst thisObj) {
-  JSValue ret = minnet_log;
+  JSValue ret = minnet_log_cb;
 
   minnet_log_ctx = ctx;
-  minnet_log = JS_DupValue(ctx, value);
+  minnet_log_cb = JS_DupValue(ctx, value);
   if(!JS_IsUndefined(minnet_log_this) || !JS_IsNull(minnet_log_this))
     JS_FreeValue(ctx, minnet_log_this);
 
@@ -181,7 +84,15 @@ set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst 
 
 static JSValue
 minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  return set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
+  JSValue ret;
+  if(argc >= 1 && JS_IsNumber(argv[0])) {
+    JS_ToInt32(ctx, &minnet_log_level, argv[0]);
+    argc--;
+    argv++;
+  }
+  ret = set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
+  lws_set_log_level(minnet_log_level, lws_log_callback);
+  return ret;
 }
 
 static JSValue
@@ -357,8 +268,19 @@ io_events(int events) {
     case POLLIN | POLLOUT: return "IN|OUT";
     case POLLIN: return "IN";
     case POLLOUT: return "OUT";
+    case 0: return "0";
   }
   return "";
+}
+static int
+io_parse_events(const char* str) {
+  int events = 0;
+
+  if(strstr(str, "IN"))
+    events |= POLLIN;
+  if(strstr(str, "OUT"))
+    events |= POLLOUT;
+  return events;
 }
 
 #define PIO (POLLIN | POLLOUT)
@@ -366,22 +288,18 @@ io_events(int events) {
 static JSValue
 io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   struct pollfd x = {0, 0, 0};
-  struct lws_context* context;
-  int wr = READ_HANDLER, flags;
-  int fd, events, revents;
-  size_t seq, len;
-  intptr_t* values = (intptr_t*)JS_GetArrayBuffer(ctx, &len, func_data[0]);
-  assert(len == sizeof(intptr_t) * 5);
-  fd = values[0];
-  revents = values[2];
-  context = (void*)values[3];
-  seq = values[4];
-  if(argc >= 1)
-    JS_ToInt32(ctx, &wr, argv[0]);
-  flags = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+  struct lws_context* context = value2ptr(ctx, func_data[2]);
+  uint32_t fd, events, revents;
+  int32_t wr;
+  static int calls = 0;
 
-  if(!(events = (values[1] & PIO)))
-    values[1] = events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+  const char* io = JS_ToCString(ctx, func_data[1]);
+  revents = io_parse_events(io);
+
+  JS_ToUint32(ctx, &fd, func_data[0]);
+  JS_ToInt32(ctx, &wr, argv[0]);
+
+  events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
 
   if(!(revents & PIO)) {
     x.fd = fd;
@@ -395,17 +313,27 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     }
   }
 
-  // printf("\033[2K\rio_handler #%zu fd = %d, events = %s, revents = %s, context = %p\n", seq, x.fd, io_events(x.events), io_events(x.revents), context);
-  fflush(stdout);
+  //  if(++calls <= 100)
+  // printf("io_handler #%i fd = %d, wr = %s, events = %s, revents = %s, context = %p\n", ++calls, fd, wr ? "W" : "R", io_parse_events(io), io_events(revents), context);
+
   if(revents & PIO) {
+    x.fd = fd;
+    x.events = events;
+    x.revents = revents;
+
     lws_service_fd(context, &x);
   }
-
-  /*if (calls <= 100)
-    printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
-         "%d %d]\n",
-         rw ? "writable" : "readable", calls, pfd.fd, pfd.events,
-         pfd.revents, args.fd, args.events, args.prev_events);*/
+  /*  if(++calls <= 100)
+      printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
+             "%d %d]\n",
+             wr == WRITE_HANDLER ? "writable" : "readable",
+             calls,
+             fd,
+             events,
+             revents,
+             x.fd,
+             x.events,
+             x.revents);*/
 
   return JS_UNDEFINED;
 }
@@ -419,35 +347,69 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
   intptr_t values[] = {fd, events, 0, (intptr_t)context, seq};
   JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
-  //  printf("\033[2K\rmake_handler #%zu fd = %zd, events = 0x%04zx, revents = 0x%04zx, context = %p\n", values[4], values[0], values[1], values[2], (void*)values[3]);
+  // printf("make_handler fd = %d, events = %s, context = %p\n", fd, io_events(events), context);
 
-  fflush(stdout);
-  JSValueConst data[] = {buffer /*/, ptr2value(ctx, context), JS_NewUint32(ctx, seq)*/};
+  JSValue data[3] = {JS_NewUint32(ctx, fd), JS_NewString(ctx, io_events(events)), ptr2value(ctx, context)};
   return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
-}
-
-JSValue
-minnet_emit(struct callback_ws* cb, int argc, JSValue* argv) {
-  if(!cb->func_obj)
-    return JS_UNDEFINED;
-  return JS_Call(cb->ctx, *cb->func_obj, cb->this_obj ? *cb->this_obj : JS_NULL, argc, argv);
 }
 
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
   JSValue func = make_handler(ctx, args->fd, args->events | args->prev_events, wsi, 0);
 
-  out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
-  out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
+  out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, JS_DupValue(ctx, func), JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
+  out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, JS_DupValue(ctx, func), JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
 
   JS_FreeValue(ctx, func);
 }
 
-static const JSCFunctionListEntry minnet_funcs[] = {JS_CFUNC_DEF("server", 1, minnet_ws_server),
-                                                    JS_CFUNC_DEF("client", 1, minnet_ws_client),
-                                                    JS_CFUNC_DEF("fetch", 1, minnet_fetch),
-                                                    // JS_CGETSET_DEF("log", get_log, set_log),
-                                                    JS_CFUNC_DEF("setLog", 1, minnet_set_log)};
+JSValue
+minnet_emit_this(const struct callback_ws* cb, JSValueConst this_obj, int argc, JSValue* argv) {
+  if(!cb->ctx)
+    return JS_UNDEFINED;
+
+  size_t len;
+  const char* str = JS_ToCStringLen(cb->ctx, &len, cb->func_obj);
+  // printf("emit %s [%d] \"%.*s\"\n", cb->name, argc, (int)((const char*)memchr(str, '{', len) - str), str);
+  JS_FreeCString(cb->ctx, str);
+
+  return JS_Call(cb->ctx, cb->func_obj, this_obj, argc, argv);
+}
+
+JSValue
+minnet_emit(const struct callback_ws* cb, int argc, JSValue* argv) {
+  return minnet_emit_this(cb, cb->this_obj /* ? *cb->this_obj : JS_NULL*/, argc, argv);
+}
+
+static const JSCFunctionListEntry minnet_funcs[] = {
+    JS_CFUNC_DEF("server", 1, minnet_ws_server),
+    JS_CFUNC_DEF("client", 1, minnet_ws_client),
+    JS_CFUNC_DEF("fetch", 1, minnet_fetch),
+    // JS_CGETSET_DEF("log", get_log, set_log),
+    JS_CFUNC_DEF("setLog", 1, minnet_set_log),
+    JS_PROP_INT32_DEF("METHOD_GET", METHOD_GET, 0),
+    JS_PROP_INT32_DEF("METHOD_POST", METHOD_POST, 0),
+    JS_PROP_INT32_DEF("METHOD_OPTIONS", METHOD_OPTIONS, 0),
+    JS_PROP_INT32_DEF("METHOD_PUT", METHOD_PUT, 0),
+    JS_PROP_INT32_DEF("METHOD_PATCH", METHOD_PATCH, 0),
+    JS_PROP_INT32_DEF("METHOD_DELETE", METHOD_DELETE, 0),
+    JS_PROP_INT32_DEF("METHOD_CONNECT", METHOD_CONNECT, 0),
+    JS_PROP_INT32_DEF("METHOD_HEAD", METHOD_HEAD, 0),
+
+    JS_PROP_INT32_DEF("LLL_ERR", LLL_ERR, 0),
+    JS_PROP_INT32_DEF("LLL_WARN", LLL_WARN, 0),
+    JS_PROP_INT32_DEF("LLL_NOTICE", LLL_NOTICE, 0),
+    JS_PROP_INT32_DEF("LLL_INFO", LLL_INFO, 0),
+    JS_PROP_INT32_DEF("LLL_DEBUG", LLL_DEBUG, 0),
+    JS_PROP_INT32_DEF("LLL_PARSER", LLL_PARSER, 0),
+    JS_PROP_INT32_DEF("LLL_HEADER", LLL_HEADER, 0),
+    JS_PROP_INT32_DEF("LLL_EXT", LLL_EXT, 0),
+    JS_PROP_INT32_DEF("LLL_CLIENT", LLL_CLIENT, 0),
+    JS_PROP_INT32_DEF("LLL_LATENCY", LLL_LATENCY, 0),
+    JS_PROP_INT32_DEF("LLL_USER", LLL_USER, 0),
+    JS_PROP_INT32_DEF("LLL_THREAD", LLL_THREAD, 0),
+    JS_PROP_INT32_DEF("LLL_ALL", ~((~0u) << LLL_COUNT), 0),
+};
 
 void
 value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
@@ -459,7 +421,54 @@ value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
-  return JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
+  minnet_log_cb = JS_UNDEFINED;
+  minnet_log_this = JS_UNDEFINED;
+
+  JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
+
+  // Add class Response
+  JS_NewClassID(&minnet_response_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
+
+  minnet_response_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_response_proto, minnet_response_proto_funcs, minnet_response_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_response_class_id, minnet_response_proto);
+
+  minnet_response_ctor = JS_NewCFunction2(ctx, minnet_response_constructor, "MinnetResponse", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_response_ctor, minnet_response_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Response", minnet_response_ctor);
+
+  // Add class Request
+  JS_NewClassID(&minnet_request_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);
+  minnet_request_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_request_proto, minnet_request_proto_funcs, minnet_request_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_request_class_id, minnet_request_proto);
+
+  minnet_request_ctor = JS_NewCFunction2(ctx, minnet_request_constructor, "MinnetRequest", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_request_ctor, minnet_request_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Request", minnet_request_ctor);
+
+  // Add class WebSocket
+  JS_NewClassID(&minnet_ws_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
+  minnet_ws_proto = JS_NewObject(ctx);
+  minnet_ws_ctor = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
+  JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
+  JS_SetClassProto(ctx, minnet_ws_class_id, minnet_ws_proto);
+
+  JS_SetPropertyFunctionList(ctx, minnet_ws_ctor, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Socket", minnet_ws_ctor);
+
+  return 0;
 }
 
 __attribute__((visibility("default"))) JSModuleDef*
@@ -468,32 +477,126 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   m = JS_NewCModule(ctx, module_name, js_minnet_init);
   if(!m)
     return NULL;
+  JS_AddModuleExport(ctx, m, "Response");
+  JS_AddModuleExport(ctx, m, "Request");
+  JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
-
-  // Add class Response
-  JS_NewClassID(&minnet_response_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
-  minnet_response_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_response_proto, minnet_response_proto_funcs, minnet_response_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_response_class_id, minnet_response_proto);
-
-  // Add class Request
-  JS_NewClassID(&minnet_request_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);
-  minnet_request_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_request_proto, minnet_request_proto_funcs, minnet_request_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_request_class_id, minnet_request_proto);
-
-  // Add class WebSocket
-  JS_NewClassID(&minnet_ws_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
-  minnet_ws_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_ws_class_id, minnet_ws_proto);
 
   minnet_log_ctx = ctx;
 
-  lws_set_log_level(LLL_USER | LLL_ERR | LLL_WARN | LLL_NOTICE, lws_log_callback);
+  lws_set_log_level(minnet_log_level, lws_log_callback);
 
   return m;
+}
+
+const char*
+lws_callback_name(int reason) {
+  return ((const char* const[]){
+      "LWS_CALLBACK_ESTABLISHED",
+      "LWS_CALLBACK_CLIENT_CONNECTION_ERROR",
+      "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH",
+      "LWS_CALLBACK_CLIENT_ESTABLISHED",
+      "LWS_CALLBACK_CLOSED",
+      "LWS_CALLBACK_CLOSED_HTTP",
+      "LWS_CALLBACK_RECEIVE",
+      "LWS_CALLBACK_RECEIVE_PONG",
+      "LWS_CALLBACK_CLIENT_RECEIVE",
+      "LWS_CALLBACK_CLIENT_RECEIVE_PONG",
+      "LWS_CALLBACK_CLIENT_WRITEABLE",
+      "LWS_CALLBACK_SERVER_WRITEABLE",
+      "LWS_CALLBACK_HTTP",
+      "LWS_CALLBACK_HTTP_BODY",
+      "LWS_CALLBACK_HTTP_BODY_COMPLETION",
+      "LWS_CALLBACK_HTTP_FILE_COMPLETION",
+      "LWS_CALLBACK_HTTP_WRITEABLE",
+      "LWS_CALLBACK_FILTER_NETWORK_CONNECTION",
+      "LWS_CALLBACK_FILTER_HTTP_CONNECTION",
+      "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED",
+      "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION",
+      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS",
+      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS",
+      "LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION",
+      "LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER",
+      "LWS_CALLBACK_CONFIRM_EXTENSION_OKAY",
+      "LWS_CALLBACK_CLIENT_CONFIRM_EXTENSION_SUPPORTED",
+      "LWS_CALLBACK_PROTOCOL_INIT",
+      "LWS_CALLBACK_PROTOCOL_DESTROY",
+      "LWS_CALLBACK_WSI_CREATE",
+      "LWS_CALLBACK_WSI_DESTROY",
+      "LWS_CALLBACK_GET_THREAD_ID",
+      "LWS_CALLBACK_ADD_POLL_FD",
+      "LWS_CALLBACK_DEL_POLL_FD",
+      "LWS_CALLBACK_CHANGE_MODE_POLL_FD",
+      "LWS_CALLBACK_LOCK_POLL",
+      "LWS_CALLBACK_UNLOCK_POLL",
+      "LWS_CALLBACK_OPENSSL_CONTEXT_REQUIRES_PRIVATE_KEY",
+      "LWS_CALLBACK_WS_PEER_INITIATED_CLOSE",
+      "LWS_CALLBACK_WS_EXT_DEFAULTS",
+      "LWS_CALLBACK_CGI",
+      "LWS_CALLBACK_CGI_TERMINATED",
+      "LWS_CALLBACK_CGI_STDIN_DATA",
+      "LWS_CALLBACK_CGI_STDIN_COMPLETED",
+      "LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP",
+      "LWS_CALLBACK_CLOSED_CLIENT_HTTP",
+      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP",
+      "LWS_CALLBACK_COMPLETED_CLIENT_HTTP",
+      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ",
+      "LWS_CALLBACK_HTTP_BIND_PROTOCOL",
+      "LWS_CALLBACK_HTTP_DROP_PROTOCOL",
+      "LWS_CALLBACK_CHECK_ACCESS_RIGHTS",
+      "LWS_CALLBACK_PROCESS_HTML",
+      "LWS_CALLBACK_ADD_HEADERS",
+      "LWS_CALLBACK_SESSION_INFO",
+      "LWS_CALLBACK_GS_EVENT",
+      "LWS_CALLBACK_HTTP_PMO",
+      "LWS_CALLBACK_CLIENT_HTTP_WRITEABLE",
+      "LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION",
+      "LWS_CALLBACK_RAW_RX",
+      "LWS_CALLBACK_RAW_CLOSE",
+      "LWS_CALLBACK_RAW_WRITEABLE",
+      "LWS_CALLBACK_RAW_ADOPT",
+      "LWS_CALLBACK_RAW_ADOPT_FILE",
+      "LWS_CALLBACK_RAW_RX_FILE",
+      "LWS_CALLBACK_RAW_WRITEABLE_FILE",
+      "LWS_CALLBACK_RAW_CLOSE_FILE",
+      "LWS_CALLBACK_SSL_INFO",
+      0,
+      "LWS_CALLBACK_CHILD_CLOSING",
+      "LWS_CALLBACK_CGI_PROCESS_ATTACH",
+      "LWS_CALLBACK_EVENT_WAIT_CANCELLED",
+      "LWS_CALLBACK_VHOST_CERT_AGING",
+      "LWS_CALLBACK_TIMER",
+      "LWS_CALLBACK_VHOST_CERT_UPDATE",
+      "LWS_CALLBACK_CLIENT_CLOSED",
+      "LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL",
+      "LWS_CALLBACK_WS_SERVER_BIND_PROTOCOL",
+      "LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL",
+      "LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL",
+      "LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_FILE_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_FILE_DROP_PROTOCOL",
+      "LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL",
+      "LWS_CALLBACK_HTTP_CONFIRM_UPGRADE",
+      0,
+      0,
+      "LWS_CALLBACK_RAW_PROXY_CLI_RX",
+      "LWS_CALLBACK_RAW_PROXY_SRV_RX",
+      "LWS_CALLBACK_RAW_PROXY_CLI_CLOSE",
+      "LWS_CALLBACK_RAW_PROXY_SRV_CLOSE",
+      "LWS_CALLBACK_RAW_PROXY_CLI_WRITEABLE",
+      "LWS_CALLBACK_RAW_PROXY_SRV_WRITEABLE",
+      "LWS_CALLBACK_RAW_PROXY_CLI_ADOPT",
+      "LWS_CALLBACK_RAW_PROXY_SRV_ADOPT",
+      "LWS_CALLBACK_RAW_PROXY_CLI_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_PROXY_SRV_BIND_PROTOCOL",
+      "LWS_CALLBACK_RAW_PROXY_CLI_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_PROXY_SRV_DROP_PROTOCOL",
+      "LWS_CALLBACK_RAW_CONNECTED",
+      "LWS_CALLBACK_VERIFY_BASIC_AUTHORIZATION",
+      "LWS_CALLBACK_WSI_TX_CREDIT_GET",
+      "LWS_CALLBACK_CLIENT_HTTP_REDIRECT",
+      "LWS_CALLBACK_CONNECTING",
+  })[reason];
 }

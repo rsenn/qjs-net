@@ -87,7 +87,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       break;
     }
 
-    if(client_cb_fd.func_obj)
+    if(client_cb_fd.ctx)
       js_std_loop(ctx);
     else
       /* n =*/lws_service(client_context, 500);
@@ -124,7 +124,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     case LWS_CALLBACK_CLIENT_CLOSED:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       client_wsi = NULL;
-      if(client_cb_close.func_obj) {
+      if(client_cb_close.ctx) {
         JSValue why = in ? JS_NewString(client_cb_close.ctx, in) : JS_NULL;
         minnet_emit(&client_cb_close, 1, &why);
       }
@@ -132,7 +132,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_CLIENT_ESTABLISHED: {
-      if(client_cb_connect.func_obj) {
+      if(client_cb_connect.ctx) {
         JSValue ws_obj = minnet_ws_object(client_cb_connect.ctx, wsi);
         minnet_emit(&client_cb_connect, 1, &ws_obj);
       }
@@ -144,7 +144,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL: {
       client_wsi = NULL;
-      if(client_cb_close.func_obj) {
+      if(client_cb_close.ctx) {
         JSValue cb_argv[] = {minnet_ws_object(client_cb_close.ctx, wsi), JS_NewString(client_cb_close.ctx, in)};
         minnet_emit(&client_cb_close, 2, cb_argv);
         JS_FreeValue(client_cb_close.ctx, cb_argv[0]);
@@ -153,7 +153,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       break;
     }
     case LWS_CALLBACK_CLIENT_RECEIVE: {
-      if(client_cb_message.func_obj) {
+      if(client_cb_message.ctx) {
         JSValue ws_obj = minnet_ws_object(client_cb_message.ctx, wsi);
         JSValue msg = JS_NewStringLen(client_cb_message.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, msg};
@@ -162,7 +162,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       break;
     }
     case LWS_CALLBACK_CLIENT_RECEIVE_PONG: {
-      if(client_cb_pong.func_obj) {
+      if(client_cb_pong.ctx) {
         JSValue ws_obj = minnet_ws_object(client_cb_pong.ctx, wsi);
         JSValue data = JS_NewArrayBufferCopy(client_cb_pong.ctx, in, len);
         JSValue cb_argv[2] = {ws_obj, data};
@@ -172,7 +172,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
     case LWS_CALLBACK_ADD_POLL_FD: {
       struct lws_pollargs* args = in;
-      if(client_cb_fd.func_obj) {
+      if(client_cb_fd.ctx) {
         JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
         minnet_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
 
@@ -185,7 +185,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
     case LWS_CALLBACK_DEL_POLL_FD: {
       struct lws_pollargs* args = in;
-      if(client_cb_fd.func_obj) {
+      if(client_cb_fd.ctx) {
         JSValue argv[3] = {
             JS_NewInt32(client_cb_fd.ctx, args->fd),
         };
@@ -198,7 +198,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
       struct lws_pollargs* args = in;
 
-      if(client_cb_fd.func_obj && args->events != args->prev_events) {
+      if(client_cb_fd.ctx && args->events != args->prev_events) {
         JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
         minnet_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
 
@@ -211,7 +211,7 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
 
     default: {
-      // lws_print_unhandled(reason);
+      // minnet_lws_unhandled(reason);
       break;
     }
   }
