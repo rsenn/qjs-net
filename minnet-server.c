@@ -272,7 +272,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case(int)LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case(int)LWS_CALLBACK_ESTABLISHED: {
       if(server.cb_connect.ctx) {
-        
+
         ws_obj = minnet_ws_object(server.cb_connect.ctx, wsi);
 
         minnet_emit(&server.cb_connect, 1, &ws_obj);
