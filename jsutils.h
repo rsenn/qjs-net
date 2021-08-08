@@ -147,7 +147,7 @@ static inline void
 js_buffer_free_default(JSContext* ctx, uint8_t* data, JSValue val) {
 
   if(JS_IsString(val))
-    JS_FreeCString(ctx, data);
+    JS_FreeCString(ctx, (const char*)data);
 
   if(!JS_IsUndefined(val))
     JS_FreeValue(ctx, val);

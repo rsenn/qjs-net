@@ -69,8 +69,7 @@ buffer_write(struct byte_buffer* buf, const char* x, size_t n) {
 int
 buffer_printf(struct byte_buffer* buf, const char* format, ...) {
   va_list ap;
-  int n;
-  size_t size = lws_ptr_diff_size_t(buf->end, buf->write);
+  ssize_t n, size = lws_ptr_diff_size_t(buf->end, buf->write);
   va_start(ap, format);
   n = vsnprintf((char*)buf->write, size, format, ap);
   va_end(ap);
@@ -136,7 +135,7 @@ buffer_tostring(struct byte_buffer const* buf, JSContext* ctx) {
 
 void
 buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
-  struct byte_buffer* buf = opaque;
+  // struct byte_buffer* buf = opaque;
 }
 
 JSValue

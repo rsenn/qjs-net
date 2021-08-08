@@ -21,7 +21,7 @@ typedef struct http_server {
   struct lws_context* context;
   struct lws_context_creation_info info;
   JSContext* ctx;
-  MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd, cb_http, cb_body;
+  MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd, cb_http;
 } MinnetHttpServer;
 
 typedef struct http_session {
@@ -40,7 +40,7 @@ typedef struct server_context {
     JSValue args[2];
   };
   struct http_mount* mount;
-  uint32_t serial;
+  size_t serial;
   JSValue generator;
 
 } MinnetServerContext;

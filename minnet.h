@@ -69,8 +69,8 @@ JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
 const char* lws_callback_name(int);
 
 static inline size_t
-byte_chr(const char* str, size_t len, char c) {
-  const char *s, *t;
+byte_chr(const void* x, size_t len, char c) {
+  const char *s, *t, *str = x;
   for(s = str, t = s + len; s < t; ++s)
     if(*s == c)
       break;

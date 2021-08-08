@@ -291,7 +291,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   struct lws_context* context = value2ptr(ctx, func_data[2]);
   uint32_t fd, events, revents;
   int32_t wr;
-  static int calls = 0;
+  // static int calls = 0;
 
   const char* io = JS_ToCString(ctx, func_data[1]);
   revents = io_parse_events(io);
@@ -338,14 +338,14 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
   return JS_UNDEFINED;
 }
 
-static uint32_t handler_seq = 0;
+// static uint32_t handler_seq = 0;
 
 static JSValue
 make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
-  uint32_t seq = ++handler_seq;
+  // uint32_t seq = ++handler_seq;
   struct lws_context* context = lws_get_context(wsi);
-  intptr_t values[] = {fd, events, 0, (intptr_t)context, seq};
-  JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
+  // intptr_t values[] = {fd, events, 0, (intptr_t)context, seq};
+  // JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
 
   // printf("make_handler fd = %d, events = %s, context = %p\n", fd, io_events(events), context);
 

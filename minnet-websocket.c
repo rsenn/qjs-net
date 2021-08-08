@@ -156,7 +156,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
 
   if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
-  MinnetBuffer header = {0, 0, 0};
+  MinnetBuffer header = {0, 0, 0, 0};
 
   switch(magic) {
     case RESPONSE_BODY: {
@@ -352,7 +352,7 @@ JSValue
 minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetWebsocket* ws;
-  int i;
+  // int i;
 
   if(!(ws = js_mallocz(ctx, sizeof(MinnetWebsocket))))
     return JS_ThrowOutOfMemory(ctx);

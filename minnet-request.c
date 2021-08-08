@@ -2,11 +2,12 @@
 #include "minnet-request.h"
 #include "jsutils.h"
 #include <cutils.h>
+#include <ctype.h>
 
 JSClassID minnet_request_class_id;
 JSValue minnet_request_proto, minnet_request_ctor;
 
-enum { REQUEST_TYPE, REQUEST_METHOD, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_BODY };
+enum { REQUEST_TYPE, REQUEST_METHOD, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_ARRAYBUFFER, REQUEST_TEXT };
 
 static const char* const method_names[] = {"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE", "CONNECT", "HEAD"};
 
@@ -19,7 +20,7 @@ method2name(enum http_method m) {
 
 static enum http_method
 name2method(const char* name) {
-  int i;
+  unsigned long i;
   for(i = 0; i < countof(method_names); i++) {
     if(!strcasecmp(name, method_names[i]))
       return i;
@@ -153,11 +154,11 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
 
   JSValue ret = JS_UNDEFINED;
   switch(magic) {
-    case REQUEST_TYPE: {
+    case REQUEST_METHOD: {
       ret = JS_NewString(ctx, method_name(req->method));
       break;
     }
-    case REQUEST_METHOD: {
+    case REQUEST_TYPE: {
       ret = JS_NewInt32(ctx, req->method);
       break;
     }
@@ -172,7 +173,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
     }
     case REQUEST_HEADER: {
       size_t len, namelen;
-      char *x, *end;
+      uint8_t *x, *end;
       ret = JS_NewObject(ctx);
 
       for(x = req->header.start, end = req->header.write; x < end; x += len + 1) {
@@ -182,23 +183,26 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
         if(namelen >= len)
           continue;
 
-        char* prop = js_strndup(ctx, x, namelen);
+        const char* prop = js_strndup(ctx, (const char*)x, namelen);
 
         if(x[namelen] == ':')
           namelen++;
         if(isspace(x[namelen]))
           namelen++;
 
-        JS_SetPropertyStr(ctx, ret, prop, JS_NewStringLen(ctx, &x[namelen], len - namelen));
-        js_free(ctx, prop);
+        JS_SetPropertyStr(ctx, ret, prop, JS_NewStringLen(ctx, (const char*)&x[namelen], len - namelen));
+        js_free(ctx, (void*)prop);
       }
 
       //      ret = buffer_tostring(&req->header, ctx);
       break;
     }
-    case REQUEST_BODY: {
-      ret = buffer_toarraybuffer(&req->body, ctx);
-
+    case REQUEST_ARRAYBUFFER: {
+      ret = buffer_OFFSET(&req->body) ? buffer_toarraybuffer(&req->body, ctx) : JS_NULL;
+      break;
+    }
+    case REQUEST_TEXT: {
+      ret = buffer_OFFSET(&req->body) ? buffer_tostring(&req->body, ctx) : JS_NULL;
       break;
     }
   }
@@ -247,7 +251,8 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
       ret = JS_ThrowReferenceError(ctx, "Cannot set headers");
       break;
     }
-    case REQUEST_BODY: {
+    case REQUEST_TEXT:
+    case REQUEST_ARRAYBUFFER: {
 
       break;
     }
@@ -275,12 +280,13 @@ JSClassDef minnet_request_class = {
 };
 
 const JSCFunctionListEntry minnet_request_proto_funcs[] = {
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, minnet_request_set, REQUEST_HEADER, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, minnet_request_set, REQUEST_BODY, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("arrayBuffer", minnet_request_get, minnet_request_set, REQUEST_ARRAYBUFFER, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("text", minnet_request_get, minnet_request_set, REQUEST_TEXT, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 
