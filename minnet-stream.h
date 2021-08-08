@@ -6,15 +6,17 @@
 #include "buffer.h"
 
 typedef struct stream {
+  size_t ref_count;
+  char type[256];
   struct byte_buffer buffer;
 } MinnetStream;
 
 void stream_dump(struct stream const*);
-void stream_init(struct stream*, const void* x, size_t len);
+void stream_init(struct stream*, const char* type, size_t typelen, const void* x, size_t len);
 struct stream* stream_new(JSContext*);
 void stream_zero(struct stream*);
 JSValue minnet_stream_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
-JSValue minnet_stream_new(JSContext*, const void* x, size_t len);
+JSValue minnet_stream_new(JSContext*, const char* type, size_t typelen, const void* x, size_t len);
 JSValue minnet_stream_wrap(JSContext*, struct stream*);
 
 extern JSClassDef minnet_stream_class;

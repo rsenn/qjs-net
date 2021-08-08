@@ -4,6 +4,7 @@
 #include "minnet-response.h"
 #include "minnet-request.h"
 #include "minnet-websocket.h"
+#include "minnet-stream.h"
 #include "jsutils.h"
 #include "buffer.h"
 #include <assert.h>
@@ -454,6 +455,20 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Request", minnet_request_ctor);
 
+  // Add class Stream
+  JS_NewClassID(&minnet_stream_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_stream_class_id, &minnet_stream_class);
+  minnet_stream_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_stream_proto, minnet_stream_proto_funcs, minnet_stream_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_stream_class_id, minnet_stream_proto);
+
+  minnet_stream_ctor = JS_NewCFunction2(ctx, minnet_stream_constructor, "MinnetStream", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_stream_ctor, minnet_stream_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Stream", minnet_stream_ctor);
+
   // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
@@ -481,6 +496,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
     return NULL;
   JS_AddModuleExport(ctx, m, "Response");
   JS_AddModuleExport(ctx, m, "Request");
+  JS_AddModuleExport(ctx, m, "Stream");
   JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 

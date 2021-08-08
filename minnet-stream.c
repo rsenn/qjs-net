@@ -1,23 +1,24 @@
+#include "minnet.h"
 #include "minnet-stream.h"
+#include <quickjs.h>
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 void
 stream_dump(struct stream const* strm) {
-  printf("\nMinnetStream {\n\turi = %s", strm->url);
-  printf("\n\tpath = %s", strm->path);
-  printf("\n\ttype = %s", method_name(strm->method));
-
-  buffer_dump("header", &strm->header);
-  fputs("\n\tresponse = ", stdout);
-  fputs(" }", stdout);
+  printf("\nMinnetStream {\n\tref_count = %zu", strm->ref_count);
+  buffer_dump("buffer", &strm->buffer);
+  fputs("\n}", stdout);
   fflush(stdout);
 }
 
 void
-stream_init(struct stream* strm, const void* x, size_t n) {
-  memset(strm, 0, sizeof(*strm));
+stream_init(struct stream* strm, const char* type, size_t typelen, const void* x, size_t n) {
+  //  memset(strm, 0, sizeof(*strm));
 
-  buffer_alloc(&strm->buffer, n);
   buffer_write(&strm->buffer, x, n);
+
+  pstrcpy(strm->type, MIN(typelen + 1, sizeof(strm->type)), type);
 }
 
 struct stream*
@@ -25,7 +26,7 @@ stream_new(JSContext* ctx) {
   MinnetStream* strm;
 
   if((strm = js_mallocz(ctx, sizeof(MinnetStream)))) {
-    buffer_alloc(&strm->buffer, 1024);
+    // buffer_alloc(&strm->buffer, 1024,ctx);
   }
   return strm;
 }
@@ -55,25 +56,19 @@ minnet_stream_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSV
   if(JS_IsException(obj))
     goto fail;
 
-  if(argc >= 1) {
+  while(argc >= 1) {
+    size_t len;
+    uint8_t* ptr;
     if(JS_IsString(argv[0])) {
-      const char* str = JS_ToCString(ctx, argv[0]);
-      strm->url = js_strdup(ctx, str);
+      const char* str = JS_ToCStringLen(ctx, &len, argv[0]);
+      buffer_append(&strm->buffer, str, len, ctx);
       JS_FreeCString(ctx, str);
+    } else if((ptr = JS_GetArrayBuffer(ctx, &len, argv[0]))) {
+      buffer_append(&strm->buffer, ptr, len, ctx);
     }
     argc--;
     argv++;
   }
-
-  if(argc >= 1) {
-    if(JS_IsObject(argv[0]) && !JS_IsNull(argv[0])) {
-      js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);
-      argc--;
-      argv++;
-    }
-  }
-
-  strm->read_only = TRUE;
 
   JS_SetOpaque(obj, strm);
 
@@ -86,15 +81,16 @@ fail:
 }
 
 JSValue
-minnet_stream_new(JSContext* ctx, const void* x, size_t n) {
+minnet_stream_new(JSContext* ctx, const char* type, size_t typelen, const void* x, size_t n) {
   struct stream* strm;
 
   if(!(strm = stream_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  stream_init(strm, x, n);
+  buffer_alloc(&strm->buffer, n ? n : 1024, ctx);
+  stream_init(strm, type, typelen, x, n);
 
-  strm->method = method;
+  strm->ref_count = 1;
 
   return minnet_stream_wrap(ctx, strm);
 }
@@ -112,6 +108,8 @@ minnet_stream_wrap(JSContext* ctx, struct stream* strm) {
 
   return ret;
 }
+
+enum { STREAM_TYPE, STREAM_BUFFER, STREAM_TEXT };
 
 static JSValue
 minnet_stream_get(JSContext* ctx, JSValueConst this_val, int magic) {
@@ -135,29 +133,17 @@ minnet_stream_get(JSContext* ctx, JSValueConst this_val, int magic) {
 }
 
 static JSValue
-minnet_stream_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+minnet_stream_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  return JS_DupValue(ctx, this_val);
+}
+
+static JSValue
+minnet_stream_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], BOOL* pdone, int magic) {
   MinnetStream* strm;
   JSValue ret = JS_UNDEFINED;
-  const char* str;
-  size_t len;
-  if(!(strm = JS_GetOpaque2(ctx, this_val, minnet_stream_class_id)))
+
+  if(!(strm = minnet_stream_data(ctx, this_val)))
     return JS_EXCEPTION;
-
-  if(strm->read_only)
-    return JS_ThrowReferenceError(ctx, "Stream object is read-only");
-
-  str = JS_ToCStringLen(ctx, &len, value);
-
-  switch(magic) {
-
-    case STREAM_TEXT:
-    case STREAM_BUFFER: {
-
-      break;
-    }
-  }
-
-  JS_FreeCString(ctx, str);
 
   return ret;
 }
@@ -166,8 +152,8 @@ static void
 minnet_stream_finalizer(JSRuntime* rt, JSValue val) {
   MinnetStream* strm = JS_GetOpaque(val, minnet_stream_class_id);
   if(strm && --strm->ref_count == 0) {
-    if(strm->url)
-      js_free_rt(rt, strm->url);
+
+    buffer_free(&strm->buffer, rt);
 
     js_free_rt(rt, strm);
   }
@@ -179,7 +165,10 @@ JSClassDef minnet_stream_class = {
 };
 
 const JSCFunctionListEntry minnet_stream_proto_funcs[] = {
-    JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_stream_get, minnet_stream_set, STREAM_BUFFER, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_stream_get, 0, STREAM_TYPE, 0),
+    JS_ITERATOR_NEXT_DEF("next", 0, minnet_stream_next, 0),
+    JS_CFUNC_DEF("[Symbol.iterator]", 0, minnet_stream_iterator),
+    JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_stream_get, 0, STREAM_BUFFER, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetStream", JS_PROP_CONFIGURABLE),
 };
 
