@@ -268,9 +268,9 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
   switch((int)reason) {
     case(int)LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
-    case(int)LWS_CALLBACK_ESTABLISHED:
     case(int)LWS_CALLBACK_PROTOCOL_INIT: return 0;
 
+    case(int)LWS_CALLBACK_ESTABLISHED:
     case(int)LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
       printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
 
@@ -483,6 +483,7 @@ is_h2(struct lws* wsi) {
   return lws_get_network_wsi(wsi) != wsi;
 }
 
+static int
 callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSContext* ctx = minnet_server.ctx;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
@@ -554,7 +555,9 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(len) {
         buffer_append(&req->body, in, len, ctx);
 
-        // printf("LWS_CALLBACK_HTTP_BODY\tlen: %zu, size: %zu, in: ", len, buffer_OFFSET(&req->body)); js_dump_string(in, len, 80); puts("");
+        printf("LWS_CALLBACK_HTTP_BODY\tis_h2=%i len: %zu, size: %zu, in: ", is_h2(wsi), len, buffer_OFFSET(&req->body));
+        js_dump_string(in, len, 80);
+        puts("");
       }
       return 0;
     }
@@ -585,7 +588,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       ++req->ref_count;
 
-      printf("LWS_CALLBACK_HTTP\turl=%s path=%s mountpoint=%s mount=%s\n", url, path, mountpoint, serv->mount ? serv->mount->mnt : 0);
+      printf("LWS_CALLBACK_HTTP\tis_h2=%i url=%s path=%s mountpoint=%s mount=%s\n", is_h2(wsi), url, path, mountpoint, serv->mount ? serv->mount->mnt : 0);
       lws_callback_on_writable(wsi);
 
       if(serv->mount && serv->mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
