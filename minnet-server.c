@@ -387,6 +387,8 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_HTTP:
+    case LWS_CALLBACK_HTTP_BODY:
+    case LWS_CALLBACK_HTTP_BODY_COMPLETION:
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
     case LWS_CALLBACK_CLOSED_HTTP:
@@ -501,6 +503,9 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
 
   const char* mime = lws_get_mimetype(path, &mount->lws);
 
+  if(path[0] == '\0')
+    path = mount->def;
+
   if((fp = fopen(path, "rb"))) {
     size_t n = file_size(fp);
 
@@ -606,9 +611,11 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
 
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
-      // MinnetRequest* req = minnet_request_data(ctx, serv->req_obj);
+      MinnetRequest* req = minnet_request_data(ctx, serv->req_obj);
 
-      MinnetCallback* cb = minnet_server.cb_http.ctx ? &minnet_server.cb_http : serv->mount ? &serv->mount->callback : 0;
+      printf("LWS_CALLBACK_HTTP_BODY_COMPLETION\tis_h2=%i len: %zu, size: %zu, in: ", is_h2(wsi), len, buffer_OFFSET(&req->body));
+
+      MinnetCallback* cb = /*minnet_server.cb_http.ctx ? &minnet_server.cb_http :*/ serv->mount ? &serv->mount->callback : 0;
       MinnetBuffer b = BUFFER(buf);
       MinnetResponse* resp = request(cb, ws_obj, serv->args);
 
@@ -699,7 +706,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         cb = &mount->callback;
         //   minnet_server.cb_http = *cb;
 
-        /*if(req->method == METHOD_GET)*/ {
+        if(req->method == METHOD_GET || is_h2(wsi)) {
           resp = request(&minnet_server.cb_http, ws_obj, args);
 
           if(cb && cb->ctx) {
@@ -731,7 +738,8 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
            return 1;*/
       }
 
-      lws_callback_on_writable(wsi);
+      if(req->method == METHOD_GET || is_h2(wsi))
+        lws_callback_on_writable(wsi);
 
       JS_FreeValue(ctx, ws_obj);
 
