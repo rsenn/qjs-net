@@ -1035,7 +1035,7 @@ export const RPCConnect = (url, service = RPCClient) => new RPCSocket(url, servi
 export const RPCListen = (url, service = RPCServer) => new RPCSocket(url, service).listen();
 
 export default {
-   Connection,
+  Connection,
   ServerConnection: RPCServer,
   ClientConnection: RPCClient,
   Commands: RPCServerEndpoint,
