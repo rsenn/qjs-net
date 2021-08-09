@@ -1,6 +1,6 @@
 //import inspect from 'inspect';
 //import * as bjson from 'bjson';
-import { SyscallError } from '../../lib/misc.js';
+import { SyscallError, weakAssign } from '../../lib/misc.js';
 import { EventEmitter } from '../../lib/events.js';
 import extendArray from '../modules/lib/extendArray.js';
 import { Repeater } from '../../lib/repeater/repeater.js';
@@ -336,14 +336,14 @@ export class Connection extends MessageTransceiver {
   }
 
   sendMessage(obj) {
-    //this.log('Connection.sendMessage', obj);
+   this.log('Connection.sendMessage', obj);
     if(typeof obj == 'object')
       if(typeof obj.seq == 'number') {
         if(this.messages && this.messages.requests) this.messages.requests[obj.seq] = obj;
       } else {
         obj.seq = this.makeSeq();
       }
-    let msg = typeof obj != 'string' ? this.codec.encode(obj) : obj;
+  let msg = typeof obj != 'string' ? this.codec.encode(obj) : obj;
 
     this.socket.send(msg);
   }
@@ -417,6 +417,7 @@ export class Connection extends MessageTransceiver {
 }
 
 define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
+weakAssign(Connection.prototype, EventEmitter.prototype);
 
 Connection.list = [];
 
@@ -581,6 +582,7 @@ define(RPCClient.prototype, { [Symbol.toStringTag]: 'RPCClient' });
 export function RPCSocket(url, service = RPCServer, verbosity = 1) {
   if(!new.target) return new RPCSocket(url, service, verbosity);
 
+const DEBUG = DebugFlags();
   const instance = new.target ? this : new RPCSocket(url, service, verbosity);
   const log = /*console.config
     ? (msg, ...args) => {
@@ -979,6 +981,7 @@ export default {
   EventLogger,
   SyscallError,
   define,
+  DebugFlags,
   connect: RPCConnect,
   listen: RPCListen
 };
