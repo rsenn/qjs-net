@@ -305,8 +305,8 @@ export class Connection extends MessageTransceiver {
     throw new Error('Virtual method');
   }
 
-  onconnect(...args) {
-console.log("Connection.onconnect", {args}, this);
+  onconnect(sock) {
+console.log("Connection.onconnect", sock, this);
   } //= LogWrap('Connection.onconnect');
   onopen = LogWrap('Connection.onopen');
 
