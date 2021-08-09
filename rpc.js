@@ -358,7 +358,7 @@ export class Connection extends MessageTransceiver {
   }
 
   onclose(code, why) {
-    console.log('Connection.onclose',code,  why ? ` (${why})` : '');
+    console.log('Connection.onclose', code, why ? ` (${why})` : '');
     this.connected = false;
     this.cleanup();
   }
