@@ -124,7 +124,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
   if(JS_IsString(argv[0])) {
     msg = JS_ToCString(ctx, argv[0]);
     len = strlen(msg);
-    uint8_t buffer[LWS_PRE + len+1];
+    uint8_t buffer[LWS_PRE + len + 1];
 
     n = lws_snprintf((char*)&buffer[LWS_PRE], len + 1, "%s", msg);
     m = lws_write(ws->lwsi, &buffer[LWS_PRE], len, LWS_WRITE_TEXT);
