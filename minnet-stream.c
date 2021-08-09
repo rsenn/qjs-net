@@ -4,6 +4,9 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+JSClassID minnet_stream_class_id;
+JSValue minnet_stream_proto, minnet_stream_ctor;
+
 void
 stream_dump(struct stream const* strm) {
   printf("\nMinnetStream {\n\tref_count = %zu", strm->ref_count);
@@ -16,9 +19,11 @@ void
 stream_init(struct stream* strm, const char* type, size_t typelen, const void* x, size_t n) {
   //  memset(strm, 0, sizeof(*strm));
 
-  buffer_write(&strm->buffer, x, n);
+  if(x)
+    buffer_write(&strm->buffer, x, n);
 
-  pstrcpy(strm->type, MIN(typelen + 1, sizeof(strm->type)), type);
+  if(type)
+    pstrcpy(strm->type, MIN(typelen + 1, sizeof(strm->type)), type);
 }
 
 struct stream*
@@ -26,7 +31,7 @@ stream_new(JSContext* ctx) {
   MinnetStream* strm;
 
   if((strm = js_mallocz(ctx, sizeof(MinnetStream)))) {
-    // buffer_alloc(&strm->buffer, 1024,ctx);
+    pstrcpy(strm->type, sizeof(strm->type), "application/binary");
   }
   return strm;
 }
@@ -87,7 +92,7 @@ minnet_stream_new(JSContext* ctx, const char* type, size_t typelen, const void* 
   if(!(strm = stream_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  buffer_alloc(&strm->buffer, n ? n : 1024, ctx);
+  // buffer_alloc(&strm->buffer, n ? n : 1024, ctx);
   stream_init(strm, type, typelen, x, n);
 
   strm->ref_count = 1;
@@ -109,7 +114,7 @@ minnet_stream_wrap(JSContext* ctx, struct stream* strm) {
   return ret;
 }
 
-enum { STREAM_TYPE, STREAM_BUFFER, STREAM_TEXT };
+enum { STREAM_TYPE, STREAM_LENGTH, STREAM_BUFFER, STREAM_TEXT };
 
 static JSValue
 minnet_stream_get(JSContext* ctx, JSValueConst this_val, int magic) {
@@ -120,6 +125,14 @@ minnet_stream_get(JSContext* ctx, JSValueConst this_val, int magic) {
   JSValue ret = JS_UNDEFINED;
   switch(magic) {
 
+    case STREAM_TYPE: {
+      ret = JS_NewStringLen(ctx, strm->type, strlen(strm->type));
+      break;
+    }
+    case STREAM_LENGTH: {
+      ret = JS_NewUint32(ctx, buffer_OFFSET(&strm->buffer));
+      break;
+    }
     case STREAM_BUFFER: {
       ret = buffer_OFFSET(&strm->buffer) ? buffer_toarraybuffer(&strm->buffer, ctx) : JS_NULL;
       break;
@@ -141,9 +154,28 @@ static JSValue
 minnet_stream_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], BOOL* pdone, int magic) {
   MinnetStream* strm;
   JSValue ret = JS_UNDEFINED;
+  size_t len;
+  uint8_t* ptr;
 
   if(!(strm = minnet_stream_data(ctx, this_val)))
     return JS_EXCEPTION;
+
+  len = buffer_REMAIN(&strm->buffer);
+  ptr = strm->buffer.read;
+
+  if(argc >= 1) {
+    uint32_t n = len;
+    JS_ToUint32(ctx, &n, argv[0]);
+    if(n < len)
+      len = n;
+  }
+
+  if(len) {
+    ret = JS_NewStringLen(ctx, (const char*)ptr, len);
+    strm->buffer.read += len;
+  } else {
+    *pdone = TRUE;
+  }
 
   return ret;
 }
@@ -165,7 +197,8 @@ JSClassDef minnet_stream_class = {
 };
 
 const JSCFunctionListEntry minnet_stream_proto_funcs[] = {
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_stream_get, 0, STREAM_TYPE, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_stream_get, 0, STREAM_TYPE, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("length", minnet_stream_get, 0, STREAM_LENGTH, JS_PROP_ENUMERABLE),
     JS_ITERATOR_NEXT_DEF("next", 0, minnet_stream_next, 0),
     JS_CFUNC_DEF("[Symbol.iterator]", 0, minnet_stream_iterator),
     JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_stream_get, 0, STREAM_BUFFER, 0),

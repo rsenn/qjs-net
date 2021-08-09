@@ -90,7 +90,7 @@ header_get(JSContext* ctx, size_t* lenp, struct byte_buffer* buf, const char* na
 
     if(lenp)
       *lenp = len - namelen;
-    return (const char*)x;
+    return (const char*)x + namelen;
   }
   return 0;
 }
@@ -232,10 +232,14 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_BODY: {
-      size_t typelen;
-      const char* type = header_get(ctx, &typelen, &req->header, "content-type");
+      if(buffer_OFFSET(&req->body)) {
+        size_t typelen;
+        const char* type = header_get(ctx, &typelen, &req->header, "content-type");
 
-      ret = minnet_stream_new(ctx, type, typelen, buffer_START(&req->body), buffer_OFFSET(&req->body));
+        ret = minnet_stream_new(ctx, type, typelen, buffer_START(&req->body), buffer_OFFSET(&req->body));
+      } else {
+        ret = JS_NULL;
+      }
       break;
     }
   }
@@ -315,7 +319,7 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, 0, REQUEST_HEADER, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("arrayBuffer", minnet_request_get, 0, REQUEST_ARRAYBUFFER, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("text", minnet_request_get, 0, REQUEST_TEXT, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, JS_PROP_ENUMERABLE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 

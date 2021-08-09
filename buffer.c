@@ -67,17 +67,24 @@ buffer_write(struct byte_buffer* buf, const char* x, size_t n) {
 }
 
 int
-buffer_printf(struct byte_buffer* buf, const char* format, ...) {
-  va_list ap;
+buffer_vprintf(struct byte_buffer* buf, const char* format, va_list ap) {
   ssize_t n, size = lws_ptr_diff_size_t(buf->end, buf->write);
-  va_start(ap, format);
   n = vsnprintf((char*)buf->write, size, format, ap);
-  va_end(ap);
   if(n > size)
     return 0;
   if(n >= (int)size)
     n = size;
   buf->write += n;
+  return n;
+}
+
+int
+buffer_printf(struct byte_buffer* buf, const char* format, ...) {
+  int n;
+  va_list ap;
+  va_start(ap, format);
+  n = buffer_vprintf(buf, format, ap);
+  va_end(ap);
   return n;
 }
 

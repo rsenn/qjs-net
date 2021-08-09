@@ -60,6 +60,11 @@ response_init(struct http_response* res, char* url, int32_t status, BOOL ok, cha
 }
 
 void
+response_write(struct http_response* res, const void* x, size_t n, JSContext* ctx) {
+  buffer_append(&res->body, x, n, ctx);
+}
+
+void
 response_free(JSRuntime* rt, struct http_response* res) {
   struct list_head *hdr, *hdr2;
   js_free_rt(rt, (void*)res->url);

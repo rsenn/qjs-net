@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stddef.h>
+#include <stdarg.h>
 #include <string.h>
 #include <quickjs.h>
 #include <cutils.h>
@@ -33,6 +34,7 @@ BOOL buffer_alloc(struct byte_buffer*, size_t size, JSContext* ctx);
 ssize_t buffer_append(struct byte_buffer*, const void* x, size_t n, JSContext* ctx);
 void buffer_free(struct byte_buffer*, JSRuntime* rt);
 BOOL buffer_write(struct byte_buffer*, const char* x, size_t n);
+int buffer_vprintf(struct byte_buffer*, const char* format, va_list ap);
 int buffer_printf(struct byte_buffer*, const char* format, ...);
 uint8_t* buffer_realloc(struct byte_buffer*, size_t size, JSContext* ctx);
 int buffer_fromarraybuffer(struct byte_buffer*, JSValue value, JSContext* ctx);
