@@ -306,8 +306,9 @@ export class Connection extends MessageTransceiver {
   }
 
   onconnect(sock) {
-console.log("Connection.onconnect", sock, this);
-  } //= LogWrap('Connection.onconnect');
+//console.log("Connection.onconnect", sock, this);
+  } 
+  
   onopen = LogWrap('Connection.onopen');
 
   /*  onopen(arg) {
