@@ -403,9 +403,9 @@ export class Connection extends MessageTransceiver {
         handle(sock, 'error', error);
         remove(sock);
       },
-      onClose(sock, why) {
-        verbose(`Closed`, sock, why);
-        handle(sock, 'close', why);
+      onClose(sock, code, why) {
+        verbose(`Closed`, sock, code, why);
+        handle(sock, 'close', code, why);
         remove(sock);
       },
       onPong(sock, data) {
