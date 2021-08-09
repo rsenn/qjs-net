@@ -10,7 +10,7 @@ enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
 
 struct wsi_opaque_user_data {
   JSObject* obj;
-  struct socket* sock;
+  struct socket* ws;
 };
 
 static JSValue
@@ -33,9 +33,9 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
 
   JS_SetOpaque(ws_obj, ws);
 
-  struct wsi_opaque_user_data* opaque = js_malloc(ctx, sizeof(struct wsi_opaque_user_data));
+  struct wsi_opaque_user_data* opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
   opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, ws_obj));
-  // opaque->sock = ws;
+  opaque->ws = ws;
 
   lws_set_opaque_user_data(wsi, opaque);
   //  lws_set_opaque_user_data(wsi,ws);
@@ -48,7 +48,7 @@ minnet_ws_from_wsi(struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = lws_get_opaque_user_data(wsi)))
-    return JS_GetOpaque(JS_MKPTR(JS_TAG_OBJECT, opaque->obj), minnet_ws_class_id);
+    return opaque->ws ? opaque->ws : JS_GetOpaque(JS_MKPTR(JS_TAG_OBJECT, opaque->obj), minnet_ws_class_id);
 
   return 0;
 }
@@ -91,6 +91,7 @@ minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
   ws->lwsi = wsi;
   ws->handlers[0] = JS_NULL;
   ws->handlers[1] = JS_NULL;
+  ws->ref_count = 1;
 
   JS_SetOpaque(ret, ws);
   return ret;

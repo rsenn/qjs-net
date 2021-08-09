@@ -23,7 +23,7 @@ static MinnetHttpMount*
 mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, enum lws_mount_protocols origin_proto) {
   MinnetHttpMount* m = js_mallocz(ctx, sizeof(MinnetHttpMount));
 
-  printf("mount_create mnt=%-10s org=%-10s def=%s\n", mountpoint, origin, def);
+  // printf("mount_create mnt=%-10s org=%-10s def=%s\n", mountpoint, origin, def);
 
   m->lws.mountpoint = js_strdup(ctx, mountpoint);
   m->lws.origin = origin ? js_strdup(ctx, origin) : 0;
@@ -93,11 +93,9 @@ static struct http_mount*
 mount_find(const char* x, size_t n) {
   struct lws_http_mount *ptr, *m = 0;
   int protocol = n == 0 ? LWSMPRO_CALLBACK : LWSMPRO_HTTP;
-
   size_t l = 0;
   if(n == 0)
     n = strlen(x);
-
   if(protocol == LWSMPRO_CALLBACK && x[0] == '/') {
     x++;
     n--;
@@ -111,13 +109,12 @@ mount_find(const char* x, size_t n) {
         mnt++;
         len--;
       }
-      printf("mount_find [%i] %.*s\n", i++, (int)len, mnt);
+      // printf("mount_find [%i] %.*s\n", i++, (int)len, mnt);
       if(len == n && !strncmp(x, mnt, n)) {
         m = ptr;
         l = n;
         break;
       }
-
       if(n >= len && len >= l && !strncmp(mnt, x, MIN(len, n))) {
         m = ptr;
         l = len;
@@ -270,7 +267,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
-      printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
+      // printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
 
       if(minnet_server.cb_connect.ctx) {
         JSValue args[2];
@@ -302,7 +299,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
-      // printf("lws_callback_on_writable(1) %d\n", lws_get_socket_fd(wsi));
+      printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
       lws_callback_on_writable(wsi);
       return 0;
     }
@@ -423,7 +420,7 @@ get_context(void* user, struct lws* wsi) {
 static int
 respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp) {
   struct list_head* el;
-  printf("RESPOND\tstatus=%d type=%s\n", resp->status, resp->type);
+  // printf("RESPOND\tstatus=%d type=%s\n", resp->status, resp->type);
 
   resp->read_only = TRUE;
   /*
@@ -499,7 +496,7 @@ file_size(FILE* fp) {
 static int
 serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct http_response* resp, JSContext* ctx) {
   FILE* fp;
-  printf("\033[38;5;226mSERVE FILE\033[0m\tis_h2=%i path=%s mount=%s\n", is_h2(wsi), path, mount ? mount->mnt : 0);
+  // printf("\033[38;5;226mSERVE FILE\033[0m\tis_h2=%i path=%s mount=%s\n", is_h2(wsi), path, mount ? mount->mnt : 0);
 
   const char* mime = lws_get_mimetype(path, &mount->lws);
 
@@ -679,7 +676,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       ++req->ref_count;
 
-      printf("LWS_CALLBACK_HTTP\tis_h2=%i url=%s path=%s mountpoint=%s mount=%s\n", is_h2(wsi), url, path, mountpoint, mount ? mount->mnt : 0);
+      // printf("LWS_CALLBACK_HTTP\tis_h2=%i url=%s path=%s mountpoint=%s mount=%s\n", is_h2(wsi), url, path, mountpoint, mount ? mount->mnt : 0);
 
       if(mount && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
 
@@ -704,7 +701,6 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         }
 
         cb = &mount->callback;
-        //   minnet_server.cb_http = *cb;
 
         if(req->method == METHOD_GET || is_h2(wsi)) {
           resp = request(&minnet_server.cb_http, ws_obj, args);
@@ -786,8 +782,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-      printf("\033[38;5;171m%s\033[0m in = %s, url = %s\n", lws_callback_name(reason) + 13, (char*)in, url);
-
+      // printf("\033[38;5;171m%s\033[0m in = %s, url = %s\n", lws_callback_name(reason) + 13, (char*)in, url);
       break;
     }
     case LWS_CALLBACK_PROTOCOL_INIT:
