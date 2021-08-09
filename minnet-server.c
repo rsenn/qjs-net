@@ -260,13 +260,14 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 static int
 callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSValue ws_obj = JS_UNDEFINED;
+  MinnetServerContext* serv = user;
 
   switch((int)reason) {
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_PROTOCOL_INIT: return 0;
 
-    case LWS_CALLBACK_ESTABLISHED:
-    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
+    case LWS_CALLBACK_ESTABLISHED: {
       // printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
 
       if(minnet_server.cb_connect.ctx) {
@@ -277,24 +278,36 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         args[0] = ws_obj;
 
         minnet_emit_this(&minnet_server.cb_connect, ws_obj, 1, args);
+
+        if(serv)
+          serv->ws_obj = ws_obj;
+        else
+          JS_FreeValue(minnet_server.cb_connect.ctx, args[0]);
       }
       return 0;
     }
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE: {
-      printf("%s fd=%d in=%s\n", lws_callback_name(reason), lws_get_socket_fd(wsi), (char*)in);
-      break;
+      uint8_t* codep = in;
+      uint16_t code = (codep[0] << 8) + codep[1];
+      const char* why = in + 2;
+      int whylen = len - 2;
+
+      printf("%s fd=%d code=%u len=%zu reason=%.*s\n", lws_callback_name(reason), lws_get_socket_fd(wsi), code, len, whylen, why);
+      return 0;
     }
 
       // case LWS_CALLBACK_CLIENT_CLOSED:
     case LWS_CALLBACK_CLOSED: {
       printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
-      //   MinnetWebsocket* res = lws_wsi_user(wsi);
-
+ 
       if(minnet_server.cb_close.ctx) {
-        ws_obj = minnet_ws_wrap(minnet_server.cb_close.ctx, wsi);
-        JSValue cb_argv[2] = {ws_obj, in ? JS_NewStringLen(minnet_server.cb_connect.ctx, in, len) : JS_UNDEFINED};
+         JSValue cb_argv[2] = {JS_DupValue(minnet_server.cb_close.ctx, serv->ws_obj), in ? JS_NewStringLen(minnet_server.cb_connect.ctx, in, len) : JS_UNDEFINED};
         minnet_emit(&minnet_server.cb_close, in ? 2 : 1, cb_argv);
+        JS_FreeValue(minnet_server.cb_close.ctx, cb_argv[0]);
+        JS_FreeValue(minnet_server.cb_close.ctx, cb_argv[1]);
       }
+      JS_FreeValue(minnet_server.ctx, serv->ws_obj);
+      serv->ws_obj = JS_NULL;
       return 0;
     }
 
@@ -305,19 +318,23 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
     case LWS_CALLBACK_RECEIVE: {
       if(minnet_server.cb_message.ctx) {
-        ws_obj = minnet_ws_wrap(minnet_server.cb_message.ctx, wsi);
+        //  ws_obj = minnet_ws_wrap(minnet_server.cb_message.ctx, wsi);
         JSValue msg = JS_NewStringLen(minnet_server.cb_message.ctx, in, len);
-        JSValue cb_argv[2] = {ws_obj, msg};
+        JSValue cb_argv[2] = {JS_DupValue(minnet_server.cb_message.ctx, serv->ws_obj), msg};
         minnet_emit(&minnet_server.cb_message, 2, cb_argv);
+        JS_FreeValue(minnet_server.cb_message.ctx, cb_argv[0]);
+        JS_FreeValue(minnet_server.cb_message.ctx, cb_argv[1]);
       }
       return 0;
     }
     case LWS_CALLBACK_RECEIVE_PONG: {
       if(minnet_server.cb_pong.ctx) {
-        ws_obj = minnet_ws_object(minnet_server.cb_pong.ctx, wsi);
+        // ws_obj = minnet_ws_wrap(minnet_server.cb_pong.ctx, wsi);
         JSValue msg = JS_NewArrayBufferCopy(minnet_server.cb_pong.ctx, in, len);
-        JSValue cb_argv[2] = {ws_obj, msg};
+        JSValue cb_argv[2] = {JS_DupValue(minnet_server.cb_pong.ctx, serv->ws_obj), msg};
         minnet_emit(&minnet_server.cb_pong, 2, cb_argv);
+        JS_FreeValue(minnet_server.cb_pong.ctx, cb_argv[0]);
+        JS_FreeValue(minnet_server.cb_pong.ctx, cb_argv[1]);
       }
       return 0;
     }
@@ -329,8 +346,6 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       struct lws_pollargs* args = in;
 
       if(minnet_server.cb_fd.ctx) {
-
-        ws_obj = minnet_ws_object(minnet_server.cb_fd.ctx, wsi);
         JSValue argv[3] = {JS_NewInt32(minnet_server.cb_fd.ctx, args->fd)};
         minnet_handlers(minnet_server.cb_fd.ctx, wsi, args, &argv[1]);
 
@@ -352,6 +367,8 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         minnet_handlers(minnet_server.cb_fd.ctx, wsi, args, &argv[1]);
         minnet_emit(&minnet_server.cb_fd, 3, argv);
         JS_FreeValue(minnet_server.cb_fd.ctx, argv[0]);
+        JS_FreeValue(minnet_server.cb_fd.ctx, argv[1]);
+        JS_FreeValue(minnet_server.cb_fd.ctx, argv[2]);
       }
       return 0;
     }

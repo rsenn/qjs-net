@@ -318,10 +318,16 @@ minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case WEBSOCKET_ADDRESS: {
-      char address[1024];
-      lws_get_peer_simple(ws->lwsi, address, sizeof(address));
+      struct sockaddr_in addr;
+      socklen_t addrlen = sizeof(addr);
+      int fd = lws_get_socket_fd(ws->lwsi);
 
-      ret = JS_NewString(ctx, address);
+      if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
+        char address[1024];
+        lws_get_peer_simple(ws->lwsi, address, sizeof(address));
+
+        ret = JS_NewString(ctx, address);
+      }
       break;
     }
     case WEBSOCKET_FAMILY:
