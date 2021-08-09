@@ -42,7 +42,7 @@ typedef struct server_context {
   struct http_mount* mount;
   size_t serial;
   JSValue generator;
-
+  int closed : 1;
 } MinnetServerContext;
 
 JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);

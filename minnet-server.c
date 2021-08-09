@@ -286,26 +286,38 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       }
       return 0;
     }
-    case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE: {
-      uint8_t* codep = in;
-      uint16_t code = (codep[0] << 8) + codep[1];
-      const char* why = in + 2;
-      int whylen = len - 2;
+      /*case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE: {
+        uint8_t* codep = in;
+        uint16_t code = (codep[0] << 8) + codep[1];
+        const char* why = in + 2;
+        int whylen = len - 2;
 
-      printf("%s fd=%d code=%u len=%zu reason=%.*s\n", lws_callback_name(reason), lws_get_socket_fd(wsi), code, len, whylen, why);
-      return 0;
-    }
+        printf("%s fd=%d code=%u len=%zu reason=%.*s\n", lws_callback_name(reason), lws_get_socket_fd(wsi), code, len, whylen, why);
+        return 0;
+      }*/
 
-      // case LWS_CALLBACK_CLIENT_CLOSED:
+    // case LWS_CALLBACK_CLIENT_CLOSED:
+    case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLOSED: {
+      JSValue why = JS_UNDEFINED;
+      int code = -1;
+
+      if(in) {
+        uint8_t* codep = in;
+        code = (codep[0] << 8) + codep[1];
+        if(len - 2 > 0)
+          why = JS_NewStringLen(minnet_server.ctx, in + 2, len - 2);
+      }
+
       printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
- 
+
       if(minnet_server.cb_close.ctx) {
-         JSValue cb_argv[2] = {JS_DupValue(minnet_server.cb_close.ctx, serv->ws_obj), in ? JS_NewStringLen(minnet_server.cb_connect.ctx, in, len) : JS_UNDEFINED};
-        minnet_emit(&minnet_server.cb_close, in ? 2 : 1, cb_argv);
+        JSValue cb_argv[3] = {JS_DupValue(minnet_server.cb_close.ctx, serv->ws_obj), code != -1 ? JS_NewInt32(minnet_server.cb_close.ctx, code) : JS_UNDEFINED, why};
+        minnet_emit(&minnet_server.cb_close, code != -1 ? 3 : 1, cb_argv);
         JS_FreeValue(minnet_server.cb_close.ctx, cb_argv[0]);
         JS_FreeValue(minnet_server.cb_close.ctx, cb_argv[1]);
       }
+      JS_FreeValue(minnet_server.ctx, why);
       JS_FreeValue(minnet_server.ctx, serv->ws_obj);
       serv->ws_obj = JS_NULL;
       return 0;
