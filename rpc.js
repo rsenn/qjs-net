@@ -290,7 +290,7 @@ export class Connection extends MessageTransceiver {
       typeof codec == 'string' && codecs[codec] ? { codecName: codec, codec: codecs[codec]() } : {}
     );
     define(this, typeof codec == 'object' && codec.name ? { codecName: codec.name, codec } : {});
-    Connection.set.add(this);
+    (this.constructor ?? Connection).set.add(this);
     Connection.fromSocket.set(socket, this);
   }
 
