@@ -286,7 +286,7 @@ export class Connection extends MessageTransceiver {
     let { codec, codecName } = this;
     if(!msg) return;
     if(typeof msg == 'string' && msg.trim() == '') return;
-    //this.log('Connection.onmessage', { msg, codec, codecName });
+    this.log('Connection.onmessage', { msg, codec, codecName });
     let data;
     try {
       data = codec.decode((msg && msg.data) || msg);
@@ -295,7 +295,7 @@ export class Connection extends MessageTransceiver {
       return this.exception;
     }
     let response = this.processMessage(data);
-    //this.log('Connection.onmessage', { data, response });
+    this.log('Connection.onmessage', { data, response });
     if(isThenable(response)) response.then(r => this.sendMessage(r));
     else if(response !== undefined) this.sendMessage(response);
   }
@@ -306,9 +306,9 @@ export class Connection extends MessageTransceiver {
   }
 
   onconnect(sock) {
-//console.log("Connection.onconnect", sock, this);
-  } 
-  
+    //console.log("Connection.onconnect", sock, this);
+  }
+
   onopen = LogWrap('Connection.onopen');
 
   /*  onopen(arg) {
@@ -360,7 +360,7 @@ export class Connection extends MessageTransceiver {
   static getCallbacks(instance, verbosity = 0) {
     const { classes, fdlist, log } = instance;
     const ctor = this;
-    const verbose = verbosity > 1 ? (...args) => log('VERBOSE', ...args) : () => {};
+    const verbose = verbosity > 1 ? (...args) => log('VERBOSE', console.config({ compact: false }), ...args) : () => {};
     //log(`${ctor.name}.getCallbacks`, { instance, log, verbosity });
     const handle = (sock, event, ...args) => {
       let conn, obj;
@@ -379,11 +379,11 @@ export class Connection extends MessageTransceiver {
     };
     return {
       onConnect(sock) {
-        verbose(`Connected`,sock);
+        //        verbose(`Connected`,sock);
         let connection = fdlist[sock.fd];
         if(!connection) connection = new ctor(sock, instance, log, 'json', classes);
         connection.socket ??= sock;
-        verbose(`Connected`, { sock, connection });
+        verbose(`Connected`, sock, connection);
         fdlist[sock.fd] = connection;
         handle(sock, 'connect', sock);
       },
@@ -394,22 +394,22 @@ export class Connection extends MessageTransceiver {
         handle(sock, 'open');
       },
       onMessage(sock, msg) {
-        verbose(`Message`, { fd: sock.fd, sock }, msg);
+        verbose(`Message`, sock, msg);
         handle(sock, 'message', msg);
       },
       onError(sock, error) {
-        verbose(`Error`, { fd: sock.fd }, error);
+        verbose(`Error`, sock, error);
         callHandler(instance, 'error', error);
         handle(sock, 'error', error);
         remove(sock);
       },
       onClose(sock, why) {
-        verbose(`Closed`, { fd: sock.fd }, why);
+        verbose(`Closed`, sock, why);
         handle(sock, 'close', why);
         remove(sock);
       },
       onPong(sock, data) {
-        verbose(`Pong`, { fd: sock.fd }, data);
+        verbose(`Pong`, sock, data);
         handle(sock, 'pong', data);
       }
     };
