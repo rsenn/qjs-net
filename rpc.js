@@ -591,7 +591,7 @@ export class RPCClient extends Connection {
     RPCClient.set.add(this);
     //this.log('RPCClient.constructor', { socket, instance, log, codec, classes } /*, new Error().stack.replace(/Error\n?/, '')*/);
     this.on('error', e => console.error('RPCClient', e));
-    this.on('response', r => console.log('RPCClient.onresponse', r));
+    //this.on('response', r => console.log('RPCClient.onresponse', r));
 
     Object.defineProperties(this, { api: { get: memoize(() => new RPCApi(this)) } });
   }
@@ -659,6 +659,8 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
     },
     get socket() {
       return this.fdlist[this.fd]?.socket;
+    },  get connection() {
+      return this.fdlist[this.fd];
     },
     fdlist: {},
     classes: {},
