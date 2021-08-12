@@ -210,7 +210,7 @@ function(make_shared_module FNAME)
   endif()
 endfunction()
 
-option(BUILD_LIBWEBSOCKETS "build 3rdparty libwebsockets" OFF)
+option(BUILD_LIBWEBSOCKETS "in-tree build of libwebsockets" ON)
 
 if(NOT BUILD_LIBWEBSOCKETS)
   include(FindPkgConfig)
