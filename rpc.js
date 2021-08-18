@@ -2,7 +2,7 @@
 //import * as bjson from 'bjson';
 import { SyscallError, weakAssign } from '../../lib/misc.js';
 import { EventEmitter } from '../../lib/events.js';
-import extendArray from '../modules/lib/extendArray.js';
+import extendArray from '../qjs-modules/lib/extendArray.js';
 import { Repeater } from '../../lib/repeater/repeater.js';
 import inspect from '../../lib/objectInspect.js';
 
