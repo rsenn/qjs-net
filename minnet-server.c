@@ -283,7 +283,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       }
       return 0;
     }
-      
+
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLOSED: {
       if(!serv->closed) {
@@ -297,7 +297,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
             why = JS_NewStringLen(minnet_server.ctx, in + 2, len - 2);
         }
 
-        //printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
+        // printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
 
         if(minnet_server.cb_close.ctx) {
           JSValue cb_argv[3] = {JS_DupValue(minnet_server.cb_close.ctx, serv->ws_obj), code != -1 ? JS_NewInt32(minnet_server.cb_close.ctx, code) : JS_UNDEFINED, why};

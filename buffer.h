@@ -13,13 +13,13 @@ typedef struct byte_buffer {
   uint8_t *start, *write, *read, *end;
 } MinnetBuffer;
 
-#define BUFFER(buf) \
+#define BUFFER(buf)                                                                                                                                                                                    \
   (MinnetBuffer) { ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + sizeof((buf)) - 1 }
 
-#define BUFFER_0() \
+#define BUFFER_0()                                                                                                                                                                                     \
   (MinnetBuffer) { 0, 0, 0, 0 }
 
-#define BUFFER_N(buf, n) \
+#define BUFFER_N(buf, n)                                                                                                                                                                               \
   (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, ((uint8_t*)(buf)) + n }
 
 #define buffer_AVAIL(b) ((b)->end - (b)->write)
