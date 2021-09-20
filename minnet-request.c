@@ -46,7 +46,8 @@ request_init(struct http_request* req, const char* path, char* url, char* method
 
   req->ref_count = 0;
 
-  pstrcpy(req->path, sizeof(req->path), path);
+  if(path)
+    pstrcpy(req->path, sizeof(req->path), path);
 
   req->url = url;
   // req->type = method;

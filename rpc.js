@@ -378,14 +378,15 @@ export class Connection extends MessageTransceiver {
       delete fdlist[fd];
     };
     return {
-      onConnect(sock) {
+      onConnect(sock, req) {
         //        verbose(`Connected`,sock);
         let connection = fdlist[sock.fd];
         if(!connection) connection = new ctor(sock, instance, log, 'json', classes);
         connection.socket ??= sock;
-        verbose(`Connected`, sock, connection);
+        const { url,method,headers} = req;
+        verbose(`Connected`, sock, { url,method,headers});
         fdlist[sock.fd] = connection;
-        handle(sock, 'connect', sock);
+        handle(sock, 'connect', sock, req);
       },
       onOpen(sock) {
         verbose(`Opened`, { fd: sock.fd }, ctor.name);
