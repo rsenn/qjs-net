@@ -99,6 +99,17 @@ install/local/fast: preinstall/fast
 	/opt/cmake-20201114/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
 .PHONY : install/local/fast
 
+# Special rule for the target edit_cache
+edit_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
+	/opt/cmake-20201114/bin/ccmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+.PHONY : edit_cache
+
+# Special rule for the target edit_cache
+edit_cache/fast: edit_cache
+
+.PHONY : edit_cache/fast
+
 # Special rule for the target install
 install: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
@@ -132,27 +143,16 @@ rebuild_cache/fast: rebuild_cache
 
 .PHONY : rebuild_cache/fast
 
-# Special rule for the target edit_cache
-edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
-	/opt/cmake-20201114/bin/cmake-gui -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
-.PHONY : edit_cache
-
-# Special rule for the target edit_cache
-edit_cache/fast: edit_cache
-
-.PHONY : edit_cache/fast
-
 # The main all target
 all: cmake_check_build_system
-	cd /home/roman/Projects/plot-cv && $(CMAKE_COMMAND) -E cmake_progress_start /home/roman/Projects/plot-cv/CMakeFiles /home/roman/Projects/plot-cv/quickjs/net//CMakeFiles/progress.marks
-	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/net/all
+	cd /home/roman/Projects/plot-cv && $(CMAKE_COMMAND) -E cmake_progress_start /home/roman/Projects/plot-cv/CMakeFiles /home/roman/Projects/plot-cv/quickjs/qjs-net//CMakeFiles/progress.marks
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/qjs-net/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/roman/Projects/plot-cv/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/net/clean
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/qjs-net/clean
 .PHONY : clean
 
 # The main clean target
@@ -162,12 +162,12 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/net/preinstall
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/qjs-net/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/net/preinstall
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/qjs-net/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
@@ -176,19 +176,250 @@ depend:
 .PHONY : depend
 
 # Convenience name for target.
-quickjs/net/CMakeFiles/quickjs-minnet.dir/rule:
-	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/net/CMakeFiles/quickjs-minnet.dir/rule
-.PHONY : quickjs/net/CMakeFiles/quickjs-minnet.dir/rule
+quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/rule:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/rule
+.PHONY : quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/rule
 
 # Convenience name for target.
-quickjs-minnet: quickjs/net/CMakeFiles/quickjs-minnet.dir/rule
+quickjs-minnet: quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/rule
 
 .PHONY : quickjs-minnet
 
 # fast build rule for target.
 quickjs-minnet/fast:
-	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/net/CMakeFiles/quickjs-minnet.dir/build
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build
 .PHONY : quickjs-minnet/fast
+
+# Convenience name for target.
+quickjs/qjs-net/CMakeFiles/libwebsockets.dir/rule:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 quickjs/qjs-net/CMakeFiles/libwebsockets.dir/rule
+.PHONY : quickjs/qjs-net/CMakeFiles/libwebsockets.dir/rule
+
+# Convenience name for target.
+libwebsockets: quickjs/qjs-net/CMakeFiles/libwebsockets.dir/rule
+
+.PHONY : libwebsockets
+
+# fast build rule for target.
+libwebsockets/fast:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/libwebsockets.dir/build.make quickjs/qjs-net/CMakeFiles/libwebsockets.dir/build
+.PHONY : libwebsockets/fast
+
+buffer.o: buffer.c.o
+
+.PHONY : buffer.o
+
+# target to build an object file
+buffer.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/buffer.c.o
+.PHONY : buffer.c.o
+
+buffer.i: buffer.c.i
+
+.PHONY : buffer.i
+
+# target to preprocess a source file
+buffer.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/buffer.c.i
+.PHONY : buffer.c.i
+
+buffer.s: buffer.c.s
+
+.PHONY : buffer.s
+
+# target to generate assembly for a file
+buffer.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/buffer.c.s
+.PHONY : buffer.c.s
+
+jsutils.o: jsutils.c.o
+
+.PHONY : jsutils.o
+
+# target to build an object file
+jsutils.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/jsutils.c.o
+.PHONY : jsutils.c.o
+
+jsutils.i: jsutils.c.i
+
+.PHONY : jsutils.i
+
+# target to preprocess a source file
+jsutils.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/jsutils.c.i
+.PHONY : jsutils.c.i
+
+jsutils.s: jsutils.c.s
+
+.PHONY : jsutils.s
+
+# target to generate assembly for a file
+jsutils.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/jsutils.c.s
+.PHONY : jsutils.c.s
+
+minnet-client.o: minnet-client.c.o
+
+.PHONY : minnet-client.o
+
+# target to build an object file
+minnet-client.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-client.c.o
+.PHONY : minnet-client.c.o
+
+minnet-client.i: minnet-client.c.i
+
+.PHONY : minnet-client.i
+
+# target to preprocess a source file
+minnet-client.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-client.c.i
+.PHONY : minnet-client.c.i
+
+minnet-client.s: minnet-client.c.s
+
+.PHONY : minnet-client.s
+
+# target to generate assembly for a file
+minnet-client.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-client.c.s
+.PHONY : minnet-client.c.s
+
+minnet-request.o: minnet-request.c.o
+
+.PHONY : minnet-request.o
+
+# target to build an object file
+minnet-request.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-request.c.o
+.PHONY : minnet-request.c.o
+
+minnet-request.i: minnet-request.c.i
+
+.PHONY : minnet-request.i
+
+# target to preprocess a source file
+minnet-request.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-request.c.i
+.PHONY : minnet-request.c.i
+
+minnet-request.s: minnet-request.c.s
+
+.PHONY : minnet-request.s
+
+# target to generate assembly for a file
+minnet-request.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-request.c.s
+.PHONY : minnet-request.c.s
+
+minnet-response.o: minnet-response.c.o
+
+.PHONY : minnet-response.o
+
+# target to build an object file
+minnet-response.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-response.c.o
+.PHONY : minnet-response.c.o
+
+minnet-response.i: minnet-response.c.i
+
+.PHONY : minnet-response.i
+
+# target to preprocess a source file
+minnet-response.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-response.c.i
+.PHONY : minnet-response.c.i
+
+minnet-response.s: minnet-response.c.s
+
+.PHONY : minnet-response.s
+
+# target to generate assembly for a file
+minnet-response.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-response.c.s
+.PHONY : minnet-response.c.s
+
+minnet-server.o: minnet-server.c.o
+
+.PHONY : minnet-server.o
+
+# target to build an object file
+minnet-server.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server.c.o
+.PHONY : minnet-server.c.o
+
+minnet-server.i: minnet-server.c.i
+
+.PHONY : minnet-server.i
+
+# target to preprocess a source file
+minnet-server.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server.c.i
+.PHONY : minnet-server.c.i
+
+minnet-server.s: minnet-server.c.s
+
+.PHONY : minnet-server.s
+
+# target to generate assembly for a file
+minnet-server.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server.c.s
+.PHONY : minnet-server.c.s
+
+minnet-stream.o: minnet-stream.c.o
+
+.PHONY : minnet-stream.o
+
+# target to build an object file
+minnet-stream.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-stream.c.o
+.PHONY : minnet-stream.c.o
+
+minnet-stream.i: minnet-stream.c.i
+
+.PHONY : minnet-stream.i
+
+# target to preprocess a source file
+minnet-stream.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-stream.c.i
+.PHONY : minnet-stream.c.i
+
+minnet-stream.s: minnet-stream.c.s
+
+.PHONY : minnet-stream.s
+
+# target to generate assembly for a file
+minnet-stream.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-stream.c.s
+.PHONY : minnet-stream.c.s
+
+minnet-websocket.o: minnet-websocket.c.o
+
+.PHONY : minnet-websocket.o
+
+# target to build an object file
+minnet-websocket.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-websocket.c.o
+.PHONY : minnet-websocket.c.o
+
+minnet-websocket.i: minnet-websocket.c.i
+
+.PHONY : minnet-websocket.i
+
+# target to preprocess a source file
+minnet-websocket.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-websocket.c.i
+.PHONY : minnet-websocket.c.i
+
+minnet-websocket.s: minnet-websocket.c.s
+
+.PHONY : minnet-websocket.s
+
+# target to generate assembly for a file
+minnet-websocket.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-websocket.c.s
+.PHONY : minnet-websocket.c.s
 
 minnet.o: minnet.c.o
 
@@ -196,7 +427,7 @@ minnet.o: minnet.c.o
 
 # target to build an object file
 minnet.c.o:
-	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/net/CMakeFiles/quickjs-minnet.dir/minnet.c.o
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet.c.o
 .PHONY : minnet.c.o
 
 minnet.i: minnet.c.i
@@ -205,7 +436,7 @@ minnet.i: minnet.c.i
 
 # target to preprocess a source file
 minnet.c.i:
-	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/net/CMakeFiles/quickjs-minnet.dir/minnet.c.i
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet.c.i
 .PHONY : minnet.c.i
 
 minnet.s: minnet.c.s
@@ -214,7 +445,7 @@ minnet.s: minnet.c.s
 
 # target to generate assembly for a file
 minnet.c.s:
-	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/net/CMakeFiles/quickjs-minnet.dir/minnet.c.s
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet.c.s
 .PHONY : minnet.c.s
 
 # Help Target
@@ -229,7 +460,32 @@ help:
 	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
+	@echo "... libwebsockets"
 	@echo "... quickjs-minnet"
+	@echo "... buffer.o"
+	@echo "... buffer.i"
+	@echo "... buffer.s"
+	@echo "... jsutils.o"
+	@echo "... jsutils.i"
+	@echo "... jsutils.s"
+	@echo "... minnet-client.o"
+	@echo "... minnet-client.i"
+	@echo "... minnet-client.s"
+	@echo "... minnet-request.o"
+	@echo "... minnet-request.i"
+	@echo "... minnet-request.s"
+	@echo "... minnet-response.o"
+	@echo "... minnet-response.i"
+	@echo "... minnet-response.s"
+	@echo "... minnet-server.o"
+	@echo "... minnet-server.i"
+	@echo "... minnet-server.s"
+	@echo "... minnet-stream.o"
+	@echo "... minnet-stream.i"
+	@echo "... minnet-stream.s"
+	@echo "... minnet-websocket.o"
+	@echo "... minnet-websocket.i"
+	@echo "... minnet-websocket.s"
 	@echo "... minnet.o"
 	@echo "... minnet.i"
 	@echo "... minnet.s"

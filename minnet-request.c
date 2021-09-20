@@ -1,12 +1,11 @@
-#include "minnet.h"
 #include "minnet-request.h"
 #include "minnet-stream.h"
 #include "jsutils.h"
 #include <cutils.h>
 #include <ctype.h>
 
-JSClassID minnet_request_class_id;
-JSValue minnet_request_proto, minnet_request_ctor;
+THREAD_LOCAL JSClassID minnet_request_class_id;
+THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;
 
 enum { REQUEST_TYPE, REQUEST_METHOD, REQUEST_URI, REQUEST_PATH, REQUEST_HEADER, REQUEST_ARRAYBUFFER, REQUEST_TEXT, REQUEST_BODY };
 

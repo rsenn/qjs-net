@@ -3,6 +3,7 @@
 
 #include <quickjs.h>
 #include <cutils.h>
+#include "minnet.h"
 #include "buffer.h"
 
 struct socket;
@@ -29,9 +30,9 @@ JSValue minnet_request_constructor(JSContext*, JSValue new_target, int argc, JSV
 JSValue minnet_request_new(JSContext*, const char* path, const char* url, enum http_method);
 JSValue minnet_request_wrap(JSContext*, struct http_request* req);
 
+extern THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;
+extern THREAD_LOCAL JSClassID minnet_request_class_id;
 extern JSClassDef minnet_request_class;
-extern JSValue minnet_request_proto, minnet_request_ctor;
-extern JSClassID minnet_request_class_id;
 extern const JSCFunctionListEntry minnet_request_proto_funcs[];
 extern const size_t minnet_request_proto_funcs_size;
 

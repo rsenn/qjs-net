@@ -1,4 +1,3 @@
-#include "minnet.h"
 #include "minnet-client.h"
 #include "minnet-websocket.h"
 #include <quickjs-libc.h>

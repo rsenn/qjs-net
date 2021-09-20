@@ -1,9 +1,8 @@
-#include "minnet.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 
-JSValue minnet_ws_proto, minnet_ws_ctor;
-JSClassID minnet_ws_class_id;
+THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
+THREAD_LOCAL JSClassID minnet_ws_class_id;
 
 enum { WEBSOCKET_FD, WEBSOCKET_ADDRESS, WEBSOCKET_FAMILY, WEBSOCKET_PORT, WEBSOCKET_PEER };
 enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
@@ -16,7 +15,7 @@ struct wsi_opaque_user_data {
 static JSValue
 minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
-  JSValue ws_obj = JS_NewObjectClass(ctx, minnet_ws_class_id);
+  JSValue ws_obj = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
 
   if(JS_IsException(ws_obj))
     return JS_EXCEPTION;

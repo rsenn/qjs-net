@@ -43,6 +43,16 @@ struct http_request;
     (ptr) = &(*(ptr))->member;                                                                                                                                                                         \
   } while(0);
 
+#ifdef _Thread_local
+#define THREAD_LOCAL _Thread_local
+#elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_CC) || defined(__IBMCPP__)
+#define THREAD_LOCAL __thread
+#elif defined(_WIN32)
+#define THREAD_LOCAL __declspec(thread)
+#else
+#error No TLS implementation found.
+#endif
+
 enum { READ_HANDLER = 0, WRITE_HANDLER };
 enum http_method;
 
@@ -57,8 +67,6 @@ typedef struct callback_ws {
 
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
-
-extern JSClassID minnet_request_class_id;
 
 int minnet_lws_unhandled(const char* handler, int);
 JSValue minnet_emit_this(const struct callback_ws*, JSValueConst this_obj, int argc, JSValue* argv);

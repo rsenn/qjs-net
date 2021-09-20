@@ -3,6 +3,7 @@
 
 #include <quickjs.h>
 #include <cutils.h>
+#include "minnet.h"
 #include "buffer.h"
 
 typedef struct stream {
@@ -20,8 +21,8 @@ JSValue minnet_stream_new(JSContext*, const char* type, size_t typelen, const vo
 JSValue minnet_stream_wrap(JSContext*, struct stream*);
 
 extern JSClassDef minnet_stream_class;
-extern JSValue minnet_stream_proto, minnet_stream_ctor;
-extern JSClassID minnet_stream_class_id;
+extern THREAD_LOCAL JSValue minnet_stream_proto, minnet_stream_ctor;
+extern THREAD_LOCAL JSClassID minnet_stream_class_id;
 extern const JSCFunctionListEntry minnet_stream_proto_funcs[];
 extern const size_t minnet_stream_proto_funcs_size;
 

@@ -1,12 +1,11 @@
-#include "minnet.h"
 #include "minnet-websocket.h"
 #include "minnet-response.h"
 #include "buffer.h"
 #include "jsutils.h"
 #include <cutils.h>
 
-JSClassID minnet_response_class_id;
-JSValue minnet_response_proto, minnet_response_ctor;
+THREAD_LOCAL JSClassID minnet_response_class_id;
+THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
 
 enum { RESPONSE_BUFFER, RESPONSE_JSON, RESPONSE_TEXT, RESPONSE_HEADER };
 enum { RESPONSE_OK, RESPONSE_URL, RESPONSE_STATUS, RESPONSE_TYPE, RESPONSE_OFFSET, RESPONSE_HEADERS };

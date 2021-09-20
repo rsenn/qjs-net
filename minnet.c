@@ -1,4 +1,3 @@
-#include "minnet.h"
 #include "minnet-server.h"
 #include "minnet-client.h"
 #include "minnet-response.h"

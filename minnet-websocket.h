@@ -1,6 +1,7 @@
 #ifndef MINNET_WEBSOCKET_H
 #define MINNET_WEBSOCKET_H
 
+#include "minnet.h"
 #include <quickjs.h>
 
 struct lws;
@@ -22,11 +23,11 @@ JSValue minnet_ws_wrap(JSContext*, struct lws* wsi);
 void minnet_ws_sslcert(JSContext*, struct lws_context_creation_info* info, JSValue options);
 JSValue minnet_ws_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
 
-extern JSValue minnet_ws_proto, minnet_ws_ctor;
+extern THREAD_LOCAL JSClassID minnet_ws_class_id;
+extern THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
 extern JSClassDef minnet_ws_class;
 extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_static_funcs[], minnet_ws_proto_defs[];
 extern const size_t minnet_ws_proto_funcs_size, minnet_ws_static_funcs_size, minnet_ws_proto_defs_size;
-extern JSClassID minnet_ws_class_id;
 
 static inline MinnetWebsocket*
 minnet_ws_data(JSContext* ctx, JSValueConst obj) {

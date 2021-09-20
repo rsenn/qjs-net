@@ -1,11 +1,10 @@
-#include "minnet.h"
 #include "minnet-stream.h"
 #include <quickjs.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-JSClassID minnet_stream_class_id;
-JSValue minnet_stream_proto, minnet_stream_ctor;
+THREAD_LOCAL JSClassID minnet_stream_class_id;
+THREAD_LOCAL JSValue minnet_stream_proto, minnet_stream_ctor;
 
 void
 stream_dump(struct stream const* strm) {

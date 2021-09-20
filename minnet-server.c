@@ -1,4 +1,3 @@
-#include "minnet.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 #include "jsutils.h"
@@ -268,7 +267,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_PROTOCOL_INIT: return 0;
 
     case LWS_CALLBACK_ESTABLISHED: {
-      // printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
+      printf("%s in='%.*s' url=%s\n", lws_callback_name(reason), len, in, url);
 
       if(minnet_server.cb_connect.ctx) {
         JSValue args[2];
@@ -314,8 +313,8 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
-      printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
-      lws_callback_on_writable(wsi);
+      /*   printf("%s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
+         lws_callback_on_writable(wsi);*/
       return 0;
     }
     case LWS_CALLBACK_RECEIVE: {
@@ -610,15 +609,16 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   }
 
   switch((int)reason) {
-      /*   case (int)LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
-         case (int)LWS_CALLBACK_PROTOCOL_INIT:
-         case (int)LWS_CALLBACK_HTTP_BIND_PROTOCOL:
-         case (int)LWS_CALLBACK_HTTP_DROP_PROTOCOL:
-         case (int)LWS_CALLBACK_CLOSED_HTTP:
-         case (int)LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
-         case (int)LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-           break;
-         }*/
+    case(int)LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
+    case(int)LWS_CALLBACK_PROTOCOL_INIT:
+    case(int)LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+    case(int)LWS_CALLBACK_HTTP_DROP_PROTOCOL:
+    case(int)LWS_CALLBACK_CLOSED_HTTP:
+    case(int)LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
+    case(int)LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+      printf("%s in='%.*s' url=%s\n", lws_callback_name(reason), len, in, url);
+      break;
+    }
 
     case LWS_CALLBACK_ADD_HEADERS: {
       /*struct lws_process_html_args* args = (struct lws_process_html_args*)in;
@@ -695,7 +695,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       ++req->ref_count;
 
-      // printf("LWS_CALLBACK_HTTP\tis_h2=%i url=%s path=%s mountpoint=%s mount=%s\n", is_h2(wsi), url, path, mountpoint, mount ? mount->mnt : 0);
+      printf("LWS_CALLBACK_HTTP\tis_h2=%i url=%s path=%s mountpoint=%s mount=%s\n", is_h2(wsi), url, path, mountpoint, mount ? mount->mnt : 0);
 
       if(mount && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
 
@@ -801,7 +801,7 @@ callback_http(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-      // printf("\033[38;5;171m%s\033[0m in = %s, url = %s\n", lws_callback_name(reason) + 13, (char*)in, url);
+      printf("\033[38;5;171m%s\033[0m in = %s, url = %s\n", lws_callback_name(reason) + 13, (char*)in, url);
       break;
     }
     case LWS_CALLBACK_PROTOCOL_INIT:

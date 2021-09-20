@@ -4,6 +4,7 @@
 #include <quickjs.h>
 #include <list.h>
 #include <libwebsockets.h>
+#include "minnet.h"
 #include "buffer.h"
 
 struct http_request;
@@ -38,11 +39,11 @@ JSValue minnet_response_wrap(JSContext*, struct http_response* res);
 JSValue minnet_response_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
 void minnet_response_finalizer(JSRuntime*, JSValue val);
 
+extern THREAD_LOCAL JSClassID minnet_response_class_id;
+extern THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
 extern JSClassDef minnet_response_class;
 extern const JSCFunctionListEntry minnet_response_proto_funcs[];
 extern const size_t minnet_response_proto_funcs_size;
-extern JSValue minnet_response_proto, minnet_response_ctor;
-extern JSClassID minnet_response_class_id;
 
 static inline MinnetResponse*
 minnet_response_data(JSContext* ctx, JSValueConst obj) {

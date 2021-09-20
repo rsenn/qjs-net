@@ -629,6 +629,9 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
   if(!url) url = globalThis.location?.href;
   if(typeof url != 'object') url = parseURL(url);
 
+  if(url.protocol == 'ws') url.protocol = 'http';
+  if(url.protocol == 'wss') url.protocol = 'https';
+
   define(instance, {
     service,
     callbacks,
