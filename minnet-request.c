@@ -41,7 +41,7 @@ request_dump(struct http_request const* req) {
 }
 
 void
-request_init(struct http_request* req, const char* path, char* url, char* method) {
+request_init(struct http_request* req, const char* path, char* url, MinnetHttpMethod method) {
   memset(req, 0, sizeof(*req));
 
   req->ref_count = 0;
@@ -50,16 +50,23 @@ request_init(struct http_request* req, const char* path, char* url, char* method
     pstrcpy(req->path, sizeof(req->path), path);
 
   req->url = url;
-  // req->type = method;
+  req->method = method;
 }
 
 struct http_request*
-request_new(JSContext* ctx) {
+request_new(JSContext* ctx, const char* path, char* url, MinnetHttpMethod method) {
   MinnetRequest* req;
 
   if((req = js_mallocz(ctx, sizeof(MinnetRequest)))) {
     req->ref_count = 1;
   }
+
+  if(path)
+    pstrcpy(req->path, sizeof(req->path), path);
+
+  req->url = url;
+  req->method = method;
+
   return req;
 }
 
@@ -148,12 +155,10 @@ JSValue
 minnet_request_new(JSContext* ctx, const char* path, const char* url, enum http_method method) {
   struct http_request* req;
 
-  if(!(req = request_new(ctx)))
+  if(!(req = request_new(ctx, 0, 0, 0)))
     return JS_ThrowOutOfMemory(ctx);
 
-  request_init(req, path, js_strdup(ctx, url), js_strdup(ctx, method == METHOD_POST ? "POST" : "GET"));
-
-  req->method = method;
+  request_init(req, path, js_strdup(ctx, url), method);
 
   return minnet_request_wrap(ctx, req);
 }

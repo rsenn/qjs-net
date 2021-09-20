@@ -23,8 +23,8 @@ typedef struct http_request {
 } MinnetRequest;
 
 void request_dump(struct http_request const*);
-void request_init(struct http_request*, const char* path, char* url, char* type);
-struct http_request* request_new(JSContext*);
+void request_init(struct http_request*, const char* path, char* url, MinnetHttpMethod);
+struct http_request* request_new(JSContext*, const char* path, char* url, MinnetHttpMethod);
 void request_zero(struct http_request*);
 JSValue minnet_request_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
 JSValue minnet_request_new(JSContext*, const char* path, const char* url, enum http_method);

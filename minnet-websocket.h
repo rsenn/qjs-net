@@ -29,6 +29,12 @@ extern JSClassDef minnet_ws_class;
 extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_static_funcs[], minnet_ws_proto_defs[];
 extern const size_t minnet_ws_proto_funcs_size, minnet_ws_static_funcs_size, minnet_ws_proto_defs_size;
 
+struct wsi_opaque_user_data {
+  JSObject* obj;
+  struct socket* ws;
+  struct http_request* req;
+};
+
 static inline MinnetWebsocket*
 minnet_ws_data(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_ws_class_id);

@@ -383,8 +383,8 @@ export class Connection extends MessageTransceiver {
         let connection = fdlist[sock.fd];
         if(!connection) connection = new ctor(sock, instance, log, 'json', classes);
         connection.socket ??= sock;
-        const { url,method,headers} = req;
-        verbose(`Connected`, sock, { url,method,headers});
+        const { url, method, headers } = req;
+        verbose(`Connected`, sock, req, { url, method, headers });
         fdlist[sock.fd] = connection;
         handle(sock, 'connect', sock, req);
       },

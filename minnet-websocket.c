@@ -7,11 +7,6 @@ THREAD_LOCAL JSClassID minnet_ws_class_id;
 enum { WEBSOCKET_FD, WEBSOCKET_ADDRESS, WEBSOCKET_FAMILY, WEBSOCKET_PORT, WEBSOCKET_PEER };
 enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
 
-struct wsi_opaque_user_data {
-  JSObject* obj;
-  struct socket* ws;
-};
-
 static JSValue
 minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
@@ -79,6 +74,7 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
 
 JSValue
 minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
+  struct wsi_opaque_user_data* opaque;
   MinnetWebsocket* ws;
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
 
@@ -93,6 +89,17 @@ minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
   ws->ref_count = 1;
 
   JS_SetOpaque(ret, ws);
+
+  if(!(opaque = lws_get_opaque_user_data(wsi))) {
+    opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
+    lws_set_opaque_user_data(wsi, opaque);
+  }
+
+  assert(!opaque->ws);
+
+  opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, ret));
+  opaque->ws = ws;
+
   return ret;
 }
 
