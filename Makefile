@@ -340,6 +340,87 @@ minnet-response.c.s:
 	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-response.c.s
 .PHONY : minnet-response.c.s
 
+minnet-server-http.o: minnet-server-http.c.o
+
+.PHONY : minnet-server-http.o
+
+# target to build an object file
+minnet-server-http.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server-http.c.o
+.PHONY : minnet-server-http.c.o
+
+minnet-server-http.i: minnet-server-http.c.i
+
+.PHONY : minnet-server-http.i
+
+# target to preprocess a source file
+minnet-server-http.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server-http.c.i
+.PHONY : minnet-server-http.c.i
+
+minnet-server-http.s: minnet-server-http.c.s
+
+.PHONY : minnet-server-http.s
+
+# target to generate assembly for a file
+minnet-server-http.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server-http.c.s
+.PHONY : minnet-server-http.c.s
+
+minnet-server-proxy.o: minnet-server-proxy.c.o
+
+.PHONY : minnet-server-proxy.o
+
+# target to build an object file
+minnet-server-proxy.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server-proxy.c.o
+.PHONY : minnet-server-proxy.c.o
+
+minnet-server-proxy.i: minnet-server-proxy.c.i
+
+.PHONY : minnet-server-proxy.i
+
+# target to preprocess a source file
+minnet-server-proxy.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server-proxy.c.i
+.PHONY : minnet-server-proxy.c.i
+
+minnet-server-proxy.s: minnet-server-proxy.c.s
+
+.PHONY : minnet-server-proxy.s
+
+# target to generate assembly for a file
+minnet-server-proxy.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server-proxy.c.s
+.PHONY : minnet-server-proxy.c.s
+
+minnet-server-ws.o: minnet-server-ws.c.o
+
+.PHONY : minnet-server-ws.o
+
+# target to build an object file
+minnet-server-ws.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server-ws.c.o
+.PHONY : minnet-server-ws.c.o
+
+minnet-server-ws.i: minnet-server-ws.c.i
+
+.PHONY : minnet-server-ws.i
+
+# target to preprocess a source file
+minnet-server-ws.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server-ws.c.i
+.PHONY : minnet-server-ws.c.i
+
+minnet-server-ws.s: minnet-server-ws.c.s
+
+.PHONY : minnet-server-ws.s
+
+# target to generate assembly for a file
+minnet-server-ws.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet-server-ws.c.s
+.PHONY : minnet-server-ws.c.s
+
 minnet-server.o: minnet-server.c.o
 
 .PHONY : minnet-server.o
@@ -477,6 +558,15 @@ help:
 	@echo "... minnet-response.o"
 	@echo "... minnet-response.i"
 	@echo "... minnet-response.s"
+	@echo "... minnet-server-http.o"
+	@echo "... minnet-server-http.i"
+	@echo "... minnet-server-http.s"
+	@echo "... minnet-server-proxy.o"
+	@echo "... minnet-server-proxy.i"
+	@echo "... minnet-server-proxy.s"
+	@echo "... minnet-server-ws.o"
+	@echo "... minnet-server-ws.i"
+	@echo "... minnet-server-ws.s"
 	@echo "... minnet-server.o"
 	@echo "... minnet-server.i"
 	@echo "... minnet-server.s"

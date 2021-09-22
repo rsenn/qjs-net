@@ -281,8 +281,11 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     mountpoint = 0;
   }
 
-  /*if(url || (in && *(char*)in) || (path && *path)) */ printf(
-      "http %s\tis_h2=%i url=%s in='%.*s' path=%s mountpoint=%.*s\n", lws_callback_name(reason) + 13, is_h2(wsi), url, len, in, path, mountpoint_len, mountpoint);
+  /*if(url || (in && *(char*)in) || (path && *path)) */
+
+if(reason != LWS_CALLBACK_HTTP_WRITEABLE)
+   printf(
+      "http %-25s fd=%i, is_h2=%i url=%s in='%.*s' path=%s mountpoint=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), is_h2(wsi), url, len, in, path, mountpoint_len, mountpoint);
 
   switch((int)reason) {
     case(int)LWS_CALLBACK_ESTABLISHED: {
@@ -296,12 +299,12 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(minnet_server.cb_connect.ctx) {
         opaque->req = request_new(minnet_server.cb_connect.ctx, path, url, method);
         int num_hdr = http_headers(ctx, &opaque->req->header, wsi);
-        printf("http \033[38;5;171m%s\033[0m num_hdr=%i\n", lws_callback_name(reason) + 13, num_hdr);
+        printf("http \033[38;5;171m%-25s\033[0m fd=%i, num_hdr=%i\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), num_hdr);
         args[1] = minnet_request_wrap(minnet_server.cb_connect.ctx, opaque->req);
         minnet_emit_this(&minnet_server.cb_connect, ws_obj, 2, args);
         JS_FreeValue(ctx, args[1]);
       }
-      // printf("http \033[38;5;171m%s\033[0m wsi=%p, ws=%p, req=%p, in='%.*s', path=%s, url=%s, opaque=%p\n", lws_callback_name(reason) + 13, wsi, ws, opaque->req, (int)len, (char*)in, path, url,
+      // printf("http \033[38;5;171m%-25s\033[0m wsi=%p, ws=%p, req=%p, in='%.*s', path=%s, url=%s, opaque=%p\n", lws_callback_name(reason) + 13, wsi, ws, opaque->req, (int)len, (char*)in, path, url,
       // opaque);
 
       break;
@@ -313,7 +316,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         opaque->req = request_new(ctx, path, url, method);
 
       int num_hdr = http_headers(ctx, &opaque->req->header, wsi);
-      // printf("http \033[38;5;171m%s\033[0m num_hdr = %i, offset = %zu, url=%s, req=%p\n", lws_callback_name(reason) + 13, num_hdr, buffer_OFFSET(&opaque->req->header), url, opaque->req);
+      // printf("http \033[38;5;171m%-25s\033[0m num_hdr = %i, offset = %zu, url=%s, req=%p\n", lws_callback_name(reason) + 13, num_hdr, buffer_OFFSET(&opaque->req->header), url, opaque->req);
       // buffer_free(&opaque->req->header, JS_GetRuntime(ctx));
       break;
     }
@@ -382,7 +385,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         assert(!strncmp(url, mount->mnt, mlen));
         path += mlen;
       }
-      printf("http LWS_CALLBACK_HTTP is_h2=%i, url=%s, mnt=%s\n", is_h2(wsi), url, mount->org);
+      printf("http %-25s fd=%i, is_h2=%i, req=%p, url=%s, mnt=%s\n", "HTTP", lws_get_socket_fd(lws_get_network_wsi( wsi)), is_h2(wsi), opaque->req, url, mount->org);
 
       //  if(!JS_IsObject(args[0]))
       args[0] = serv->req_obj = minnet_request_wrap(ctx, opaque->req);
@@ -393,7 +396,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetRequest* req = opaque->req;
       MinnetResponse* resp = minnet_response_data(ctx, args[1]);
 
-      printf("http \x1b[38;5;87mLWS_CALLBACK_HTTP\x1b[0m req=%p, header=%zu\n", req, buffer_OFFSET(&req->header));
+      printf("http \x1b[38;5;87m%-25s\x1b[0m req=%p, header=%zu\n", "HTTP", req, buffer_OFFSET(&req->header));
 
       ++req->ref_count;
 

@@ -325,13 +325,13 @@ minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
 
   switch(magic) {
     case WEBSOCKET_FD: {
-      ret = JS_NewInt32(ctx, lws_get_socket_fd(ws->lwsi));
+      ret = JS_NewInt32(ctx, lws_get_socket_fd(lws_get_network_wsi(ws->lwsi)));
       break;
     }
     case WEBSOCKET_ADDRESS: {
       struct sockaddr_in addr;
       socklen_t addrlen = sizeof(addr);
-      int fd = lws_get_socket_fd(ws->lwsi);
+      int fd = lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
 
       if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
         char address[1024];
@@ -345,7 +345,7 @@ minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
     case WEBSOCKET_PORT: {
       struct sockaddr_in addr;
       socklen_t addrlen = sizeof(addr);
-      int fd = lws_get_socket_fd(ws->lwsi);
+      int fd = lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
 
       if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
         ret = JS_NewInt32(ctx, magic == 2 ? addr.sin_family : addr.sin_port);
@@ -355,7 +355,7 @@ minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
     case WEBSOCKET_PEER: {
       struct sockaddr_in addr;
       socklen_t addrlen = sizeof(addr);
-      int fd = lws_get_socket_fd(ws->lwsi);
+      int fd = lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
 
       if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
         ret = JS_NewArrayBufferCopy(ctx, (const uint8_t*)&addr, addrlen);
@@ -363,7 +363,7 @@ minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case WEBSOCKET_SSL: {
-      ret = JS_NewBool(ctx, lws_is_ssl(ws->lwsi));
+      ret = JS_NewBool(ctx, lws_is_ssl(lws_get_network_wsi(ws->lwsi)));
       break;
     }
     case WEBSOCKET_BINARY: {
