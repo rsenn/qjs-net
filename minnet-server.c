@@ -1,6 +1,7 @@
+#include "jsutils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
-#include "jsutils.h"
+#include "minnet-server-http.h"
 #include "minnet-response.h"
 #include "minnet-request.h"
 #include <list.h>
@@ -10,11 +11,11 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-MinnetHttpServer minnet_server = {0};
+MinnetServer minnet_server = {0};
 
-static int callback_ws(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+static int minnet_ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int http_writable(struct lws*, struct http_response*, BOOL done);
-int http_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
+int minnet_http_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
 
 /**
  * @brief      Create HTTP server mount
@@ -138,8 +139,8 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
 }
 
 static struct lws_protocols protocols[] = {
-    {"minnet", callback_ws, sizeof(MinnetServerContext), 0, 0, 0, 1024},
-    {"http", http_callback, sizeof(MinnetServerContext), 0, 0, 0, 1024},
+    {"minnet", minnet_ws_callback, sizeof(MinnetSession), 0, 0, 0, 1024},
+    {"http", minnet_http_callback, sizeof(MinnetSession), 0, 0, 0, 1024},
     LWS_PROTOCOL_LIST_TERM,
 };
 
@@ -257,11 +258,11 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   return ret;
 }
 
-static struct server_context*
+static struct session_data*
 get_context(void* user, struct lws* wsi) {
-  MinnetServerContext* serv;
+  MinnetSession* serv;
 
-  if((serv = (MinnetServerContext*)user)) {
+  if((serv = (MinnetSession*)user)) {
 
     if(!JS_IsObject(serv->ws_obj))
       serv->ws_obj = minnet_ws_object(minnet_server.ctx, wsi);
@@ -311,7 +312,7 @@ respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp) {
 }
 
 static MinnetResponse*
-request_handler(MinnetServerContext* serv, MinnetCallback* cb) {
+request_handler(MinnetSession* serv, MinnetCallback* cb) {
   MinnetResponse* resp = minnet_response_data(minnet_server.ctx, serv->resp_obj);
 
   if(cb->ctx) {
@@ -407,11 +408,11 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
 
   return 0;
 }
-  
+
 static int
-callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+minnet_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSValue ws_obj = JS_UNDEFINED;
-  MinnetServerContext* serv = user;
+  MinnetSession* serv = user;
   MinnetHttpMethod method;
   char* url = lws_uri_and_method(wsi, minnet_server.cb_connect.ctx, &method);
 
@@ -563,7 +564,7 @@ callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_CLOSED_HTTP:
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION:
     case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
-      return http_callback(wsi, reason, user, in, len);
+      return minnet_http_callback(wsi, reason, user, in, len);
     }
       /*
           default: {

@@ -5,6 +5,7 @@
 #include "jsutils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
+#include "minnet-server-http.h"
 #include "minnet-response.h"
 #include "minnet-request.h"
 
@@ -45,11 +46,11 @@ http_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
 }
 
 int
-http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSContext* ctx = minnet_server.ctx;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetHttpMethod method = METHOD_GET;
-  MinnetServerContext* serv = user; // get_context(user, wsi);
+  MinnetSession* serv = user; // get_context(user, wsi);
   JSValue ws_obj = minnet_ws_object(ctx, wsi);
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
   //  MinnetWebsocket* ws = minnet_ws_data(ctx, ws_obj);

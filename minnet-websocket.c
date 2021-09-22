@@ -1,6 +1,7 @@
 #include "buffer.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
+#include "minnet-server-http.h"
 
 THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
 THREAD_LOCAL JSClassID minnet_ws_class_id;
