@@ -360,7 +360,7 @@ export class Connection extends MessageTransceiver {
   static getCallbacks(instance, verbosity = 0) {
     const { classes, fdlist, log } = instance;
     const ctor = this;
-    const verbose = verbosity > 1 ? (...args) => log('VERBOSE', console.config({ compact: false }), ...args) : () => {};
+    const verbose = verbosity > 1 ? (...args) => log('VERBOSE', console.config({ compact: 2 }), ...args) : () => {};
     //log(`${ctor.name}.getCallbacks`, { instance, log, verbosity });
     const handle = (sock, event, ...args) => {
       let conn, obj;

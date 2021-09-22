@@ -355,13 +355,6 @@ endfunction()
 link_directories(${LIBWEBSOCKETS_LIBRARY_DIRS})
 # endif(NOT USE_SYSTEM_LIBWEBSOCKETS)
 
-# file(GLOB JS_BINDINGS_SOURCES ${CMAKE_SOURCE_DIR}/src/js_*.cpp) foreach(MOD
-# ${JS_BINDINGS_SOURCES}) string(REGEX REPLACE "\\.cpp" "" MOD "${MOD}")
-# string(REGEX REPLACE ".*/js_" "" MOD "${MOD}") list(APPEND JS_BINDINGS_MODULES
-# ${MOD}) endforeach(MOD ${JS_BINDINGS_SOURCES}) message("JS_BINDINGS_MODULES:
-# ${JS_BINDINGS_MODULES}") foreach(JS_MODULE ${JS_BINDINGS_MODULES})
-# make_shared_module(${JS_MODULE}) endforeach()
-
 file(GLOB JS_BINDINGS_SOURCES *.c *.h)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

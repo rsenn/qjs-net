@@ -46,6 +46,8 @@ typedef struct server_context {
 } MinnetServerContext;
 
 JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+int http_writable(struct lws*, struct http_response*, BOOL done);
+int http_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
 
 extern MinnetHttpServer minnet_server;
 
