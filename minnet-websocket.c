@@ -1,3 +1,4 @@
+#include "buffer.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 

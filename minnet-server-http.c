@@ -1,9 +1,12 @@
 #include <sys/types.h>
 #include <cutils.h>
 
+#include "buffer.h"
 #include "jsutils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
+#include "minnet-response.h"
+#include "minnet-request.h"
 
 int
 http_writable(struct lws* wsi, struct http_response* resp, BOOL done) {

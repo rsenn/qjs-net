@@ -407,7 +407,7 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
 
   return 0;
 }
-
+  
 static int
 callback_ws(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSValue ws_obj = JS_UNDEFINED;
