@@ -6,7 +6,7 @@
 THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
 THREAD_LOCAL JSClassID minnet_ws_class_id;
 
-enum { WEBSOCKET_FD, WEBSOCKET_ADDRESS, WEBSOCKET_FAMILY, WEBSOCKET_PORT, WEBSOCKET_PEER, WEBSOCKET_SSL };
+enum { WEBSOCKET_FD, WEBSOCKET_ADDRESS, WEBSOCKET_FAMILY, WEBSOCKET_PORT, WEBSOCKET_PEER, WEBSOCKET_SSL, WEBSOCKET_BINARY };
 enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
 
 static JSValue
@@ -300,14 +300,12 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* a
     }
 
     printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
-    //  return JS_ThrowInternalError(ctx, "minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
 
-    if(reason)
-      lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
+    lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
 
     lws_close_free_wsi(ws->lwsi, status, "minnet_ws_close");
-
     ws->lwsi = 0;
+
     return JS_TRUE;
   }
 
@@ -318,8 +316,12 @@ static JSValue
 minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
+
   if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
+
+  if(!ws->lwsi)
+    return JS_NULL;
 
   switch(magic) {
     case WEBSOCKET_FD: {
@@ -362,6 +364,27 @@ minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
     }
     case WEBSOCKET_SSL: {
       ret = JS_NewBool(ctx, lws_is_ssl(ws->lwsi));
+      break;
+    }
+    case WEBSOCKET_BINARY: {
+      ret = JS_NewBool(ctx, ws->binary);
+      break;
+    }
+  }
+  return ret;
+}
+
+static JSValue
+minnet_ws_setter(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+  MinnetWebsocket* ws;
+  JSValue ret = JS_UNDEFINED;
+  if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+
+    case WEBSOCKET_BINARY: {
+      ws->binary = JS_ToBool(ctx, value);
       break;
     }
   }
@@ -445,6 +468,7 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_ws_getter, 0, WEBSOCKET_PORT, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_getter, 0, WEBSOCKET_PEER, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("ssl", minnet_ws_getter, 0, WEBSOCKET_SSL, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_getter, minnet_ws_setter, WEBSOCKET_BINARY, 0),
     JS_ALIAS_DEF("remote", "peer"),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebSocket", JS_PROP_CONFIGURABLE),
 

@@ -14,6 +14,7 @@ typedef struct socket {
   size_t ref_count;
   struct lws* lwsi;
   JSValue handlers[2];
+  BOOL binary;
 } MinnetWebsocket;
 
 MinnetWebsocket* minnet_ws_from_wsi(struct lws*);
