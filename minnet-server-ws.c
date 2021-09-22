@@ -1,31 +1,50 @@
+#include "minnet-server.h"
+#include "minnet-websocket.h"
+#include "minnet-request.h"
 
-  int
-minnet_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+int
+ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSValue ws_obj = JS_UNDEFINED;
   MinnetSession* serv = user;
-  MinnetHttpMethod method;
-  char* url = lws_uri_and_method(wsi, minnet_server.cb_connect.ctx, &method);
-
-  // printf("ws %s\tfd=%d in='%.*s'\n", lws_callback_name(reason), lws_get_socket_fd(wsi), len, in);
+  // char* url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI);
 
   switch((int)reason) {
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_PROTOCOL_INIT: return 0;
 
+    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
+      if(minnet_server.cb_connect.ctx) {
+        JSContext* ctx = minnet_server.cb_connect.ctx;
+        struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
+
+        opaque->req = request_new(ctx, in, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), METHOD_GET);
+
+        int num_hdr = http_headers(ctx, &opaque->req->header, wsi);
+
+        printf("ws \033[38;5;171m%s\033[0m wsi=%p, ws=%p, req=%p, opaque=%p, num_hdr=%i, url=%s\n", lws_callback_name(reason) + 13, wsi, opaque->ws, opaque->req, opaque, num_hdr, opaque->req->url);
+      }
+      return 0;
+    }
+
     case LWS_CALLBACK_ESTABLISHED: {
 
       if(minnet_server.cb_connect.ctx) {
-        struct wsi_opaque_user_data* user = lws_get_opaque_user_data(wsi);
+        JSContext* ctx = minnet_server.cb_connect.ctx;
+        struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+        assert(opaque->req);
 
-        serv->args[1] = minnet_ws_wrap(minnet_server.cb_connect.ctx, user->req);
+        if(!JS_IsObject(serv->req_obj))
+          serv->req_obj = minnet_request_wrap(ctx, opaque->req);
 
-        // printf("ws %s wsi=%p, ws=%p, req=%p, url=%s, serv=%p, user=%p\n", lws_callback_name(reason) + 13, wsi, user->ws, user->req, url, serv, lws_get_opaque_user_data(wsi));
+        serv->ws_obj = minnet_ws_wrap(ctx, wsi);
+        opaque->ws = minnet_ws_data(ctx, serv->ws_obj);
 
-        minnet_emit_this(&minnet_server.cb_connect, serv->args[0], 2, serv->args);
+        printf("ws %s wsi=%p, ws=%p, req=%p, opaque=%p\n", lws_callback_name(reason) + 13, wsi, minnet_ws_data(ctx, serv->ws_obj), opaque->req, opaque);
+        minnet_emit_this(&minnet_server.cb_connect, serv->ws_obj, 2, &serv->ws_obj);
       }
 
-      return 0;
+      break;
     }
 
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
@@ -54,7 +73,7 @@ minnet_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
         serv->ws_obj = JS_NULL;
         serv->closed = 1;
       }
-      return 0;
+      break;
     }
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
@@ -135,9 +154,7 @@ minnet_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       return 0;
     }
 
-    case LWS_CALLBACK_WSI_CREATE: {
-      return 0;
-    }
+    case LWS_CALLBACK_WSI_CREATE:
     case LWS_CALLBACK_WSI_DESTROY:
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
@@ -145,24 +162,25 @@ minnet_ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
     case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL: {
       return 0;
     }
-
-    case LWS_CALLBACK_HTTP:
-    case LWS_CALLBACK_HTTP_BODY:
-    case LWS_CALLBACK_HTTP_BODY_COMPLETION:
-    case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
-    case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
-    case LWS_CALLBACK_CLOSED_HTTP:
-    case LWS_CALLBACK_FILTER_HTTP_CONNECTION:
-    case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
-      return minnet_http_callback(wsi, reason, user, in, len);
-    }
       /*
-          default: {
-            minnet_lws_unhandled("WS", reason);
-            return 0;
+          case LWS_CALLBACK_HTTP:
+          case LWS_CALLBACK_HTTP_BODY:
+          case LWS_CALLBACK_HTTP_BODY_COMPLETION:
+          case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+          case LWS_CALLBACK_CLOSED_HTTP:
+          case LWS_CALLBACK_FILTER_HTTP_CONNECTION:
+          case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
+            return http_callback(wsi, reason, user, in, len);
           }*/
+
+    default: {
+      minnet_lws_unhandled("WS", reason);
+      return 0;
+    }
   }
-  minnet_lws_unhandled("WS", reason);
+
+  printf("ws %s\tfd=%d in='%.*s'\n", lws_callback_name(reason), lws_get_socket_fd(wsi), len, in);
+
   return 0;
   //  return lws_callback_http_dummy(wsi, reason, user, in, len);
 }

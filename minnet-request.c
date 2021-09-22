@@ -221,11 +221,13 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
         if(isspace(x[namelen]))
           namelen++;
 
-        JS_SetPropertyStr(ctx, ret, prop, JS_NewStringLen(ctx, (const char*)&x[namelen], len - namelen));
+        // printf("header '%s' = %.*s\n", prop, len - namelen, &x[namelen]);
+
+        JS_DefinePropertyValueStr(ctx, ret, prop, JS_NewStringLen(ctx, (const char*)&x[namelen], len - namelen), JS_PROP_ENUMERABLE);
         js_free(ctx, (void*)prop);
       }
 
-      //      ret = buffer_tostring(&req->header, ctx);
+      ret = buffer_tostring(&req->header, ctx);
       break;
     }
     case REQUEST_ARRAYBUFFER: {

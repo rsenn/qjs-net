@@ -1,13 +1,224 @@
 #include <sys/types.h>
 #include <cutils.h>
 
-#include "buffer.h"
 #include "jsutils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 #include "minnet-server-http.h"
 #include "minnet-response.h"
 #include "minnet-request.h"
+
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+MinnetHttpMount*
+mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, enum lws_mount_protocols origin_proto) {
+  MinnetHttpMount* m = js_mallocz(ctx, sizeof(MinnetHttpMount));
+
+  // printf("mount_create mnt=%-10s org=%-10s def=%s\n", mountpoint, origin, def);
+
+  m->lws.mountpoint = js_strdup(ctx, mountpoint);
+  m->lws.origin = origin ? js_strdup(ctx, origin) : 0;
+  m->lws.def = def ? js_strdup(ctx, def) : 0;
+  m->lws.protocol = "http";
+  m->lws.origin_protocol = origin_proto;
+  m->lws.mountpoint_len = strlen(mountpoint);
+
+  return m;
+}
+
+MinnetHttpMount*
+mount_new(JSContext* ctx, JSValueConst obj) {
+  MinnetHttpMount* ret;
+  JSValue mnt = JS_UNDEFINED, org = JS_UNDEFINED, def = JS_UNDEFINED;
+
+  if(JS_IsArray(ctx, obj)) {
+    mnt = JS_GetPropertyUint32(ctx, obj, 0);
+    org = JS_GetPropertyUint32(ctx, obj, 1);
+    def = JS_GetPropertyUint32(ctx, obj, 2);
+  } else if(JS_IsFunction(ctx, obj)) {
+    size_t namelen;
+    JSValue name = JS_GetPropertyStr(ctx, obj, "name");
+    const char* namestr = JS_ToCStringLen(ctx, &namelen, name);
+    char buf[namelen + 2];
+    pstrcpy(&buf[1], namelen + 1, namestr);
+    buf[0] = '/';
+    buf[namelen + 1] = '\0';
+    JS_FreeCString(ctx, namestr);
+    mnt = JS_NewString(ctx, buf);
+    org = JS_DupValue(ctx, obj);
+    JS_FreeValue(ctx, name);
+  }
+
+  const char* path = JS_ToCString(ctx, mnt);
+
+  if(JS_IsFunction(ctx, org)) {
+    ret = mount_create(ctx, path, 0, 0, LWSMPRO_CALLBACK);
+
+    GETCBTHIS(org, ret->callback, JS_UNDEFINED);
+
+  } else {
+    const char* dest = JS_ToCString(ctx, org);
+    const char* dotslashslash = strstr(dest, "://");
+    size_t plen = dotslashslash ? dotslashslash - dest : 0;
+    const char* origin = &dest[plen ? plen + 3 : 0];
+    const char* index = JS_IsUndefined(def) ? 0 : JS_ToCString(ctx, def);
+    enum lws_mount_protocols proto = plen == 0 ? LWSMPRO_CALLBACK : !strncmp(dest, "https", plen) ? LWSMPRO_HTTPS : LWSMPRO_HTTP;
+
+    ret = mount_create(ctx, path, origin, index, proto);
+
+    if(index)
+      JS_FreeCString(ctx, index);
+    JS_FreeCString(ctx, dest);
+  }
+
+  JS_FreeCString(ctx, path);
+
+  JS_FreeValue(ctx, mnt);
+  JS_FreeValue(ctx, org);
+  JS_FreeValue(ctx, def);
+
+  return ret;
+}
+
+struct http_mount*
+mount_find(const char* x, size_t n) {
+  struct lws_http_mount *ptr, *m = 0;
+  int protocol = n == 0 ? LWSMPRO_CALLBACK : LWSMPRO_HTTP;
+  size_t l = 0;
+  if(n == 0)
+    n = strlen(x);
+  if(protocol == LWSMPRO_CALLBACK && x[0] == '/') {
+    x++;
+    n--;
+  }
+  int i = 0;
+  for(ptr = (struct lws_http_mount*)minnet_server.info.mounts; ptr; ptr = (struct lws_http_mount*)ptr->mount_next) {
+    if(protocol != LWSMPRO_CALLBACK || ptr->origin_protocol == LWSMPRO_CALLBACK) {
+      const char* mnt = ptr->mountpoint;
+      size_t len = ptr->mountpoint_len;
+      if(protocol == LWSMPRO_CALLBACK && mnt[0] == '/') {
+        mnt++;
+        len--;
+      }
+      // printf("mount_find [%i] %.*s\n", i++, (int)len, mnt);
+      if(len == n && !strncmp(x, mnt, n)) {
+        m = ptr;
+        l = n;
+        break;
+      }
+      if(n >= len && len >= l && !strncmp(mnt, x, MIN(len, n))) {
+        m = ptr;
+        l = len;
+      }
+    }
+  }
+  return (struct http_mount*)m;
+}
+
+void
+mount_free(JSContext* ctx, MinnetHttpMount const* m) {
+  js_free(ctx, (void*)m->lws.mountpoint);
+
+  if(m->lws.origin)
+    js_free(ctx, (void*)m->lws.origin);
+
+  if(m->lws.def)
+    js_free(ctx, (void*)m->lws.def);
+
+  js_free(ctx, (void*)m);
+}
+
+int
+http_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp) {
+  struct list_head* el;
+  // printf("RESPOND\tstatus=%d type=%s\n", resp->status, resp->type);
+
+  resp->read_only = TRUE;
+
+  if(lws_add_http_common_headers(wsi, resp->status, resp->type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &buf->write, buf->end))
+    return 1;
+
+  list_for_each(el, &resp->headers) {
+    struct http_header* hdr = list_entry(el, struct http_header, link);
+
+    if((lws_add_http_header_by_name(wsi, (const unsigned char*)hdr->name, (const unsigned char*)hdr->value, strlen(hdr->value), &buf->write, buf->end)))
+      JS_ThrowInternalError(minnet_server.cb_http.ctx, "lws_add_http_header_by_name failed");
+  }
+
+  if(lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end))
+    return 1;
+
+  return 0;
+}
+
+static MinnetResponse*
+request_handler(MinnetSession* serv, MinnetCallback* cb) {
+  MinnetResponse* resp = minnet_response_data(minnet_server.ctx, serv->resp_obj);
+
+  if(cb->ctx) {
+    JSValue ret = minnet_emit_this(cb, serv->ws_obj, 2, serv->args);
+    if(JS_IsObject(ret) && minnet_response_data(cb->ctx, ret)) {
+      JS_FreeValue(cb->ctx, serv->args[1]);
+      serv->args[1] = ret;
+      resp = minnet_response_data(cb->ctx, ret);
+      response_dump(resp);
+    } else {
+      JS_FreeValue(cb->ctx, ret);
+    }
+  }
+
+  return resp;
+}
+
+static size_t
+file_size(FILE* fp) {
+  long pos = ftell(fp);
+  size_t size = 0;
+
+  if(fseek(fp, 0, SEEK_END) != -1) {
+    size = ftell(fp);
+    fseek(fp, pos, SEEK_SET);
+  }
+  return size;
+}
+
+static int
+serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct http_response* resp, JSContext* ctx) {
+  FILE* fp;
+  // printf("\033[38;5;226mSERVE FILE\033[0m\tis_h2=%i path=%s mount=%s\n", is_h2(wsi), path, mount ? mount->mnt : 0);
+
+  const char* mime = lws_get_mimetype(path, &mount->lws);
+
+  if(path[0] == '\0')
+    path = mount->def;
+
+  if((fp = fopen(path, "rb"))) {
+    size_t n = file_size(fp);
+
+    buffer_alloc(&resp->body, n, ctx);
+
+    if(fread(resp->body.write, n, 1, fp) == 1)
+      resp->body.write += n;
+
+    if(mime) {
+      if(resp->type)
+        js_free(ctx, resp->type);
+
+      resp->type = js_strdup(ctx, mime);
+    }
+
+    fclose(fp);
+  } else {
+    const char* body = "<html><head><title>404 Not Found</title><meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/></head><body><h1>404 Not Found</h1></body></html>";
+    resp->status = 404;
+    resp->ok = FALSE;
+
+    response_write(resp, body, strlen(body), ctx);
+  }
+
+  return 0;
+}
 
 int
 http_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
@@ -46,7 +257,7 @@ http_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
 }
 
 int
-minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSContext* ctx = minnet_server.ctx;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetHttpMethod method = METHOD_GET;
@@ -70,8 +281,8 @@ minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     mountpoint = 0;
   }
 
-  // if(url || (in && *(char*)in) || (path && *path)) printf("http %s\tis_h2=%i url=%s in='%.*s' path=%s mountpoint=%.*s\n", lws_callback_name(reason) + 13, is_h2(wsi), url, len, in, path,
-  // mountpoint_len, mountpoint);
+  /*if(url || (in && *(char*)in) || (path && *path)) */ printf(
+      "http %s\tis_h2=%i url=%s in='%.*s' path=%s mountpoint=%.*s\n", lws_callback_name(reason) + 13, is_h2(wsi), url, len, in, path, mountpoint_len, mountpoint);
 
   switch((int)reason) {
     case(int)LWS_CALLBACK_ESTABLISHED: {
@@ -84,8 +295,8 @@ minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(minnet_server.cb_connect.ctx) {
         opaque->req = request_new(minnet_server.cb_connect.ctx, path, url, method);
-        int num_hdr = headers(ctx, &opaque->req->header, wsi);
-        //  printf("http \033[38;5;171m%s\033[0m num_hdr=%i\n", lws_callback_name(reason) + 13, num_hdr);
+        int num_hdr = http_headers(ctx, &opaque->req->header, wsi);
+        printf("http \033[38;5;171m%s\033[0m num_hdr=%i\n", lws_callback_name(reason) + 13, num_hdr);
         args[1] = minnet_request_wrap(minnet_server.cb_connect.ctx, opaque->req);
         minnet_emit_this(&minnet_server.cb_connect, ws_obj, 2, args);
         JS_FreeValue(ctx, args[1]);
@@ -101,8 +312,8 @@ minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!opaque->req)
         opaque->req = request_new(ctx, path, url, method);
 
-      int num_hdr = headers(ctx, &opaque->req->header, wsi);
-      printf("http \033[38;5;171m%s\033[0m num_hdr = %i, offset = %zu, url=%s, req=%p\n", lws_callback_name(reason) + 13, num_hdr, buffer_OFFSET(&opaque->req->header), url, opaque->req);
+      int num_hdr = http_headers(ctx, &opaque->req->header, wsi);
+      // printf("http \033[38;5;171m%s\033[0m num_hdr = %i, offset = %zu, url=%s, req=%p\n", lws_callback_name(reason) + 13, num_hdr, buffer_OFFSET(&opaque->req->header), url, opaque->req);
       // buffer_free(&opaque->req->header, JS_GetRuntime(ctx));
       break;
     }
@@ -122,7 +333,7 @@ minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetBuffer b = BUFFER(buf);
       MinnetResponse* resp = request_handler(serv, cb);
 
-      if(respond(wsi, &b, resp)) {
+      if(http_respond(wsi, &b, resp)) {
         JS_FreeValue(ctx, ws_obj);
         return 1;
       }
@@ -162,8 +373,6 @@ minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       char* path = in;
       int ret = 0;
 
-      // printf("http LWS_CALLBACK_HTTP is_h2=%i, url=%s\n", is_h2(wsi), url);
-
       if(!(serv->mount = mount_find(mountpoint_len ? mountpoint : url, mountpoint_len ? mountpoint_len : 0)))
         serv->mount = mount_find(url, 0);
 
@@ -173,6 +382,7 @@ minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         assert(!strncmp(url, mount->mnt, mlen));
         path += mlen;
       }
+      printf("http LWS_CALLBACK_HTTP is_h2=%i, url=%s, mnt=%s\n", is_h2(wsi), url, mount->org);
 
       //  if(!JS_IsObject(args[0]))
       args[0] = serv->req_obj = minnet_request_wrap(ctx, opaque->req);
@@ -190,7 +400,7 @@ minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(mount && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
 
         if((ret = serve_file(wsi, path, mount, resp, ctx)) == 0) {
-          if(respond(wsi, &b, resp)) {
+          if(http_respond(wsi, &b, resp)) {
             JS_FreeValue(ctx, ws_obj);
             return 1;
           }
@@ -213,7 +423,7 @@ minnet_http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             if(lws_http_transaction_completed(wsi))
               return -1;
           }
-          if(respond(wsi, &b, resp)) {
+          if(http_respond(wsi, &b, resp)) {
             JS_FreeValue(ctx, ws_obj);
             return 1;
           }

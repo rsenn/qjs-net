@@ -35,6 +35,18 @@ struct wsi_opaque_user_data {
   struct http_request* req;
 };
 
+static inline struct wsi_opaque_user_data*
+lws_opaque(struct lws* wsi, JSContext* ctx) {
+  struct wsi_opaque_user_data* opaque;
+
+  if((opaque = lws_get_opaque_user_data(wsi)))
+    return opaque;
+
+  opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
+  lws_set_opaque_user_data(wsi, opaque);
+  return opaque;
+}
+
 static inline MinnetWebsocket*
 minnet_ws_data(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_ws_class_id);

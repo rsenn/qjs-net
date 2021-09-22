@@ -2,6 +2,7 @@
 #define MINNET_SERVER_H
 
 #include <quickjs.h>
+#include "buffer.h"
 #include "minnet.h"
 
 struct http_mount;
@@ -28,6 +29,9 @@ typedef struct session_data {
   int closed : 1;
 } MinnetSession;
 
-JSValue minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue minnet_ws_server(JSContext*, JSValue, int argc, JSValue* argv);
+int http_headers(JSContext*, MinnetBuffer*, struct lws* wsi);
+
+extern MinnetServer minnet_server;
 
 #endif /* MINNET_SERVER_H */

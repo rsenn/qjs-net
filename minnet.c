@@ -364,7 +364,7 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
 }
 
 JSValue
-minnet_emit_this(const struct minnet_ws_callback* cb, JSValueConst this_obj, int argc, JSValue* argv) {
+minnet_emit_this(const struct ws_callback* cb, JSValueConst this_obj, int argc, JSValue* argv) {
   if(!cb->ctx)
     return JS_UNDEFINED;
 
@@ -377,7 +377,7 @@ minnet_emit_this(const struct minnet_ws_callback* cb, JSValueConst this_obj, int
 }
 
 JSValue
-minnet_emit(const struct minnet_ws_callback* cb, int argc, JSValue* argv) {
+minnet_emit(const struct ws_callback* cb, int argc, JSValue* argv) {
   return minnet_emit_this(cb, cb->this_obj /* ? *cb->this_obj : JS_NULL*/, argc, argv);
 }
 

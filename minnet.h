@@ -58,7 +58,7 @@ enum http_method;
 
 typedef struct lws_pollfd MinnetPollFd;
 
-typedef struct minnet_ws_callback {
+typedef struct ws_callback {
   JSContext* ctx;
   JSValue this_obj;
   JSValue func_obj;
@@ -69,8 +69,8 @@ extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
 
 int minnet_lws_unhandled(const char* handler, int);
-JSValue minnet_emit_this(const struct minnet_ws_callback*, JSValueConst this_obj, int argc, JSValue* argv);
-JSValue minnet_emit(const struct minnet_ws_callback*, int argc, JSValue* argv);
+JSValue minnet_emit_this(const struct ws_callback*, JSValueConst this_obj, int argc, JSValue* argv);
+JSValue minnet_emit(const struct ws_callback*, int argc, JSValue* argv);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);
 void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
