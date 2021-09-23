@@ -49,7 +49,12 @@ lws_opaque(struct lws* wsi, JSContext* ctx) {
 }
 
 static inline MinnetWebsocket*
-minnet_ws_data(JSContext* ctx, JSValueConst obj) {
+minnet_ws_data(JSValueConst obj) {
+  return JS_GetOpaque(obj, minnet_ws_class_id);
+}
+
+static inline MinnetWebsocket*
+minnet_ws_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_ws_class_id);
 }
 

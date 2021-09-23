@@ -10,15 +10,15 @@
 
 MinnetServer minnet_server = {0};
 
-int proxy_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
-int raw_client_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
-int ws_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
+int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
-    {"minnet", ws_callback, sizeof(MinnetSession), 0, 0, 0, 1024},
-    {"http", http_callback, sizeof(MinnetSession), 0, 0, 0, 1024},
-    {"lws-ws-raw-ws", proxy_callback, 0, 1024, 0, NULL, 0},
-    {"lws-ws-raw-raw", raw_client_callback, 0, 1024, 0, NULL, 0},
+    {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"http", http_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
+    {"proxy-raw", raw_client_callback, 0, 1024, 0, NULL, 0},
     LWS_PROTOCOL_LIST_TERM,
 };
 
@@ -80,14 +80,11 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
         break;
 
       ADD(ptr, mount_new(ctx, mount), next);
-
-      /**ptr = mount_new(ctx, mount);
-      ptr = (MinnetHttpMount const**)&(*ptr)->next;*/
     }
   }
 
   if(!(minnet_server.context = lws_create_context(&minnet_server.info))) {
-    lwsl_err("Libwebsockets init failed\n");
+    lwsl_err("libwebsockets init failed\n");
     return JS_EXCEPTION;
   }
 

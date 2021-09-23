@@ -2,66 +2,105 @@
 #include "minnet-websocket.h"
 #include <quickjs-libc.h>
 
-static struct lws_context* client_context;
-static struct lws* client_wsi;
-static int client_server_port = 7981;
-static const char* client_server_address = "localhost";
-
 static MinnetCallback client_cb_message, client_cb_connect, client_cb_close, client_cb_pong, client_cb_fd;
 
 static int lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
+static JSValue
+close_status(JSContext* ctx, const char* in, size_t len) {
+  if(len >= 2)
+    return JS_NewInt32(ctx, ((uint8_t*)in)[0] << 8 | ((uint8_t*)in)[1]);
+  return JS_UNDEFINED;
+}
+
+static JSValue
+close_reason(JSContext* ctx, const char* in, size_t len) {
+  if(len > 2)
+    return JS_NewStringLen(ctx, &in[2], len - 2);
+  return JS_UNDEFINED;
+}
+
 static int
-connect_client(void) {
+connect_client(struct lws_context* context, const char* host, uint16_t port, BOOL ssl, const char* path) {
   struct lws_client_connect_info i;
 
   memset(&i, 0, sizeof(i));
 
-  i.context = client_context;
-  i.port = client_server_port;
-  i.address = client_server_address;
-  i.path = "/";
+  i.context = context;
+  i.port = port;
+  i.address = host;
+  i.ssl_connection = ssl;
+  i.path = path;
   i.host = i.address;
   i.origin = i.address;
-  i.ssl_connection = 0;
-  i.protocol = "minnet";
-  i.pwsi = &client_wsi;
+  i.protocol = "ws";
+  // i.pwsi = &client_wsi;
 
   return !lws_client_connect_via_info(&i);
 }
 
 static const struct lws_protocols client_protocols[] = {
-    {"minnet", lws_client_callback, 0, 0, 0, 0, 0},
-    {NULL, NULL, 0, 0, 0, 0, 0},
+    {"ws", lws_client_callback, 0, 0, 0, 0, 0},
+    LWS_PROTOCOL_LIST_TERM,
 };
 
 JSValue
 minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+  static struct lws_context* context;
   struct lws_context_creation_info info;
   int n = 0;
   JSValue ret = JS_NewInt32(ctx, 0);
+  MinnetURL url = {0, -1, 0, 0};
+  JSValue options = argv[0];
 
-  SETLOG
+  SETLOG(LLL_INFO)
 
   memset(&info, 0, sizeof info);
   info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
   info.port = CONTEXT_PORT_NO_LISTEN;
   info.protocols = client_protocols;
 
-  JSValue options = argv[0];
-  JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
-  JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
+  if(argc >= 2) {
+    const char* urlStr = JS_ToCString(ctx, argv[0]);
+    url = url_parse(ctx, urlStr);
+    JS_FreeCString(ctx, urlStr);
+    options = argv[1];
+  } else {
+    const char *host, *path = 0;
+    int32_t port = -1, ssl = -1;
+
+    JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
+    JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
+    JSValue opt_ssl = JS_GetPropertyStr(ctx, options, "ssl");
+    JSValue opt_path = JS_GetPropertyStr(ctx, options, "path");
+
+    host = JS_ToCString(ctx, opt_host);
+
+    if(JS_IsString(opt_path))
+      path = JS_ToCString(ctx, opt_path);
+
+    if(JS_IsNumber(opt_port))
+      JS_ToInt32(ctx, &port, opt_port);
+
+    ssl = JS_ToBool(ctx, opt_ssl);
+
+    url = url_init(ctx, ssl ? "wss" : "ws", host, port, path);
+
+    JS_FreeCString(ctx, host);
+    if(path)
+      JS_FreeCString(ctx, path);
+
+    JS_FreeValue(ctx, opt_path);
+    JS_FreeValue(ctx, opt_ssl);
+    JS_FreeValue(ctx, opt_host);
+    JS_FreeValue(ctx, opt_port);
+  }
+
   JSValue opt_on_pong = JS_GetPropertyStr(ctx, options, "onPong");
   JSValue opt_on_close = JS_GetPropertyStr(ctx, options, "onClose");
   JSValue opt_on_connect = JS_GetPropertyStr(ctx, options, "onConnect");
   JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
-
-  if(JS_IsString(opt_host))
-    client_server_address = JS_ToCString(ctx, opt_host);
-
-  if(JS_IsNumber(opt_port))
-    JS_ToInt32(ctx, &client_server_port, opt_port);
 
   GETCB(opt_on_pong, client_cb_pong)
   GETCB(opt_on_close, client_cb_close)
@@ -71,13 +110,14 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
   minnet_ws_sslcert(ctx, &info, options);
 
-  client_context = lws_create_context(&info);
-  if(!client_context) {
+  context = lws_create_context(&info);
+  if(!context) {
     lwsl_err("Libwebsockets init failed\n");
     return JS_EXCEPTION;
   }
 
-  connect_client();
+  connect_client(context, url.host, url.port, !strcmp(url.protocol, "wss"), url.location);
+
   minnet_exception = FALSE;
 
   while(n >= 0) {
@@ -89,16 +129,28 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     if(client_cb_fd.ctx)
       js_std_loop(ctx);
     else
-      /* n =*/lws_service(client_context, 500);
+      /* n =*/lws_service(context, 500);
   }
 
-  lws_context_destroy(client_context);
+  lws_context_destroy(context);
+
+  JS_FreeValue(ctx, opt_on_pong);
+  JS_FreeValue(ctx, opt_on_close);
+  JS_FreeValue(ctx, opt_on_connect);
+  JS_FreeValue(ctx, opt_on_message);
+  JS_FreeValue(ctx, opt_on_fd);
+
+  url_free(ctx, &url);
 
   return ret;
 }
 
 static int
 lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+
+  if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
+    lwsl_user("ws   %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), len, in);
+
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT: {
       // connect_client();
@@ -120,16 +172,24 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
 
       break;
     }
+    case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CLOSED:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      client_wsi = NULL;
-      if(client_cb_close.ctx) {
-        JSValue why = in ? JS_NewString(client_cb_close.ctx, in) : JS_NULL;
-        minnet_emit(&client_cb_close, 1, &why);
+      JSContext* ctx = client_cb_close.ctx;
+      if(ctx) {
+        JSValue cb_argv[] = {
+            minnet_ws_object(ctx, wsi),
+            close_status(ctx, in, len),
+            close_reason(ctx, in, len),
+        };
+        minnet_emit(&client_cb_close, 3, &cb_argv);
+        JS_FreeValue(ctx, cb_argv[0]);
+        JS_FreeValue(ctx, cb_argv[1]);
+        JS_FreeValue(ctx, cb_argv[2]);
       }
       break;
     }
-    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
+    // case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_CLIENT_ESTABLISHED: {
       if(client_cb_connect.ctx) {
         JSValue ws_obj = minnet_ws_object(client_cb_connect.ctx, wsi);
@@ -141,16 +201,16 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       lws_callback_on_writable(wsi);
       break;
     }
-    case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL: {
-      client_wsi = NULL;
-      if(client_cb_close.ctx) {
-        JSValue cb_argv[] = {minnet_ws_object(client_cb_close.ctx, wsi), JS_NewString(client_cb_close.ctx, in)};
-        minnet_emit(&client_cb_close, 2, cb_argv);
-        JS_FreeValue(client_cb_close.ctx, cb_argv[0]);
-        JS_FreeValue(client_cb_close.ctx, cb_argv[1]);
-      }
-      break;
-    }
+      /*   case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL: {
+           client_wsi = NULL;
+           if(client_cb_close.ctx) {
+             JSValue cb_argv[] = {minnet_ws_object(client_cb_close.ctx, wsi), JS_NewString(client_cb_close.ctx, in)};
+             minnet_emit(&client_cb_close, 2, cb_argv);
+             JS_FreeValue(client_cb_close.ctx, cb_argv[0]);
+             JS_FreeValue(client_cb_close.ctx, cb_argv[1]);
+           }
+           break;
+         }*/
     case LWS_CALLBACK_CLIENT_RECEIVE: {
       if(client_cb_message.ctx) {
         JSValue ws_obj = minnet_ws_object(client_cb_message.ctx, wsi);

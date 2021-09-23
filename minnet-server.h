@@ -14,6 +14,8 @@ typedef struct server_context {
   MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd, cb_http;
 } MinnetServer;
 
+struct proxy_connection;
+
 typedef struct session_data {
   JSValue ws_obj;
   union {
@@ -24,6 +26,7 @@ typedef struct session_data {
     JSValue args[2];
   };
   struct http_mount* mount;
+  struct proxy_connection* proxy;
   size_t serial;
   JSValue generator;
   int closed : 1;

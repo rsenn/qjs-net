@@ -23,7 +23,7 @@ struct http_request;
     .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} }                                         \
   }
 
-#define SETLOG lws_set_log_level(LLL_ERR, NULL);
+#define SETLOG(max_level) lws_set_log_level((((max_level) << 1) - 1) & (~LLL_PARSER) | LLL_USER, NULL);
 
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj)                                                                                                                                                               \
@@ -65,9 +65,19 @@ typedef struct ws_callback {
   const char* name;
 } MinnetCallback;
 
+typedef struct url {
+  char* protocol;
+  char* host;
+  int port;
+  char* location;
+} MinnetURL;
+
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
 
+MinnetURL url_init(JSContext*, const char* proto, const char* host, uint16_t port, const char* path);
+MinnetURL url_parse(JSContext* ctx, const char* url);
+void url_free(JSContext*, MinnetURL* url);
 int minnet_lws_unhandled(const char* handler, int);
 JSValue minnet_emit_this(const struct ws_callback*, JSValueConst this_obj, int argc, JSValue* argv);
 JSValue minnet_emit(const struct ws_callback*, int argc, JSValue* argv);

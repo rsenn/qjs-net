@@ -1,39 +1,39 @@
 {
   "folders": [
     {
-      "path": "."
-    }
+      "path": ".",
+    },
   ],
   "build_systems": [
     {
       "name": "Build debug",
       "shell_cmd": "make -C build/*-debug install",
-      "working_dir": "${project_path}"
+      "working_dir": "${project_path}",
     },
     {
       "name": "Rebuild CTags",
-      "shell_cmd": "ctags -R ."
+      "shell_cmd": "ctags -R .",
     },
     {
       "name": "clang-format",
       "shell_cmd": "clang-format -verbose -style=file -i `find . -name '*.c' -or -name '*.h'`",
-      "working_dir": "${project_path:${folder:${file_path}}}"
+      "working_dir": "${project_path:${folder:${file_path}}}",
     },
     {
       "name": "prettier",
       "shell_cmd": "(. ~/.nvm/nvm.sh; nvm use 14;  set -x; yarn run format)",
-      "working_dir": "${project_path:${folder:${file_path}}}"
+      "working_dir": "${project_path:${folder:${file_path}}}",
     },
     {
       "name": "CMake",
       "shell_cmd": ". ./cfg.sh; TYPE=Debug cfg",
-      "working_dir": "${project_path}"
+      "working_dir": "${project_path}",
     },
     {
       "name": "make",
       "shell_cmd": "make -C build/`gcc -dumpmachine`",
-      "working_dir": "${project_path}"
+      "working_dir": "${project_path}",
     }
  
-  ]
+  ],
 }

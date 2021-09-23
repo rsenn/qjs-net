@@ -267,16 +267,19 @@ export class Connection extends MessageTransceiver {
 
   error(message) {
     const { socket } = this;
+    const status = socket.CLOSE_STATUS_PROTOCOL_ERR || 1000;
+
     console.log(`ERROR: ${message}`);
     this.exception = new Error(message);
-    this.close(socket.CLOSE_STATUS_PROTOCOL_ERR || 1000, message.slice(0, 128));
+    console.log('error(', status, message, ')');
+    this.close(status, message.slice(0, 128));
     return this.exception;
   }
 
-  close(...args) {
+  close(status, reason) {
     const { socket } = this;
-    console.log('close(', ...args, ')');
-    socket.close();
+    console.log('close(', status, reason, ')');
+    socket.close(status, reason);
     delete this.socket;
     delete this.fd;
     this.connected = false;
@@ -291,7 +294,7 @@ export class Connection extends MessageTransceiver {
     try {
       data = codec.decode((msg && msg.data) || msg);
     } catch(err) {
-      throw this.error(`Connection.onmessage ${this.codec.name} parse error: '${(err && err.message) || msg}'` + err.stack);
+      throw this.error(`${this.codec.name} parse error: ${(err && err.message) || msg}`);
       return this.exception;
     }
     let response = this.processMessage(data);
@@ -384,7 +387,7 @@ export class Connection extends MessageTransceiver {
         if(!connection) connection = new ctor(sock, instance, log, 'json', classes);
         connection.socket ??= sock;
         const { url, method, headers } = req;
-        verbose(`Connected`, sock, req, { url, method }, headers);
+        verbose(`Connected`, sock, req, { url, method } /*, headers*/);
         fdlist[sock.fd] = connection;
         handle(sock, 'connect', sock, req);
       },

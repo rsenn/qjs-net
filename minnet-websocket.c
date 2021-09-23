@@ -283,23 +283,25 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* a
   const char* reason = 0;
   size_t rlen = 0;
 
-  if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
+  if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   if(ws->lwsi) {
     int optind = 0;
     int32_t status = LWS_CLOSE_STATUS_NORMAL;
 
-    if(optind < argc && JS_IsNumber(argv[optind]))
-      JS_ToInt32(ctx, &status, argv[optind++]);
-
-    if(optind < argc) {
-      reason = JS_ToCStringLen(ctx, &rlen, argv[optind++]);
-      if(rlen > 124)
-        rlen = 124;
+    while(optind < argc) {
+      if(JS_IsNumber(argv[optind]) || optind + 1 < argc) {
+        JS_ToInt32(ctx, &status, argv[optind]);
+      } else {
+        reason = JS_ToCStringLen(ctx, &rlen, argv[optind]);
+        if(rlen > 124)
+          rlen = 124;
+      }
+      optind++;
     }
 
-    printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
+    // printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
 
     lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
 
@@ -317,8 +319,8 @@ minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
 
-  if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
-    return JS_EXCEPTION;
+  if(!(ws = minnet_ws_data(this_val)))
+    return JS_UNDEFINED;
 
   if(!ws->lwsi)
     return JS_NULL;
@@ -348,7 +350,7 @@ minnet_ws_getter(JSContext* ctx, JSValueConst this_val, int magic) {
       int fd = lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
 
       if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
-        ret = JS_NewInt32(ctx, magic == 2 ? addr.sin_family : addr.sin_port);
+        ret = JS_NewInt32(ctx, magic == 2 ? addr.sin_family : ntohs(addr.sin_port));
       }
       break;
     }

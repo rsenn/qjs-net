@@ -27,9 +27,6 @@ BOOL minnet_exception = FALSE;
 static void
 lws_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
-    if(JS_IsUndefined(minnet_log_cb))
-      js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log_cb);
-
     if(JS_IsFunction(minnet_log_ctx, minnet_log_cb)) {
       size_t n = 0, len = strlen(line);
 
@@ -53,13 +50,15 @@ lws_log_callback(int level, const char* line) {
       JS_FreeValue(minnet_log_ctx, argv[0]);
       JS_FreeValue(minnet_log_ctx, argv[1]);
       JS_FreeValue(minnet_log_ctx, ret);
+    } else {
+      js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log_cb);
     }
   }
 }
 
 int
 minnet_lws_unhandled(const char* handler, int reason) {
-  printf("Unhandled %s client event: %i %s\n", handler, reason, lws_callback_name(reason));
+  lwsl_user("Unhandled %s client event: %i %s\n", handler, reason, lws_callback_name(reason));
   return -1;
 }
 
@@ -75,6 +74,7 @@ set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst 
   minnet_log_ctx = ctx;
   minnet_log_cb = JS_DupValue(ctx, value);
   if(!JS_IsUndefined(minnet_log_this) || !JS_IsNull(minnet_log_this))
+
     JS_FreeValue(ctx, minnet_log_this);
 
   minnet_log_this = JS_DupValue(ctx, thisObj);
@@ -93,6 +93,54 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   ret = set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
   lws_set_log_level(minnet_log_level, lws_log_callback);
   return ret;
+}
+
+MinnetURL
+url_init(JSContext* ctx, const char* protocol, const char* host, uint16_t port, const char* location) {
+  MinnetURL url;
+  url.protocol = protocol ? js_strdup(ctx, protocol) : 0;
+  url.host = host ? js_strdup(ctx, host) : 0;
+  url.port = port;
+  url.location = location ? js_strdup(ctx, location) : 0;
+  return url;
+}
+
+MinnetURL
+url_parse(JSContext* ctx, const char* url) {
+  MinnetURL ret = {0, 0, -1, 0};
+  size_t i = 0, j;
+  char* end;
+  if((end = strstr(url, "://"))) {
+    i = end - url;
+    ret.protocol = js_strndup(ctx, url, i);
+    i += 3;
+  }
+  for(j = i; url[j]; j++) {
+    if(url[j] == ':' || url[j] == '/')
+      break;
+  }
+  if(j - i)
+    ret.host = js_strndup(ctx, &url[i], j - i);
+  i = url[j] ? j + 1 : j;
+  if(url[j] == ':') {
+    unsigned long n = strtoul(&url[i], &end, 10);
+    if((j = end - url) > i)
+      ret.port = n;
+  }
+  if(url[j])
+    ret.location = js_strdup(ctx, &url[j]);
+  return ret;
+}
+
+void
+url_free(JSContext* ctx, MinnetURL* url) {
+  if(url->protocol)
+    js_free(ctx, url->protocol);
+  if(url->host)
+    js_free(ctx, url->host);
+  if(url->location)
+    js_free(ctx, url->location);
+  memset(url, 0, sizeof(MinnetURL));
 }
 
 static JSValue
@@ -307,7 +355,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     x.revents = 0;
 
     if(poll(&x, 1, 0) < 0) {
-      printf("poll error: %s\n", strerror(errno));
+      lwsl_user("poll error: %s\n", strerror(errno));
     } else {
       revents = x.revents;
     }
@@ -324,8 +372,7 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     lws_service_fd(context, &x);
   }
   /*  if(++calls <= 100)
-      printf("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d "
-             "%d %d]\n",
+      lwsl_user("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d %d %d]\n",
              wr == WRITE_HANDLER ? "writable" : "readable",
              calls,
              fd,
@@ -414,8 +461,7 @@ static const JSCFunctionListEntry minnet_funcs[] = {
 void
 value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
   const char* str = JS_ToCString(ctx, *v);
-  printf("\n\t%s\t%s", n, str);
-  fflush(stdout);
+  lwsl_user("%s = '%s'\n", n, str);
   JS_FreeCString(ctx, str);
 }
 
