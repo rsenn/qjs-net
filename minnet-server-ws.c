@@ -2,6 +2,8 @@
 #include "minnet-websocket.h"
 #include "minnet-request.h"
 
+int http_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+
 int
 ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSValue ws_obj = JS_UNDEFINED;
@@ -19,7 +21,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
         opaque->req = request_new(ctx, in, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), METHOD_GET);
 
-        int num_hdr = http_headers(ctx, &opaque->req->header, wsi);
+        int num_hdr = http_headers(ctx, &opaque->req->headers, wsi);
 
         lwsl_user(
             "ws   \033[38;5;171m%s\033[0m wsi=%p, ws=%p, req=%p, opaque=%p, num_hdr=%i, url=%s\n", lws_callback_name(reason) + 13, wsi, opaque->ws, opaque->req, opaque, num_hdr, opaque->req->url);
@@ -178,7 +180,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
   }
 
-  lwsl_user("ws   %-25s fd=%d in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), len, in);
+  lwsl_user("ws   %-25s fd=%d in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), (int)len, (char*)in);
 
   return 0;
   //  return lws_callback_http_dummy(wsi, reason, user, in, len);

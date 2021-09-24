@@ -5,6 +5,7 @@
 #include <quickjs.h>
 #include <libwebsockets.h>
 
+struct byte_buffer;
 struct http_request;
 
 #ifdef JS_SHARED_LIBRARY
@@ -78,6 +79,7 @@ extern BOOL minnet_exception;
 MinnetURL url_init(JSContext*, const char* proto, const char* host, uint16_t port, const char* path);
 MinnetURL url_parse(JSContext* ctx, const char* url);
 void url_free(JSContext*, MinnetURL* url);
+JSValue header_object(JSContext*, const struct byte_buffer*);
 int minnet_lws_unhandled(const char* handler, int);
 JSValue minnet_emit_this(const struct ws_callback*, JSValueConst this_obj, int argc, JSValue* argv);
 JSValue minnet_emit(const struct ws_callback*, int argc, JSValue* argv);

@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <cutils.h>
+#include <ctype.h>
 
 #include "jsutils.h"
 #include "minnet-websocket.h"
@@ -130,21 +131,35 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
 }
 
 int
-http_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp) {
-  struct list_head* el;
+http_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp, JSContext* ctx) {
   // printf("RESPOND\tstatus=%d type=%s\n", resp->status, resp->type);
 
   resp->read_only = TRUE;
 
   if(lws_add_http_common_headers(wsi, resp->status, resp->type, LWS_ILLEGAL_HTTP_CONTENT_LEN, &buf->write, buf->end))
     return 1;
-
-  list_for_each(el, &resp->headers) {
-    struct http_header* hdr = list_entry(el, struct http_header, link);
-
-    if((lws_add_http_header_by_name(wsi, (const unsigned char*)hdr->name, (const unsigned char*)hdr->value, strlen(hdr->value), &buf->write, buf->end)))
-      JS_ThrowInternalError(minnet_server.cb_http.ctx, "lws_add_http_header_by_name failed");
+  {
+    size_t len, n;
+    uint8_t *x, *end;
+    for(x = resp->headers.start, end = resp->headers.write; x < end; x += len + 1) {
+      if((len = byte_chr(x, end - x, '\n')) > (n = byte_chr(x, len, ':'))) {
+        const char* prop = js_strndup(ctx, (const char*)x, n);
+        if(x[n] == ':')
+          n++;
+        if(isspace(x[n]))
+          n++;
+        if((lws_add_http_header_by_name(wsi, (const unsigned char*)prop, (const unsigned char*)&x[n], len - n, &buf->write, buf->end)))
+          JS_ThrowInternalError(minnet_server.cb_http.ctx, "lws_add_http_header_by_name failed");
+        js_free(ctx, (void*)prop);
+      }
+    }
   }
+  /*  list_for_each(el, &resp->headers) {
+      struct http_header* hdr = list_entry(el, struct http_header, link);
+
+      if((lws_add_http_header_by_name(wsi, (const unsigned char*)hdr->name, (const unsigned char*)hdr->value, strlen(hdr->value), &buf->write, buf->end)))
+        JS_ThrowInternalError(minnet_server.cb_http.ctx, "lws_add_http_header_by_name failed");
+    }*/
 
   if(lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end))
     return 1;
@@ -289,10 +304,10 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
               lws_get_socket_fd(lws_get_network_wsi(wsi)),
               is_h2(wsi),
               url,
-              len,
-              in,
+              (int)len,
+              (char*)in,
               path,
-              mountpoint_len,
+              (int)mountpoint_len,
               mountpoint);
 
   switch((int)reason) {
@@ -306,7 +321,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       if(minnet_server.cb_connect.ctx) {
         opaque->req = request_new(minnet_server.cb_connect.ctx, path, url, method);
-        int num_hdr = http_headers(ctx, &opaque->req->header, wsi);
+        int num_hdr = http_headers(ctx, &opaque->req->headers, wsi);
         lwsl_user("http \033[38;5;171m%-25s\033[0m fd=%i, num_hdr=%i\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), num_hdr);
         args[1] = minnet_request_wrap(minnet_server.cb_connect.ctx, opaque->req);
         minnet_emit_this(&minnet_server.cb_connect, ws_obj, 2, args);
@@ -323,9 +338,9 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(!opaque->req)
         opaque->req = request_new(ctx, path, url, method);
 
-      int num_hdr = http_headers(ctx, &opaque->req->header, wsi);
-      // printf("http \033[38;5;171m%-25s\033[0m num_hdr = %i, offset = %zu, url=%s, req=%p\n", lws_callback_name(reason) + 13, num_hdr, buffer_OFFSET(&opaque->req->header), url, opaque->req);
-      // buffer_free(&opaque->req->header, JS_GetRuntime(ctx));
+      int num_hdr = http_headers(ctx, &opaque->req->headers, wsi);
+      // printf("http \033[38;5;171m%-25s\033[0m num_hdr = %i, offset = %zu, url=%s, req=%p\n", lws_callback_name(reason) + 13, num_hdr, buffer_OFFSET(&opaque->req->headers), url, opaque->req);
+      // buffer_free(&opaque->req->headers, JS_GetRuntime(ctx));
       break;
     }
 
@@ -344,7 +359,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetBuffer b = BUFFER(buf);
       MinnetResponse* resp = request_handler(serv, cb);
 
-      if(http_respond(wsi, &b, resp)) {
+      if(http_respond(wsi, &b, resp, ctx)) {
         JS_FreeValue(ctx, ws_obj);
         return 1;
       }
@@ -408,14 +423,14 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       MinnetRequest* req = opaque->req;
       MinnetResponse* resp = minnet_response_data2(ctx, args[1]);
 
-      lwsl_user("http \x1b[38;5;87m%-25s\x1b[0m req=%p, header=%zu\n", "HTTP", req, buffer_OFFSET(&req->header));
+      lwsl_user("http \x1b[38;5;87m%-25s\x1b[0m req=%p, header=%zu\n", "HTTP", req, buffer_OFFSET(&req->headers));
 
       ++req->ref_count;
 
       if(mount && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
 
         if((ret = serve_file(wsi, path, mount, resp, ctx)) == 0) {
-          if(http_respond(wsi, &b, resp)) {
+          if(http_respond(wsi, &b, resp, ctx)) {
             JS_FreeValue(ctx, ws_obj);
             return 1;
           }
@@ -438,7 +453,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
             if(lws_http_transaction_completed(wsi))
               return -1;
           }
-          if(http_respond(wsi, &b, resp)) {
+          if(http_respond(wsi, &b, resp, ctx)) {
             JS_FreeValue(ctx, ws_obj);
             return 1;
           }

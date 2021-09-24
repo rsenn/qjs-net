@@ -143,14 +143,31 @@ url_free(JSContext* ctx, MinnetURL* url) {
   memset(url, 0, sizeof(MinnetURL));
 }
 
-static size_t header_callback(char *buffer, size_t size,
-                              size_t nitems, void *userdata)
-{
-  
-  
+JSValue
+header_object(JSContext* ctx, const MinnetBuffer* buffer) {
+  JSValue ret = JS_NewObject(ctx);
+  size_t len, n;
+  uint8_t *x, *end;
+  for(x = buffer->start, end = buffer->write; x < end; x += len + 1) {
+    if((len = byte_chr(x, end - x, '\n')) > (n = byte_chr(x, len, ':'))) {
+      const char* prop = js_strndup(ctx, (const char*)x, n);
+      if(x[n] == ':')
+        n++;
+      if(isspace(x[n]))
+        n++;
+      JS_DefinePropertyValueStr(ctx, ret, prop, JS_NewStringLen(ctx, (const char*)&x[n], len - n), JS_PROP_ENUMERABLE);
+      js_free(ctx, (void*)prop);
+    }
+  }
+  return ret;
+}
+
+static size_t
+header_callback(char* buffer, size_t size, size_t nitems, void* userdata) {
+
   return nitems * size;
 }
- 
+
 static JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   CURL* curl;
@@ -269,7 +286,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, fi);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &header_callback);
-   curl_easy_setopt(curl, CURLOPT_HEADERDATA, 0);
+  curl_easy_setopt(curl, CURLOPT_HEADERDATA, 0);
 
   if(body_str)
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body_str);
@@ -293,13 +310,16 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
 
   buffer = calloc(1, bufSize + 1);
   if(!buffer) {
-    fclose(fi); fputs("memory alloc fails", stderr);
+    fclose(fi);
+    fputs("memory alloc fails", stderr);
     goto finish;
   }
 
   /* copy the file into the buffer */
   if(1 != fread(buffer, bufSize, 1, fi)) {
-    fclose(fi); free(buffer); fputs("entire read fails", stderr);
+    fclose(fi);
+    free(buffer);
+    fputs("entire read fails", stderr);
     goto finish;
   }
 

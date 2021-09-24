@@ -53,9 +53,8 @@ response_init(struct http_response* res, char* url, int32_t status, BOOL ok, cha
   res->ok = ok;
   res->url = url;
   res->type = type;
+  res->headers = BUFFER_0();
   res->body = BUFFER_0();
-
-  init_list_head(&res->headers);
 }
 
 void
@@ -71,9 +70,8 @@ response_free(JSRuntime* rt, struct http_response* res) {
   js_free_rt(rt, (void*)res->type);
   res->type = 0;
 
+  buffer_free(&res->headers, rt);
   buffer_free(&res->body, rt);
-
-  list_for_each_safe(hdr, hdr2, &res->headers) { header_free(rt, list_entry(hdr, struct http_header, link)); }
 
   js_free_rt(rt, res);
 }
@@ -84,8 +82,6 @@ response_new(JSContext* ctx) {
 
   if(!(res = js_mallocz(ctx, sizeof(MinnetResponse))))
     JS_ThrowOutOfMemory(ctx);
-
-  init_list_head(&res->headers);
 
   return res;
 }
@@ -106,6 +102,7 @@ minnet_response_new(JSContext* ctx, const char* url, int32_t status, BOOL ok, co
 JSValue
 minnet_response_wrap(JSContext* ctx, struct http_response* res) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_response_proto, minnet_response_class_id);
+
   if(JS_IsException(ret))
     return JS_EXCEPTION;
 
@@ -143,7 +140,7 @@ minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   return JS_EXCEPTION;
 }
 
-static JSValue
+/*static JSValue
 minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetResponse* res;
   MinnetHttpHeader* hdr;
@@ -169,7 +166,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
   return ret;
 }
-
+*/
 static JSValue
 minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetResponse* res;
@@ -199,15 +196,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case RESPONSE_HEADERS: {
-      struct list_head* el;
-      ret = JS_NewObject(ctx);
-
-      list_for_each(el, &res->headers) {
-        struct http_header* hdr = list_entry(el, struct http_header, link);
-
-        JS_SetPropertyStr(ctx, ret, hdr->name, JS_NewString(ctx, hdr->value));
-      }
-
+      ret = header_object(ctx, &res->headers);
       break;
     }
   }
@@ -340,7 +329,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_DEF("arrayBuffer", 0, minnet_response_buffer),
     JS_CFUNC_DEF("json", 0, minnet_response_json),
     JS_CFUNC_DEF("text", 0, minnet_response_text),
-    JS_CFUNC_DEF("header", 2, minnet_response_header),
+    // JS_CFUNC_DEF("header", 2, minnet_response_header),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("ok", minnet_response_get, minnet_response_set, RESPONSE_OK, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),

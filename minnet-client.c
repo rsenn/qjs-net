@@ -50,7 +50,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   struct lws_context_creation_info info;
   int n = 0;
   JSValue ret = JS_NewInt32(ctx, 0);
-  MinnetURL url = {0, -1, 0, 0};
+  MinnetURL url = {0, 0, -1, 0};
   JSValue options = argv[0];
 
   SETLOG(LLL_INFO)
@@ -149,7 +149,7 @@ static int
 lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
 
   if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
-    lwsl_user("ws   %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), len, in);
+    lwsl_user("ws   %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT: {
@@ -177,12 +177,12 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       JSContext* ctx = client_cb_close.ctx;
       if(ctx) {
-        JSValue cb_argv[] = {
+        JSValueConst cb_argv[] = {
             minnet_ws_object(ctx, wsi),
             close_status(ctx, in, len),
             close_reason(ctx, in, len),
         };
-        minnet_emit(&client_cb_close, 3, &cb_argv);
+        minnet_emit(&client_cb_close, 3, cb_argv);
         JS_FreeValue(ctx, cb_argv[0]);
         JS_FreeValue(ctx, cb_argv[1]);
         JS_FreeValue(ctx, cb_argv[2]);

@@ -21,9 +21,8 @@ typedef struct http_response {
   char *url, *type;
   int status;
   BOOL ok;
-  struct list_head headers;
   JSValue generator;
-  struct byte_buffer body;
+  struct byte_buffer headers, body;
 } MinnetResponse;
 
 struct http_header* header_new(JSContext*, const char* name, const char* value);
