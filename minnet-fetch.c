@@ -130,6 +130,30 @@ handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socket
 
   return 0;
 }
+/*
+static void
+on_timeout(evutil_socket_t fd, short events, void* arg) {
+  int running_handles;
+  curl_multi_socket_action(curl_handle, CURL_SOCKET_TIMEOUT, 0, &running_handles);
+  check_multi_info();
+}*/
+
+static int
+start_timeout(CURLM* multi, long timeout_ms, void* userp) {
+  struct curl_callback* callback_data = userp;
+ /*if(timeout_ms < 0) {
+    evtimer_del(timeout);
+  } else {
+    if(timeout_ms == 0)
+      timeout_ms = 1;
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+    evtimer_del(timeout);
+    evtimer_add(timeout, &tv);
+  }*/
+  return 0;
+}
 
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -147,6 +171,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   struct curl_slist* headerlist = NULL;
   struct header_context hctx = {ctx, 0};
   struct curl_callback* callback_data = 0;
+  int still_running = 1; /* keep number of running handles */
 
   JSValue resObj = JS_NewObjectClass(ctx, minnet_response_class_id);
   if(JS_IsException(resObj))
@@ -200,6 +225,8 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
 
   curl_multi_setopt(multi, CURLMOPT_SOCKETFUNCTION, handle_socket);
   curl_multi_setopt(multi, CURLMOPT_SOCKETDATA, callback_data);
+  curl_multi_setopt(multi, CURLMOPT_TIMERFUNCTION, start_timeout);
+  curl_multi_setopt(multi, CURLMOPT_TIMERDATA, callback_data);
 
   fi = tmpfile();
   hctx.buf = &res->headers;
@@ -215,6 +242,14 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   if(body_str)
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body_str);
 
+  curl_multi_add_handle(multi, curl);
+
+  if(still_running) {
+    CURLMsg* msg;
+    int queued;
+    CURLMcode mc = curl_multi_perform(multi, &still_running);
+  }
+#if 0
   curlRes = curl_easy_perform(curl);
   if(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status) == CURLE_OK)
     res->status = status;
@@ -248,7 +283,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   }
 
   fclose(fi);
-
+#endif
   res->ok = TRUE;
   res->body = BUFFER_N(buffer, bufSize);
 

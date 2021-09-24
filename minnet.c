@@ -225,19 +225,18 @@ lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
 }
 
 static JSValue
-make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
-  struct lws_context* context = lws_get_context(wsi);
+make_handler(JSContext* ctx, int fd, int events, void* opaque, int magic) {
   JSValue data[] = {
       JS_NewUint32(ctx, fd),
       JS_NewString(ctx, io_events(events)),
-      ptr2value(ctx, context),
+      ptr2value(ctx, opaque),
   };
-  return JS_NewCFunctionData(ctx, lws_io_handler, 0, 0, countof(data), data);
+  return JS_NewCFunctionData(ctx, lws_io_handler, 0, magic, countof(data), data);
 }
 
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
-  JSValue func = make_handler(ctx, args->fd, args->events | args->prev_events, wsi, 0);
+  JSValue func = make_handler(ctx, args->fd, args->events | args->prev_events, lws_get_context(wsi), 0);
 
   out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, JS_DupValue(ctx, func), JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
   out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, JS_DupValue(ctx, func), JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;

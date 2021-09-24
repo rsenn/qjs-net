@@ -192,6 +192,7 @@ function(make_shared_module FNAME)
       BUILD_RPATH
       "${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
   target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
+  message("C module dir: ${QUICKJS_C_MODULE_DIR}")
   install(TARGETS ${TARGET_NAME} DESTINATION ${QUICKJS_C_MODULE_DIR})
 
   if(LIBWEBSOCKETS_FOUND)
@@ -341,7 +342,8 @@ function(make_shared_module FNAME)
       BUILD_RPATH
       "${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
   target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
-  install(TARGETS ${TARGET_NAME} DESTINATION lib/quickjs)
+  message("C module dir: ${QUICKJS_C_MODULE_DIR}")
+  install(TARGETS ${TARGET_NAME} DESTINATION ${QUICKJS_C_MODULE_DIR})
 
   if(LIBWEBSOCKETS_FOUND)
     target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
@@ -372,6 +374,7 @@ target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BIN
 target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_SSL_LIBRARY}
                       ${OPENSSL_CRYPTO_LIBRARY})
 
+message("C module dir: ${QUICKJS_C_MODULE_DIR}")
 install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                                                                                  GROUP_EXECUTE GROUP_READ)
 
