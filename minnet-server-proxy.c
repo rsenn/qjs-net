@@ -33,7 +33,7 @@ proxy_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, vo
       struct lws_client_connect_info info;
 
       if(!(pc = malloc(sizeof(MinnetProxyConnection)))) {
-        lwsl_error("error allocating MinnetProxyConnection\n");
+        lwsl_err("error allocating MinnetProxyConnection\n");
         return -1;
       }
 

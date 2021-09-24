@@ -97,7 +97,7 @@ if(NOT CURL_FOUND OR BUILD_CURL)
   set(CURL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl/include")
   link_directories(${CMAKE_CURRENT_BINARY_DIR}/curl/lib)
 endif()
-#message(STATUS "CURL library: ${CURL_LIBRARY}")
+message(STATUS "CURL library: ${CURL_LIBRARY}")
 set(DISABLE_WERROR ON)
 
 #[[option(USE_SYSTEM_LIBWEBSOCKETS "Use system-installed libwebsockets" ON)
