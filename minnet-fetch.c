@@ -141,17 +141,17 @@ on_timeout(evutil_socket_t fd, short events, void* arg) {
 static int
 start_timeout(CURLM* multi, long timeout_ms, void* userp) {
   struct curl_callback* callback_data = userp;
- /*if(timeout_ms < 0) {
-    evtimer_del(timeout);
-  } else {
-    if(timeout_ms == 0)
-      timeout_ms = 1;
-    struct timeval tv;
-    tv.tv_sec = timeout_ms / 1000;
-    tv.tv_usec = (timeout_ms % 1000) * 1000;
-    evtimer_del(timeout);
-    evtimer_add(timeout, &tv);
-  }*/
+  /*if(timeout_ms < 0) {
+     evtimer_del(timeout);
+   } else {
+     if(timeout_ms == 0)
+       timeout_ms = 1;
+     struct timeval tv;
+     tv.tv_sec = timeout_ms / 1000;
+     tv.tv_usec = (timeout_ms % 1000) * 1000;
+     evtimer_del(timeout);
+     evtimer_add(timeout, &tv);
+   }*/
   return 0;
 }
 
@@ -283,9 +283,9 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   }
 
   fclose(fi);
-#endif
   res->ok = TRUE;
   res->body = BUFFER_N(buffer, bufSize);
+#endif
 
 finish:
 
