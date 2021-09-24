@@ -1,4 +1,4 @@
 [submodule "libwebsockets"]
 	path = libwebsockets
-	url = https://libwebsockets.org/repo/libwebsockets.git
+	url = https://github.com/warmcat/libwebsockets.git
 	branch = main
