@@ -154,14 +154,14 @@ http_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp) {
 
 static MinnetResponse*
 request_handler(MinnetSession* serv, MinnetCallback* cb) {
-  MinnetResponse* resp = minnet_response_data(minnet_server.ctx, serv->resp_obj);
+  MinnetResponse* resp = minnet_response_data2(minnet_server.ctx, serv->resp_obj);
 
   if(cb->ctx) {
     JSValue ret = minnet_emit_this(cb, serv->ws_obj, 2, serv->args);
-    if(JS_IsObject(ret) && minnet_response_data(cb->ctx, ret)) {
+    if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
       JS_FreeValue(cb->ctx, serv->args[1]);
       serv->args[1] = ret;
-      resp = minnet_response_data(cb->ctx, ret);
+      resp = minnet_response_data2(cb->ctx, ret);
       response_dump(resp);
     } else {
       JS_FreeValue(cb->ctx, ret);
@@ -336,7 +336,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
 
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
-      MinnetRequest* req = minnet_request_data(ctx, serv->req_obj);
+      MinnetRequest* req = minnet_request_data2(ctx, serv->req_obj);
 
       lwsl_user("http LWS_CALLBACK_HTTP_BODY_COMPLETION\tis_h2=%i len: %zu, size: %zu\n", is_h2(wsi), len, buffer_OFFSET(&req->body));
 
@@ -363,7 +363,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
 
     case LWS_CALLBACK_HTTP_BODY: {
-      MinnetRequest* req = minnet_request_data(ctx, serv->req_obj);
+      MinnetRequest* req = minnet_request_data2(ctx, serv->req_obj);
 
       lwsl_user("http LWS_CALLBACK_HTTP_BODY\tis_h2=%i len: %zu, size: %zu\n", is_h2(wsi), len, buffer_OFFSET(&req->body));
 
@@ -406,7 +406,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         args[1] = minnet_response_new(ctx, url, 200, TRUE, "text/html");
 
       MinnetRequest* req = opaque->req;
-      MinnetResponse* resp = minnet_response_data(ctx, args[1]);
+      MinnetResponse* resp = minnet_response_data2(ctx, args[1]);
 
       lwsl_user("http \x1b[38;5;87m%-25s\x1b[0m req=%p, header=%zu\n", "HTTP", req, buffer_OFFSET(&req->header));
 
@@ -467,8 +467,8 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
     case LWS_CALLBACK_HTTP_WRITEABLE: {
 
-      MinnetResponse* resp = minnet_response_data(minnet_server.ctx, serv->resp_obj);
-      MinnetRequest* req = minnet_request_data(minnet_server.ctx, serv->req_obj);
+      MinnetResponse* resp = minnet_response_data2(minnet_server.ctx, serv->resp_obj);
+      MinnetRequest* req = minnet_request_data2(minnet_server.ctx, serv->req_obj);
       BOOL done = FALSE;
 
       // printf("LWS_CALLBACK_HTTP_WRITEABLE[%zu]\tcb_http.ctx=%p url=%s path=%s mount=%s\n", serv->serial++, minnet_server.cb_http.ctx, url, req->path, serv->mount ? serv->mount->mnt : 0);

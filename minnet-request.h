@@ -37,7 +37,12 @@ extern const JSCFunctionListEntry minnet_request_proto_funcs[];
 extern const size_t minnet_request_proto_funcs_size;
 
 static inline MinnetRequest*
-minnet_request_data(JSContext* ctx, JSValueConst obj) {
+minnet_request_data(JSValueConst obj) {
+  return JS_GetOpaque(obj, minnet_request_class_id);
+}
+
+static inline MinnetRequest*
+minnet_request_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_request_class_id);
 }
 
