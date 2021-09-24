@@ -149,7 +149,8 @@ header_object(JSContext* ctx, const MinnetBuffer* buffer) {
   size_t len, n;
   uint8_t *x, *end;
   for(x = buffer->start, end = buffer->write; x < end; x += len + 1) {
-    if((len = byte_chr(x, end - x, '\n')) > (n = byte_chr(x, len, ':'))) {
+    len = byte_chr(x, end - x, '\n');
+    if(len > (n = byte_chr(x, len, ':'))) {
       const char* prop = js_strndup(ctx, (const char*)x, n);
       if(x[n] == ':')
         n++;

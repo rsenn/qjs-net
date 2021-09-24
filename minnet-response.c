@@ -64,8 +64,7 @@ response_write(struct http_response* res, const void* x, size_t n, JSContext* ct
 
 void
 response_free(JSRuntime* rt, struct http_response* res) {
-  struct list_head *hdr, *hdr2;
-  js_free_rt(rt, (void*)res->url);
+   js_free_rt(rt, (void*)res->url);
   res->url = 0;
   js_free_rt(rt, (void*)res->type);
   res->type = 0;

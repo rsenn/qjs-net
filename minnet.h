@@ -24,7 +24,7 @@ struct http_request;
     .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} }                                         \
   }
 
-#define SETLOG(max_level) lws_set_log_level((((max_level) << 1) - 1) & (~LLL_PARSER) | LLL_USER, NULL);
+#define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
 
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj)                                                                                                                                                               \

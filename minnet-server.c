@@ -144,7 +144,7 @@ http_headers(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
 
     if((len = lws_hdr_total_length(wsi, tok)) > 0) {
       char hdr[len + 1];
-      const char* name = lws_token_to_string(tok);
+      const char* name = (const char*)lws_token_to_string(tok);
       int namelen = byte_chr(name, strlen(name), ':');
       lws_hdr_copy(wsi, hdr, len + 1, tok);
       hdr[len] = '\0';

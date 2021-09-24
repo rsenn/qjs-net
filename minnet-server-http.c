@@ -93,8 +93,7 @@ mount_find(const char* x, size_t n) {
     x++;
     n--;
   }
-  int i = 0;
-  for(ptr = (struct lws_http_mount*)minnet_server.info.mounts; ptr; ptr = (struct lws_http_mount*)ptr->mount_next) {
+   for(ptr = (struct lws_http_mount*)minnet_server.info.mounts; ptr; ptr = (struct lws_http_mount*)ptr->mount_next) {
     if(protocol != LWSMPRO_CALLBACK || ptr->origin_protocol == LWSMPRO_CALLBACK) {
       const char* mnt = ptr->mountpoint;
       size_t len = ptr->mountpoint_len;
@@ -142,7 +141,8 @@ http_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp, JSContext
     size_t len, n;
     uint8_t *x, *end;
     for(x = resp->headers.start, end = resp->headers.write; x < end; x += len + 1) {
-      if((len = byte_chr(x, end - x, '\n')) > (n = byte_chr(x, len, ':'))) {
+      len = byte_chr(x, end - x, '\n');
+      if(len > (n = byte_chr(x, len, ':'))) {
         const char* prop = js_strndup(ctx, (const char*)x, n);
         if(x[n] == ':')
           n++;
@@ -338,7 +338,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       if(!opaque->req)
         opaque->req = request_new(ctx, path, url, method);
 
-      int num_hdr = http_headers(ctx, &opaque->req->headers, wsi);
+     // int num_hdr = http_headers(ctx, &opaque->req->headers, wsi);
       // printf("http \033[38;5;171m%-25s\033[0m num_hdr = %i, offset = %zu, url=%s, req=%p\n", lws_callback_name(reason) + 13, num_hdr, buffer_OFFSET(&opaque->req->headers), url, opaque->req);
       // buffer_free(&opaque->req->headers, JS_GetRuntime(ctx));
       break;
@@ -483,7 +483,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     case LWS_CALLBACK_HTTP_WRITEABLE: {
 
       MinnetResponse* resp = minnet_response_data2(minnet_server.ctx, serv->resp_obj);
-      MinnetRequest* req = minnet_request_data2(minnet_server.ctx, serv->req_obj);
+     // MinnetRequest* req = minnet_request_data2(minnet_server.ctx, serv->req_obj);
       BOOL done = FALSE;
 
       // printf("LWS_CALLBACK_HTTP_WRITEABLE[%zu]\tcb_http.ctx=%p url=%s path=%s mount=%s\n", serv->serial++, minnet_server.cb_http.ctx, url, req->path, serv->mount ? serv->mount->mnt : 0);

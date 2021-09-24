@@ -6,7 +6,6 @@ int http_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 int
 ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  JSValue ws_obj = JS_UNDEFINED;
   MinnetSession* sess = user;
 
   switch(reason) {
