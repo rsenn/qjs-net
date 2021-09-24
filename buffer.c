@@ -7,6 +7,7 @@ buffer_init(struct byte_buffer* buf, uint8_t* start, size_t len) {
   buf->read = buf->start;
   buf->write = buf->start;
   buf->end = start + len;
+  buf->alloc = 0;
 }
 
 struct byte_buffer*
@@ -24,6 +25,7 @@ buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   uint8_t* p;
   if((p = js_malloc(ctx, size + LWS_PRE))) {
     buffer_init(buf, p + LWS_PRE, size);
+    buf->alloc = p;
     return TRUE;
   }
   return FALSE;
@@ -44,17 +46,12 @@ buffer_append(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) 
 
 void
 buffer_free(struct byte_buffer* buf, JSRuntime* rt) {
-  uint8_t* start = buf->start;
-  if(start == (uint8_t*)&buf[1]) {
-    js_free_rt(rt, buf);
-  } else {
-    js_free_rt(rt, buf->start - LWS_PRE);
-    buf->start = 0;
-    buf->read = 0;
-    buf->write = 0;
-    buf->end = 0;
-    //  js_free_rt(rt, buf);
-  }
+  if(buf->alloc)
+    js_free_rt(rt, buf->alloc);
+  buf->start = 0;
+  buf->read = 0;
+  buf->write = 0;
+  buf->end = 0;
 }
 
 BOOL
@@ -90,14 +87,22 @@ buffer_printf(struct byte_buffer* buf, const char* format, ...) {
 
 uint8_t*
 buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
-  assert((uint8_t*)&buf[1] != buf->start);
   size_t wrofs = buf->write - buf->start;
   size_t rdofs = buf->read - buf->start;
+  uint8_t* x;
   assert(size >= wrofs);
 
-  uint8_t* x = js_realloc(ctx, buf->start ? buf->start - LWS_PRE : 0, size + LWS_PRE);
+  if(!size) {
+    buffer_free(buf, JS_GetRuntime(ctx));
+    return 0;
+  }
+
+  x = js_realloc(ctx, buf->alloc, size + LWS_PRE);
 
   if(x) {
+    if(buf->alloc == 0)
+      memcpy(x + LWS_PRE, buf->start, wrofs);
+
     buf->start = x + LWS_PRE;
     buf->write = buf->start + wrofs;
     buf->read = buf->start + rdofs;

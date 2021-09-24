@@ -15,33 +15,33 @@ struct http_request;
 #endif
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
-#define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags)                                                                                                                      \
-  {                                                                                                                                                                                                    \
-    .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET_MAGIC, .magic = magic_num, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} }               \
+#define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags) \
+  { \
+    .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET_MAGIC, .magic = magic_num, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} } \
   }
-#define JS_CGETSET_FLAGS_DEF(prop_name, fgetter, fsetter, flags)                                                                                                                                       \
-  {                                                                                                                                                                                                    \
-    .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} }                                         \
+#define JS_CGETSET_FLAGS_DEF(prop_name, fgetter, fsetter, flags) \
+  { \
+    .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} } \
   }
 
 #define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
 
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
-#define GETCBTHIS(opt, cb_ptr, this_obj)                                                                                                                                                               \
-  if(JS_IsFunction(ctx, opt)) {                                                                                                                                                                        \
-    cb_ptr = (MinnetCallback){ctx, JS_DupValue(ctx, this_obj), JS_DupValue(ctx, opt), #cb_ptr};                                                                                                        \
+#define GETCBTHIS(opt, cb_ptr, this_obj) \
+  if(JS_IsFunction(ctx, opt)) { \
+    cb_ptr = (MinnetCallback){ctx, JS_DupValue(ctx, this_obj), JS_DupValue(ctx, opt), #cb_ptr}; \
   }
 
-#define FREECB(cb_ptr)                                                                                                                                                                                 \
-  do {                                                                                                                                                                                                 \
-    JS_FreeValue(ctx, cb_ptr.this_obj);                                                                                                                                                                \
-    JS_FreeValue(ctx, cb_ptr.func_obj);                                                                                                                                                                \
+#define FREECB(cb_ptr) \
+  do { \
+    JS_FreeValue(ctx, cb_ptr.this_obj); \
+    JS_FreeValue(ctx, cb_ptr.func_obj); \
   } while(0);
 
-#define ADD(ptr, inst, member)                                                                                                                                                                         \
-  do {                                                                                                                                                                                                 \
-    (*(ptr)) = (inst);                                                                                                                                                                                 \
-    (ptr) = &(*(ptr))->member;                                                                                                                                                                         \
+#define ADD(ptr, inst, member) \
+  do { \
+    (*(ptr)) = (inst); \
+    (ptr) = &(*(ptr))->member; \
   } while(0);
 
 #ifdef _Thread_local

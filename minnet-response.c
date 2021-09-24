@@ -64,7 +64,7 @@ response_write(struct http_response* res, const void* x, size_t n, JSContext* ct
 
 void
 response_free(JSRuntime* rt, struct http_response* res) {
-   js_free_rt(rt, (void*)res->url);
+  js_free_rt(rt, (void*)res->url);
   res->url = 0;
   js_free_rt(rt, (void*)res->type);
   res->type = 0;
@@ -312,8 +312,13 @@ void
 minnet_response_finalizer(JSRuntime* rt, JSValue val) {
   MinnetResponse* res = JS_GetOpaque(val, minnet_response_class_id);
   if(res) {
-    if(res->body.start)
-      js_free_rt(rt, res->body.start - LWS_PRE);
+    buffer_free(&res->headers, rt);
+    buffer_free(&res->body, rt);
+
+    if(res->url)
+      js_free_rt(rt, res->url);
+    if(res->type)
+      js_free_rt(rt, res->type);
 
     js_free_rt(rt, res);
   }

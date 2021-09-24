@@ -10,17 +10,17 @@
 #include <cutils.h>
 
 typedef struct byte_buffer {
-  uint8_t *start, *write, *read, *end;
+  uint8_t *start, *write, *read, *end, *alloc;
 } MinnetBuffer;
 
-#define BUFFER(buf)                                                                                                                                                                                    \
-  (MinnetBuffer) { ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + sizeof((buf)) - 1 }
+#define BUFFER(buf) \
+  (MinnetBuffer) { ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + sizeof((buf)) - 1, 0 }
 
-#define BUFFER_0()                                                                                                                                                                                     \
-  (MinnetBuffer) { 0, 0, 0, 0 }
+#define BUFFER_0() \
+  (MinnetBuffer) { 0, 0, 0, 0, 0 }
 
-#define BUFFER_N(buf, n)                                                                                                                                                                               \
-  (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, ((uint8_t*)(buf)) + n }
+#define BUFFER_N(buf, n) \
+  (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, ((uint8_t*)(buf)) + n, 0 }
 
 #define buffer_AVAIL(b) ((b)->end - (b)->write)
 #define buffer_OFFSET(b) ((b)->write - (b)->start)

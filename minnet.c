@@ -1,7 +1,7 @@
 #include "minnet-server.h"
 #include "minnet-client.h"
-#include "minnet-response.h"
 #include "minnet-request.h"
+#include "minnet-response.h"
 #include "minnet-websocket.h"
 #include "minnet-stream.h"
 #include "jsutils.h"
@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
-#include <curl/curl.h>
 #include <ctype.h>
 #include <sys/time.h>
 
@@ -18,6 +17,8 @@
 #else
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
+
+JSValue minnet_fetch(JSContext*, JSValueConst, int, JSValueConst*);
 
 static JSValue minnet_log_cb, minnet_log_this;
 int32_t minnet_log_level = 0;
@@ -163,184 +164,6 @@ header_object(JSContext* ctx, const MinnetBuffer* buffer) {
   return ret;
 }
 
-static size_t
-header_callback(char* buffer, size_t size, size_t nitems, void* userdata) {
-
-  return nitems * size;
-}
-
-static JSValue
-minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-  CURL* curl;
-  CURLcode curlRes;
-  const char* url;
-  FILE* fi;
-  MinnetResponse* res;
-  uint8_t* buffer;
-  long bufSize;
-  long status;
-  char* type;
-  const char* body_str = NULL;
-  struct curl_slist* headerlist = NULL;
-  char* buf = calloc(1, 1);
-  size_t bufsize = 1;
-
-  JSValue resObj = JS_NewObjectClass(ctx, minnet_response_class_id);
-  if(JS_IsException(resObj))
-    return JS_EXCEPTION;
-
-  res = js_mallocz(ctx, sizeof(*res));
-
-  if(!res) {
-    JS_FreeValue(ctx, resObj);
-    return JS_EXCEPTION;
-  }
-
-  if(!JS_IsString(argv[0]))
-    return JS_EXCEPTION;
-
-  url = JS_ToCString(ctx, argv[0]);
-  res->url = js_strdup(ctx, url);
-
-  if(argc > 1 && JS_IsObject(argv[1])) {
-    JSValue method, body, headers;
-    const char* method_str;
-    method = JS_GetPropertyStr(ctx, argv[1], "method");
-    body = JS_GetPropertyStr(ctx, argv[1], "body");
-    headers = JS_GetPropertyStr(ctx, argv[1], "headers");
-
-    if(!JS_IsUndefined(headers)) {
-      JSValue global_obj, object_ctor, /* object_proto, */ keys, names, length;
-      int i;
-      int32_t len;
-
-      global_obj = JS_GetGlobalObject(ctx);
-      object_ctor = JS_GetPropertyStr(ctx, global_obj, "Object");
-      keys = JS_GetPropertyStr(ctx, object_ctor, "keys");
-
-      names = JS_Call(ctx, keys, object_ctor, 1, (JSValueConst*)&headers);
-      length = JS_GetPropertyStr(ctx, names, "length");
-
-      JS_ToInt32(ctx, &len, length);
-
-      for(i = 0; i < len; i++) {
-        char* h;
-        JSValue key, value;
-        const char *key_str, *value_str;
-        size_t key_len, value_len;
-        key = JS_GetPropertyUint32(ctx, names, i);
-        key_str = JS_ToCString(ctx, key);
-        key_len = strlen(key_str);
-
-        value = JS_GetPropertyStr(ctx, headers, key_str);
-        value_str = JS_ToCString(ctx, value);
-        value_len = strlen(value_str);
-
-        buf = realloc(buf, bufsize + key_len + 2 + value_len + 2 + 1);
-        h = &buf[bufsize];
-
-        strcpy(&buf[bufsize], key_str);
-        bufsize += key_len;
-        strcpy(&buf[bufsize], ": ");
-        bufsize += 2;
-        strcpy(&buf[bufsize], value_str);
-        bufsize += value_len;
-        strcpy(&buf[bufsize], "\0\n");
-        bufsize += 2;
-
-        JS_FreeCString(ctx, key_str);
-        JS_FreeCString(ctx, value_str);
-
-        headerlist = curl_slist_append(headerlist, h);
-      }
-
-      JS_FreeValue(ctx, global_obj);
-      JS_FreeValue(ctx, object_ctor);
-      // JS_FreeValue(ctx, object_proto);
-      JS_FreeValue(ctx, keys);
-      JS_FreeValue(ctx, names);
-      JS_FreeValue(ctx, length);
-    }
-
-    method_str = JS_ToCString(ctx, method);
-
-    if(!JS_IsUndefined(body) || !strcasecmp(method_str, "post")) {
-      body_str = JS_ToCString(ctx, body);
-    }
-
-    JS_FreeCString(ctx, method_str);
-
-    JS_FreeValue(ctx, method);
-    JS_FreeValue(ctx, body);
-    JS_FreeValue(ctx, headers);
-  }
-
-  curl = curl_easy_init();
-  if(!curl)
-    return JS_EXCEPTION;
-
-  fi = tmpfile();
-
-  curl_easy_setopt(curl, CURLOPT_URL, url);
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt(curl, CURLOPT_USERAGENT, "minimal-network-quickjs");
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, fi);
-  curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &header_callback);
-  curl_easy_setopt(curl, CURLOPT_HEADERDATA, 0);
-
-  if(body_str)
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body_str);
-
-  curlRes = curl_easy_perform(curl);
-  if(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status) == CURLE_OK)
-    res->status = status;
-
-  if(curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &type) == CURLE_OK)
-    res->type = type ? js_strdup(ctx, type) : 0;
-
-  res->ok = FALSE;
-
-  if(curlRes != CURLE_OK) {
-    fprintf(stderr, "CURL failed: %s\n", curl_easy_strerror(curlRes));
-    goto finish;
-  }
-
-  bufSize = ftell(fi);
-  rewind(fi);
-
-  buffer = calloc(1, bufSize + 1);
-  if(!buffer) {
-    fclose(fi);
-    fputs("memory alloc fails", stderr);
-    goto finish;
-  }
-
-  /* copy the file into the buffer */
-  if(1 != fread(buffer, bufSize, 1, fi)) {
-    fclose(fi);
-    free(buffer);
-    fputs("entire read fails", stderr);
-    goto finish;
-  }
-
-  fclose(fi);
-
-  res->ok = TRUE;
-  res->body = BUFFER_N(buffer, bufSize);
-
-finish:
-  curl_slist_free_all(headerlist);
-  free(buf);
-  if(body_str)
-    JS_FreeCString(ctx, body_str);
-
-  curl_easy_cleanup(curl);
-  JS_SetOpaque(resObj, res);
-
-  return resObj;
-}
-
 static const char*
 io_events(int events) {
   switch(events & (POLLIN | POLLOUT)) {
@@ -365,12 +188,11 @@ io_parse_events(const char* str) {
 #define PIO (POLLIN | POLLOUT)
 
 static JSValue
-io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
+lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   struct pollfd x = {0, 0, 0};
   struct lws_context* context = value2ptr(ctx, func_data[2]);
   uint32_t fd, events, revents;
   int32_t wr;
-  // static int calls = 0;
 
   const char* io = JS_ToCString(ctx, func_data[1]);
   revents = io_parse_events(io);
@@ -385,15 +207,11 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
     x.events = events;
     x.revents = 0;
 
-    if(poll(&x, 1, 0) < 0) {
+    if(poll(&x, 1, 0) < 0)
       lwsl_user("poll error: %s\n", strerror(errno));
-    } else {
+    else
       revents = x.revents;
-    }
   }
-
-  //  if(++calls <= 100)
-  // printf("io_handler #%i fd = %d, wr = %s, events = %s, revents = %s, context = %p\n", ++calls, fd, wr ? "W" : "R", io_parse_events(io), io_events(revents), context);
 
   if(revents & PIO) {
     x.fd = fd;
@@ -402,33 +220,19 @@ io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, 
 
     lws_service_fd(context, &x);
   }
-  /*  if(++calls <= 100)
-      lwsl_user("minnet %s handler calls=%i fd=%d events=%d revents=%d pfd=[%d %d %d]\n",
-             wr == WRITE_HANDLER ? "writable" : "readable",
-             calls,
-             fd,
-             events,
-             revents,
-             x.fd,
-             x.events,
-             x.revents);*/
 
   return JS_UNDEFINED;
 }
 
-// static uint32_t handler_seq = 0;
-
 static JSValue
 make_handler(JSContext* ctx, int fd, int events, struct lws* wsi, int magic) {
-  // uint32_t seq = ++handler_seq;
   struct lws_context* context = lws_get_context(wsi);
-  // intptr_t values[] = {fd, events, 0, (intptr_t)context, seq};
-  // JSValue buffer = JS_NewArrayBufferCopy(ctx, (const void*)values, sizeof(values));
-
-  // printf("make_handler fd = %d, events = %s, context = %p\n", fd, io_events(events), context);
-
-  JSValue data[3] = {JS_NewUint32(ctx, fd), JS_NewString(ctx, io_events(events)), ptr2value(ctx, context)};
-  return JS_NewCFunctionData(ctx, io_handler, 0, magic, countof(data), data);
+  JSValue data[] = {
+      JS_NewUint32(ctx, fd),
+      JS_NewString(ctx, io_events(events)),
+      ptr2value(ctx, context),
+  };
+  return JS_NewCFunctionData(ctx, lws_io_handler, 0, 0, countof(data), data);
 }
 
 void
