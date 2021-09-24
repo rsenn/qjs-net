@@ -9,14 +9,13 @@ struct header_context {
   MinnetBuffer* buf;
 };
 
-
- struct curl_callback {
+struct curl_callback {
   JSContext* ctx;
   CURLM* multi;
 };
 
 struct curl_socket {
-  BOOL wantread,wantwrite;
+  BOOL wantread, wantwrite;
   curl_socket_t sockfd;
 };
 
@@ -92,8 +91,7 @@ header_callback(char* x, size_t n, size_t nitems, void* userdata) {
 
 static int
 handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socketp) {
-  CURLM* multi = userp;
-  struct curl_callback* cb = userp;
+  struct curl_callback* callback_data = userp;
   struct curl_socket* sock;
   int events = 0;
 
@@ -101,26 +99,30 @@ handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socket
     case CURL_POLL_IN:
     case CURL_POLL_OUT:
     case CURL_POLL_INOUT:
-      sock = socketp ? (struct curl_socket*)socketp : js_mallocz(cb->ctx, sizeof(struct curl_socket));
+      sock = (struct curl_socket*)(socketp ? socketp : js_mallocz(callback_data->ctx, sizeof(struct curl_socket)));
 
-      curl_multi_assign(multi, s, (void*)sock);
+      curl_multi_assign(callback_data->multi, s, (void*)sock);
+
+      sock->sockfd = s;
 
       if(action != CURL_POLL_IN)
         sock->wantwrite = TRUE;
       if(action != CURL_POLL_OUT)
         sock->wantread = TRUE;
 
-/*      event_del(sock->event);
-      event_assign(sock->event, base, sock->sockfd, events,
-        curl_perform, sock);
-      event_add(sock->event, NULL);
-  */
+      printf("handle_socket sock=%d, wantwrite=%d, wantread=%d\n", sock->sockfd, sock->wantwrite, sock->wantread);
+
+      /*      event_del(sock->event);
+            event_assign(sock->event, base, sock->sockfd, events,
+              curl_perform, sock);
+            event_add(sock->event, NULL);
+        */
       break;
     case CURL_POLL_REMOVE:
       if(socketp) {
         /*  event_del(((curl_context_t*) socketp)->event);*/
-        js_free(cb->ctx, socketp);
-        curl_multi_assign(multi, s, NULL);
+        js_free(callback_data->ctx, socketp);
+        curl_multi_assign(callback_data->multi, s, NULL);
       }
       break;
     default: abort();
@@ -131,8 +133,8 @@ handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socket
 
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-  CURL* curl;
-  CURLM* multi;
+  CURL* curl = 0;
+  CURLM* multi = 0;
   CURLcode curlRes;
   const char* url;
   FILE* fi;
@@ -144,6 +146,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   const char* body_str = NULL;
   struct curl_slist* headerlist = NULL;
   struct header_context hctx = {ctx, 0};
+  struct curl_callback* callback_data = 0;
 
   JSValue resObj = JS_NewObjectClass(ctx, minnet_response_class_id);
   if(JS_IsException(resObj))
@@ -187,27 +190,16 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
 
   curl_global_init(CURL_GLOBAL_DEFAULT);
 
-  if(!(multi = curl_multi_init())) {
+  if(!(multi = curl_multi_init()) || !(curl = curl_easy_init()) || !(callback_data = js_mallocz(ctx, sizeof(struct curl_callback)))) {
     resObj = JS_ThrowOutOfMemory(ctx);
     goto fail;
   }
 
-{
-
-
- struct curl_callback* cb = js_mallocz(ctx, sizeof(struct curl_callback));
-
-cb->ctx = ctx;
-cb->multi = multi;
+  callback_data->ctx = ctx;
+  callback_data->multi = multi;
 
   curl_multi_setopt(multi, CURLMOPT_SOCKETFUNCTION, handle_socket);
-  curl_multi_setopt(multi, CURLMOPT_SOCKETDATA, cb);
-
-  if(!(curl = curl_easy_init())) {
-    curl_multi_cleanup(multi);
-    resObj = JS_ThrowOutOfMemory(ctx);
-    goto fail;
-  }
+  curl_multi_setopt(multi, CURLMOPT_SOCKETDATA, callback_data);
 
   fi = tmpfile();
   hctx.buf = &res->headers;
@@ -261,20 +253,20 @@ cb->multi = multi;
   res->body = BUFFER_N(buffer, bufSize);
 
 finish:
-js_free(ctx, cb);
 
   curl_slist_free_all(headerlist);
   if(body_str)
     JS_FreeCString(ctx, body_str);
 
-  curl_multi_cleanup(multi);
-  curl_global_cleanup();
   JS_SetOpaque(resObj, res);
 
-  return resObj;
-}
-
 fail:
+  if(callback_data)
+    js_free(ctx, callback_data);
+  if(curl)
+    curl_easy_cleanup(curl);
+  if(multi)
+    curl_multi_cleanup(multi);
 
   curl_global_cleanup();
   return resObj;
