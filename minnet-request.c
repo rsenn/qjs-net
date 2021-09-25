@@ -29,15 +29,19 @@ name2method(const char* name) {
 }
 
 void
-request_dump(struct http_request const* req) {
-  printf("\nMinnetRequest {\n\turi = %s", req->url);
-  printf("\n\tpath = %s", req->path);
-  printf("\n\ttype = %s", method_name(req->method));
+request_format(struct http_request const* req, char* buf, size_t len, JSContext* ctx) {
+  char* headers = buffer_escaped(&req->headers, ctx);
 
-  buffer_dump("headers", &req->headers);
-  fputs("\n\tresponse = ", stdout);
-  fputs(" }", stdout);
-  fflush(stdout);
+  snprintf(buf, len, FGC(196, "MinnetRequest") " { method: '%s', url: '%s', path: '%s', headers: '%s' }", method_name(req->method), req->url, req->path, headers);
+
+  js_free(ctx, headers);
+}
+
+char*
+request_dump(struct http_request const* req, JSContext* ctx) {
+  static char buf[2048];
+  request_format(req, buf, sizeof(buf), ctx);
+  return buf;
 }
 
 void
@@ -57,15 +61,8 @@ struct http_request*
 request_new(JSContext* ctx, const char* path, char* url, MinnetHttpMethod method) {
   MinnetRequest* req;
 
-  if((req = js_mallocz(ctx, sizeof(MinnetRequest)))) {
-    req->ref_count = 1;
-  }
-
-  if(path)
-    pstrcpy(req->path, sizeof(req->path), path);
-
-  req->url = url;
-  req->method = method;
+  if((req = js_mallocz(ctx, sizeof(MinnetRequest))))
+    request_init(req, path, url, method);
 
   return req;
 }
@@ -121,6 +118,10 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   if(JS_IsException(obj))
     goto fail;
 
+  request_zero(req);
+
+  JS_SetOpaque(obj, req);
+
   if(argc >= 1) {
     if(JS_IsString(argv[0])) {
       const char* str = JS_ToCString(ctx, argv[0]);
@@ -131,18 +132,10 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
     argv++;
   }
 
-  if(argc >= 1) {
-    if(JS_IsObject(argv[0]) && !JS_IsNull(argv[0])) {
-      js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);
-      argc--;
-      argv++;
-    }
-  }
+  if(argc >= 1 && JS_IsObject(argv[0]))
+    js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);
 
   req->read_only = TRUE;
-
-  JS_SetOpaque(obj, req);
-
   return obj;
 
 fail:
@@ -180,10 +173,11 @@ minnet_request_wrap(JSContext* ctx, struct http_request* req) {
 static JSValue
 minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetRequest* req;
-  if(!(req = JS_GetOpaque2(ctx, this_val, minnet_request_class_id)))
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(req = minnet_request_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  JSValue ret = JS_UNDEFINED;
   switch(magic) {
     case REQUEST_METHOD: {
       ret = JS_NewString(ctx, method_name(req->method));
@@ -199,7 +193,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_PATH: {
-      ret = JS_NewString(ctx, req->path);
+      ret = req->path[0] ? JS_NewString(ctx, req->path) : JS_NULL;
       break;
     }
     case REQUEST_HEADERS: {
@@ -299,8 +293,8 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, 0, REQUEST_HEADERS, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, 0, REQUEST_HEADERS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("arrayBuffer", minnet_request_get, 0, REQUEST_ARRAYBUFFER, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("text", minnet_request_get, 0, REQUEST_TEXT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, 0),

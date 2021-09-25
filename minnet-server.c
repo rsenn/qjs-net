@@ -70,7 +70,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   minnet_ws_sslcert(ctx, &minnet_server.info, options);
 
   if(JS_IsArray(ctx, opt_mounts)) {
-    MinnetHttpMount** ptr = (MinnetHttpMount**)&minnet_server.info.mounts;
+    MinnetHttpMount** m = (MinnetHttpMount**)&minnet_server.info.mounts;
     uint32_t i;
 
     for(i = 0;; i++) {
@@ -79,7 +79,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       if(JS_IsUndefined(mount))
         break;
 
-      ADD(ptr, mount_new(ctx, mount), next);
+      ADD(m, mount_new(ctx, mount), next);
     }
   }
 

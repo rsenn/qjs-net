@@ -63,7 +63,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
           uint8_t* codep = in;
           code = (codep[0] << 8) + codep[1];
           if(len - 2 > 0)
-            why = JS_NewStringLen(minnet_server.ctx, in + 2, len - 2);
+            why = JS_NewStringLen(minnet_server.ctx, (char*)in + 2, len - 2);
         }
 
         lwsl_user("ws   %-25s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));

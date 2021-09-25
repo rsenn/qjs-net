@@ -50,7 +50,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   struct lws_context_creation_info info;
   int n = 0;
   JSValue ret = JS_NewInt32(ctx, 0);
-  MinnetURL url = {0, 0, -1, 0};
+  MinnetURL url;
   JSValue options = argv[0];
 
   SETLOG(LLL_INFO)

@@ -48,6 +48,11 @@ lws_opaque(struct lws* wsi, JSContext* ctx) {
   return opaque;
 }
 
+static inline int
+ws_fd(const MinnetWebsocket* ws) {
+  return lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
+}
+
 static inline MinnetWebsocket*
 minnet_ws_data(JSValueConst obj) {
   return JS_GetOpaque(obj, minnet_ws_class_id);

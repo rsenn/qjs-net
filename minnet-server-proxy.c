@@ -134,7 +134,6 @@ raw_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
   MinnetProxyConnection* pc = (MinnetProxyConnection*)lws_get_opaque_user_data(wsi);
   MinnetProxyMessage* msg;
   uint8_t* data;
-  int m, a;
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
@@ -193,6 +192,7 @@ raw_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       break;
     }
     case LWS_CALLBACK_RAW_WRITEABLE: {
+      int m, a;
       lwsl_user("RAW_WRITEABLE\n");
       if(!pc || !pc->queue[ONWARD].count)
         break;

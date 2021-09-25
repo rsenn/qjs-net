@@ -18,11 +18,11 @@ typedef struct http_mount {
   MinnetCallback callback;
 } MinnetHttpMount;
 
-typedef struct http_session {
+/*typedef struct http_session {
   struct socket* ws;
   struct http_request* req;
   struct http_response* resp;
-} MinnetHttpSession;
+} MinnetHttpSession;*/
 
 MinnetHttpMount* mount_create(JSContext*, const char*, const char* origin, const char* def, enum lws_mount_protocols origin_proto);
 MinnetHttpMount* mount_new(JSContext*, JSValue);

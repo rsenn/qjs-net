@@ -17,12 +17,12 @@ typedef struct http_request {
   int ref_count;
   BOOL read_only;
   enum http_method method;
-  char /* *type, */* url;
+  char* url;
   struct byte_buffer headers, body;
   char path[256];
 } MinnetRequest;
 
-void request_dump(struct http_request const*);
+char* request_dump(struct http_request const*, JSContext* ctx);
 void request_init(struct http_request*, const char* path, char* url, MinnetHttpMethod);
 struct http_request* request_new(JSContext*, const char* path, char* url, MinnetHttpMethod);
 void request_zero(struct http_request*);

@@ -33,10 +33,9 @@ buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
 
 ssize_t
 buffer_append(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) {
-  ssize_t ret = -1;
   if((size_t)buffer_AVAIL(buf) < n) {
     if(!buffer_realloc(buf, buffer_OFFSET(buf) + n + 1, ctx))
-      return ret;
+      return -1;
   }
   memcpy(buf->write, x, n);
   buf->write[n] = '\0';
@@ -145,6 +144,73 @@ buffer_tostring(struct byte_buffer const* buf, JSContext* ctx) {
   return JS_NewStringLen(ctx, ptr, len);
 }
 
+char*
+buffer_escaped(struct byte_buffer const* buf, JSContext* ctx) {
+  struct byte_buffer out = BUFFER_0();
+  uint8_t* ptr;
+
+  buffer_alloc(&out, (buffer_OFFSET(buf) * 4) + 1, ctx);
+
+  out.start -= LWS_PRE;
+  out.read = out.write = out.start;
+
+  for(ptr = buf->start; ptr < buf->write; ptr++) {
+    char c = *ptr;
+    switch(c) {
+      case '\n':
+        buffer_putchar(&out, '\\');
+        buffer_putchar(&out, 'n');
+        break;
+      case '\r':
+        buffer_putchar(&out, '\\');
+        buffer_putchar(&out, 'r');
+        break;
+      case '\t':
+        buffer_putchar(&out, '\\');
+        buffer_putchar(&out, 't');
+        break;
+      case '\v':
+        buffer_putchar(&out, '\\');
+        buffer_putchar(&out, 'v');
+        break;
+      case '\b':
+        buffer_putchar(&out, '\\');
+        buffer_putchar(&out, 'b');
+        break;
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 12:
+      case 14:
+      case 15:
+      case 16:
+      case 17:
+      case 18:
+      case 19:
+      case 20:
+      case 21:
+      case 22:
+      case 23:
+      case 24:
+      case 25:
+      case 26:
+      case 27:
+      case 28:
+      case 29:
+      case 30:
+      case 31: buffer_printf(&out, "\\x%02", c); break;
+      default: buffer_putchar(&out, c); break;
+    }
+  }
+  *out.write = '\0';
+  return (char*)out.start;
+}
+
 void
 buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
   // struct byte_buffer* buf = opaque;
@@ -159,6 +225,6 @@ buffer_toarraybuffer(struct byte_buffer const* buf, JSContext* ctx) {
 
 void
 buffer_dump(const char* n, struct byte_buffer const* buf) {
-  fprintf(stderr, "%s\t{ write = %zu, size = %zu }\n", n, buf->write - buf->start, buf->end - buf->start);
+  fprintf(stderr, "%s\t{ write = %td, size = %td }\n", n, buf->write - buf->start, buf->end - buf->start);
   fflush(stderr);
 }

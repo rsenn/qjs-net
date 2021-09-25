@@ -30,6 +30,7 @@ typedef struct session_data {
   size_t serial;
   JSValue generator;
   int closed : 1;
+  BOOL h2;
 } MinnetSession;
 
 JSValue minnet_ws_server(JSContext*, JSValue, int argc, JSValue* argv);

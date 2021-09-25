@@ -40,6 +40,7 @@ uint8_t* buffer_realloc(struct byte_buffer*, size_t size, JSContext* ctx);
 int buffer_fromarraybuffer(struct byte_buffer*, JSValue value, JSContext* ctx);
 int buffer_fromvalue(struct byte_buffer*, JSValue value, JSContext* ctx);
 JSValue buffer_tostring(struct byte_buffer const*, JSContext* ctx);
+char* buffer_escaped(struct byte_buffer const*, JSContext* ctx);
 void buffer_finalizer(JSRuntime*, void* opaque, void* ptr);
 JSValue buffer_toarraybuffer(struct byte_buffer const*, JSContext* ctx);
 void buffer_dump(const char*, struct byte_buffer const* buf);
@@ -54,6 +55,16 @@ buffer_skip(struct byte_buffer* buf, size_t size) {
   assert(buf->read + size <= buf->write);
   buf->read += size;
   return buf->read;
+}
+
+static inline BOOL
+buffer_putchar(struct byte_buffer* buf, char c) {
+  if(buf->write + 1 <= buf->end) {
+    *buf->write = (uint8_t)c;
+    buf->write++;
+    return TRUE;
+  }
+  return FALSE;
 }
 
 #endif /* BUFFER_H */

@@ -44,6 +44,12 @@ struct http_request;
     (ptr) = &(*(ptr))->member; \
   } while(0);
 
+#define FG(c) "\x1b[38;5;" c "m"
+#define BG(c) "\x1b[48;5;" c "m"
+#define FGC(c, str) FG(#c) str NC
+#define BGC(c, str) BG(#c) str NC
+#define NC "\x1b[0m"
+
 #ifdef _Thread_local
 #define THREAD_LOCAL _Thread_local
 #elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_CC) || defined(__IBMCPP__)
