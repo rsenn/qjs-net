@@ -157,14 +157,7 @@ http_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp, JSContext
         js_free(ctx, (void*)prop);
       }
     }
-  }
-  /*  list_for_each(el, &resp->headers) {
-      struct http_header* hdr = list_entry(el, struct http_header, link);
-
-      if((lws_add_http_header_by_name(wsi, (const unsigned char*)hdr->name, (const unsigned char*)hdr->value, strlen(hdr->value), &buf->write, buf->end)))
-        JS_ThrowInternalError(minnet_server.cb_http.ctx, "lws_add_http_header_by_name failed");
-    }*/
-
+  } 
   if(lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end))
     return 1;
   {
@@ -181,7 +174,8 @@ request_handler(MinnetSession* serv, MinnetCallback* cb) {
 
   if(cb && cb->ctx) {
     JSValue ret = minnet_emit_this(cb, serv->ws_obj, 2, serv->args);
-    if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
+         lwsl_user("request_handler ret=%s", JS_ToCString(cb->ctx, ret));
+ if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
       JS_FreeValue(cb->ctx, serv->args[1]);
       serv->args[1] = ret;
       resp = minnet_response_data2(cb->ctx, ret);

@@ -129,7 +129,9 @@ macro(configure_quickjs)
   string(REPLACE ";" ":" MODULE_PATH "${MODULE_PATH}")
   set(QUICKJS_MODULE_PATH "${MODULE_PATH}" CACHE PATH "QuickJS modules search path")
 
-  set(CMAKE_INSTALL_RPATH "${QUICKJS_MODULE_PATH}")
+if(NOT CMAKE_INSTALL_RPATH)
+  set(CMAKE_INSTALL_RPATH "${QUICKJS_C_MODULE_DIR}:${QUICKJS_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+endif(NOT CMAKE_INSTALL_RPATH)
 
   message(STATUS "QuickJS configuration")
   message(STATUS "\tinterpreter: ${QJS}")
