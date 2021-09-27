@@ -14,18 +14,15 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_PROTOCOL_INIT: return 0;
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
-      if(minnet_server.cb_connect.ctx) {
-        JSContext* ctx = minnet_server.cb_connect.ctx;
-        struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
+      /* if(minnet_server.cb_connect.ctx) {*/
+      JSContext* ctx = minnet_server.ctx;
+      struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
 
-        opaque->req = request_new(ctx, in, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), METHOD_GET);
+      opaque->req = request_new(ctx, in, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), METHOD_GET);
 
-        int num_hdr = http_headers(ctx, &opaque->req->headers, wsi);
-
-        lwsl_user(
-            "ws   \033[38;5;171m%s\033[0m wsi=%p, ws=%p, req=%p, opaque=%p, num_hdr=%i, url=%s\n", lws_callback_name(reason) + 13, wsi, opaque->ws, opaque->req, opaque, num_hdr, opaque->req->url);
-      }
-      return 0;
+      int num_hdr = http_headers(ctx, &opaque->req->headers, wsi);
+      break;
+      //      return http_callback(wsi, reason, user, in, len);
     }
 
     case LWS_CALLBACK_ESTABLISHED: {
@@ -179,7 +176,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
   }
 
-  lwsl_user("ws   %-25s fd=%d in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), (int)len, (char*)in);
+  lwsl_user("ws   %-25s fd=%d url='%s' in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), lws_get_uri(wsi, minnet_server.ctx, WSI_TOKEN_GET_URI), (int)len, (char*)in);
 
   return 0;
   //  return lws_callback_http_dummy(wsi, reason, user, in, len);

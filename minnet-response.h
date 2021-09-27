@@ -21,7 +21,6 @@ typedef struct http_response {
   char *url, *type;
   int status;
   BOOL ok;
-  JSValue generator;
   struct byte_buffer headers, body;
 } MinnetResponse;
 
@@ -30,7 +29,7 @@ void header_free(JSRuntime*, struct http_header* hdr);
 char* response_dump(struct http_response const*);
 void response_zero(struct http_response*);
 void response_init(struct http_response*, char* url, int32_t status, BOOL ok, char* type);
-void response_write(struct http_response*, const void* x, size_t n, JSContext* ctx);
+ssize_t response_write(struct http_response*, const void* x, size_t n, JSContext* ctx);
 void response_free(JSRuntime*, struct http_response* res);
 struct http_response* response_new(JSContext*);
 JSValue minnet_response_new(JSContext*, const char* url, int32_t status, BOOL ok, const char* type);

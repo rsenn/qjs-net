@@ -199,6 +199,7 @@ lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
 
   JS_ToUint32(ctx, &fd, func_data[0]);
   JS_ToInt32(ctx, &wr, argv[0]);
+  lwsl_user("lws_io_handler fd=%d, wr=%i, io=%s, revents=%d", fd, wr, io, revents);
 
   events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
 
@@ -218,7 +219,8 @@ lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
     x.events = events;
     x.revents = revents;
 
-    lws_service_fd(context, &x);
+    int ret = lws_service_fd(context, &x);
+    lwsl_user("lws_service_fd fd=%d, events=%i, revents=%d, ret=%d", fd, events, revents, ret);
   }
 
   return JS_UNDEFINED;

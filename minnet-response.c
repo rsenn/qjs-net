@@ -60,9 +60,9 @@ response_init(struct http_response* res, char* url, int32_t status, BOOL ok, cha
   res->body = BUFFER_0();
 }
 
-void
+ssize_t
 response_write(struct http_response* res, const void* x, size_t n, JSContext* ctx) {
-  buffer_append(&res->body, x, n, ctx);
+  return buffer_append(&res->body, x, n, ctx);
 }
 
 void
