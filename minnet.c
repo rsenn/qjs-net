@@ -194,16 +194,18 @@ lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
   uint32_t fd, events, revents;
   int32_t wr;
 
-  const char* io = JS_ToCString(ctx, func_data[1]);
-  revents = io_parse_events(io);
+  /* const char* io = JS_ToCString(ctx, func_data[1]);
+   revents = io_parse_events(io);*
+   */
 
   JS_ToUint32(ctx, &fd, func_data[0]);
   JS_ToInt32(ctx, &wr, argv[0]);
-  lwsl_user("lws_io_handler fd=%d, wr=%i, io=%s, revents=%d", fd, wr, io, revents);
 
   events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
+  revents = magic & events;
+  lwsl_user("lws_io_handler fd=%d wr=%i magic=%s events=%s revents=%s", fd, wr, io_events(magic), io_events(events), io_events(revents));
 
-  if(!(revents & PIO)) {
+  if((revents & PIO) != magic) {
     x.fd = fd;
     x.events = events;
     x.revents = 0;
@@ -216,11 +218,11 @@ lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
 
   if(revents & PIO) {
     x.fd = fd;
-    x.events = events;
-    x.revents = revents;
+    x.events = magic;
+    x.revents = /* revents &*/ revents;
 
     int ret = lws_service_fd(context, &x);
-    lwsl_user("lws_service_fd fd=%d, events=%i, revents=%d, ret=%d", fd, events, revents, ret);
+    lwsl_user("lws_service_fd fd=%d, magic=%s, revents=%s, ret=%d", fd, io_events(magic), io_events(revents), ret);
   }
 
   return JS_UNDEFINED;
@@ -233,15 +235,15 @@ make_handler(JSContext* ctx, int fd, int events, void* opaque, int magic) {
       JS_NewString(ctx, io_events(events)),
       ptr2value(ctx, opaque),
   };
-  return JS_NewCFunctionData(ctx, lws_io_handler, 0, magic, countof(data), data);
+  return JS_NewCFunctionData(ctx, lws_io_handler, events, magic, countof(data), data);
 }
 
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
-  JSValue func = make_handler(ctx, args->fd, args->events | args->prev_events, lws_get_context(wsi), 0);
+  JSValue func = make_handler(ctx, args->fd, args->events /* | args->prev_events*/, lws_get_context(wsi), args->events);
 
-  out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, JS_DupValue(ctx, func), JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
-  out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, JS_DupValue(ctx, func), JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
+  out[0] = (args->events == POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
+  out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
 
   JS_FreeValue(ctx, func);
 }

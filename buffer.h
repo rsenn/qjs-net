@@ -23,10 +23,12 @@ typedef struct byte_buffer {
   (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, ((uint8_t*)(buf)) + n, 0 }
 
 #define buffer_AVAIL(b) ((b)->end - (b)->write)
-#define buffer_OFFSET(b) ((b)->write - (b)->start)
+#define buffer_WRITE(b) ((b)->write - (b)->start)
 #define buffer_REMAIN(b) ((b)->write - (b)->read)
+#define buffer_READ(b) ((b)->read - (b)->start)
 #define buffer_SIZE(b) ((b)->end - (b)->start)
-#define buffer_START(b) (void*)(b)->start
+#define buffer_BEGIN(b) (void*)(b)->start
+#define buffer_END(b) (void*)(b)->end
 
 void buffer_init(struct byte_buffer*, uint8_t* start, size_t len);
 struct byte_buffer* buffer_new(JSContext*, size_t size);

@@ -27,10 +27,12 @@ typedef struct session_data {
   };
   struct http_mount* mount;
   struct proxy_connection* proxy;
-  size_t serial;
-  JSValue generator;
-  int closed : 1;
-  BOOL h2;
+  int serial;
+  JSValue generator, next;
+  BOOL done;
+  unsigned closed : 1;
+  unsigned h2 : 1;
+  int64_t written;
 } MinnetSession;
 
 JSValue minnet_ws_server(JSContext*, JSValue, int argc, JSValue* argv);

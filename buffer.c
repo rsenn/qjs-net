@@ -34,7 +34,7 @@ buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
 ssize_t
 buffer_append(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) {
   if((size_t)buffer_AVAIL(buf) < n) {
-    if(!buffer_realloc(buf, buffer_OFFSET(buf) + n + 1, ctx))
+    if(!buffer_realloc(buf, buffer_WRITE(buf) + n + 1, ctx))
       return -1;
   }
   memcpy(buf->write, x, n);
@@ -149,7 +149,7 @@ buffer_escaped(struct byte_buffer const* buf, JSContext* ctx) {
   struct byte_buffer out = BUFFER_0();
   uint8_t* ptr;
 
-  buffer_alloc(&out, (buffer_OFFSET(buf) * 4) + 1, ctx);
+  buffer_alloc(&out, (buffer_WRITE(buf) * 4) + 1, ctx);
 
   out.start -= LWS_PRE;
   out.read = out.write = out.start;
@@ -225,6 +225,6 @@ buffer_toarraybuffer(struct byte_buffer const* buf, JSContext* ctx) {
 
 void
 buffer_dump(const char* n, struct byte_buffer const* buf) {
-  fprintf(stderr, "%s\t{ write = %td, size = %td }\n", n, buf->write - buf->start, buf->end - buf->start);
+  fprintf(stderr, "%s\t{ write = %td, read = %td, size = %td }\n", n, buf->write - buf->start, buf->read - buf->start, buf->end - buf->start);
   fflush(stderr);
 }

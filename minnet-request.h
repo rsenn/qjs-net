@@ -54,12 +54,18 @@ lws_uri_and_method(struct lws* wsi, JSContext* ctx, MinnetHttpMethod* method) {
     *method = METHOD_POST;
   else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI)))
     *method = METHOD_GET;
+  else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_HEAD_URI)))
+    *method = METHOD_HEAD;
+  else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_OPTIONS_URI)))
+    *method = METHOD_OPTIONS;
 
   return url;
 }
 
 static inline const char*
-method_name(enum http_method m) {
+method_name(int m) {
+  if(m < 0)
+    return "-1";
   return ((const char* const[]){"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE", "CONNECT", "HEAD"})[m];
 }
 

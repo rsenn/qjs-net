@@ -129,15 +129,15 @@ minnet_stream_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case STREAM_LENGTH: {
-      ret = JS_NewUint32(ctx, buffer_OFFSET(&strm->buffer));
+      ret = JS_NewUint32(ctx, buffer_WRITE(&strm->buffer));
       break;
     }
     case STREAM_BUFFER: {
-      ret = buffer_OFFSET(&strm->buffer) ? buffer_toarraybuffer(&strm->buffer, ctx) : JS_NULL;
+      ret = buffer_WRITE(&strm->buffer) ? buffer_toarraybuffer(&strm->buffer, ctx) : JS_NULL;
       break;
     }
     case STREAM_TEXT: {
-      ret = buffer_OFFSET(&strm->buffer) ? buffer_tostring(&strm->buffer, ctx) : JS_NULL;
+      ret = buffer_WRITE(&strm->buffer) ? buffer_tostring(&strm->buffer, ctx) : JS_NULL;
       break;
     }
   }

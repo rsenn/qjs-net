@@ -139,7 +139,7 @@ http_headers(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
     buffer_alloc(headers, 1024, ctx);
 
   for(tok = WSI_TOKEN_HOST; tok < WSI_TOKEN_COUNT; tok++) {
-    if(tok == WSI_TOKEN_HTTP)
+    if(tok == WSI_TOKEN_HTTP || tok == WSI_TOKEN_HTTP_URI_ARGS)
       continue;
 
     if((len = lws_hdr_total_length(wsi, tok)) > 0) {

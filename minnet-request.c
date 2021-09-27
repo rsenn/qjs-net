@@ -202,19 +202,19 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_ARRAYBUFFER: {
-      ret = buffer_OFFSET(&req->body) ? buffer_toarraybuffer(&req->body, ctx) : JS_NULL;
+      ret = buffer_WRITE(&req->body) ? buffer_toarraybuffer(&req->body, ctx) : JS_NULL;
       break;
     }
     case REQUEST_TEXT: {
-      ret = buffer_OFFSET(&req->body) ? buffer_tostring(&req->body, ctx) : JS_NULL;
+      ret = buffer_WRITE(&req->body) ? buffer_tostring(&req->body, ctx) : JS_NULL;
       break;
     }
     case REQUEST_BODY: {
-      if(buffer_OFFSET(&req->body)) {
+      if(buffer_WRITE(&req->body)) {
         size_t typelen;
         const char* type = header_get(ctx, &typelen, &req->headers, "content-type");
 
-        ret = minnet_stream_new(ctx, type, typelen, buffer_START(&req->body), buffer_OFFSET(&req->body));
+        ret = minnet_stream_new(ctx, type, typelen, buffer_BEGIN(&req->body), buffer_WRITE(&req->body));
       } else {
         ret = JS_NULL;
       }

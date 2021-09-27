@@ -34,16 +34,20 @@ struct wsi_opaque_user_data {
   JSObject* obj;
   struct socket* ws;
   struct http_request* req;
+  int64_t serial;
 };
 
 static inline struct wsi_opaque_user_data*
 lws_opaque(struct lws* wsi, JSContext* ctx) {
+  static int64_t opaque_serial;
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = lws_get_opaque_user_data(wsi)))
     return opaque;
 
   opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
+  opaque->serial = ++opaque_serial;
+
   lws_set_opaque_user_data(wsi, opaque);
   return opaque;
 }
