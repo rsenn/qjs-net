@@ -48,9 +48,6 @@ else(BUILD_CURL)
   set(LOCAL_CURL OFF)
 endif(BUILD_CURL)
 
-set(CMAKE_BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}/curl/lib" CACHE PATH "Build with local rpath" FORCE)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib" CACHE PATH "Build with install rpath" FORCE)
-
 option(BUILD_CURL "Build curl library" ${LOCAL_CURL})
 #message("BUILD_CURL: ${BUILD_CURL}")
 
@@ -186,11 +183,9 @@ function(make_shared_module FNAME)
     ${TARGET_NAME}
     PROPERTIES
       PREFIX ""
-      BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}"
-      INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
-      OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
+          OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
       BUILD_RPATH
-      "${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
+      "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
   target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
   message("C module dir: ${QUICKJS_C_MODULE_DIR}")
   install(TARGETS ${TARGET_NAME} DESTINATION ${QUICKJS_C_MODULE_DIR})
@@ -220,6 +215,27 @@ endif(NOT LIBWEBSOCKETS_FOUND)
 
 if(BUILD_LIBWEBSOCKETS)
 
+#[[  find_package(MbedTLS 3.0.0)
+
+  message("${MbedTLS_VERSION}")
+  message("${MbedTLS_LIBRARY}")
+  message("${MbedTLS_LIBRARIES}")
+  message("${MbedTLS_ROOT}")
+  message("${MbedTLS_DIR}")]]
+
+  set(MBEDTLS_LIBRARIES "mbedtls" CACHE STRING "mbedtls libraries")
+  if(MBEDTLS_PREFIX)
+     set(MBEDTLS_INCLUDE_DIRS "${MBEDTLS_PREFIX}/include" CACHE STRING "mbedtls include directories")
+  set(MBEDTLS_LIBRARY_DIR "${MBEDTLS_PREFIX}/lib" CACHE STRING "mbedtls include directories")
+else(MBEDTLS_PREFIX)
+  set(MBEDTLS_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include" CACHE STRING "mbedtls include directories")
+  set(MBEDTLS_LIBRARY_DIR "${CMAKE_INSTALL_PREFIX}/lib" CACHE STRING "mbedtls include directories")
+endif(MBEDTLS_PREFIX)
+
+
+  set(CMAKE_INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR}:${QUICKJS_C_MODULE_DIR}:${QUICKJS_LIBRARY_DIR}" CACHE STRING "Install rpath")
+             message("CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
+          
   message("-- Building LIBWEBSOCKETS from source")
   set(LWS_WITHOUT_TESTAPPS TRUE)
   set(LWS_WITHOUT_TEST_SERVER TRUE)
@@ -234,7 +250,7 @@ if(BUILD_LIBWEBSOCKETS)
       ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
       ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets" FORCE)
-  set(LIBWEBSOCKETS_LIBRARIES "mbedtls;brotlienc;brotlidec;cap" CACHE STRING "libwebsockets libraries" FORCE)
+  set(LIBWEBSOCKETS_LIBRARIES "${MBEDTLS_LIBRARIES};brotlienc;brotlidec;cap" CACHE STRING "libwebsockets libraries")
   if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
     list(PREPEND LIBWEBSOCKETS_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
   else(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
@@ -297,11 +313,17 @@ if(BUILD_LIBWEBSOCKETS)
       -DLWS_WITH_RANGES:BOOL=ON
       -DLWS_WITH_SHARED:BOOL=OFF
       -DLWS_WITH_LIBUV:BOOL=OFF
-      -DLWS_WITHOUT_TESTAPPS:BOOL=ON)
+      -DLWS_WITHOUT_TESTAPPS:BOOL=ON
+      "-DLWS_MBEDTLS_LIBRARIES:STRING=${MBEDTLS_LIBRARIES}"
+      "-DLWS_MBEDTLS_INCLUDE_DIRS:STRING=${MBEDTLS_INCLUDE_DIRS}")
   ExternalProject_Get_Property(libwebsockets CMAKE_CACHE_DEFAULT_ARGS)
   #message("CMAKE_CACHE_DEFAULT_ARGS of libwebsockets = ${CMAKE_CACHE_DEFAULT_ARGS}")
   link_directories("${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib")
 endif(BUILD_LIBWEBSOCKETS)
+
+
+set(CMAKE_BUILD_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_CURRENT_BINARY_DIR}/curl/lib" CACHE PATH "Build with local rpath" FORCE)
+set(CMAKE_INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_INSTALL_PREFIX}/lib;${QUICKJS_C_MODULE_DIR}" CACHE PATH "Build with install rpath" FORCE)
 
 #foreach(VAR LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS LIBWEBSOCKETS_LIBRARY_DIRS LIBWEBSOCKETS_FOUND)
 #  message("${VAR} = ${${VAR}}")
@@ -336,11 +358,9 @@ function(make_shared_module FNAME)
     ${TARGET_NAME}
     PROPERTIES
       PREFIX ""
-      BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}"
-      INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
-      OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
+        OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
       BUILD_RPATH
-      "${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
+      "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
   target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
   message("C module dir: ${QUICKJS_C_MODULE_DIR}")
   install(TARGETS ${TARGET_NAME} DESTINATION ${QUICKJS_C_MODULE_DIR})

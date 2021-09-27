@@ -53,19 +53,11 @@ function(make_module FNAME)
   if(BUILD_SHARED_MODULES)
     add_library(${TARGET_NAME} SHARED ${SOURCES})
 
-    set_target_properties(
-      ${TARGET_NAME}
-      PROPERTIES
-        PREFIX ""
-        RPATH "${OPENCV_LIBRARY_DIRS}:${QUICKJS_INSTALL_PREFIX}/lib:${QUICKJS_INSTALL_PREFIX}/lib/quickjs"
-        OUTPUT_NAME "${VNAME}"
-        BUILD_RPATH
-        "${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/quickjs:${CMAKE_CURRENT_BINARY_DIR}/quickjs"
-        COMPILE_FLAGS "${MODULE_COMPILE_FLAGS}")
+    set_target_properties(${TARGET_NAME} PROPERTIES  RPATH "${MBEDTLS_LIBRARY_DIR}" PREFIX "" OUTPUT_NAME "${VNAME}" COMPILE_FLAGS
+                                                                                     "${MODULE_COMPILE_FLAGS}")
 
     target_compile_definitions(${TARGET_NAME} PRIVATE _GNU_SOURCE=1 JS_SHARED_LIBRARY=1 JS_${UNAME}_MODULE=1
                                                       CONFIG_PREFIX="${QUICKJS_INSTALL_PREFIX}")
-
 
     message("C module dir: ${QUICKJS_C_MODULE_DIR}")
     install(TARGETS ${TARGET_NAME} DESTINATION "${QUICKJS_C_MODULE_DIR}"
