@@ -41,7 +41,7 @@ connect_client(struct lws_context* context, const char* host, uint16_t port, BOO
 
 static const struct lws_protocols client_protocols[] = {
     {"ws", lws_client_callback, 0, 0, 0, 0, 0},
-    LWS_PROTOCOL_LIST_TERM,
+    {0},
 };
 
 JSValue
@@ -160,11 +160,6 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     case LWS_CALLBACK_UNLOCK_POLL: {
       break;
     }
-    case LWS_CALLBACK_CONNECTING: {
-      //   printf("LWS_CALLBACK_CONNECTING\n");
-      break;
-    }
-
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
       break;
     }

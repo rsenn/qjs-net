@@ -19,7 +19,7 @@ static struct lws_protocols protocols[] = {
     {"http", http_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     {"proxy-raw", raw_client_callback, 0, 1024, 0, NULL, 0},
-    LWS_PROTOCOL_LIST_TERM,
+    {0},
 };
 
 JSValue
