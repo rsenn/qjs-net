@@ -64,7 +64,7 @@ buffer_write(struct byte_buffer* buf, const char* x, size_t n) {
 
 int
 buffer_vprintf(struct byte_buffer* buf, const char* format, va_list ap) {
-  ssize_t n, size = lws_ptr_diff_size_t(buf->end, buf->write);
+  ssize_t n, size = buffer_AVAIL(buf);
   n = vsnprintf((char*)buf->write, size, format, ap);
   if(n > size)
     return 0;
