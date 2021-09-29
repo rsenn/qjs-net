@@ -26,6 +26,7 @@ JSValue
 minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   int a = 0;
   int port = 7981;
+  BOOL is_tls;
   memset(&minnet_server, 0, sizeof minnet_server);
 
   lwsl_user("Minnet WebSocket Server\n");
@@ -34,6 +35,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
   JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
   JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
+  JSValue opt_tls = JS_GetPropertyStr(ctx, options, "tls");
   JSValue opt_on_pong = JS_GetPropertyStr(ctx, options, "onPong");
   JSValue opt_on_close = JS_GetPropertyStr(ctx, options, "onClose");
   JSValue opt_on_connect = JS_GetPropertyStr(ctx, options, "onConnect");
@@ -41,7 +43,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
   JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
-
+  is_tls = JS_ToBool(ctx, opt_tls);
   if(!JS_IsUndefined(opt_port))
     JS_ToInt32(ctx, &port, opt_port);
 
@@ -64,10 +66,16 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   minnet_server.info.port = port;
   minnet_server.info.protocols = protocols;
   minnet_server.info.mounts = 0;
-  minnet_server.info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT | LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER |
-                               LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT /*| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE*/;
+  minnet_server.info.options = 0
+      //|LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER
+      //|LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT
+      //| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE
+      ;
+  if(is_tls) {
+    minnet_server.info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
 
-  minnet_ws_sslcert(ctx, &minnet_server.info, options);
+    minnet_ws_sslcert(ctx, &minnet_server.info, options);
+  }
 
   if(JS_IsArray(ctx, opt_mounts)) {
     MinnetHttpMount** m = (MinnetHttpMount**)&minnet_server.info.mounts;
