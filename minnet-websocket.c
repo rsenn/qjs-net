@@ -63,17 +63,12 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
   if((opaque = lws_get_opaque_user_data(wsi))) {
     JSValue ws_obj;
     MinnetWebsocket* ws;
-
     if(opaque->obj) {
       ws_obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, opaque->obj));
-
       ws = JS_GetOpaque2(ctx, ws_obj, minnet_ws_class_id);
-
       if(!ws)
         return JS_EXCEPTION;
-
       ws->ref_count++;
-
     } else {
       ws_obj = minnet_ws_wrap(ctx, wsi);
       opaque->obj = JS_VALUE_GET_OBJ(ws_obj);
@@ -181,28 +176,23 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
     case RESPONSE_BODY: {
       const char* msg = 0;
       uint32_t status = 0;
-
+      
       JS_ToUint32(ctx, &status, argv[0]);
-
       if(argc >= 2)
         msg = JS_ToCString(ctx, argv[1]);
-
       lws_return_http_status(ws->lwsi, status, msg);
       if(msg)
         JS_FreeCString(ctx, msg);
       break;
     }
     case RESPONSE_REDIRECT: {
-
       const char* msg = 0;
       size_t len = 0;
       uint32_t status = 0;
-
       JS_ToUint32(ctx, &status, argv[0]);
 
       if(argc >= 2)
         msg = JS_ToCStringLen(ctx, &len, argv[1]);
-
       if(lws_http_redirect(ws->lwsi, status, (unsigned char*)msg, len, &header.write, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
       if(msg)
@@ -210,23 +200,20 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
       break;
     }
     case RESPONSE_HEADER: {
-
       size_t namelen;
       const char* namestr = JS_ToCStringLen(ctx, &namelen, argv[0]);
       char* name = js_malloc(ctx, namelen + 2);
       size_t len;
       const char* value = JS_ToCStringLen(ctx, &len, argv[1]);
-
       memcpy(name, namestr, namelen);
       name[namelen] = ':';
       name[namelen + 1] = '\0';
 
       if(lws_add_http_header_by_name(ws->lwsi, (const uint8_t*)name, (const uint8_t*)value, len, &header.write, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
-
+      
       js_free(ctx, name);
-      JS_FreeCString(ctx, namestr);
-      JS_FreeCString(ctx, value);
+      JS_FreeCString(ctx, namestr);      JS_FreeCString(ctx, value);
       break;
     }
   }
