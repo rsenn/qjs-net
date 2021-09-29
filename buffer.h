@@ -3,11 +3,13 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <stdarg.h>
 #include <string.h>
 #include <quickjs.h>
 #include <cutils.h>
+#include <unistd.h>
 
 typedef struct byte_buffer {
   uint8_t *start, *write, *read, *end, *alloc;
