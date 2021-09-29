@@ -26,7 +26,7 @@ JSValue
 minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   int a = 0;
   int port = 7981;
-  BOOL is_tls;
+  BOOL is_tls = FALSE;
   memset(&minnet_server, 0, sizeof minnet_server);
 
   lwsl_user("Minnet WebSocket Server\n");
@@ -43,7 +43,18 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
   JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
-  is_tls = JS_ToBool(ctx, opt_tls);
+
+  if(!JS_IsUndefined(opt_tls)) {
+    is_tls = JS_ToBool(ctx, opt_tls);
+  } else {
+    JSValue opt_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
+
+    if(JS_IsString(opt_private_key))
+      is_tls = TRUE;
+
+    JS_FreeValue(ctx, opt_private_key);
+  }
+
   if(!JS_IsUndefined(opt_port))
     JS_ToInt32(ctx, &port, opt_port);
 

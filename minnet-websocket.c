@@ -61,14 +61,23 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = lws_get_opaque_user_data(wsi))) {
-    JSValue ws_obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, opaque->obj));
-    MinnetWebsocket* ws = JS_GetOpaque2(ctx, ws_obj, minnet_ws_class_id);
+    JSValue ws_obj;
+    MinnetWebsocket* ws;
 
-    if(!ws)
-      return JS_EXCEPTION;
+    if(opaque->obj) {
+      ws_obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, opaque->obj));
 
-    ws->ref_count++;
+      ws = JS_GetOpaque2(ctx, ws_obj, minnet_ws_class_id);
 
+      if(!ws)
+        return JS_EXCEPTION;
+
+      ws->ref_count++;
+
+    } else {
+      ws_obj = minnet_ws_wrap(ctx, wsi);
+      opaque->obj = JS_VALUE_GET_OBJ(ws_obj);
+    }
     return ws_obj;
   }
 
