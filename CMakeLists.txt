@@ -179,8 +179,8 @@ function(make_shared_module FNAME)
 
   add_library(${TARGET_NAME} SHARED ${FNAME}.c)
 
-  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY}  mbedtls mbedx509 mbedcrypto ${OPENSSL_SSL_LIBRARY}
-                        ${OPENSSL_CRYPTO_LIBRARY} quickjs dl)
+  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto
+                        ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} quickjs dl)
   set_target_properties(
     ${TARGET_NAME}
     PROPERTIES
@@ -195,7 +195,8 @@ function(make_shared_module FNAME)
 
   if(LIBWEBSOCKETS_FOUND)
     target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
-    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY}  mbedtls mbedx509 mbedcrypto ${OPENSSL_CRYPTO_LIBRARY})
+    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto
+                          ${OPENSSL_CRYPTO_LIBRARY})
   endif()
 endfunction()
 
@@ -309,7 +310,7 @@ function(make_shared_module FNAME)
 
   if(LIBWEBSOCKETS_FOUND)
     target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
-    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES}  )
+    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES})
   endif()
 endfunction()
 
@@ -333,7 +334,7 @@ set_target_properties(
                                                                           "net" # OUTPUT_NAME_DEBUG "net-debug"
 )
 target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
-target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY}  mbedtls mbedx509 mbedcrypto
+target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto
                       ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
 
 #message("C module dir: ${QUICKJS_C_MODULE_DIR}")
