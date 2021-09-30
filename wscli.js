@@ -3,6 +3,9 @@ import * as os from 'os';
 import REPL from 'repl';
 import inspect from 'inspect';
 import * as net from 'net';
+import { Console } from 'console';
+
+const connections = new Set();
 
 function GetOpt(options = {}, args) {
   let s, l;
@@ -10,10 +13,7 @@ function GetOpt(options = {}, args) {
   let positional = (r['@'] = []);
   if(!(options instanceof Array)) options = Object.entries(options);
   const findOpt = a =>
-    options.find(
-      ([optname, option]) =>
-        (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname
-    );
+    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
   let [, params] = options.find(o => o[0] == '@') || [];
   if(typeof params == 'string') params = params.split(',');
   for(let i = 0; i < args.length; i++) {
@@ -92,17 +92,15 @@ class CLI extends REPL {
 
   handleCmd(data) {
     if(typeof data == 'string' && data.length > 0) {
-      for(let connection of connections) {
-        this.printStatus(`Sending '${data}'`, false);
-        connection.send(data);
-      }
+      this.printStatus(`Sending '${data}'`, false);
+      for(let connection of connections) connection.send(data);
     }
   }
 }
 
 function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
-
+  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true } });
   let params = GetOpt(
     {
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],
@@ -119,15 +117,11 @@ function main(...args) {
     },
     args
   );
-  const {
-    'ssl-cert': sslCert = 'localhost.crt',
-    'ssl-private-key': sslPrivateKey = 'localhost.key'
-  } = params;
+  const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key' } = params;
   const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   console.log('params', params);
-  let connections = new Set();
   function createWS(url, callbacks, listen = 0) {
     let [protocol, host, port, ...location] = [...url.matchAll(/[^:\/]+/g)].map(a => a[0]);
     if(!isNaN(+port)) port = +port;
