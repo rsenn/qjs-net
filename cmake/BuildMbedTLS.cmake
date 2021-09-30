@@ -35,11 +35,16 @@ macro(build_mbedtls)
 
   string(APPEND MBEDTLS_C_FLAGS ${CMAKE_C_FLAGS})
 
-  if(${ARM_CPU_ARCHITECTURE} STREQUAL "ARMv8-M.BASE")
+  if("${ARM_CPU_ARCHITECTURE}" STREQUAL "ARMv8-M.BASE")
     string(APPEND MBEDTLS_C_FLAGS " -DMULADDC_CANNOT_USE_R7")
   endif()
 
   if(TARGET ${MBEDTLS_TARGET_NAME})
+    foreach(P NAME BUNDLE DEPRECATION FOLDER FRAMEWORK IMPORTED LABELS LOCATION NAME PREFIX RESOURCE SOURCES SOVERSION SUFFIX TYPE VERSION)
+      get_target_property(VALUE "${MBEDTLS_TARGET_NAME}" "${P}")
+      message("Target ${MBEDTLS_TARGET_NAME} property '${P}': ${VALUE}")
+    endforeach()
+
     message(FATAL_ERROR "A target with name ${MBEDTLS_TARGET_NAME} is already defined. Please set MBEDTLS_TARGET_NAME to a unique value.")
   endif()
 
