@@ -6,6 +6,11 @@ set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag")
 option(BUILD_SHARED_LIBWEBSOCKETS "Shared building of dependency libraries" OFF)
 #message("libwebsockets shared: ${BUILD_SHARED_LIBWEBSOCKETS}")
 
+
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "PIC code")
+ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
+
 if(UNIX AND NOT APPLE)
   include(GNUInstallDirs)
 elseif(NOT DEFINED CMAKE_INSTALL_LIBDIR)
@@ -15,12 +20,15 @@ endif()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/UseMultiArch.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/QuickJSModule.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindQuickJS.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindMbedTLS.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildLibwebsockets.cmake)
 
 message(STATUS "Finding QuickJS...")
 
 find_quickjs()
 configure_quickjs()
+
+
 
 if(BUILD_SHARED_LIBWEBSOCKETS)
   set(LWS_WITH_SHARED TRUE)
@@ -70,8 +78,6 @@ endif(NOT BUILD_CURL)
 if(NOT CURL_FOUND OR BUILD_CURL)
   set(BUILD_CURL TRUE CACHE BOOL "Build curl from source")
   # set(LIBCURL_NO_SHARED libcurl CACHE STRING "Build static libcurl")
-  # set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "PIC code")
-  # set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
   message("-- Building CURL from source")
   include(ExternalProject)
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/curl/CMakeLists.txt")
@@ -87,13 +93,13 @@ if(NOT CURL_FOUND OR BUILD_CURL)
       GIT_SUBMODULES_RECURSE TRUE
       GIT_PROGRESS TRUE
       BINARY_DIR
-        curl # STEP_TARGETS   build CONFIGURE_COMMAND cmake
-             # "${CMAKE_CURRENT_SOURCE_DIR}/curl"
-             # -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
-             # CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
-             # -DBUILD_SHARED_LIBS:BOOL=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-             # CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
-             # -DBUILD_SHARED_LIBS:BOOL=OFF
+        curl STEP_TARGETS   build CONFIGURE_COMMAND cmake
+              "${CMAKE_CURRENT_SOURCE_DIR}/curl"
+             -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
+            CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
+             -DBUILD_SHARED_LIBS:BOOL=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+               CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
+              -DBUILD_SHARED_LIBS:BOOL=OFF
     )
     set_property(DIRECTORY PROPERTY EP_STEP_TARGETS build)
   endif()
@@ -109,19 +115,6 @@ if(NOT CURL_FOUND OR BUILD_CURL)
 endif()
 message(STATUS "CURL library: ${CURL_LIBRARY}")
 set(DISABLE_WERROR ON)
-
-#[[option(USE_SYSTEM_LIBWEBSOCKETS "Use system-installed libwebsockets" ON)
-
-if(USE_SYSTEM_LIBWEBSOCKETS)
-  include(FindPkgConfig)
-
-  unset(LIBWEBSOCKETS_INCLUDE_DIRS CACHE)
-  unset(LIBWEBSOCKETS_LIBRARY_DIRS CACHE)
-  unset(LIBWEBSOCKETS_LIBRARIES CACHE)
-  unset(LIBWEBSOCKETS_FOUND CACHE)
-
-  pkg_search_module(LIBWEBSOCKETS libwebsockets)
-endif(USE_SYSTEM_LIBWEBSOCKETS)]]
 
 if(NOT QUICKJS_INCLUDE_DIR)
   if(QUICKJS_INCLUDE_DIR)
@@ -235,43 +228,20 @@ if(NOT LIBWEBSOCKETS_FOUND)
   set(BUILD_LIBWEBSOCKETS ON CACHE BOOL "build 3rdparty libwebsockets")
 endif(NOT LIBWEBSOCKETS_FOUND)
 
-if(BUILD_LIBWEBSOCKETS)
+if(BUILD_LIBWEBSOCKETS) 
 
-  #[[  find_package(MbedTLS 3.0.0)
-
-  message("${MbedTLS_VERSION}")
-  message("${MbedTLS_LIBRARY}")
-  message("${MbedTLS_LIBRARIES}")
-  message("${MbedTLS_ROOT}")
-  message("${MbedTLS_DIR}")]]
-
-  #  set(MBEDTLS_LIBRARIES "mbedtls" CACHE STRING "mbedtls libraries")
-  #  if(MBEDTLS_PREFIX)
-  #    set(MBEDTLS_INCLUDE_DIRS "${MBEDTLS_PREFIX}/include"
-  #        CACHE STRING "mbedtls include directories")
-  #    set(MBEDTLS_LIBRARY_DIR "${MBEDTLS_PREFIX}/lib"
-  #        CACHE STRING "mbedtls include directories")
-  #  else(MBEDTLS_PREFIX)
-  #    set(MBEDTLS_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include"
-  #        CACHE STRING "mbedtls include directories")
-  #    set(MBEDTLS_LIBRARY_DIR "${CMAKE_INSTALL_PREFIX}/lib"
-  #        CACHE STRING "mbedtls include directories")
-  #  endif(MBEDTLS_PREFIX)
-
-  set(CMAKE_INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR}:${QUICKJS_C_MODULE_DIR}:${QUICKJS_LIBRARY_DIR}" CACHE STRING
-                                                                                                        "Install rpath")
-  message("CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
+  message(STATUS "Finding MBedTLS")
+  find_mbedtls()
+  if(NOT MBEDTLS_FOUND)
+    build_mbedtls()
+  endif(NOT MBEDTLS_FOUND)
 
   build_libwebsockets()
 endif(BUILD_LIBWEBSOCKETS)
 
 set(CMAKE_BUILD_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_CURRENT_BINARY_DIR}/curl/lib" CACHE PATH "Build with local rpath")
 set(CMAKE_INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR}" CACHE PATH "Build with install rpath")
-
-#foreach(VAR LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS LIBWEBSOCKETS_LIBRARY_DIRS LIBWEBSOCKETS_FOUND)
-#  message("${VAR} = ${${VAR}}")
-#endforeach()
-
+ 
 # if(NOT USE_SYSTEM_LIBWEBSOCKETS)
 link_directories(${LIBWEBSOCKETS_LIBRARY_DIRS})
 # endif(NOT USE_SYSTEM_LIBWEBSOCKETS)
