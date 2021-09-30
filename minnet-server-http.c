@@ -358,11 +358,8 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       MinnetBuffer* h = &opaque->req->headers;
       int num_hdr = http_headers(ctx, h, wsi);
-      lwsl_user("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
+      //lwsl_user("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
 
-      /*char* header_data = buffer_escaped(buf, ctx);
-      lwsl_user("http " FGC(171, "%-25s") " headers: " FGC(214, "%s") "\n", lws_callback_name(reason) + 13, header_data);
-      js_free(ctx, header_data);*/
       break;
     }
 
@@ -371,11 +368,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
 
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
-      // MinnetRequest* req = minnet_request_data2(ctx, serv->req_obj);
-
-      // lwsl_user("http LWS_CALLBACK_HTTP_BODY_COMPLETION\tis_h2=%i len: %zu, size: %zu\n", is_h2(wsi), len, buffer_WRITE(&req->body));
-
-      MinnetCallback* cb = /*minnet_server.cb_http.ctx ? &minnet_server.cb_http :*/ serv->mount ? &serv->mount->callback : 0;
+     MinnetCallback* cb = serv->mount ? &serv->mount->callback : 0;
       MinnetBuffer b = BUFFER(buf);
       MinnetResponse* resp = request_handler(serv, cb);
 

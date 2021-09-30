@@ -272,8 +272,9 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
 
   if(argc >= 1 && argc < 3) {
 
-    if(!js_is_nullish(argv[0]))
+    if(!js_is_nullish(argv[0])) {
       buffer_fromvalue(&resp->body, argv[0], ctx);
+    }
 
     argc--;
     argv++;

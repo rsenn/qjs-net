@@ -1,3 +1,4 @@
+#include "jsutils.h"
 #include "buffer.h"
 #include <libwebsockets.h>
 
@@ -10,7 +11,7 @@ buffer_init(struct byte_buffer* buf, uint8_t* start, size_t len) {
   buf->alloc = 0;
 }
 
-struct byte_buffer*
+/*struct byte_buffer*
 buffer_new(JSContext* ctx, size_t size) {
   if(size < LWS_RECOMMENDED_MIN_HEADER_SPACE)
     size = LWS_RECOMMENDED_MIN_HEADER_SPACE;
@@ -18,7 +19,7 @@ buffer_new(JSContext* ctx, size_t size) {
 
   buffer_init(buf, (uint8_t*)&buf[1] + LWS_PRE, size);
   return buf;
-}
+}*/
 
 BOOL
 buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
@@ -51,13 +52,13 @@ buffer_free(struct byte_buffer* buf, JSRuntime* rt) {
   buf->read = 0;
   buf->write = 0;
   buf->end = 0;
+  buf->alloc = 0;
 }
 
 BOOL
 buffer_write(struct byte_buffer* buf, const char* x, size_t n) {
   assert((size_t)buffer_AVAIL(buf) >= n);
   memcpy(buf->write, x, n);
-  buf->write[n] = '\0';
   buf->write += n;
   return TRUE;
 }
@@ -90,6 +91,7 @@ buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   size_t rdofs = buf->read - buf->start;
   uint8_t* x;
   assert(size >= wrofs);
+  assert(buf->alloc);
 
   if(!size) {
     buffer_free(buf, JS_GetRuntime(ctx));
@@ -102,6 +104,7 @@ buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
     if(buf->alloc == 0)
       memcpy(x + LWS_PRE, buf->start, wrofs);
 
+    buf->alloc = x;
     buf->start = x + LWS_PRE;
     buf->write = buf->start + wrofs;
     buf->read = buf->start + rdofs;
@@ -111,7 +114,7 @@ buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   return 0;
 }
 
-int
+/*int
 buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
   void* ptr;
   size_t len;
@@ -124,17 +127,20 @@ buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* c
   }
   return 1;
 }
-
+*/
 int
 buffer_fromvalue(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
-  if(buffer_fromarraybuffer(buf, value, ctx)) {
-    size_t len;
-    const char* str = JS_ToCStringLen(ctx, &len, value);
+  int ret = -1;
+  MinnetBuffer buffer = BUFFER_0();
+  JSBuffer input = js_buffer_from(ctx, value);
 
-    buf->write = buf->start = (uint8_t*)str;
-    buf->end = buf->start + len;
+  if(input.data && buffer_alloc(&buffer, input.size, ctx)) {
+    buffer_write(&buffer, input.data, input.size);
+    ret = 0;
   }
-  return 0;
+end:
+  js_buffer_free(&input, ctx);
+  return ret;
 }
 
 JSValue

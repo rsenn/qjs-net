@@ -17,7 +17,7 @@ typedef struct JSThreadState {
 typedef struct input_buffer {
   uint8_t* data;
   size_t size;
-  void (*free)(JSContext*, uint8_t*, JSValue);
+  void (*free)(JSRuntime*, void* opaque, void* ptr);
   JSValue value;
 } JSBuffer;
 
@@ -144,13 +144,13 @@ js_is_nullish(JSValueConst value) {
 }
 
 static inline void
-js_buffer_free_default(JSContext* ctx, uint8_t* data, JSValue val) {
+js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr) {
+  JSBuffer* buf = opaque;
 
-  if(JS_IsString(val))
-    JS_FreeCString(ctx, (const char*)data);
-
-  if(!JS_IsUndefined(val))
-    JS_FreeValue(ctx, val);
+  if(JS_IsString(buf->value))
+    JS_FreeValueRT(rt, buf->value);
+  else if(!JS_IsUndefined(buf->value))
+    JS_FreeValueRT(rt, buf->value);
 }
 
 static inline const uint8_t*

@@ -41,8 +41,6 @@ BOOL buffer_write(struct byte_buffer*, const char* x, size_t n);
 int buffer_vprintf(struct byte_buffer*, const char* format, va_list ap);
 int buffer_printf(struct byte_buffer*, const char* format, ...);
 uint8_t* buffer_realloc(struct byte_buffer*, size_t size, JSContext* ctx);
-int buffer_fromarraybuffer(struct byte_buffer*, JSValue value, JSContext* ctx);
-int buffer_fromvalue(struct byte_buffer*, JSValue value, JSContext* ctx);
 JSValue buffer_tostring(struct byte_buffer const*, JSContext* ctx);
 char* buffer_escaped(struct byte_buffer const*, JSContext* ctx);
 void buffer_finalizer(JSRuntime*, void* opaque, void* ptr);

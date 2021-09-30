@@ -93,14 +93,16 @@ js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags
 JSBuffer
 js_buffer_from(JSContext* ctx, JSValueConst value) {
   JSBuffer ret = {0, 0, &js_buffer_free_default, JS_UNDEFINED};
-  ret.value = JS_DupValue(ctx, value);
   ret.free = &js_buffer_free_default;
 
   if(JS_IsString(value)) {
     ret.data = (uint8_t*)JS_ToCStringLen(ctx, &ret.size, value);
+    ret.value = value;
   } else {
     ret.data = JS_GetArrayBuffer(ctx, &ret.size, ret.value);
+    ret.value = JS_DupValue(ctx, value);
   }
+
   return ret;
 }
 
@@ -127,7 +129,7 @@ js_buffer_dump(const JSBuffer* in, DynBuf* db) {
 void
 js_buffer_free(JSBuffer* in, JSContext* ctx) {
   if(in->data) {
-    in->free(ctx, in->data, in->value);
+    in->free(JS_GetRuntime(ctx), in, in->data);
     in->data = 0;
     in->size = 0;
     in->value = JS_UNDEFINED;

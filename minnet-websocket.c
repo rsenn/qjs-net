@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "jsutils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 #include "minnet-server-http.h"
@@ -127,40 +128,35 @@ minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValu
 static JSValue
 minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetWebsocket* ws;
-  const char* msg;
-  uint8_t* data;
-  int m, n;
-  size_t len;
+  int64_t m;
+  JSBuffer input;
+  MinnetBuffer buffer = BUFFER_0();
+  JSValue ret = JS_UNDEFINED;
 
   if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
 
-  if(JS_IsString(argv[0])) {
-    msg = JS_ToCString(ctx, argv[0]);
-    len = strlen(msg);
-    uint8_t buffer[LWS_PRE + len + 1];
+  input = js_buffer_from(ctx, argv[0]);
 
-    n = lws_snprintf((char*)&buffer[LWS_PRE], len + 1, "%s", msg);
-    m = lws_write(ws->lwsi, &buffer[LWS_PRE], len, LWS_WRITE_TEXT);
-    if(m < n) {
-      // Sending message failed
-      return JS_EXCEPTION;
-    }
-    return JS_UNDEFINED;
+  if(!input.data && !input.size)
+    return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
+
+  if(!buffer_alloc(&buffer, input.size, ctx)) {
+    ret = JS_ThrowOutOfMemory(ctx);
+    goto fail;
   }
+  buffer_write(&buffer, input.data, input.size);
 
-  data = JS_GetArrayBuffer(ctx, &len, argv[0]);
-  if(data) {
-    uint8_t buffer[LWS_PRE + len];
-    memcpy(&buffer[LWS_PRE], data, len);
+  m = lws_write(ws->lwsi, buffer.read, input.size, JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
+  if(m < input.size)
+    ret = JS_ThrowInternalError(ctx, "lws write failed: %d/%zu", m, input.size);
+  else
+    ret = JS_NewInt64(ctx, m);
 
-    m = lws_write(ws->lwsi, &buffer[LWS_PRE], len, LWS_WRITE_BINARY);
-    if((size_t)m < len) {
-      // Sending data failed
-      return JS_EXCEPTION;
-    }
-  }
-  return JS_UNDEFINED;
+fail:
+  buffer_free(&buffer, JS_GetRuntime(ctx));
+
+  return ret;
 }
 
 static JSValue
@@ -176,7 +172,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
     case RESPONSE_BODY: {
       const char* msg = 0;
       uint32_t status = 0;
-      
+
       JS_ToUint32(ctx, &status, argv[0]);
       if(argc >= 2)
         msg = JS_ToCString(ctx, argv[1]);
@@ -211,9 +207,10 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
 
       if(lws_add_http_header_by_name(ws->lwsi, (const uint8_t*)name, (const uint8_t*)value, len, &header.write, header.end) < 0)
         ret = JS_NewInt32(ctx, -1);
-      
+
       js_free(ctx, name);
-      JS_FreeCString(ctx, namestr);      JS_FreeCString(ctx, value);
+      JS_FreeCString(ctx, namestr);
+      JS_FreeCString(ctx, value);
       break;
     }
   }
