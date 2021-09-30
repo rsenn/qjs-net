@@ -20,8 +20,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/QuickJSModule.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindQuickJS.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildLibwebsockets.cmake)
 
-message(STATUS "Finding QuickJS...")
-
 find_quickjs()
 configure_quickjs()
 
@@ -206,20 +204,35 @@ endif(NOT LIBWEBSOCKETS_FOUND)
 
 if(BUILD_LIBWEBSOCKETS)
 
-  message(STATUS "Finding MBedTLS")
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindMbedTLS.cmake)
 
   find_mbedtls()
   if(NOT MBEDTLS_FOUND)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildMbedTLS.cmake)
+    
     set(MBEDTLS_DEBUG OFF)
     set(MBEDTLS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mbedtls")
     set(MBEDTLS_C_FLAGS "${CMAKE_C_FLAGS}")
     set(MBEDTLS_TARGET_NAME libmbedtls)
 
     build_mbedtls()
-    
   endif(NOT MBEDTLS_FOUND)
+
+
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindBrotli.cmake)
+
+  find_brotli()
+  if(NOT BROTLI_FOUND)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildBrotli.cmake)
+    
+    set(BROTLI_DEBUG OFF)
+    set(BROTLI_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/brotli")
+    set(BROTLI_C_FLAGS "${CMAKE_C_FLAGS}")
+    set(BROTLI_TARGET_NAME libbrotli)
+
+    build_brotli()
+  endif(NOT BROTLI_FOUND)
+
 
   build_libwebsockets()
 endif(BUILD_LIBWEBSOCKETS)
