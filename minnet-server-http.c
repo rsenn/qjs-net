@@ -268,7 +268,7 @@ http_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
     }
   }
 
-  lwsl_user("http_writable done=%i remain=%zu final=%d", done, buffer_REMAIN(&resp->body), n == LWS_WRITE_HTTP_FINAL);
+  lwsl_debug("http_writable done=%i remain=%zu final=%d", done, buffer_REMAIN(&resp->body), n == LWS_WRITE_HTTP_FINAL);
 
   if(done && buffer_REMAIN(&resp->body) == 0) {
     if(lws_http_transaction_completed(wsi))
@@ -358,7 +358,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       MinnetBuffer* h = &opaque->req->headers;
       int num_hdr = http_headers(ctx, h, wsi);
-      //lwsl_user("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
+      // lwsl_user("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
 
       break;
     }
@@ -368,7 +368,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     }
 
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
-     MinnetCallback* cb = serv->mount ? &serv->mount->callback : 0;
+      MinnetCallback* cb = serv->mount ? &serv->mount->callback : 0;
       MinnetBuffer b = BUFFER(buf);
       MinnetResponse* resp = request_handler(serv, cb);
 

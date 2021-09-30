@@ -148,17 +148,20 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 static int
 lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
 
-  if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
-    lwsl_user("ws   %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
-
   switch(reason) {
+    case LWS_CALLBACK_WSI_CREATE:
+    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
+    case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:  
+    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
+    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
+    case LWS_CALLBACK_CONNECTING:
+    case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL:
     case LWS_CALLBACK_PROTOCOL_INIT: {
-      // connect_client();
-      break;
+     return 0;
     }
     case LWS_CALLBACK_LOCK_POLL:
     case LWS_CALLBACK_UNLOCK_POLL: {
-      break;
+     return 0;
     }
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
       break;
@@ -270,5 +273,9 @@ lws_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
     }
   }
 
-  return lws_callback_http_dummy(wsi, reason, user, in, len);
+  if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
+    lwsl_user("ws   %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
+
+return 0;
+//  return lws_callback_http_dummy(wsi, reason, user, in, len);
 }

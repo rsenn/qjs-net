@@ -131,12 +131,13 @@ buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* c
 int
 buffer_fromvalue(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
   int ret = -1;
-  MinnetBuffer buffer = BUFFER_0();
   JSBuffer input = js_buffer_from(ctx, value);
 
-  if(input.data && buffer_alloc(&buffer, input.size, ctx)) {
-    buffer_write(&buffer, input.data, input.size);
+  if(input.data == 0) {
     ret = 0;
+  } else if(buffer_alloc(buf, input.size, ctx)) {
+    buffer_write(buf, input.data, input.size);
+    ret = 1;
   }
 end:
   js_buffer_free(&input, ctx);

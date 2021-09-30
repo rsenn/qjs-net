@@ -59,7 +59,7 @@ lws_log_callback(int level, const char* line) {
 
 int
 minnet_lws_unhandled(const char* handler, int reason) {
-  lwsl_user("Unhandled %s client event: %i %s\n", handler, reason, lws_callback_name(reason));
+  lwsl_warn("Unhandled %s client event: %i %s\n", handler, reason, lws_callback_name(reason));
   return -1;
 }
 
@@ -203,7 +203,7 @@ lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
 
   events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
   revents = magic & events;
-  lwsl_user("lws_io_handler fd=%d wr=%i magic=%s events=%s revents=%s", fd, wr, io_events(magic), io_events(events), io_events(revents));
+  lwsl_debug("lws_io_handler fd=%d wr=%i magic=%s events=%s revents=%s", fd, wr, io_events(magic), io_events(events), io_events(revents));
 
   if((revents & PIO) != magic) {
     x.fd = fd;
@@ -211,7 +211,7 @@ lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
     x.revents = 0;
 
     if(poll(&x, 1, 0) < 0)
-      lwsl_user("poll error: %s\n", strerror(errno));
+      lwsl_err("poll error: %s\n", strerror(errno));
     else
       revents = x.revents;
   }
@@ -222,7 +222,7 @@ lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
     x.revents = /* revents &*/ revents;
 
     int ret = lws_service_fd(context, &x);
-    lwsl_user("lws_service_fd fd=%d, magic=%s, revents=%s, ret=%d", fd, io_events(magic), io_events(revents), ret);
+    lwsl_debug("lws_service_fd fd=%d, magic=%s, revents=%s, ret=%d", fd, io_events(magic), io_events(revents), ret);
   }
 
   return JS_UNDEFINED;

@@ -128,28 +128,26 @@ minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValu
 static JSValue
 minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetWebsocket* ws;
-  int64_t m;
-  JSBuffer input;
+  int64_t m, len;
   MinnetBuffer buffer = BUFFER_0();
   JSValue ret = JS_UNDEFINED;
 
   if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
     return JS_EXCEPTION;
 
-  input = js_buffer_from(ctx, argv[0]);
-
-  if(!input.data && !input.size)
+  m = buffer_fromvalue(&buffer, argv[0], ctx);
+  if(!m)
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
 
-  if(!buffer_alloc(&buffer, input.size, ctx)) {
+  if(m < 0) {
     ret = JS_ThrowOutOfMemory(ctx);
     goto fail;
   }
-  buffer_write(&buffer, input.data, input.size);
+  len = buffer_REMAIN(&buffer);
+  m = lws_write(ws->lwsi, buffer.read, buffer_REMAIN(&buffer), JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
 
-  m = lws_write(ws->lwsi, buffer.read, input.size, JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
-  if(m < input.size)
-    ret = JS_ThrowInternalError(ctx, "lws write failed: %d/%zu", m, input.size);
+  if(m < len)
+    ret = JS_ThrowInternalError(ctx, "lws write failed: %" PRIi64 "/%" PRIi64, m, len);
   else
     ret = JS_NewInt64(ctx, m);
 

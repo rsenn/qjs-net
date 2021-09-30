@@ -32,20 +32,20 @@ typedef struct byte_buffer {
 #define buffer_BEGIN(b) (void*)(b)->start
 #define buffer_END(b) (void*)(b)->end
 
-void buffer_init(struct byte_buffer*, uint8_t* start, size_t len);
-struct byte_buffer* buffer_new(JSContext*, size_t size);
-BOOL buffer_alloc(struct byte_buffer*, size_t size, JSContext* ctx);
-ssize_t buffer_append(struct byte_buffer*, const void* x, size_t n, JSContext* ctx);
-void buffer_free(struct byte_buffer*, JSRuntime* rt);
-BOOL buffer_write(struct byte_buffer*, const char* x, size_t n);
-int buffer_vprintf(struct byte_buffer*, const char* format, va_list ap);
-int buffer_printf(struct byte_buffer*, const char* format, ...);
-uint8_t* buffer_realloc(struct byte_buffer*, size_t size, JSContext* ctx);
-JSValue buffer_tostring(struct byte_buffer const*, JSContext* ctx);
-char* buffer_escaped(struct byte_buffer const*, JSContext* ctx);
-void buffer_finalizer(JSRuntime*, void* opaque, void* ptr);
-JSValue buffer_toarraybuffer(struct byte_buffer const*, JSContext* ctx);
-void buffer_dump(const char*, struct byte_buffer const* buf);
+void buffer_init(struct byte_buffer*, uint8_t*, size_t);
+BOOL buffer_alloc(struct byte_buffer*, size_t, JSContext*);
+ssize_t buffer_append(struct byte_buffer*, const void*, size_t, JSContext*);
+void buffer_free(struct byte_buffer*, JSRuntime*);
+BOOL buffer_write(struct byte_buffer*, const char*, size_t);
+int buffer_vprintf(struct byte_buffer*, const char*, va_list);
+int buffer_printf(struct byte_buffer*, const char*, ...);
+uint8_t* buffer_realloc(struct byte_buffer*, size_t, JSContext*);
+int buffer_fromvalue(struct byte_buffer*, JSValue, JSContext*);
+JSValue buffer_tostring(struct byte_buffer const*, JSContext*);
+char* buffer_escaped(struct byte_buffer const*, JSContext*);
+void buffer_finalizer(JSRuntime*, void*, void*);
+JSValue buffer_toarraybuffer(struct byte_buffer const*, JSContext*);
+void buffer_dump(const char*, struct byte_buffer const*);
 
 static inline uint8_t*
 buffer_grow(struct byte_buffer* buf, size_t size, JSContext* ctx) {
