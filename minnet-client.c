@@ -162,7 +162,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_UNLOCK_POLL: {
       return 0;
     }
-   
+
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
 
       break;
@@ -186,7 +186,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
     // case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_CLIENT_ESTABLISHED: {
-        lwsl_user("ws   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), len, in);
+      lwsl_user("ws   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), len, in);
 
       if(client_cb_connect.ctx) {
         JSValue ws_obj = minnet_ws_object(client_cb_connect.ctx, wsi);

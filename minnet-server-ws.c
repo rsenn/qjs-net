@@ -12,7 +12,9 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   switch(reason) {
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
-    case LWS_CALLBACK_PROTOCOL_INIT: return 0;
+    case LWS_CALLBACK_PROTOCOL_INIT: {
+      return lws_callback_http_dummy(wsi, reason, user, in, len);
+    }
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
       /* return 0;
@@ -165,7 +167,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
     case LWS_CALLBACK_ADD_HEADERS:
     case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL: {
-      return 0;
+      return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
     case LWS_CALLBACK_CLOSED_HTTP:
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
@@ -185,6 +187,5 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
             (int)len,
             (char*)in);
 
-  return 0;
-  //  return lws_callback_http_dummy(wsi, reason, user, in, len);
+  return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
