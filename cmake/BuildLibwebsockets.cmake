@@ -9,9 +9,7 @@ macro(build_libwebsockets)
   set(LWS_HAVE_LIBCAP FALSE CACHE BOOL "have libcap")
 
   # include: libwebsockets find_package(libwebsockets)
-  set(LIBWEBSOCKETS_INCLUDE_DIRS
-      ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
-      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
+  set(LIBWEBSOCKETS_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets")
   set(LIBWEBSOCKETS_LIBRARIES "${MBEDTLS_LIBRARIES};brotlienc;brotlidec;cap" CACHE STRING "libwebsockets libraries")
   if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
@@ -21,8 +19,7 @@ macro(build_libwebsockets)
   endif(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
 
   set(LIBWEBSOCKETS_INCLUDE_DIRS "${LIBWEBSOCKETS_INCLUDE_DIRS}" CACHE PATH "libwebsockets include directory")
-  set(LIBWEBSOCKETS_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib CACHE PATH
-                                                                                     "libwebsockets library directory")
+  set(LIBWEBSOCKETS_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib CACHE PATH "libwebsockets library directory")
   # add_subdirectory(libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets)
   include(ExternalProject)
   ExternalProject_Add(

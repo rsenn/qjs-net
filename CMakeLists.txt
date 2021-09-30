@@ -6,10 +6,8 @@ set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag")
 option(BUILD_SHARED_LIBWEBSOCKETS "Shared building of dependency libraries" OFF)
 #message("libwebsockets shared: ${BUILD_SHARED_LIBWEBSOCKETS}")
 
-
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "PIC code")
- set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 
 if(UNIX AND NOT APPLE)
   include(GNUInstallDirs)
@@ -27,8 +25,6 @@ message(STATUS "Finding QuickJS...")
 
 find_quickjs()
 configure_quickjs()
-
-
 
 if(BUILD_SHARED_LIBWEBSOCKETS)
   set(LWS_WITH_SHARED TRUE)
@@ -87,20 +83,9 @@ if(NOT CURL_FOUND OR BUILD_CURL)
     set(CURL_REPO "https://github.com/curl/curl.git")
 
     ExternalProject_Add(
-      curl
-      SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl"
-      GIT_REPOSITORY "${CURL_REPO}"
-      GIT_SUBMODULES_RECURSE TRUE
-      GIT_PROGRESS TRUE
-      BINARY_DIR
-        curl STEP_TARGETS   build CONFIGURE_COMMAND cmake
-              "${CMAKE_CURRENT_SOURCE_DIR}/curl"
-             -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
-            CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
-             -DBUILD_SHARED_LIBS:BOOL=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-               CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
-              -DBUILD_SHARED_LIBS:BOOL=OFF
-    )
+      curl SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl" GIT_REPOSITORY "${CURL_REPO}" GIT_SUBMODULES_RECURSE TRUE GIT_PROGRESS TRUE BINARY_DIR curl STEP_TARGETS build CONFIGURE_COMMAND cmake "${CMAKE_CURRENT_SOURCE_DIR}/curl" -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
+                                                                                                                                                                                                                                                                                                              -DCMAKE_POSITION_INDEPENDENT_CODE=ON CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
+                                                                                                                                                                                                                                                                                                                                                                    -DBUILD_SHARED_LIBS:BOOL=OFF)
     set_property(DIRECTORY PROPERTY EP_STEP_TARGETS build)
   endif()
 
@@ -172,24 +157,16 @@ function(make_shared_module FNAME)
 
   add_library(${TARGET_NAME} SHARED ${FNAME}.c)
 
-  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto
-                        ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} quickjs dl)
-  set_target_properties(
-    ${TARGET_NAME}
-    PROPERTIES
-      PREFIX ""
-      OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
-      BUILD_RPATH
-      "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs"
-  )
+  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} quickjs dl)
+  set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "" OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
+                                                  BUILD_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
   target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
   #message("C module dir: ${QUICKJS_C_MODULE_DIR}")
   install(TARGETS ${TARGET_NAME} DESTINATION ${QUICKJS_C_MODULE_DIR})
 
   if(LIBWEBSOCKETS_FOUND)
     target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
-    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto
-                          ${OPENSSL_CRYPTO_LIBRARY})
+    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto ${OPENSSL_CRYPTO_LIBRARY})
   endif()
 endfunction()
 
@@ -228,7 +205,7 @@ if(NOT LIBWEBSOCKETS_FOUND)
   set(BUILD_LIBWEBSOCKETS ON CACHE BOOL "build 3rdparty libwebsockets")
 endif(NOT LIBWEBSOCKETS_FOUND)
 
-if(BUILD_LIBWEBSOCKETS) 
+if(BUILD_LIBWEBSOCKETS)
 
   message(STATUS "Finding MBedTLS")
   find_mbedtls()
@@ -241,7 +218,7 @@ endif(BUILD_LIBWEBSOCKETS)
 
 set(CMAKE_BUILD_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_CURRENT_BINARY_DIR}/curl/lib" CACHE PATH "Build with local rpath")
 set(CMAKE_INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR}" CACHE PATH "Build with install rpath")
- 
+
 # if(NOT USE_SYSTEM_LIBWEBSOCKETS)
 link_directories(${LIBWEBSOCKETS_LIBRARY_DIRS})
 # endif(NOT USE_SYSTEM_LIBWEBSOCKETS)
@@ -266,14 +243,8 @@ function(make_shared_module FNAME)
   add_library(${TARGET_NAME} SHARED ${FNAME}.c)
 
   target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto dl)
-  set_target_properties(
-    ${TARGET_NAME}
-    PROPERTIES
-      PREFIX ""
-      OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
-      BUILD_RPATH
-      "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs"
-  )
+  set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "" OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
+                                                  BUILD_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
   target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
   #message("C module dir: ${QUICKJS_C_MODULE_DIR}")
   install(TARGETS ${TARGET_NAME} DESTINATION ${QUICKJS_C_MODULE_DIR})
@@ -299,16 +270,12 @@ if(BUILD_LIBWEBSOCKETS)
 endif(BUILD_LIBWEBSOCKETS)
 
 target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
-set_target_properties(
-  quickjs-minnet PROPERTIES COMPILE_FLAGS "-fvisibility=hidden" PREFIX "" OUTPUT_NAME
-                                                                          "net" # OUTPUT_NAME_DEBUG "net-debug"
+set_target_properties(quickjs-minnet PROPERTIES COMPILE_FLAGS "-fvisibility=hidden" PREFIX "" OUTPUT_NAME "net" # OUTPUT_NAME_DEBUG "net-debug"
 )
 target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
-target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto
-                      ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
+target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
 
 #message("C module dir: ${QUICKJS_C_MODULE_DIR}")
-install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-                                                                                 GROUP_EXECUTE GROUP_READ)
+install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
 
 # link
