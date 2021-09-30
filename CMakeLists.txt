@@ -215,7 +215,7 @@ if(BUILD_LIBWEBSOCKETS)
     set(MBEDTLS_DEBUG OFF)
     set(MBEDTLS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mbedtls")
     set(MBEDTLS_C_FLAGS "${CMAKE_C_FLAGS}")
-    set(MBEDTLS_TARGET_NAME mbedtls)
+    set(MBEDTLS_TARGET_NAME libmbedtls)
     build_mbedtls()
   endif(NOT MBEDTLS_FOUND)
 
@@ -279,7 +279,7 @@ target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} 
 set_target_properties(quickjs-minnet PROPERTIES COMPILE_FLAGS "-fvisibility=hidden" PREFIX "" OUTPUT_NAME "net" # OUTPUT_NAME_DEBUG "net-debug"
 )
 target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
-target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
+target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${MBEDTLS_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
 
 #message("C module dir: ${QUICKJS_C_MODULE_DIR}")
 install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)

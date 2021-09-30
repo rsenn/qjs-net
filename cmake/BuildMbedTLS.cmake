@@ -40,11 +40,6 @@ macro(build_mbedtls)
   endif()
 
   if(TARGET ${MBEDTLS_TARGET_NAME})
-    foreach(P NAME BUNDLE DEPRECATION FOLDER FRAMEWORK IMPORTED LABELS LOCATION NAME PREFIX RESOURCE SOURCES SOVERSION SUFFIX TYPE VERSION)
-      get_target_property(VALUE "${MBEDTLS_TARGET_NAME}" "${P}")
-      message("Target ${MBEDTLS_TARGET_NAME} property '${P}': ${VALUE}")
-    endforeach()
-
     message(FATAL_ERROR "A target with name ${MBEDTLS_TARGET_NAME} is already defined. Please set MBEDTLS_TARGET_NAME to a unique value.")
   endif()
 
@@ -79,5 +74,20 @@ macro(build_mbedtls)
 
   add_custom_target(${MBEDTLS_TARGET_NAME}_install COMMAND ${CMAKE_COMMAND} --build ${CMAKE_CURRENT_BINARY_DIR}/mbedtls -- install WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mbedtls COMMENT "Installing mbedtls to ${CMAKE_INSTALL_PREFIX}" VERBATIM)
   add_dependencies(${MBEDTLS_TARGET_NAME}_install ${MBEDTLS_TARGET_NAME})
+
+  set(MBEDTLS_LIBRARY mbedtls)
+  add_library(${MBEDTLS_LIBRARY} STATIC IMPORTED)
+  add_dependencies(${MBEDTLS_LIBRARY} ${MBEDTLS_TARGET_NAME})
+  set_property(TARGET ${MBEDTLS_LIBRARY} PROPERTY IMPORTED_LOCATION ${MBEDTLS_BINARY_DIR}/libmbedtls.a)
+
+  set(MBEDTLS_X509_LIBRARY mbedx509)
+  add_library(${MBEDTLS_X509_LIBRARY} STATIC IMPORTED)
+  add_dependencies(${MBEDTLS_X509_LIBRARY} ${MBEDTLS_TARGET_NAME})
+  set_property(TARGET ${MBEDTLS_X509_LIBRARY} PROPERTY IMPORTED_LOCATION ${MBEDTLS_BINARY_DIR}/libmbedx509.a)
+
+  set(MBEDTLS_CRYPTO_LIBRARY mbedcrypto)
+  add_library(${MBEDTLS_CRYPTO_LIBRARY} STATIC IMPORTED)
+  add_dependencies(${MBEDTLS_CRYPTO_LIBRARY} ${MBEDTLS_TARGET_NAME})
+  set_property(TARGET ${MBEDTLS_CRYPTO_LIBRARY} PROPERTY IMPORTED_LOCATION ${MBEDTLS_BINARY_DIR}/libmbedcrypto.a)
 
 endmacro(build_mbedtls)
