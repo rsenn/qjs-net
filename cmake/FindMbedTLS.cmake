@@ -1,5 +1,7 @@
 macro(find_mbedtls)
-  if(MBEDTLS_ROOT_DIR)
+ message(STATUS "Finding MbedTLS library...")
+
+ if(MBEDTLS_ROOT_DIR)
     # Disable re-rooting paths in find_path/find_library. This assumes MBEDTLS_ROOT_DIR is an absolute path.
     set(_EXTRA_FIND_ARGS "NO_DEFAULT_PATH")
   endif()
@@ -25,7 +27,7 @@ macro(find_mbedtls)
     set(_MBEDTLS_X509_LIB_NAME libmbedx509.a)
   else()
     set(_MBEDTLS_LIB_NAME mbedtls)
-    set(_MBEDTLS_CRYPTO_LIB_NAME mbedcrypto)
+    set(*- mbedcrypto)
     set(_MBEDTLS_X509_LIB_NAME mbedx509)
   endif()
 
@@ -58,6 +60,11 @@ macro(find_mbedtls)
       add_library(mbedtls UNKNOWN IMPORTED)
       set_target_properties(mbedtls PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${MBEDTLS_INCLUDE_DIR}" INTERFACE_LINK_LIBRARIES mbedx509 IMPORTED_LINK_INTERFACE_LANGUAGES "C" IMPORTED_LOCATION "${MBEDTLS_LIBRARY}")
     endif()
+
+  else(MBEDTLS_FOUND)
+    unset(MBEDTLS_LIBRARY CACHE)
+    unset(MBEDTLS_CRYPTO_LIBRARY CACHE)
+    unset(MBEDTLS_X509_LIBRARY CACHE)
 
   endif(MBEDTLS_FOUND)
 

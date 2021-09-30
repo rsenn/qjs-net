@@ -156,7 +156,7 @@ function(make_shared_module FNAME)
 
   add_library(${TARGET_NAME} SHARED ${FNAME}.c)
 
-  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} quickjs dl)
+  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${MBEDTLS_LIBRARIES} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} quickjs dl)
   set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "" OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
                                                   BUILD_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
   target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
@@ -165,7 +165,7 @@ function(make_shared_module FNAME)
 
   if(LIBWEBSOCKETS_FOUND)
     target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
-    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto ${OPENSSL_CRYPTO_LIBRARY})
+    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${MBEDTLS_LIBRARIES} ${OPENSSL_CRYPTO_LIBRARY})
   endif()
 endfunction()
 
@@ -216,7 +216,9 @@ if(BUILD_LIBWEBSOCKETS)
     set(MBEDTLS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mbedtls")
     set(MBEDTLS_C_FLAGS "${CMAKE_C_FLAGS}")
     set(MBEDTLS_TARGET_NAME libmbedtls)
+
     build_mbedtls()
+    
   endif(NOT MBEDTLS_FOUND)
 
   build_libwebsockets()
@@ -248,7 +250,7 @@ function(make_shared_module FNAME)
 
   add_library(${TARGET_NAME} SHARED ${FNAME}.c)
 
-  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} mbedtls mbedx509 mbedcrypto dl)
+  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${MBEDTLS_LIBRARIES} dl)
   set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "" OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
                                                   BUILD_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs")
   target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)

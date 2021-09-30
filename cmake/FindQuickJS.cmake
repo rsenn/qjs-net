@@ -1,4 +1,6 @@
 macro(find_quickjs)
+  message(STATUS "Finding QuickJS...")
+
   include(CheckIncludeFile)
 
   if(ARGN)
