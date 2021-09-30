@@ -233,35 +233,3 @@ try {
 } finally {
   //console.log('SUCCESS');
 }
-/*
-function CreateREPL(prompt2) {
-  let name = scriptArgs[0];
-  name = name
-    .replace(/.*\//, '')
-    .replace(/-/g, ' ')
-    .replace(/\.[^\/.]*$/, '');
-  let [prefix, suffix] = [name, prompt2];
-  let repl = new REPL(`\x1b[38;5;40m${prefix} \x1b[38;5;33m${suffix}\x1b[0m`, false);
-  repl.historyLoad(null, false);
-  repl.help = () => {};
-  let { log } = console;
-  repl.show = arg => std.puts((typeof arg == 'string' ? arg : inspect(arg, globalThis.console.options)) + '\n');
-  repl.handleCmd = data => {
-    if(typeof data == 'string' && data.length > 0) {
-      for(let connection of connections) {
-        repl.printStatus(`Sending '${data}'`, false);
-        connection.send(data);
-      }
-    }
-  };
-  repl.addCleanupHandler(() => {
-    repl.readlineRemovePrompt();
-    repl.printStatus(`EXIT`, false);
-    std.exit(0);
-  });
-  console.log = repl.printFunction(log);
-  repl.runSync();
-  return repl;
-}
-
-*/
