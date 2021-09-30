@@ -371,7 +371,7 @@ export class Connection extends MessageTransceiver {
   static getCallbacks(instance, verbosity = 0) {
     const { classes, fdlist, log } = instance;
     const ctor = this;
-    const verbose = verbosity > 1 ? (...args) => log('VERBOSE', /*console.config({ compact: 2 }),*/ ...args) : () => {};
+    const verbose = verbosity > 1 ? (msg, ...args) => log('VERBOSE ' + msg, args) : () => {};
     //log(`${ctor.name}.getCallbacks`, { instance, log, verbosity });
     const handle = (sock, event, ...args) => {
       let conn, obj;
@@ -395,12 +395,12 @@ export class Connection extends MessageTransceiver {
         if(!connection) connection = new ctor(sock, instance, log, 'json', classes);
         connection.socket ??= sock;
         const { url, method, headers } = req;
-        verbose(`Connected`, sock, req, { url, method } /*, headers*/);
+        verbose(`Connected`, sock, req);
         fdlist[sock.fd] = connection;
         handle(sock, 'connect', sock, req);
       },
       onOpen(sock) {
-        verbose(`Opened`, { fd: sock.fd }, ctor.name);
+        verbose(`Opened`, sock, ctor.name);
         fdlist[sock.fd] = new ctor(sock, instance, log, 'json', classes);
         fdlist[sock.fd].socket ??= sock;
         handle(sock, 'open');
