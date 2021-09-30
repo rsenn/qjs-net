@@ -2,7 +2,6 @@ macro(build_mbedtls)
   message("-- Building MBEDTLS from source")
 
   set(MBEDTLS_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/mbedtls")
-  set(MBEDTLS_TARGET_NAME mbedtls)
 
   if(NOT DEFINED MBEDTLS_DEBUG)
     message(FATAL_ERROR "Please set MBEDTLS_DEBUG to 'OFF' or 'ON' before including this file.")
