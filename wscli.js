@@ -6,9 +6,7 @@ import REPL from 'repl';
 import { define } from 'util';
 import inspect from 'inspect';
 import * as net from 'net';
-
 Error.stackTraceLimit = 100;
-
 function GetOpt(options = {}, args) {
   let s, l;
   let r = {};
@@ -49,10 +47,9 @@ function GetOpt(options = {}, args) {
         const [, [, handler]] = o;
         let v = a;
         if(typeof handler == 'function')
-          v = Util.tryCatch(
-            () => handler(v, r[o[0]], options, r),
-            v => v
-          );
+          try {
+            v= handler(v, r[o[0]], options, r);
+          }catch(err) { }
         const n = o[0];
         r[o[0]] = v;
         continue;
@@ -62,14 +59,11 @@ function GetOpt(options = {}, args) {
   }
   return r;
 }
-
 /*function ReadJSON(filename) {
   let data = fs.readFileSync(filename, 'utf-8');
-
   if(data) console.debug(`${data.length} bytes read from '${filename}'`);
   return data ? JSON.parse(data) : null;
 }
-
 function WriteFile(name, data, verbose = true) {
   if(Util.isGenerator(data)) {
     let fd = fs.openSync(name, os.O_WRONLY | os.O_TRUNC | os.O_CREAT, 0x1a4);
@@ -83,17 +77,13 @@ function WriteFile(name, data, verbose = true) {
   }
   if(Util.isIterator(data)) data = [...data];
   if(Util.isArray(data)) data = data.join('\n');
-
   if(typeof data == 'string' && !data.endsWith('\n')) data += '\n';
   let ret = fs.writeFileSync(name, data);
-
   if(verbose) console.log(`Wrote ${name}: ${ret} bytes`);
 }*/
-
 function WriteJSON(name, data) {
   WriteFile(name, JSON.stringify(data, null, 2));
 }
-
 function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
   globalThis.console = new Console({
@@ -121,28 +111,21 @@ function main(...args) {
     args
   );
   const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key' } = params;
-
   const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
-
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
-
-  //console.log('net', net);
-
+  console.log('params', params);
   let connections = new Set();
   let repl;
-
   function createWS(url, callbacks, listen = 0) {
     let [protocol, host, port, ...location] = [...url.matchAll(/[^:\/]+/g)].map(a => a[0]);
-     if(!isNaN(+port)) port=+port;
-       const path = location.reduce((acc, part) => acc + '/' + part, '');
-        console.log('createWS', {protocol,host,port,path});
-
+    if(!isNaN(+port)) port = +port;
+    const path = location.reduce((acc, part) => acc + '/' + part, '');
+    console.log('createWS', { protocol, host, port, path });
     net.setLog(net.LLL_DEBUG - 1, (level, ...args) => {
       if(level == net.LLL_USER)
         console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
-
     const fn = [net.client, net.server][+listen];
     return fn({
       sslCert,
@@ -153,62 +136,49 @@ function main(...args) {
       path,
       ...callbacks,
       onConnect(ws, req) {
-        repl = CreateREPL(`${host}:${port}`);
-
-        repl.printStatus(`Connected to ${ws.ssl ? 'wss' : 'ws'}://${ws.address}:${ws.port}${location}`, true);
         connections.add(ws);
-
-        return callbacks.onConnect(ws, req);
+        console.log('onConnect', ws, req);
+        try {
+          repl = CreateREPL(`${host}:${port}`);
+          repl.printStatus(`Connected to ${protocol}://${host}:${port}${path}`, true);
+        } catch(err) {
+          console.log('error:', err.message);
+        }
       },
       onClose(ws, status, reason) {
         connections.delete(ws);
-
-        return callbacks.onClose(ws, status, reason);
+        console.log('onClose', ws, status, reason);
+        repl.exit(status != 1000 ? 1 : 0);
       },
       onHttp(req, rsp) {
         const { url, method, headers } = req;
         console.log('\x1b[38;5;82monHttp\x1b[0m(\n\t', Object.setPrototypeOf({ url, method, headers }, Object.getPrototypeOf(req)), ',\n\t', rsp, '\n)');
-        /*   rsp = new net.Response(req.url, 301, true, 'application/binary');
-          rsp.header('Blah', 'XXXX');*/
         return rsp;
+      },
+      onFd(fd, rd, wr) {
+        //console.log('onFd', fd, rd, wr);
+        os.setReadHandler(fd, rd);
+        os.setWriteHandler(fd, wr);
+      },
+      onMessage(ws, msg) {
+        repl.printStatus(msg, true);
+      },
+      onError(ws, error) {
+        console.log('onError', ws, error);
       }
     });
   }
-
-  //globalThis[['connection', 'listener'][+listen]] = cli;
-
   define(globalThis, {
     get connections() {
       return [...connections];
     }
   });
-
-  createWS(url, {
-    onMessage(ws, msg) {
-      repl.printStatus(msg, true);
-    },
-    onConnect(ws, req) {},
-    onError(ws, error) {
-      console.log('onError', ws, error);
-    },
-    onClose(ws, status, reason) {
-      console.log('onClose', ws, status, reason);
-
-      repl.exit(status != 1000 ? 1 : 0);
-    },
-    onFd(fd, rd, wr) {
-      //console.log('onFd', fd, rd, wr);
-      os.setReadHandler(fd, rd);
-      os.setWriteHandler(fd, wr);
-    }
-  });
-
+  createWS(url, {});
   function quit(why) {
     console.log(`quit('${why}')`);
     repl.cleanup(why);
   }
 }
-
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
@@ -219,22 +189,17 @@ try {
 }
 
 function CreateREPL(prompt2) {
-  let name = Util.getArgs()[0];
+  let name = scriptArgs[0];
   name = name
     .replace(/.*\//, '')
     .replace(/-/g, ' ')
     .replace(/\.[^\/.]*$/, '');
-
   let [prefix, suffix] = [name, prompt2];
-
   let repl = new REPL(`\x1b[38;5;40m${prefix} \x1b[38;5;226m${suffix}\x1b[0m`, false);
-
   repl.historyLoad(null, false);
-
   repl.help = () => {};
   let { log } = console;
   repl.show = arg => std.puts((typeof arg == 'string' ? arg : inspect(arg, globalThis.console.options)) + '\n');
-
   repl.handleCmd = data => {
     if(typeof data == 'string' && data.length > 0) {
       for(let connection of connections) {
@@ -243,19 +208,14 @@ function CreateREPL(prompt2) {
       }
     }
   };
-
   repl.addCleanupHandler(() => {
     repl.readlineRemovePrompt();
     Terminal.mousetrackingDisable();
     let numLines = repl.historySave();
-
     repl.printStatus(`EXIT (wrote ${numLines} history entries)`, false);
-
     std.exit(0);
   });
-
   console.log = repl.printFunction(log);
-
   repl.runSync();
   return repl;
 }
