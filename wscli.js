@@ -1,9 +1,6 @@
 import * as std from 'std';
 import * as os from 'os';
-import * as path from 'path';
-import { Console } from 'console';
 import REPL from 'repl';
-import { define } from 'util';
 import inspect from 'inspect';
 import * as net from 'net';
 
@@ -105,14 +102,7 @@ class CLI extends REPL {
 
 function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
-  globalThis.console = new Console({
-    inspectOptions: {
-      colors: true,
-      depth: Infinity,
-      compact: 2,
-      customInspect: true
-    }
-  });
+
   let params = GetOpt(
     {
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],
@@ -214,7 +204,7 @@ function main(...args) {
       }
     });
   }
-  define(globalThis, {
+  Object.assign(globalThis, {
     get connections() {
       return [...connections];
     }
