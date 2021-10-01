@@ -135,39 +135,7 @@ if(OPT_C_G_GDB)
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb" CACHE STRING "C compiler options")
   endif(NOT "${CMAKE_C_FLAGS_DEBUG}" MATCHES "-ggdb")
 endif(OPT_C_G_GDB)
-
  
-#function(make_shared_module FNAME)
-#  string(REGEX REPLACE "_" "-" NAME "${FNAME}")
-#  string(TOUPPER "${FNAME}" UNAME)
-#
-#  message("Module: ${NAME}")
-#  set(TARGET_NAME quickjs-${NAME})
-#
-#  add_library(${TARGET_NAME} SHARED ${FNAME}.c)
-#
-#  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_SSL_LIBRARY}
-#                        ${OPENSSL_CRYPTO_LIBRARY} quickjs dl)
-#  set_target_properties(
-#    ${TARGET_NAME}
-#    PROPERTIES
-#      PREFIX ""
-#      OUTPUT_NAME "${NAME}"
-#      COMPILE_FLAGS "-fvisibility=hidden"
-#      INTERFACE_LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}"
-#      LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}"
-#      INTERFACE_LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}"
-#      BUILD_RPATH
-#      "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs"
-#  )
-#  target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
-#  install(TARGETS ${TARGET_NAME} DESTINATION ${QUICKJS_C_MODULE_DIR})
-#
-#  if(LIBWEBSOCKETS_FOUND)
-#    target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
-#    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
-#  endif()
-#endfunction()
 
 if(NOT BUILD_LIBWEBSOCKETS)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibwebsockets.cmake)
@@ -250,51 +218,11 @@ if(BUILD_LIBWEBSOCKETS)
 
 endif(BUILD_LIBWEBSOCKETS)
 
-#set(CMAKE_BUILD_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_CURRENT_BINARY_DIR}/curl/lib" CACHE PATH "Build with local rpath")
-#set(CMAKE_INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR}" CACHE PATH "Build with install rpath")
-#
-#
-#if(NOT QUICKJS_INCLUDE_DIR)
-#  set(QUICKJS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
-#endif(NOT QUICKJS_INCLUDE_DIR)
-#
 
 link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${CURL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
 include_directories(${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR} ${MBEDTLS_LIBRARY_DIR})
 
-#function(make_shared_module FNAME)
-#  string(REGEX REPLACE "_" "-" NAME "${FNAME}")
-#  string(TOUPPER "${FNAME}" UNAME)
-#
-#  message("Module: ${NAME}")
-#  set(TARGET_NAME quickjs-${NAME})
-#
-#  add_library(${TARGET_NAME} SHARED ${FNAME}.c)
-#
-#  target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} dl)
-#  set_target_properties(
-#    ${TARGET_NAME}
-#    PROPERTIES
-#      PREFIX ""
-#      OUTPUT_NAME "${NAME}" # COMPILE_FLAGS "-fvisibility=hidden"
-#      LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}"
-#      INTERFACE_LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}"
-#      BUILD_RPATH
-#      "${MBEDTLS_LIBRARY_DIR};${CMAKE_BINARY_DIR};${CMAKE_CURRENT_BINARY_DIR};${CMAKE_BINARY_DIR}/quickjs;${CMAKE_CURRENT_BINARY_DIR}/quickjs"
-#  )
-#  target_compile_definitions(${TARGET_NAME} PRIVATE -DJS_${UNAME}_MODULE=1)
-#  #message("C module dir: ${QUICKJS_C_MODULE_DIR}")
-#  install(TARGETS ${TARGET_NAME} DESTINATION ${QUICKJS_C_MODULE_DIR})
-#
-#  if(LIBWEBSOCKETS_FOUND)
-#    target_include_directories(${TARGET_NAME} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
-#    target_link_libraries(${TARGET_NAME} ${LIBWEBSOCKETS_LIBRARIES})
-#  endif()
-#endfunction()
 
-# if(NOT USE_SYSTEM_LIBWEBSOCKETS)
-#link_directories(${LIBWEBSOCKETS_LIBRARY_DIR})
-# endif(NOT USE_SYSTEM_LIBWEBSOCKETS)
 
 file(GLOB JS_BINDINGS_SOURCES *.c *.h)
 
