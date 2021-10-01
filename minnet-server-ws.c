@@ -45,7 +45,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         sess->ws_obj = minnet_ws_wrap(ctx, wsi);
         opaque->ws = minnet_ws_data2(ctx, sess->ws_obj);
 
-        lwsl_user("ws   " FG("%d") "%-25s" NC " wsi#%i req=%p\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, opaque->req);
+        lwsl_user("ws   " FG("%d") "%-25s" NC " wsi#%" PRId64 " req=%p\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, opaque->req);
         minnet_emit_this(&minnet_server.cb_connect, sess->ws_obj, 2, &sess->ws_obj);
       }
 
