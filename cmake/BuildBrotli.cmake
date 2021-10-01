@@ -1,20 +1,16 @@
 macro(build_brotli)
-  include(ExternalProject)
+  message("-- Building BROTLI from source")
 
-  ExternalProject_Add(libbrotli
-    URL https://github.com/google/brotli/archive/v1.0.8.tar.gz
-    PREFIX brotli
-    CMAKE_ARGS 
-              -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-              -DCMAKE_POSITION_INDEPENDENT_CODE=${CMAKE_POSITION_INDEPENDENT_CODE}
-              -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-              -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-              -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-              -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
-    CMAKE_GENERATOR   ${CMAKE_GENERATOR}
-    CMAKE_GENERATOR_PLATFORM ${CMAKE_GENERATOR_PLATFORM}
-    INSTALL_COMMAND   ""
-  )
+  include(ExternalProject)
+  set(BROTLI_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/brotli")
+
+  if(NOT DEFINED BROTLI_SOURCE_DIR)
+    message(FATAL_ERROR "Please set BROTLI_SOURCE_DIR before including this file.")
+  endif()
+
+  ExternalProject_Add(
+    libbrotli SOURCE_DIR ${BROTLI_SOURCE_DIR} URL https://github.com/google/brotli/archive/v1.0.8.tar.gz PREFIX brotli CMAKE_ARGS "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}" "-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=${CMAKE_POSITION_INDEPENDENT_CODE}" "-DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}" "-DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}" "-DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}"
+                                                                                                                                  "-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}" "-DBROTLI_DISABLE_TESTS:BOOL=OFF" CMAKE_GENERATOR ${CMAKE_GENERATOR} CMAKE_GENERATOR_PLATFORM ${CMAKE_GENERATOR_PLATFORM} BINARY_DIR "${BROTLI_BINARY_DIR}" INSTALL_COMMAND "" LOG_DOWNLOAD ON LOG_CONFIGURE ON LOG_BUILD ON)
 
   ExternalProject_Get_Property(libbrotli SOURCE_DIR BINARY_DIR)
 
@@ -27,13 +23,13 @@ macro(build_brotli)
   add_dependencies(brotlienc libbrotli)
 
   if(MSVC)
-    set_target_properties(brotlicommon PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/brotlicommon-static.lib )
-    set_target_properties(brotlidec PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/brotlidec-static.lib )
-    set_target_properties(brotlienc PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/brotlienc-static.lib )
+    set_target_properties(brotlicommon PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/brotlicommon-static.lib)
+    set_target_properties(brotlidec PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/brotlidec-static.lib)
+    set_target_properties(brotlienc PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/brotlienc-static.lib)
   else()
-    set_target_properties(brotlicommon PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/libbrotlicommon-static.a )
-    set_target_properties(brotlidec PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/libbrotlidec-static.a )
-    set_target_properties(brotlienc PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/libbrotlienc-static.a )
+    set_target_properties(brotlicommon PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/libbrotlicommon-static.a)
+    set_target_properties(brotlidec PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/libbrotlidec-static.a)
+    set_target_properties(brotlienc PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/libbrotlienc-static.a)
   endif()
 
   set(BROTLI_INCLUDE_DIR ${SOURCE_DIR}/c/include)

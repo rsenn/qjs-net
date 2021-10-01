@@ -1,7 +1,7 @@
 macro(find_mbedtls)
- message(STATUS "Finding MbedTLS library...")
+  message(STATUS "Finding MbedTLS library...")
 
- if(MBEDTLS_ROOT_DIR)
+  if(MBEDTLS_ROOT_DIR)
     # Disable re-rooting paths in find_path/find_library. This assumes MBEDTLS_ROOT_DIR is an absolute path.
     set(_EXTRA_FIND_ARGS "NO_DEFAULT_PATH")
   endif()

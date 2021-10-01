@@ -209,7 +209,7 @@ if(BUILD_LIBWEBSOCKETS)
   find_mbedtls()
   if(NOT MBEDTLS_FOUND)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildMbedTLS.cmake)
-    
+
     set(MBEDTLS_DEBUG OFF)
     set(MBEDTLS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mbedtls")
     set(MBEDTLS_C_FLAGS "${CMAKE_C_FLAGS}")
@@ -218,13 +218,12 @@ if(BUILD_LIBWEBSOCKETS)
     build_mbedtls()
   endif(NOT MBEDTLS_FOUND)
 
-
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindBrotli.cmake)
 
   find_brotli()
   if(NOT BROTLI_FOUND)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildBrotli.cmake)
-    
+
     set(BROTLI_DEBUG OFF)
     set(BROTLI_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/brotli")
     set(BROTLI_C_FLAGS "${CMAKE_C_FLAGS}")
@@ -233,8 +232,15 @@ if(BUILD_LIBWEBSOCKETS)
     build_brotli()
   endif(NOT BROTLI_FOUND)
 
-
   build_libwebsockets()
+
+  if(TARGET libmbedtls)
+    add_dependencies(libwebsockets libmbedtls)
+  endif(TARGET libmbedtls)
+  if(TARGET libbrotli)
+    add_dependencies(libwebsockets libbrotli)
+  endif(TARGET libbrotli)
+
 endif(BUILD_LIBWEBSOCKETS)
 
 set(CMAKE_BUILD_RPATH "${MBEDTLS_LIBRARY_DIR};${CMAKE_CURRENT_BINARY_DIR}/curl/lib" CACHE PATH "Build with local rpath")
