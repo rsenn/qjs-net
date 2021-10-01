@@ -88,9 +88,18 @@ macro(find_mbedtls)
     message("MBEDTLS_LIBRARY_LOCATION: ${MBEDTLS_LIBRARY_LOCATION}")
 
     if(EXISTS "${MBEDTLS_ROOT_DIR}/lib")
-      set(MBEDTLS_INCLUDE_DIR "${MBEDTLS_ROOT_DIR}/lib" CACHE PATH "MbedTLS library directory")
+      set(LIBRARY_DIR "${MBEDTLS_ROOT_DIR}/lib")
     endif(EXISTS "${MBEDTLS_ROOT_DIR}/lib")
 
+    if(NOT LIBRARY_DIR)
+      string(REGEX REPLACE "/[^/]*$" "" LIBRARY_DIR "${MBEDTLS_LIBRARY}")
+    endif(NOT LIBRARY_DIR)
+
+    if(EXISTS "${LIBRARY_DIR}")
+      list(APPEND CMAKE_INSTALL_RPATH "${LIBRARY_PATH}")
+    endif(EXISTS "${LIBRARY_DIR}")
+
+    set(MBEDTLS_LIBRARY_DIR "${LIBRARY_DIR}" CACHE PATH "MbedTLS library directory")
     set(MBEDTLS_INCLUDE_DIR "${MBEDTLS_INCLUDE_DIR}" CACHE PATH "MbedTLS include directory")
 
   else(MBEDTLS_FOUND)

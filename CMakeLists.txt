@@ -293,7 +293,7 @@ include_directories(${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_
 #endfunction()
 
 # if(NOT USE_SYSTEM_LIBWEBSOCKETS)
-link_directories(${LIBWEBSOCKETS_LIBRARY_DIR})
+#link_directories(${LIBWEBSOCKETS_LIBRARY_DIR})
 # endif(NOT USE_SYSTEM_LIBWEBSOCKETS)
 
 file(GLOB JS_BINDINGS_SOURCES *.c *.h)
@@ -324,12 +324,27 @@ set_target_properties(quickjs-minnet PROPERTIES
   INTERFACE_LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}" 
   PREFIX "" 
   OUTPUT_NAME "net"
+  INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR}"
 )
 target_compile_definitions(quickjs-minnet PRIVATE
  -DJS_SHARED_LIBRARY=1
  -DJS_BINDINGS_INIT_MODULE=1
 )
-target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
+target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
+
+message("Libraries:\n\
+  libwebsockets - ${LIBWEBSOCKETS_LIBRARIES}\n\
+  mbedtls - ${MBEDTLS_LIBRARIES}\n\
+  curl - ${CURL_LIBRARY}\n\
+  openssl - ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY}\n\
+")
+
+message("Library directories:\n\
+  libwebsockets - ${LIBWEBSOCKETS_LIBRARY_DIR}\n\
+  mbedtls - ${MBEDTLS_LIBRARY_DIR}\n\
+  curl - ${CURL_LIBRARY_DIR}\n\
+  openssl - ${OPENSSL_LIBRARY_DIR}\n\
+")
 
 install(TARGETS quickjs-minnet 
   DESTINATION "${QUICKJS_C_MODULE_DIR}" 
