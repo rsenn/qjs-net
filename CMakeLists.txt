@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(minnet)
+project(minnet C)
 
 set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag")
 
@@ -79,9 +79,17 @@ if(NOT CURL_FOUND OR BUILD_CURL)
     set(CURL_REPO "https://github.com/curl/curl.git")
 
     ExternalProject_Add(
-      curl SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl" GIT_REPOSITORY "${CURL_REPO}" GIT_SUBMODULES_RECURSE TRUE GIT_PROGRESS TRUE BINARY_DIR curl STEP_TARGETS build CONFIGURE_COMMAND cmake "${CMAKE_CURRENT_SOURCE_DIR}/curl" -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
-                                                                                                                                                                                                                                                                                                              -DCMAKE_POSITION_INDEPENDENT_CODE=ON CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
-                                                                                                                                                                                                                                                                                                                                                                    -DBUILD_SHARED_LIBS:BOOL=OFF)
+      curl
+      SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl"
+      GIT_REPOSITORY "${CURL_REPO}"
+      GIT_SUBMODULES_RECURSE TRUE
+      GIT_PROGRESS TRUE
+      BINARY_DIR curl
+      STEP_TARGETS build
+      CONFIGURE_COMMAND cmake "${CMAKE_CURRENT_SOURCE_DIR}/curl" -DLIBCURL_NO_SHARED:STRING=libcurl
+                        -DBUILD_SHARED_LIBS:BOOL=OFF
+      CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+      CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF)
     set_property(DIRECTORY PROPERTY EP_STEP_TARGETS build)
   endif()
 
@@ -179,6 +187,7 @@ if(BUILD_LIBWEBSOCKETS)
       pkg_check_modules(OPENSSL openssl)
       find_package(OpenSSL REQUIRED)
       #pkg_search_module(OPENSSL openssl)
+
     endif(NOT OPENSSL_LIBRARIES)
   endif(WITH_SSL AND NOT WITH_MBEDTLS)
 
@@ -223,8 +232,16 @@ if(BUILD_LIBWEBSOCKETS)
 
 endif(BUILD_LIBWEBSOCKETS)
 
-link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${CURL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
-include_directories(${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR} ${MBEDTLS_LIBRARY_DIR})
+if(OPENSSL_INCLUDE_DIR AND NOT OPENSSL_LIBRARY_DIR)
+  string(REGEX REPLACE "/include" "/lib" OPENSSL_LIBRARY_DIR "${OPENSSL_INCLUDE_DIR}")
+
+  message("OPENSSL_LIBRARY_DIR: ${OPENSSL_LIBRARY_DIR}")
+  set(CMAKE_INSTALL_RPATH "${OPENSSL_LIBRARY_DIR}")
+endif()
+message("CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
+
+link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${CURL_LIBRARY_DIR} ${OPENSSL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
+include_directories(${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
 
 file(GLOB JS_BINDINGS_SOURCES *.c *.h)
 
@@ -232,7 +249,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 string(ASCII 27 ESC)
 
 function(DUMP_TARGET TARGET)
-  foreach(PROP BINARY_DIR BUILD_RPATH COMPILE_DEFINITIONS COMPILE_FLAGS INCLUDE_DIRECTORIES INTERFACE_LINK_DIRECTORIES INTERFACE_LINK_LIBRARIES LINK_DIRECTORIES LINK_LIBRARIES MANUALLY_ADDED_DEPENDENCIES NAME OUTPUT_NAME PCH_WARN_INVALID POSITION_INDEPENDENT_CODE SOURCE_DIR SOURCES TYPE)
+  foreach(
+    PROP
+    BINARY_DIR BUILD_RPATH COMPILE_DEFINITIONS COMPILE_FLAGS INCLUDE_DIRECTORIES INTERFACE_LINK_DIRECTORIES
+    INTERFACE_LINK_LIBRARIES LINK_DIRECTORIES LINK_LIBRARIES MANUALLY_ADDED_DEPENDENCIES NAME OUTPUT_NAME
+    PCH_WARN_INVALID POSITION_INDEPENDENT_CODE SOURCE_DIR SOURCES TYPE)
     get_target_property(VALUE "${TARGET}" "${PROP}")
     if(VALUE)
       message("${ESC}[1;33m${TARGET} ${ESC}[1;31m${PROP} = ${ESC}[1;36m'${VALUE}'${ESC}[0m")
@@ -246,10 +267,17 @@ if(BUILD_LIBWEBSOCKETS)
   add_dependencies(quickjs-minnet libwebsockets)
 endif(BUILD_LIBWEBSOCKETS)
 
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=${CMAKE_INSTALL_RPATH}")
+
 target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
-set_target_properties(quickjs-minnet PROPERTIES COMPILE_FLAGS "-fvisibility=hidden" LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}" INTERFACE_LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}" PREFIX "" OUTPUT_NAME "net" INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR}")
+set_target_properties(
+  quickjs-minnet
+  PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${MBEDTLS_LIBRARY_DIR}" COMPILE_FLAGS "-fvisibility=hidden"
+  LINK_DIRECTORIES "${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}" INTERFACE_LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}" PREFIX ""
+             OUTPUT_NAME "net")
 target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
-target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES})
+target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY}
+                      ${OPENSSL_LIBRARIES})
 
 message(
   "Libraries:\n\
@@ -267,6 +295,7 @@ message(
   openssl - ${OPENSSL_LIBRARY_DIR}\n\
 ")
 
-install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
+install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                                                                                 GROUP_EXECUTE GROUP_READ)
 
 #dump_target(quickjs-minnet)
