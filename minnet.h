@@ -89,6 +89,7 @@ MinnetURL url_init(JSContext*, const char* proto, const char* host, uint16_t por
 MinnetURL url_parse(JSContext* ctx, const char* url);
 void url_free(JSContext*, MinnetURL* url);
 JSValue header_object(JSContext*, const struct byte_buffer*);
+ssize_t header_set(JSContext*, struct byte_buffer*, const char* name, const char* value);
 int minnet_lws_unhandled(const char* handler, int);
 JSValue minnet_emit_this(const struct ws_callback*, JSValueConst this_obj, int argc, JSValue* argv);
 JSValue minnet_emit(const struct ws_callback*, int argc, JSValue* argv);
@@ -104,6 +105,15 @@ byte_chr(const void* x, size_t len, char c) {
     if(*s == c)
       break;
   return s - str;
+}
+
+static inline size_t
+byte_chrs(const void* str, size_t len, const char needle[], size_t nl) {
+  const char *s, *t;
+  for(s = str, t = str + len; s != t; s++)
+    if(byte_chr(needle, nl, *s) < nl)
+      break;
+  return s - (const char*)str;
 }
 
 static inline char*

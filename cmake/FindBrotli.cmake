@@ -30,8 +30,7 @@ macro(find_brotli)
       list(APPEND BROTLI_LIBRARY "${pkgcfg_lib_BROTLIENC_brotlicommon}")
     endif(pkgcfg_lib_BROTLIENC_brotlicommon AND EXISTS "${pkgcfg_lib_BROTLIENC_brotlicommon}")
 
-    set(BROTLI_LINK_LIBRARY ${pkgcfg_lib_BROTLIENC_brotlienc} ${pkgcfg_lib_BROTLIDEC_brotlidec}
-                            ${pkgcfg_lib_BROTLICOMMON_brotlicommon})
+    set(BROTLI_LINK_LIBRARY ${pkgcfg_lib_BROTLIENC_brotlienc} ${pkgcfg_lib_BROTLIDEC_brotlidec} ${pkgcfg_lib_BROTLICOMMON_brotlicommon})
     set(BROTLI_LIBRARY_DIR ${BROTLICOMMON_LIBRARY_DIRS})
     set(BROTLI_FOUND TRUE)
   endif(BROTLICOMMON_FOUND OR BROTLI_FOUND)
@@ -42,8 +41,7 @@ macro(find_brotli)
 
   if(NOT BROTLI_LIBRARIES)
     if(BROTLICOMMON_LIBRARY)
-      set(BROTLI_LIBRARIES "${BROTLIENC_LIBRARY};${BROTLIDEC_LIBRARY};${BROTLICOMMON_LIBRARY}" CACHE PATH
-                                                                                                     "Brotli libraries")
+      set(BROTLI_LIBRARIES "${BROTLIENC_LIBRARY};${BROTLIDEC_LIBRARY};${BROTLICOMMON_LIBRARY}" CACHE PATH "Brotli libraries")
     else(BROTLICOMMON_LIBRARY)
       set(BROTLI_LIBRARIES "brotlienc;brotlidec;brotlicommon" CACHE PATH "Brotli libraries")
     endif(BROTLICOMMON_LIBRARY)

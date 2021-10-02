@@ -164,16 +164,36 @@ header_object(JSContext* ctx, const MinnetBuffer* buffer) {
   return ret;
 }
 
+ssize_t
+header_set(JSContext* ctx, MinnetBuffer* buffer, const char* name, const char* value) {
+  size_t namelen = strlen(name), valuelen = strlen(value);
+  size_t len = namelen + 2 + valuelen + 2;
+
+  buffer_grow(buffer, len, ctx);
+  buffer_write(buffer, name, namelen);
+  buffer_write(buffer, ": ", 2);
+  buffer_write(buffer, value, valuelen);
+  buffer_write(buffer, "\r\n", 2);
+
+  return len;
+}
+
 static const char*
 io_events(int events) {
-  switch(events & (POLLIN | POLLOUT)) {
+  switch(events /* & (POLLIN | POLLOUT)*/) {
+    case POLLOUT | POLLHUP: return "OUT|HUP";
+    case POLLIN | POLLOUT | POLLHUP | POLLERR: return "IN|OUT|HUP|ERR";
+    case POLLOUT | POLLHUP | POLLERR: return "OUT|HUP|ERR";
     case POLLIN | POLLOUT: return "IN|OUT";
     case POLLIN: return "IN";
-    case POLLOUT: return "OUT";
-    case 0: return "0";
+    case POLLOUT:
+      return "OUT";
+      //  case 0: return "0";
   }
+  assert(!events);
   return "";
 }
+
 static int
 io_parse_events(const char* str) {
   int events = 0;
@@ -188,7 +208,7 @@ io_parse_events(const char* str) {
 #define PIO (POLLIN | POLLOUT)
 
 static JSValue
-lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
+minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
   struct pollfd x = {0, 0, 0};
   struct lws_context* context = value2ptr(ctx, func_data[2]);
   uint32_t fd, events, revents;
@@ -203,26 +223,29 @@ lws_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
 
   events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
   revents = magic & events;
-  lwsl_debug("lws_io_handler fd=%d wr=%i magic=%s events=%s revents=%s", fd, wr, io_events(magic), io_events(events), io_events(revents));
+  lwsl_debug("minnet_io_handler fd=%d wr=%i magic=0x%x events=%s revents=%s", fd, wr, (magic), io_events(events), io_events(revents));
 
   if((revents & PIO) != magic) {
     x.fd = fd;
-    x.events = events;
+    x.events = magic;
     x.revents = 0;
 
     if(poll(&x, 1, 0) < 0)
       lwsl_err("poll error: %s\n", strerror(errno));
     else
       revents = x.revents;
+
+    lwsl_debug("minnet_io_handler poll() fd=%d, magic=%s, revents=%s", fd, io_events(magic), io_events(revents));
   }
 
   if(revents & PIO) {
     x.fd = fd;
     x.events = magic;
-    x.revents = /* revents &*/ revents;
+    x.revents = revents & PIO; // POLLIN|POLLOUT;
 
+    lwsl_debug("%sHandler lws_service_fd fd=%d, events=%s, revents=%s", ((const char*[]){"Read", "Write"})[wr], x.fd, io_events(x.events), io_events(x.revents));
     int ret = lws_service_fd(context, &x);
-    lwsl_debug("lws_service_fd fd=%d, magic=%s, revents=%s, ret=%d", fd, io_events(magic), io_events(revents), ret);
+    lwsl_debug("%sHandler lws_service_fd fd=%d, ret=%d", ((const char*[]){"Read", "Write"})[wr], x.fd, ret);
   }
 
   return JS_UNDEFINED;
@@ -235,14 +258,19 @@ make_handler(JSContext* ctx, int fd, int events, void* opaque, int magic) {
       JS_NewString(ctx, io_events(events)),
       ptr2value(ctx, opaque),
   };
-  return JS_NewCFunctionData(ctx, lws_io_handler, events, magic, countof(data), data);
+  return JS_NewCFunctionData(ctx, minnet_io_handler, events, magic, countof(data), data);
 }
 
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
-  JSValue func = make_handler(ctx, args->fd, args->events /* | args->prev_events*/, lws_get_context(wsi), args->events);
+  JSValue func;
+  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 
-  out[0] = (args->events == POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
+  lwsl_debug("minnet_handlers wsi#%" PRIi64 " fd=%d events=%s", opaque ? opaque->serial : (int64_t)-1, args->fd, io_events(args->events));
+
+  func = make_handler(ctx, args->fd, args->events /* | args->prev_events*/, lws_get_context(wsi), args->events);
+
+  out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
   out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
 
   JS_FreeValue(ctx, func);
@@ -299,7 +327,7 @@ static const JSCFunctionListEntry minnet_funcs[] = {
 void
 value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
   const char* str = JS_ToCString(ctx, *v);
-  lwsl_user("%s = '%s'\n", n, str);
+  lwsl_debug("%s = '%s'\n", n, str);
   JS_FreeCString(ctx, str);
 }
 

@@ -11,10 +11,10 @@ struct http_request;
 
 /* class MinnetResponse */
 
-typedef struct http_header {
+/*typedef struct http_header {
   char *name, *value;
   struct list_head link;
-} MinnetHttpHeader;
+} MinnetHttpHeader;*/
 
 typedef struct http_response {
   BOOL read_only;

@@ -10,7 +10,7 @@ THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
 enum { RESPONSE_BUFFER, RESPONSE_JSON, RESPONSE_TEXT, RESPONSE_HEADER };
 enum { RESPONSE_OK, RESPONSE_URL, RESPONSE_STATUS, RESPONSE_TYPE, RESPONSE_OFFSET, RESPONSE_HEADERS };
 
-struct http_header*
+/*struct http_header*
 header_new(JSContext* ctx, const char* name, const char* value) {
   MinnetHttpHeader* hdr;
 
@@ -28,7 +28,7 @@ header_free(JSRuntime* rt, struct http_header* hdr) {
   js_free_rt(rt, hdr->name);
   js_free_rt(rt, hdr->value);
   js_free_rt(rt, hdr);
-}
+}*/
 
 void
 response_format(struct http_response const* res, char* buf, size_t len) {
@@ -167,8 +167,8 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   JS_FreeCString(ctx, value);
 
   return ret;
-}
-*/
+}*/
+
 static JSValue
 minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetResponse* res;

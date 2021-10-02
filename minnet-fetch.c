@@ -130,6 +130,7 @@ handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socket
 
   return 0;
 }
+
 /*
 static void
 on_timeout(evutil_socket_t fd, short events, void* arg) {

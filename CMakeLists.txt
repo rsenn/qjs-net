@@ -4,7 +4,6 @@ project(minnet)
 set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag")
 
 #option(BUILD_SHARED_LIBWEBSOCKETS "Shared building of dependency libraries" OFF)
-option(BUILD_BROTLI "in-tree build of brotli" ON)
 option(BUILD_LIBWEBSOCKETS "in-tree build of libwebsockets" ON)
 option(BUILD_CURL "Build curl library" ${LOCAL_CURL})
 
@@ -80,17 +79,9 @@ if(NOT CURL_FOUND OR BUILD_CURL)
     set(CURL_REPO "https://github.com/curl/curl.git")
 
     ExternalProject_Add(
-      curl
-      SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl"
-      GIT_REPOSITORY "${CURL_REPO}"
-      GIT_SUBMODULES_RECURSE TRUE
-      GIT_PROGRESS TRUE
-      BINARY_DIR curl
-      STEP_TARGETS build
-      CONFIGURE_COMMAND cmake "${CMAKE_CURRENT_SOURCE_DIR}/curl" -DLIBCURL_NO_SHARED:STRING=libcurl
-                        -DBUILD_SHARED_LIBS:BOOL=OFF
-      CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-      CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF)
+      curl SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl" GIT_REPOSITORY "${CURL_REPO}" GIT_SUBMODULES_RECURSE TRUE GIT_PROGRESS TRUE BINARY_DIR curl STEP_TARGETS build CONFIGURE_COMMAND cmake "${CMAKE_CURRENT_SOURCE_DIR}/curl" -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
+                                                                                                                                                                                                                                                                                                              -DCMAKE_POSITION_INDEPENDENT_CODE=ON CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
+                                                                                                                                                                                                                                                                                                                                                                    -DBUILD_SHARED_LIBS:BOOL=OFF)
     set_property(DIRECTORY PROPERTY EP_STEP_TARGETS build)
   endif()
 
@@ -105,7 +96,6 @@ if(NOT CURL_FOUND OR BUILD_CURL)
 endif()
 message(STATUS "CURL library: ${CURL_LIBRARY}")
 
-
 #set(DISABLE_WERROR ON)
 #if(NOT QUICKJS_INCLUDE_DIR)
 #  if(QUICKJS_INCLUDE_DIR)
@@ -118,8 +108,7 @@ message(STATUS "CURL library: ${CURL_LIBRARY}")
 #
 #if(EXISTS "${QUICKJS_INCLUDE_DIR}/quickjs")
 #  set(QUICKJS_INCLUDE_DIR "${QUICKJS_INCLUDE_DIR}/quickjs")
-#endif(EXISTS "${QUICKJS_INCLUDE_DIR}/quickjs") 
-
+#endif(EXISTS "${QUICKJS_INCLUDE_DIR}/quickjs")
 
 include(CheckCCompilerFlag)
 
@@ -135,7 +124,6 @@ if(OPT_C_G_GDB)
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb" CACHE STRING "C compiler options")
   endif(NOT "${CMAKE_C_FLAGS_DEBUG}" MATCHES "-ggdb")
 endif(OPT_C_G_GDB)
- 
 
 if(NOT BUILD_LIBWEBSOCKETS)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibwebsockets.cmake)
@@ -149,59 +137,74 @@ endif(NOT LIBWEBSOCKETS_FOUND)
 
 if(BUILD_LIBWEBSOCKETS)
 
+  option(WITH_SSL "Use SSL" ON)
+  option(WITH_MBEDTLS "Use MbedTLS replacement for OpenSSL" OFF)
+  option(WITH_BROTLI "Use brotli HTTP stream compression" ON)
+
   set(LIBWEBSOCKETS_DEPS "")
   set(LIBWEBSOCKETS_C_FLAGS "")
 
-  option(BUILD_MBEDTLS "in-tree build of MbedTLS" OFF)
+  if(WITH_MBEDTLS)
+    set(WITH_SSL ON)
 
-  if(NOT BUILD_MBEDTLS)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindMbedTLS.cmake)
+    option(BUILD_MBEDTLS "in-tree build of MbedTLS" OFF)
 
-    find_mbedtls()
-  endif(NOT BUILD_MBEDTLS)
+    if(NOT BUILD_MBEDTLS)
+      include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindMbedTLS.cmake)
 
-  if(NOT MBEDTLS_FOUND)
-    set(BUILD_MBEDTLS ON)
-  endif(NOT MBEDTLS_FOUND)
+      find_mbedtls()
+    endif(NOT BUILD_MBEDTLS)
 
-  if(BUILD_MBEDTLS)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildMbedTLS.cmake)
+    if(NOT MBEDTLS_FOUND)
+      set(BUILD_MBEDTLS ON)
+    endif(NOT MBEDTLS_FOUND)
 
-    set(MBEDTLS_DEBUG OFF)
-    set(MBEDTLS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mbedtls")
-    set(MBEDTLS_C_FLAGS "${CMAKE_C_FLAGS}")
-    set(MBEDTLS_TARGET_NAME libmbedtls)
+    if(BUILD_MBEDTLS)
+      include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildMbedTLS.cmake)
 
-    build_mbedtls()
+      set(MBEDTLS_DEBUG OFF)
+      set(MBEDTLS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mbedtls")
+      set(MBEDTLS_C_FLAGS "${CMAKE_C_FLAGS}")
+      set(MBEDTLS_TARGET_NAME libmbedtls)
 
-    list(APPEND LIBWEBSOCKETS_DEPS ${MBEDTLS_TARGET_NAME})
-     set(LIBWEBSOCKETS_C_FLAGS "-I${MBEDTLS_INCLUDE_DIR} ${LIBWEBSOCKETS_C_FLAGS}")
- endif(BUILD_MBEDTLS)
+      build_mbedtls()
 
- 
-  #option(BUILD_BROTLI "in-tree build of brotli" ON)
-  #
-  #if(NOT BUILD_BROTLI)
-  #  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindBrotli.cmake)
-  #
-  #  find_mbedtls()
-  #endif(NOT BUILD_BROTLI)
-  #
-  #if(NOT BROTLI_FOUND)
-  #  set(BUILD_BROTLI ON)
-  #endif(NOT BROTLI_FOUND)
-  #
-  #if(BUILD_BROTLI)
-  #  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildBrotli.cmake)
-  #
-  #  set(BROTLI_DEBUG OFF)
-  #   set(BROTLI_C_FLAGS "${CMAKE_C_FLAGS}")
-  #  set(BROTLI_TARGET_NAME libbrotli)
-  #
-  #  build_brotli()
-  #  list(APPEND LIBWEBSOCKETS_DEPS ${BROTLI_TARGET_NAME})
-  #  set(LIBWEBSOCKETS_C_FLAGS "-I${BROTLI_INCLUDE_DIR} ${LIBWEBSOCKETS_C_FLAGS}")
-  #endif(BUILD_BROTLI)
+      list(APPEND LIBWEBSOCKETS_DEPS ${MBEDTLS_TARGET_NAME})
+      set(LIBWEBSOCKETS_C_FLAGS "-I${MBEDTLS_INCLUDE_DIR} ${LIBWEBSOCKETS_C_FLAGS}")
+    endif(BUILD_MBEDTLS)
+  endif(WITH_MBEDTLS)
+  if(WITH_SSL AND NOT WITH_MBEDTLS)
+    include(FindPkgConfig)
+    pkg_check_modules(OPENSSL openssl)
+    find_package(OpenSSL REQUIRED)
+    #pkg_search_module(OPENSSL openssl)
+  endif(WITH_SSL AND NOT WITH_MBEDTLS)
+
+  if(WITH_BROTLI)
+    option(BUILD_BROTLI "in-tree build of brotli" OFF)
+
+    if(NOT BUILD_BROTLI)
+      include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindBrotli.cmake)
+
+      find_brotli()
+    endif(NOT BUILD_BROTLI)
+
+    if(NOT BROTLI_FOUND)
+      set(BUILD_BROTLI ON)
+    endif(NOT BROTLI_FOUND)
+
+    if(BUILD_BROTLI)
+      include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildBrotli.cmake)
+
+      set(BROTLI_DEBUG OFF)
+      set(BROTLI_C_FLAGS "${CMAKE_C_FLAGS}")
+      set(BROTLI_TARGET_NAME libbrotli)
+
+      build_brotli()
+      list(APPEND LIBWEBSOCKETS_DEPS ${BROTLI_TARGET_NAME})
+      set(LIBWEBSOCKETS_C_FLAGS "-I${BROTLI_INCLUDE_DIR} ${LIBWEBSOCKETS_C_FLAGS}")
+    endif(BUILD_BROTLI)
+  endif(WITH_BROTLI)
 
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildLibwebsockets.cmake)
 
@@ -218,11 +221,8 @@ if(BUILD_LIBWEBSOCKETS)
 
 endif(BUILD_LIBWEBSOCKETS)
 
-
 link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${CURL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
 include_directories(${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR} ${MBEDTLS_LIBRARY_DIR})
-
-
 
 file(GLOB JS_BINDINGS_SOURCES *.c *.h)
 
@@ -238,7 +238,6 @@ function(DUMP_TARGET TARGET)
   endforeach()
 endfunction(DUMP_TARGET TARGET)
 
-
 add_library(quickjs-minnet MODULE ${JS_BINDINGS_SOURCES})
 
 if(BUILD_LIBWEBSOCKETS)
@@ -246,36 +245,26 @@ if(BUILD_LIBWEBSOCKETS)
 endif(BUILD_LIBWEBSOCKETS)
 
 target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
-set_target_properties(quickjs-minnet PROPERTIES 
-  COMPILE_FLAGS "-fvisibility=hidden" 
-  LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}" 
-  INTERFACE_LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}" 
-  PREFIX "" 
-  OUTPUT_NAME "net"
-  INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR}"
-)
-target_compile_definitions(quickjs-minnet PRIVATE
- -DJS_SHARED_LIBRARY=1
- -DJS_BINDINGS_INIT_MODULE=1
-)
+set_target_properties(quickjs-minnet PROPERTIES COMPILE_FLAGS "-fvisibility=hidden" LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}" INTERFACE_LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}" PREFIX "" OUTPUT_NAME "net" INSTALL_RPATH "${MBEDTLS_LIBRARY_DIR}")
+target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
 target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
 
-message("Libraries:\n\
+message(
+  "Libraries:\n\
   libwebsockets - ${LIBWEBSOCKETS_LIBRARIES}\n\
   mbedtls - ${MBEDTLS_LIBRARIES}\n\
   curl - ${CURL_LIBRARY}\n\
   openssl - ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY}\n\
 ")
 
-message("Library directories:\n\
+message(
+  "Library directories:\n\
   libwebsockets - ${LIBWEBSOCKETS_LIBRARY_DIR}\n\
   mbedtls - ${MBEDTLS_LIBRARY_DIR}\n\
   curl - ${CURL_LIBRARY_DIR}\n\
   openssl - ${OPENSSL_LIBRARY_DIR}\n\
 ")
 
-install(TARGETS quickjs-minnet 
-  DESTINATION "${QUICKJS_C_MODULE_DIR}" 
-  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
+install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
 
 #dump_target(quickjs-minnet)

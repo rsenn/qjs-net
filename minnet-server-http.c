@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <cutils.h>
 #include <ctype.h>
+#include <libgen.h>
 
 #include "jsutils.h"
 #include "minnet-websocket.h"
@@ -147,13 +148,16 @@ http_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp, JSContext
     size_t len, n;
     uint8_t *x, *end;
     for(x = resp->headers.start, end = resp->headers.write; x < end; x += len + 1) {
-      len = byte_chr(x, end - x, '\n');
+      len = byte_chrs(x, end - x, "\r\n", 2);
       if(len > (n = byte_chr(x, len, ':'))) {
         const char* prop = js_strndup(ctx, (const char*)x, n);
         if(x[n] == ':')
           n++;
         if(isspace(x[n]))
           n++;
+
+        lwsl_user("HTTP header %s = %.*s", prop, (int)(len - n), &x[n]);
+
         if((lws_add_http_header_by_name(wsi, (const unsigned char*)prop, (const unsigned char*)&x[n], len - n, &buf->write, buf->end)))
           JS_ThrowInternalError(minnet_server.cb_http.ctx, "lws_add_http_header_by_name failed");
         js_free(ctx, (void*)prop);
@@ -208,10 +212,14 @@ file_size(FILE* fp) {
 static int
 serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct http_response* resp, JSContext* ctx) {
   FILE* fp;
+  const char* mime = lws_get_mimetype(path, &mount->lws);
+  char disposition[1024];
+
+  snprintf(disposition, sizeof(disposition), "attachment; filename=\"%s\"", basename(path));
+
+  header_set(ctx, &resp->headers, "Content-Disposition", disposition);
 
   // printf("\033[38;5;226mSERVE FILE\033[0m\tis_h2=%i path=%s mount=%s\n", is_h2(wsi), path, mount ? mount->mnt : 0);
-
-  const char* mime = lws_get_mimetype(path, &mount->lws);
 
   if(path[0] == '\0')
     path = mount->def;
@@ -247,30 +255,30 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
 
 int
 http_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
-  enum lws_write_protocol n = LWS_WRITE_HTTP;
+  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+  enum lws_write_protocol n, p;
   size_t remain;
   ssize_t ret = 0;
 
-  if(done) {
-    n = LWS_WRITE_HTTP_FINAL;
-    /*  if(!buffer_REMAIN(&resp->body) && is_h2(wsi)) buffer_append(&resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
-  }
+  n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
+  /*  if(!buffer_REMAIN(&resp->body) && is_h2(wsi)) buffer_append(&resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
 
   if((remain = buffer_REMAIN(&resp->body))) {
     uint8_t* x = resp->body.read;
     size_t l = is_h2(wsi) ? (remain > 1024 ? 1024 : remain) : remain;
 
     if(l > 0) {
-      int p = (remain - l) > 0 ? LWS_WRITE_HTTP : n;
-      lwsl_debug("lws_write len=%zu final=%d", l, p == LWS_WRITE_HTTP_FINAL);
-      if((ret = lws_write(wsi, x, l, p)) > 0)
+      p = (remain - l) > 0 ? LWS_WRITE_HTTP : n;
+      ret = lws_write(wsi, x, l, p);
+      lwsl_debug("lws_write wsi#%" PRIi64 " len=%zu final=%d ret=%zd", opaque->serial, l, p == LWS_WRITE_HTTP_FINAL, ret);
+      if(ret > 0)
         buffer_skip(&resp->body, ret);
     }
   }
 
-  lwsl_debug("http_writable done=%i remain=%zu final=%d", done, buffer_REMAIN(&resp->body), n == LWS_WRITE_HTTP_FINAL);
+  lwsl_debug("http_writable wsi#%" PRIi64 " done=%i remain=%zu final=%d", opaque->serial, done, buffer_REMAIN(&resp->body), p == LWS_WRITE_HTTP_FINAL);
 
-  if(done && buffer_REMAIN(&resp->body) == 0) {
+  if(p == LWS_WRITE_HTTP_FINAL) {
     if(lws_http_transaction_completed(wsi))
       return -1;
   } else {
@@ -550,7 +558,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
             serv->done = TRUE;
           } else if(!serv->done) {
             JSBuffer out = js_buffer_from(minnet_server.ctx, ret);
-            /*    lwsl_user("http " FG("%d") "%-25s" NC " size=%zu", 22 + (reason * 2), lws_callback_name(reason) + 13, out.size);*/
+            lwsl_user("http " FG("%d") "%-25s" NC " size=%zu", 22 + (reason * 2), lws_callback_name(reason) + 13, out.size);
             buffer_append(&resp->body, out.data, out.size, ctx);
             js_buffer_free(&out, minnet_server.ctx);
           }
@@ -568,7 +576,8 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         serv->done = TRUE;
       }
 
-      //  buffer_dump("&resp->body", &resp->body);
+      fprintf(stderr, "resp url=%s ", resp->url);
+      buffer_dump("&resp->body", &resp->body);
       http_writable(wsi, resp, serv->done);
       break;
     }

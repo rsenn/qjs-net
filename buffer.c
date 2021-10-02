@@ -91,7 +91,7 @@ buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   size_t rdofs = buf->read - buf->start;
   uint8_t* x;
   assert(size >= wrofs);
-  assert(buf->alloc);
+  // assert(buf->alloc);
 
   if(!size) {
     buffer_free(buf, JS_GetRuntime(ctx));
@@ -101,7 +101,7 @@ buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   x = js_realloc(ctx, buf->alloc, size + LWS_PRE);
 
   if(x) {
-    if(buf->alloc == 0)
+    if(buf->alloc == 0 && buf->start && wrofs)
       memcpy(x + LWS_PRE, buf->start, wrofs);
 
     buf->alloc = x;
@@ -126,8 +126,8 @@ buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* c
     return 0;
   }
   return 1;
-}
-*/
+}*/
+
 int
 buffer_fromvalue(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
   int ret = -1;
