@@ -186,7 +186,7 @@ function main(...args) {
         return rsp;
       },
       onFd(fd, rd, wr) {
-        //console.log('onFd', fd, rd, wr);
+       console.log('onFd', fd, rd, wr);
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
       },
@@ -212,7 +212,7 @@ function main(...args) {
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
-  console.log(`FAIL: ${error.message}\n${error.stack}`);
+  console.log(`FAIL: ${error && error.message}\n${error && error.stack}`);
   std.exit(1);
 } finally {
   //console.log('SUCCESS');

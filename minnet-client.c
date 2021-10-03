@@ -21,10 +21,13 @@ close_reason(JSContext* ctx, const char* in, size_t len) {
 }
 
 static int
-connect_client(struct lws_context* context, const char* host, uint16_t port, BOOL ssl, const char* path) {
+connect_client(struct lws_context* context, const char* host, uint16_t port, BOOL ssl,  BOOL raw, const char* path) {
   struct lws_client_connect_info i;
 
   memset(&i, 0, sizeof(i));
+
+  if(raw)
+    i.method = "RAW";
 
   i.context = context;
   i.port = port;
@@ -51,6 +54,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   int n = 0;
   JSValue ret = JS_NewInt32(ctx, 0);
   MinnetURL url;
+  BOOL raw=FALSE;
   JSValue options = argv[0];
 
   SETLOG(LLL_INFO)
@@ -72,6 +76,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
     JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
     JSValue opt_ssl = JS_GetPropertyStr(ctx, options, "ssl");
+    JSValue opt_raw= JS_GetPropertyStr(ctx, options, "raw");
     JSValue opt_path = JS_GetPropertyStr(ctx, options, "path");
 
     host = JS_ToCString(ctx, opt_host);
@@ -83,6 +88,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       JS_ToInt32(ctx, &port, opt_port);
 
     ssl = JS_ToBool(ctx, opt_ssl);
+    raw = JS_ToBool(ctx, opt_raw);
 
     url = url_init(ctx, ssl ? "wss" : "ws", host, port, path);
 
@@ -92,6 +98,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
     JS_FreeValue(ctx, opt_path);
     JS_FreeValue(ctx, opt_ssl);
+    JS_FreeValue(ctx, opt_raw);
     JS_FreeValue(ctx, opt_host);
     JS_FreeValue(ctx, opt_port);
   }
@@ -116,7 +123,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     return JS_EXCEPTION;
   }
 
-  connect_client(context, url.host, url.port, !strcmp(url.protocol, "wss"), url.location);
+  connect_client(context, url.host, url.port, !strcmp(url.protocol, "wss"), raw, url.location);
 
   minnet_exception = FALSE;
 
