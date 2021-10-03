@@ -31,7 +31,7 @@
     },
     {
       "name": "make",
-      "shell_cmd": "make -C build/`gcc -dumpmachine`",
+      "shell_cmd": "make -C ../build/x86_64-linux-debug install -j10",
       "working_dir": "${project_path}",
     }
  

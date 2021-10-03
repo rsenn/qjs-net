@@ -214,7 +214,8 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
         size_t typelen;
         const char* type = header_get(ctx, &typelen, &req->headers, "content-type");
 
-        ret = minnet_stream_new(ctx, type, typelen, buffer_BEGIN(&req->body), buffer_WRITE(&req->body));
+        ret = buffer_tostring(&req->body, ctx);
+        //  ret = minnet_stream_new(ctx, type, typelen, buffer_BEGIN(&req->body), buffer_WRITE(&req->body));
       } else {
         ret = JS_NULL;
       }

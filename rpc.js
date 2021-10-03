@@ -77,7 +77,7 @@ export function Mapper(map = new WeakMap()) {
   };
   return Object.setPrototypeOf(self, Mapper.prototype);
 }
-Mapper.prototype = new Function();
+Mapper.prototype = function() {};
 Mapper.prototype.constructor = Mapper;
 
 export function DefaultConstructor(mapper, fn = (...args) => new Object(...args)) {
@@ -96,7 +96,8 @@ export function DefaultConstructor(mapper, fn = (...args) => new Object(...args)
   };
   return Object.setPrototypeOf(self, DefaultConstructor.prototype);
 }
-DefaultConstructor.prototype = new Function();
+
+DefaultConstructor.prototype = function() {};
 DefaultConstructor.prototype.constructor = DefaultConstructor;
 
 export function EventLogger(
@@ -230,8 +231,8 @@ export function RPCFactory(api) {
 
   return Factory;
 }
-RPCFactory.prototype = new Function();
 
+RPCFactory.prototype = function() {};
 RPCFactory.prototype[Symbol.toStringTag] = 'RPCFactory';
 
 /**

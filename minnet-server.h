@@ -29,7 +29,7 @@ typedef struct session_data {
   struct proxy_connection* proxy;
   int serial;
   JSValue generator, next;
-  BOOL done;
+  BOOL done, responded;
   unsigned closed : 1;
   unsigned h2 : 1;
   int64_t written;

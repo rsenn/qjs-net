@@ -21,7 +21,7 @@ close_reason(JSContext* ctx, const char* in, size_t len) {
 }
 
 static int
-connect_client(struct lws_context* context, const char* host, uint16_t port, BOOL ssl,  BOOL raw, const char* path) {
+connect_client(struct lws_context* context, const char* host, uint16_t port, BOOL ssl, BOOL raw, const char* path) {
   struct lws_client_connect_info i;
 
   memset(&i, 0, sizeof(i));
@@ -54,7 +54,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   int n = 0;
   JSValue ret = JS_NewInt32(ctx, 0);
   MinnetURL url;
-  BOOL raw=FALSE;
+  BOOL raw = FALSE;
   JSValue options = argv[0];
 
   SETLOG(LLL_INFO)
@@ -76,7 +76,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
     JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
     JSValue opt_ssl = JS_GetPropertyStr(ctx, options, "ssl");
-    JSValue opt_raw= JS_GetPropertyStr(ctx, options, "raw");
+    JSValue opt_raw = JS_GetPropertyStr(ctx, options, "raw");
     JSValue opt_path = JS_GetPropertyStr(ctx, options, "path");
 
     host = JS_ToCString(ctx, opt_host);
