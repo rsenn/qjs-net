@@ -213,16 +213,15 @@ static int
 serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct http_response* resp, JSContext* ctx) {
   FILE* fp;
   const char* mime = lws_get_mimetype(path, &mount->lws);
-  char disposition[1024];
-
-  snprintf(disposition, sizeof(disposition), "attachment; filename=\"%s\"", basename(path));
-
-  header_set(ctx, &resp->headers, "Content-Disposition", disposition);
-
-  // printf("\033[38;5;226mSERVE FILE\033[0m\tis_h2=%i path=%s mount=%s\n", is_h2(wsi), path, mount ? mount->mnt : 0);
 
   if(path[0] == '\0')
     path = mount->def;
+
+  /*{
+    char disposition[1024];
+    snprintf(disposition, sizeof(disposition), "attachment; filename=\"%s\"", basename(path));
+    header_set(ctx, &resp->headers, "Content-Disposition", disposition);
+  }*/
 
   if((fp = fopen(path, "rb"))) {
     size_t n = file_size(fp);
@@ -248,7 +247,7 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
     response_write(resp, body, strlen(body), ctx);
   }
 
-  lwsl_debug("serve_file path=%s mount=%.*s length=%td", path, mount->lws.mountpoint_len, mount->lws.mountpoint, buffer_WRITE(&resp->body));
+  lwsl_user("serve_file path=%s mount=%.*s length=%td", path, mount->lws.mountpoint_len, mount->lws.mountpoint, buffer_WRITE(&resp->body));
 
   return 0;
 }

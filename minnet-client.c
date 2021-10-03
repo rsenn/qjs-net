@@ -120,7 +120,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   context = lws_create_context(&info);
   if(!context) {
     lwsl_err("Libwebsockets init failed\n");
-    return JS_EXCEPTION;
+    return JS_ThrowInternalError(ctx, "Libwebsockets init failed");
   }
 
   connect_client(context, url.host, url.port, !strcmp(url.protocol, "wss"), raw, url.location);

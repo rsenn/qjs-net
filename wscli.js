@@ -126,7 +126,6 @@ function main(...args) {
     let [protocol, host, port, ...location] = [...url.matchAll(/[^:\/]+/g)].map(a => a[0]);
     if(!isNaN(+port)) port = +port;
     const path = location.reduce((acc, part) => acc + '/' + part, '');
-    console.log('createWS', { protocol, host, port, path });
     net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, ...args) => {
       if(params.debug)
         console.log(
@@ -149,9 +148,11 @@ function main(...args) {
           ...args
         );
     });
+
     const repl = new CLI(`${host}:${port}`);
 
     const fn = [net.client, net.server][+listen];
+        console.log('createWS', { protocol, host, port, path, repl, fn });
     return fn({
       sslCert,
       sslPrivateKey,
