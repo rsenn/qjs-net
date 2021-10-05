@@ -16,13 +16,13 @@
     },
     {
       "name": "clang-format",
-      "shell_cmd": "clang-format -verbose -style=file -i `find . -name '*.c' -or -name '*.h'`",
-      "working_dir": "${project_path:${folder:${file_path}}}",
+      "shell_cmd": "clang-format -verbose -style=file -i *.[ch]`",
+      "working_dir": "${project_path}",
     },
     {
       "name": "prettier",
       "shell_cmd": "(. ~/.nvm/nvm.sh; nvm use 14;  set -x; yarn run format)",
-      "working_dir": "${project_path:${folder:${file_path}}}",
+      "working_dir": "${project_path}",
     },
     {
       "name": "CMake",

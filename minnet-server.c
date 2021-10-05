@@ -16,8 +16,8 @@ int ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
-    {"defprot", lws_callback_http_dummy, 0, 0},
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"defprot", lws_callback_http_dummy, 0, 0},
     {"http", http_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     {"proxy-raw", raw_client_callback, 0, 1024, 0, NULL, 0},
@@ -25,8 +25,8 @@ static struct lws_protocols protocols[] = {
 };
 
 static struct lws_protocols protocols2[] = {
-    {"defprot", defprot_callback, 0, 0},
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"defprot", defprot_callback, 0, 0},
     {"http", http_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {0, 0},
 };
