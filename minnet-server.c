@@ -14,6 +14,7 @@ int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t)
 int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int http_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
@@ -106,7 +107,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
   if(is_tls) {
     minnet_server.info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-    minnet_server.info.options |= LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
+    minnet_server.info.options |= /*LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | */LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
   }
   if(JS_IsString(opt_host))
     minnet_server.info.vhost_name = js_to_string(ctx, opt_host);
@@ -213,11 +214,7 @@ http_headers(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
   }
   return count;
 }
-#include "minnet-server.h"
-#include "minnet-websocket.h"
-#include "minnet-request.h"
 
-int http_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {

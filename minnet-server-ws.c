@@ -172,6 +172,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL: {
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
+    case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+    case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
     case LWS_CALLBACK_CLOSED_HTTP:
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
       return http_callback(wsi, reason, user, in, len);
