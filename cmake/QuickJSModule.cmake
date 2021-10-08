@@ -65,6 +65,7 @@ function(make_module FNAME)
     config_module(${TARGET_NAME})
 
     set(LIBRARIES ${${VNAME}_LIBRARIES})
+    target_link_libraries(${TARGET_NAME} PRIVATE quickjs)
     if(LIBRARIES)
       target_link_libraries(${TARGET_NAME} PRIVATE ${LIBRARIES})
     endif(LIBRARIES)

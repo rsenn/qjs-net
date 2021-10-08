@@ -276,7 +276,8 @@ set_target_properties(
   LINK_DIRECTORIES "${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}" INTERFACE_LINK_DIRECTORIES "${MBEDTLS_LIBRARY_DIR}" PREFIX ""
              OUTPUT_NAME "net")
 target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
-target_link_libraries(quickjs-minnet ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY}
+
+target_link_libraries(quickjs-minnet quickjs ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY}
                       ${OPENSSL_LIBRARIES})
 
 message(
