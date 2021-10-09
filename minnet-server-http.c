@@ -10,6 +10,50 @@
 #include "minnet-response.h"
 #include "minnet-request.h"
 
+MinnetVhostOptions*
+vhost_options_create(JSContext* ctx, const char* name, const char* value) {
+  MinnetVhostOptions* vo = js_mallocz(ctx, sizeof(MinnetVhostOptions));
+
+  vo->name = name ? js_strdup(ctx, name) : 0;
+  vo->value = value ? js_strdup(ctx, value) : 0;
+
+  return vo;
+}
+
+MinnetVhostOptions*
+vhost_options_new(JSContext* ctx, JSValueConst vhost_option) {
+  MinnetVhostOptions* vo;
+  JSValue name, value;
+  const char *namestr, *valuestr;
+
+  name = JS_GetPropertyUint32(ctx, vhost_option, 0);
+  value = JS_GetPropertyUint32(ctx, vhost_option, 1);
+
+  namestr = JS_ToCString(ctx, name);
+  valuestr = JS_ToCString(ctx, value);
+
+  JS_FreeValue(ctx, name);
+  JS_FreeValue(ctx, value);
+
+  vo = vhost_options_create(ctx, namestr, valuestr);
+
+  JS_FreeCString(ctx, namestr);
+  JS_FreeCString(ctx, valuestr);
+
+  return vo;
+}
+
+void
+vhost_options_free(JSContext* ctx, MinnetVhostOptions* vo) {
+
+  if(vo->name)
+    js_free(ctx, (void*)vo->name);
+  if(vo->value)
+    js_free(ctx, (void*)vo->value);
+
+  js_free(ctx, (void*)vo);
+}
+
 MinnetHttpMount*
 mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, enum lws_mount_protocols origin_proto) {
   MinnetHttpMount* m = js_mallocz(ctx, sizeof(MinnetHttpMount));

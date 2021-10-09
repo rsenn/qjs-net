@@ -7,11 +7,22 @@
 struct http_request;
 struct http_response;
 
+typedef struct http_vhost_options {
+  union {
+    struct {
+      struct http_vhost_options *next, *options;
+      const char *name, *value;
+    };
+    struct lws_protocol_vhost_options lws;
+  };
+} MinnetVhostOptions;
+
 typedef struct http_mount {
   union {
     struct {
       struct http_mount* next;
       const char *mnt, *org, *def, *pro;
+      struct http_vhost_options *cgienv, *extra_mimetypes, *interpret;
     };
     struct lws_http_mount lws;
   };
@@ -24,8 +35,11 @@ typedef struct http_mount {
   struct http_response* resp;
 } MinnetHttpSession;*/
 
+MinnetVhostOptions* vhost_options_create(JSContext*, const char* name, const char* value);
+void vhost_options_free(JSContext*, MinnetVhostOptions* vo);
+MinnetVhostOptions* vhost_options_new(JSContext*, JSValueConst vhost_option);
 MinnetHttpMount* mount_create(JSContext*, const char*, const char* origin, const char* def, enum lws_mount_protocols origin_proto);
-MinnetHttpMount* mount_new(JSContext*, JSValue);
+MinnetHttpMount* mount_new(JSContext*, JSValueConst);
 struct http_mount* mount_find(const char*, size_t);
 void mount_free(JSContext*, MinnetHttpMount const*);
 int http_writable(struct lws*, struct http_response*, BOOL done);

@@ -57,6 +57,8 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   int a = 0;
   int port = 7981;
   BOOL is_tls = FALSE;
+  MinnetVhostOptions* mimetypes = 0;
+
   memset(&minnet_server, 0, sizeof minnet_server);
 
   lwsl_user("Minnet WebSocket Server\n");
@@ -73,6 +75,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
   JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
+  JSValue opt_mimetypes = JS_GetPropertyStr(ctx, options, "mimetypes");
 
   if(!JS_IsUndefined(opt_tls)) {
     is_tls = JS_ToBool(ctx, opt_tls);
@@ -107,7 +110,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
   if(is_tls) {
     minnet_server.info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-    minnet_server.info.options |= /*LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | */LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
+    minnet_server.info.options |= /*LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | */ LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
   }
   if(JS_IsString(opt_host))
     minnet_server.info.vhost_name = js_to_string(ctx, opt_host);
@@ -122,18 +125,36 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     minnet_ws_sslcert(ctx, &minnet_server.info, options);
   }
 
-  minnet_server.info.mounts = 0;
-  if(JS_IsArray(ctx, opt_mounts)) {
-    MinnetHttpMount** m = (MinnetHttpMount**)&minnet_server.info.mounts;
+  if(JS_IsArray(ctx, opt_mimetypes)) {
+    MinnetVhostOptions** vop = (MinnetVhostOptions**)&mimetypes;
     uint32_t i;
 
     for(i = 0;; i++) {
-      JSValue mount = JS_GetPropertyUint32(ctx, opt_mounts, i);
+      JSValue mimetype = JS_GetPropertyUint32(ctx, opt_mimetypes, i);
 
-      if(JS_IsUndefined(mount))
+      if(JS_IsUndefined(mimetype))
         break;
 
-      ADD(m, mount_new(ctx, mount), next);
+      ADD(vop, vhost_options_new(ctx, mimetype), next);
+    }
+  }
+
+  minnet_server.info.mounts = 0;
+  if(JS_IsArray(ctx, opt_mounts)) {
+    MinnetHttpMount *mount, **m = (MinnetHttpMount**)&minnet_server.info.mounts;
+    uint32_t i;
+
+    for(i = 0;; i++) {
+      JSValue mountval = JS_GetPropertyUint32(ctx, opt_mounts, i);
+
+      if(JS_IsUndefined(mountval))
+        break;
+
+      mount = mount_new(ctx, mountval);
+
+      mount->extra_mimetypes = mimetypes;
+
+      ADD(m, mount, next);
     }
   }
 
@@ -162,6 +183,15 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   }
 
   lws_context_destroy(minnet_server.context);
+
+  if(mimetypes) {
+    const MinnetVhostOptions *vhost_options, *next;
+
+    for(vhost_options = mimetypes; vhost_options; vhost_options = next) {
+      next = (MinnetVhostOptions*)vhost_options->lws.next;
+      vhost_options_free(ctx, vhost_options);
+    }
+  }
 
   if(minnet_server.info.mounts) {
     const MinnetHttpMount *mount, *next;
@@ -214,7 +244,6 @@ http_headers(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
   }
   return count;
 }
-
 
 int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
