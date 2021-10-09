@@ -193,7 +193,7 @@ fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* c
         JSValue argv[3] = {JS_NewInt32(cb->ctx, args->fd)};
         minnet_handlers(cb->ctx, wsi, args, &argv[1]);
 
-        minnet_emit(&minnet_server.cb_fd, 3, argv);
+        minnet_emit(cb, 3, argv);
 
         JS_FreeValue(cb->ctx, argv[0]);
         JS_FreeValue(cb->ctx, argv[1]);
@@ -208,7 +208,7 @@ fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* c
             JS_NewInt32(cb->ctx, args->fd),
         };
         minnet_handlers(cb->ctx, wsi, args, &argv[1]);
-        minnet_emit(&minnet_server.cb_fd, 3, argv);
+        minnet_emit(cb, 3, argv);
         JS_FreeValue(cb->ctx, argv[0]);
         JS_FreeValue(cb->ctx, argv[1]);
         JS_FreeValue(cb->ctx, argv[2]);
@@ -222,7 +222,7 @@ fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* c
           JSValue argv[3] = {JS_NewInt32(cb->ctx, args->fd)};
           minnet_handlers(cb->ctx, wsi, args, &argv[1]);
 
-          minnet_emit(&minnet_server.cb_fd, 3, argv);
+          minnet_emit(cb, 3, argv);
           JS_FreeValue(cb->ctx, argv[0]);
           JS_FreeValue(cb->ctx, argv[1]);
           JS_FreeValue(cb->ctx, argv[2]);

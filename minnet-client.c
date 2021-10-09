@@ -9,6 +9,12 @@ static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, vo
 THREAD_LOCAL struct lws_context* minnet_client_lws = 0;
 THREAD_LOCAL JSContext* minnet_client_ctx = 0;
 
+static const struct lws_protocols client_protocols[] = {
+    {"ws", client_callback, sizeof(MinnetClient), 0, 0, 0, 0},
+    {"http", client_callback, sizeof(MinnetClient), 0, 0, 0, 0},
+    {0},
+};
+
 static JSValue
 close_status(JSContext* ctx, const char* in, size_t len) {
   if(len >= 2)
@@ -21,6 +27,20 @@ close_reason(JSContext* ctx, const char* in, size_t len) {
   if(len > 2)
     return JS_NewStringLen(ctx, &in[2], len - 2);
   return JS_UNDEFINED;
+}
+
+static void
+sslcert_client(JSContext* ctx, struct lws_context_creation_info* info, JSValueConst options) {
+  JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");
+  JSValue opt_ssl_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
+  JSValue opt_ssl_ca = JS_GetPropertyStr(ctx, options, "sslCA");
+
+  if(JS_IsString(opt_ssl_cert))
+    info->client_ssl_cert_filepath = JS_ToCString(ctx, opt_ssl_cert);
+  if(JS_IsString(opt_ssl_private_key))
+    info->client_ssl_private_key_filepath = JS_ToCString(ctx, opt_ssl_private_key);
+  if(JS_IsString(opt_ssl_ca))
+    info->client_ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
 }
 
 static int
@@ -57,12 +77,6 @@ connect_client(struct lws_context* context, MinnetURL* url, BOOL ssl, BOOL raw, 
   return !lws_client_connect_via_info(&i);
 }
 
-static const struct lws_protocols client_protocols[] = {
-    {"ws", client_callback, sizeof(MinnetClient), 0, 0, 0, 0},
-    {"http", client_callback, sizeof(MinnetClient), 0, 0, 0, 0},
-    {0},
-};
-
 JSValue
 minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   struct lws_context_creation_info info;
@@ -77,6 +91,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
   memset(&info, 0, sizeof info);
   info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+  info.options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
   info.port = CONTEXT_PORT_NO_LISTEN;
   info.protocols = client_protocols;
 
@@ -126,7 +141,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   GETCBPROP(options, "onFd", client_cb_fd)
 
   if(!minnet_client_lws) {
-    minnet_ws_sslcert(ctx, &info, options);
+    sslcert_client(ctx, &info, options);
 
     minnet_client_lws = lws_create_context(&info);
     if(!minnet_client_lws) {
@@ -158,6 +173,8 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       MinnetWebsocket* ws = minnet_ws_data2(ctx, ret);
       ws->binary = JS_ToBool(ctx, opt_binary);
     }
+  } else {
+    ret = JS_ThrowInternalError(ctx, "No websocket!");
   }
   url_free(ctx, &url);
   return ret;
@@ -198,10 +215,6 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       buffer_zero(&cli->body);
       cli->ws_obj = minnet_ws_object(minnet_client_ctx, wsi);
 
-      return 0;
-    }
-    case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL: {
       return 0;
     }
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
@@ -284,44 +297,12 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       }
       break;
     }
-    case LWS_CALLBACK_ADD_POLL_FD: {
-      struct lws_pollargs* args = in;
-      if(client_cb_fd.ctx) {
-        JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
-        minnet_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
-
-        minnet_emit(&client_cb_fd, 3, argv);
-        JS_FreeValue(client_cb_fd.ctx, argv[0]);
-        JS_FreeValue(client_cb_fd.ctx, argv[1]);
-        JS_FreeValue(client_cb_fd.ctx, argv[2]);
-      }
-      break;
-    }
-    case LWS_CALLBACK_DEL_POLL_FD: {
-      struct lws_pollargs* args = in;
-      if(client_cb_fd.ctx) {
-        JSValue argv[3] = {
-            JS_NewInt32(client_cb_fd.ctx, args->fd),
-        };
-        minnet_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
-        minnet_emit(&client_cb_fd, 3, argv);
-        JS_FreeValue(client_cb_fd.ctx, argv[0]);
-      }
-      break;
-    }
+    case LWS_CALLBACK_LOCK_POLL:
+    case LWS_CALLBACK_UNLOCK_POLL:
+    case LWS_CALLBACK_ADD_POLL_FD:
+    case LWS_CALLBACK_DEL_POLL_FD:
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-      struct lws_pollargs* args = in;
-
-      if(client_cb_fd.ctx && args->events != args->prev_events) {
-        JSValue argv[3] = {JS_NewInt32(client_cb_fd.ctx, args->fd)};
-        minnet_handlers(client_cb_fd.ctx, wsi, args, &argv[1]);
-
-        minnet_emit(&client_cb_fd, 3, argv);
-        JS_FreeValue(client_cb_fd.ctx, argv[0]);
-        JS_FreeValue(client_cb_fd.ctx, argv[1]);
-        JS_FreeValue(client_cb_fd.ctx, argv[2]);
-      }
-      break;
+      return fd_callback(wsi, reason, &client_cb_fd, in);
     }
 
     default: {
