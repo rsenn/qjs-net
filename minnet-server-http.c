@@ -390,9 +390,9 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       MinnetBuffer* h = &opaque->req->headers;
       int num_hdr = http_headers(ctx, h, wsi);
-    lwsl_user("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
+      lwsl_debug("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
 
-return 0;
+      return 0;
       break;
     }
 
