@@ -128,13 +128,10 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   if(JS_IsArray(ctx, opt_mimetypes)) {
     MinnetVhostOptions** vop = (MinnetVhostOptions**)&mimetypes;
     uint32_t i;
-
     for(i = 0;; i++) {
       JSValue mimetype = JS_GetPropertyUint32(ctx, opt_mimetypes, i);
-
       if(JS_IsUndefined(mimetype))
         break;
-
       ADD(vop, vhost_options_new(ctx, mimetype), next);
     }
   }
@@ -143,32 +140,27 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   if(JS_IsArray(ctx, opt_mounts)) {
     MinnetHttpMount *mount, **m = (MinnetHttpMount**)&minnet_server.info.mounts;
     uint32_t i;
-
     for(i = 0;; i++) {
       JSValue mountval = JS_GetPropertyUint32(ctx, opt_mounts, i);
-
       if(JS_IsUndefined(mountval))
         break;
-
       mount = mount_new(ctx, mountval);
-
       mount->extra_mimetypes = mimetypes;
-
       ADD(m, mount, next);
     }
   }
 
-  if(!(minnet_server.context = lws_create_context(&minnet_server.info))) {
+  if(!(minnet_server.lws = lws_create_context(&minnet_server.info))) {
     lwsl_err("libwebsockets init failed\n");
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
   }
   /*
-    if(!lws_create_vhost(minnet_server.context, &minnet_server.info)) {
+    if(!lws_create_vhost(minnet_server.lws, &minnet_server.info)) {
       lwsl_err("Failed to create vhost\n");
       return JS_ThrowInternalError(ctx, "Failed to create vhost");
     }*/
 
-  lws_service_adjust_timeout(minnet_server.context, 1, 0);
+  lws_service_adjust_timeout(minnet_server.lws, 1, 0);
 
   while(a >= 0) {
     if(minnet_exception) {
@@ -179,10 +171,10 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     if(minnet_server.cb_fd.ctx)
       js_std_loop(ctx);
     else
-      a = lws_service(minnet_server.context, 20);
+      a = lws_service(minnet_server.lws, 20);
   }
 
-  lws_context_destroy(minnet_server.context);
+  lws_context_destroy(minnet_server.lws);
 
   if(mimetypes) {
     const MinnetVhostOptions *vhost_options, *next;

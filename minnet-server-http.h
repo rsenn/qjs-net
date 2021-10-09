@@ -7,7 +7,7 @@
 struct http_request;
 struct http_response;
 
-typedef struct http_vhost_options {
+typedef struct http_vhost_option {
   union {
     struct {
       struct http_vhost_options *next, *options;

@@ -115,53 +115,12 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL: return 0;
-
-    case LWS_CALLBACK_ADD_POLL_FD: {
-      struct lws_pollargs* args = in;
-
-      if(minnet_server.cb_fd.ctx) {
-        JSValue argv[3] = {JS_NewInt32(minnet_server.cb_fd.ctx, args->fd)};
-        minnet_handlers(minnet_server.cb_fd.ctx, wsi, args, &argv[1]);
-
-        minnet_emit(&minnet_server.cb_fd, 3, argv);
-
-        JS_FreeValue(minnet_server.cb_fd.ctx, argv[0]);
-        JS_FreeValue(minnet_server.cb_fd.ctx, argv[1]);
-        JS_FreeValue(minnet_server.cb_fd.ctx, argv[2]);
-      }
-      return 0;
-    }
-    case LWS_CALLBACK_DEL_POLL_FD: {
-      struct lws_pollargs* args = in;
-
-      if(minnet_server.cb_fd.ctx) {
-        JSValue argv[3] = {
-            JS_NewInt32(minnet_server.cb_fd.ctx, args->fd),
-        };
-        minnet_handlers(minnet_server.cb_fd.ctx, wsi, args, &argv[1]);
-        minnet_emit(&minnet_server.cb_fd, 3, argv);
-        JS_FreeValue(minnet_server.cb_fd.ctx, argv[0]);
-        JS_FreeValue(minnet_server.cb_fd.ctx, argv[1]);
-        JS_FreeValue(minnet_server.cb_fd.ctx, argv[2]);
-      }
-      return 0;
-    }
+    case LWS_CALLBACK_UNLOCK_POLL:
+    case LWS_CALLBACK_ADD_POLL_FD:
+    case LWS_CALLBACK_DEL_POLL_FD:
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-      struct lws_pollargs* args = in;
 
-      if(minnet_server.cb_fd.ctx) {
-        if(args->events != args->prev_events) {
-          JSValue argv[3] = {JS_NewInt32(minnet_server.cb_fd.ctx, args->fd)};
-          minnet_handlers(minnet_server.cb_fd.ctx, wsi, args, &argv[1]);
-
-          minnet_emit(&minnet_server.cb_fd, 3, argv);
-          JS_FreeValue(minnet_server.cb_fd.ctx, argv[0]);
-          JS_FreeValue(minnet_server.cb_fd.ctx, argv[1]);
-          JS_FreeValue(minnet_server.cb_fd.ctx, argv[2]);
-        }
-      }
-      return 0;
+      return fd_callback(wsi, reason, &minnet_server.cb_fd, in);
     }
 
     case LWS_CALLBACK_WSI_CREATE:
@@ -178,6 +137,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
       return http_callback(wsi, reason, user, in, len);
     }
+    case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
     default: {
       minnet_lws_unhandled("WS", reason);
       return 0;

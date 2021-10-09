@@ -8,7 +8,7 @@
 struct http_mount;
 
 typedef struct server_context {
-  struct lws_context* context;
+  struct lws_context* lws;
   struct lws_context_creation_info info;
   JSContext* ctx;
   MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd, cb_http;

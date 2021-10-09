@@ -547,7 +547,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
         break;
       }
       if(req->method == METHOD_GET || is_h2(wsi))
-        lws_callback_on_writable(wsi);
+        (wsi);
 
       JS_FreeValue(ctx, ws_obj);
 

@@ -122,7 +122,7 @@ minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValu
   if(JS_IsString(opt_ssl_private_key))
     info->ssl_private_key_filepath = JS_ToCString(ctx, opt_ssl_private_key);
   if(JS_IsString(opt_ssl_ca))
-    info->client_ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
+    info->ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
 }
 
 static JSValue
@@ -388,13 +388,11 @@ JSValue
 minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetWebsocket* ws;
-  // int i;
 
   if(!(ws = js_mallocz(ctx, sizeof(MinnetWebsocket))))
     return JS_ThrowOutOfMemory(ctx);
 
-  /* using new_target to get the prototype is necessary when the
-     class is extended. */
+  /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");
   if(JS_IsException(proto))
     proto = JS_DupValue(ctx, minnet_ws_proto);
@@ -411,7 +409,7 @@ minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValue
     if(JS_IsNumber(argv[0])) {
       uint32_t fd;
       JS_ToUint32(ctx, &fd, argv[0]);
-      ws->lwsi = lws_adopt_socket(minnet_server.context, fd);
+      ws->lwsi = lws_adopt_socket(minnet_server.lws, fd);
     }
   }
 
@@ -420,7 +418,6 @@ minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValue
   if(ws->lwsi) {
     struct wsi_opaque_user_data* opaque = js_malloc(ctx, sizeof(struct wsi_opaque_user_data));
     opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, obj));
-
     lws_set_opaque_user_data(ws->lwsi, opaque);
   }
 

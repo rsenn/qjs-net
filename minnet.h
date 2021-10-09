@@ -29,10 +29,11 @@ struct http_request;
 
 #define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
 
+#define GETCBPROP(obj, opt, cb_ptr) GETCB(JS_GetPropertyStr(ctx, obj, opt), cb_ptr)
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj) \
   if(JS_IsFunction(ctx, opt)) { \
-    cb_ptr = (MinnetCallback){ctx, JS_DupValue(ctx, this_obj), JS_DupValue(ctx, opt), #cb_ptr}; \
+    cb_ptr = (MinnetCallback){ctx, JS_DupValue(ctx, this_obj), opt, #cb_ptr}; \
   }
 
 #define FREECB(cb_ptr) \
@@ -82,6 +83,7 @@ typedef struct url {
   char* location;
 } MinnetURL;
 
+extern THREAD_LOCAL struct lws_context* minnet_lws_context;
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
 
@@ -90,6 +92,7 @@ MinnetURL url_parse(JSContext* ctx, const char* url);
 void url_free(JSContext*, MinnetURL* url);
 JSValue header_object(JSContext*, const struct byte_buffer*);
 ssize_t header_set(JSContext*, struct byte_buffer*, const char* name, const char* value);
+int fd_callback(struct lws*, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args);
 int minnet_lws_unhandled(const char* handler, int);
 JSValue minnet_emit_this(const struct ws_callback*, JSValueConst this_obj, int argc, JSValue* argv);
 JSValue minnet_emit(const struct ws_callback*, int argc, JSValue* argv);
