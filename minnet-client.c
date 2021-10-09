@@ -240,11 +240,14 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
     case LWS_CALLBACK_RAW_CONNECTED: {
-      lwsl_user("client   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
+      if(!cli->connected) {
+        lwsl_user("client   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
 
-      if(client_cb_connect.ctx) {
-        JSValue ws_obj = minnet_ws_object(client_cb_connect.ctx, wsi);
-        minnet_emit(&client_cb_connect, 1, &ws_obj);
+        if(client_cb_connect.ctx) {
+          JSValue ws_obj = minnet_ws_object(client_cb_connect.ctx, wsi);
+          minnet_emit(&client_cb_connect, 1, &ws_obj);
+        }
+        cli->connected = TRUE;
       }
       break;
     }

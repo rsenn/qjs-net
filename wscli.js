@@ -63,7 +63,8 @@ function GetOpt(options = {}, args) {
 
 class CLI extends REPL {
   constructor(prompt2) {
-    let name = scriptArgs[0];
+    //console.log('process.argv', process.argv);
+    let name = process.argv[1];
     name = name
       .replace(/.*\//, '')
       .replace(/-/g, ' ')
@@ -79,8 +80,11 @@ class CLI extends REPL {
       this.printStatus(`EXIT`, false);
       std.exit(0);
     });
-    let { log } = console;
-    console.log = this.printFunction(log);
+    let log = this.printFunction(console.log);
+    console.log = (...args) => {
+      //log('console.log:', args);
+      log(...args);
+    };
     this.runSync();
   }
 
@@ -121,7 +125,7 @@ function main(...args) {
   const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
-  console.log('params', params);
+  //console.log('params', params);
   function createWS(url, callbacks, listen = 0) {
     let [protocol, host, port, ...location] = [...url.matchAll(/[^:\/]+/g)].map(a => a[0]);
     if(!isNaN(+port)) port = +port;
@@ -129,22 +133,21 @@ function main(...args) {
     net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, ...args) => {
       if(params.debug)
         console.log(
-          (
-            [
-              'ERR',
-              'WARN',
-              'NOTICE',
-              'INFO',
-              'DEBUG',
-              'PARSER',
-              'HEADER',
-              'EXT',
-              'CLIENT',
-              'LATENCY',
-              'MINNET',
-              'THREAD'
-            ][Math.log2(level)] ?? level + ''
-          ).padEnd(8),
+          ('X',
+          [
+            'ERR',
+            'WARN',
+            'NOTICE',
+            'INFO',
+            'DEBUG',
+            'PARSER',
+            'HEADER',
+            'EXT',
+            'CLIENT',
+            'LATENCY',
+            'MINNET',
+            'THREAD'
+          ][level && Math.log2(level)] ?? level + '').padEnd(8),
           ...args
         );
     });
@@ -152,7 +155,7 @@ function main(...args) {
     const repl = new CLI(`${host}:${port}`);
 
     const fn = [net.client, net.server][+listen];
-        console.log('createWS', { protocol, host, port, path, repl, fn });
+    // console.log('createWS', { protocol, host, port, path, repl, fn });
     return fn({
       sslCert,
       sslPrivateKey,
@@ -163,7 +166,7 @@ function main(...args) {
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
-        console.log('onConnect', ws, req);
+        //console.log('onConnect', ws, req);
         try {
           repl.printStatus(`Connected to ${protocol}://${host}:${port}${path}`, true);
         } catch(err) {
@@ -187,7 +190,7 @@ function main(...args) {
         return rsp;
       },
       onFd(fd, rd, wr) {
-       console.log('onFd', fd, rd, wr);
+        //console.log('onFd', fd, rd, wr);
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
       },

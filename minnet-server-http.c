@@ -362,20 +362,6 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
   }
   url_len = url ? strlen(url) : 0;
 
-  if(reason != LWS_CALLBACK_HTTP_WRITEABLE && (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
-    lwsl_user("http " FG("%d") "%-25s" NC " wsi#%" PRId64 " fd=%i is_h2=%i is_ssl=%i url=%s method=%s in='%.*s'\n",
-              22 + (reason * 2),
-              lws_callback_name(reason) + 13,
-              opaque->serial,
-              lws_get_socket_fd(wsi),
-              serv && serv->h2 || is_h2(wsi),
-              lws_is_ssl(wsi),
-              url,
-              method_name(method),
-              (int)len,
-              (char*)in);
-  }
-
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
@@ -393,7 +379,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       lwsl_user("http " FGC(171, "%-25s") " fd=%i, num_hdr=%i\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), num_hdr);
 
-      return 1;
+      /*return 1;*/
       break;
     }
 
@@ -404,8 +390,9 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       MinnetBuffer* h = &opaque->req->headers;
       int num_hdr = http_headers(ctx, h, wsi);
-      // lwsl_user("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
+    lwsl_user("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
 
+return 0;
       break;
     }
 
@@ -629,6 +616,22 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       break;
     }
   }
+  int ret = lws_callback_http_dummy(wsi, reason, user, in, len);
 
-  return lws_callback_http_dummy(wsi, reason, user, in, len);
+  if(reason != LWS_CALLBACK_HTTP_WRITEABLE && (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
+    lwsl_user("http " FG("%d") "%-25s" NC " wsi#%" PRId64 " fd=%i is_h2=%i is_ssl=%i url=%s method=%s in='%.*s' ret=%d\n",
+              22 + (reason * 2),
+              lws_callback_name(reason) + 13,
+              opaque->serial,
+              lws_get_socket_fd(wsi),
+              serv && serv->h2 || is_h2(wsi),
+              lws_is_ssl(wsi),
+              url,
+              method_name(method),
+              (int)len,
+              (char*)in,
+              ret);
+  }
+
+  return ret;
 }
