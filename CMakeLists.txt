@@ -296,6 +296,10 @@ message(
   openssl - ${OPENSSL_LIBRARY_DIR}\n\
 ")
 
+if(NOT QUICKJS_C_MODULE_DIR)
+  set(QUICKJS_C_MODULE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/quickjs")
+endif(NOT QUICKJS_C_MODULE_DIR)
+
 install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                                                                                  GROUP_EXECUTE GROUP_READ)
 
