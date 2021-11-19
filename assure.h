@@ -29,9 +29,9 @@
    is defined, so as to catch typos and avoid some GCC warnings.  */
 
 #ifdef NDEBUG
-# define assure(E) ((void) (0 && (E)))
+#define assure(E) ((void)(0 && (E)))
 #else
-# define assure(E) assert (E)
+#define assure(E) assert(E)
 #endif
 
 #endif
