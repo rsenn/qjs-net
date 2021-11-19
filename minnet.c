@@ -12,6 +12,27 @@
 #include <ctype.h>
 #include <sys/time.h>
 
+#ifndef POLLIN
+#define POLLIN  1
+#endif
+#ifndef POLLOUT
+#define POLLOUT 4
+#endif
+#ifndef POLLERR
+#define POLLERR 8
+#endif
+#ifndef POLLHUP
+#define POLLHUP 16
+#endif
+
+#ifdef _WIN32
+struct pollfd {
+  int fd;
+  short events;
+  short revents;
+};
+#endif
+
 #ifdef JS_SHARED_LIBRARY
 #define JS_INIT_MODULE js_init_module
 #else

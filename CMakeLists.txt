@@ -23,6 +23,10 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindQuickJS.cmake)
 find_quickjs()
 configure_quickjs()
 
+if(WIN32 OR MINGW)
+  set(SOCKET_LIBRARIES mswsock ws2_32)
+endif(WIN32 OR MINGW)
+
 #if(BUILD_SHARED_LIBWEBSOCKETS)
 #  set(LWS_WITH_SHARED TRUE)
 #  set(LWS_WITH_STATIC FALSE)
@@ -278,7 +282,7 @@ set_target_properties(
 target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
 
 target_link_libraries(quickjs-minnet quickjs ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY}
-                      ${OPENSSL_LIBRARIES})
+                      ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES})
 
 message(
   "Libraries:\n\
