@@ -8,6 +8,8 @@
 #include <quickjs-libc.h>
 #include <libwebsockets.h>
 
+#include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
+
 MinnetServer minnet_server = {0};
 
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
