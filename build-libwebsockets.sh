@@ -7,10 +7,11 @@ build_libwebsockets() {
   relsrcdir=`realpath --relative-to $builddir $sourcedir`
 
   : ${PLUGINS=OFF}
+  : ${DISKCACHE=OFF}
+  export CFLAGS="-I$PWD/libwebsockets/lib/plat/unix"
 
   mkdir -p $builddir
   (cd $builddir
-
   cmake $relsrcdir \
     ${TOOLCHAIN+"-DCMAKE_TOOLCHAIN_FILE:FILEPATH=$TOOLCHAIN"} \
     -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
@@ -23,9 +24,9 @@ build_libwebsockets() {
     -DLWS_HAVE_LIBCAP:BOOL=FALSE \
     -DLWS_ROLE_RAW_PROXY:BOOL=ON \
     -DLWS_UNIX_SOCK:BOOL=ON \
+    -DLWS_WITH_DISKCACHE:BOOL="$DISKCACHE" \
     -DLWS_WITH_ACCESS_LOG:BOOL=ON \
     -DLWS_WITH_CGI:BOOL=OFF \
-    -DLWS_WITH_DISKCACHE:BOOL=ON \
     -DLWS_WITH_DIR:BOOL=OFF \
     -DLWS_WITH_EVLIB_PLUGINS:BOOL=OFF \
     -DLWS_WITH_EXTERNAL_POLL:BOOL=ON \
@@ -53,6 +54,6 @@ build_libwebsockets() {
     -DLWS_WITH_UNIX_SOCK:BOOL=ON \
     -DLWS_WITH_ZIP_FOPS:BOOL=ON \
     -DLWS_WITH_ZLIB:BOOL=ON \
-  "$@") 2>&1 | tee cmake.log
-    make -C $builddir)
+    "$@" && make) 2>&1 | tee cmake.log
+    )
 }
