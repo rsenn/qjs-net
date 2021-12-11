@@ -12,8 +12,7 @@ function GetOpt(options = {}, args) {
   let r = {};
   let positional = (r['@'] = []);
   if(!(options instanceof Array)) options = Object.entries(options);
-  const findOpt = a =>
-    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
+  const findOpt = a => options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
   let [, params] = options.find(o => o[0] == '@') || [];
   if(typeof params == 'string') params = params.split(',');
   for(let i = 0; i < args.length; i++) {
@@ -131,25 +130,7 @@ function main(...args) {
     if(!isNaN(+port)) port = +port;
     const path = location.reduce((acc, part) => acc + '/' + part, '');
     net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, ...args) => {
-      if(params.debug)
-        console.log(
-          ('X',
-          [
-            'ERR',
-            'WARN',
-            'NOTICE',
-            'INFO',
-            'DEBUG',
-            'PARSER',
-            'HEADER',
-            'EXT',
-            'CLIENT',
-            'LATENCY',
-            'MINNET',
-            'THREAD'
-          ][level && Math.log2(level)] ?? level + '').padEnd(8),
-          ...args
-        );
+      if(params.debug) console.log(('X', ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
 
     const repl = new CLI(`${host}:${port}`);
@@ -180,13 +161,7 @@ function main(...args) {
       },
       onHttp(req, rsp) {
         const { url, method, headers } = req;
-        console.log(
-          '\x1b[38;5;82monHttp\x1b[0m(\n\t',
-          Object.setPrototypeOf({ url, method, headers }, Object.getPrototypeOf(req)),
-          ',\n\t',
-          rsp,
-          '\n)'
-        );
+        console.log('\x1b[38;5;82monHttp\x1b[0m(\n\t', Object.setPrototypeOf({ url, method, headers }, Object.getPrototypeOf(req)), ',\n\t', rsp, '\n)');
         return rsp;
       },
       onFd(fd, rd, wr) {
