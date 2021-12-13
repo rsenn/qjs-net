@@ -212,7 +212,7 @@ http_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp, JSContext
 
   /* {
      char* b = buffer_escaped(buf, ctx);
-     lwsl_debug("lws_finalize_write_http_header '%s' %td ret=%d", b, buf->write - buf->start, ret);
+     lwsl_user("lws_finalize_write_http_header '%s' %td ret=%d", b, buf->write - buf->start, ret);
       js_free(ctx, b);
    }*/
   if(ret)
@@ -313,13 +313,13 @@ http_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
     if(l > 0) {
       p = (remain - l) > 0 ? LWS_WRITE_HTTP : n;
       ret = lws_write(wsi, x, l, p);
-      lwsl_debug("lws_write wsi#%" PRIi64 " len=%zu final=%d ret=%zd", opaque->serial, l, p == LWS_WRITE_HTTP_FINAL, ret);
+      lwsl_user("lws_write wsi#%" PRIi64 " len=%zu final=%d ret=%zd", opaque->serial, l, p == LWS_WRITE_HTTP_FINAL, ret);
       if(ret > 0)
         buffer_skip(&resp->body, ret);
     }
   }
 
-  lwsl_debug("http_writable wsi#%" PRIi64 " done=%i remain=%zu final=%d", opaque->serial, done, buffer_REMAIN(&resp->body), p == LWS_WRITE_HTTP_FINAL);
+  lwsl_user("http_writable wsi#%" PRIi64 " done=%i remain=%zu final=%d", opaque->serial, done, buffer_REMAIN(&resp->body), p == LWS_WRITE_HTTP_FINAL);
 
   if(p == LWS_WRITE_HTTP_FINAL) {
     if(lws_http_transaction_completed(wsi))
@@ -390,7 +390,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
 
       MinnetBuffer* h = &opaque->req->headers;
       int num_hdr = http_headers(ctx, h, wsi);
-      lwsl_debug("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
+      lwsl_user("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
 
       return 0;
       break;

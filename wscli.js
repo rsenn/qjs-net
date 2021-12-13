@@ -154,9 +154,9 @@ function main(...args) {
           console.log('error:', err.message);
         }
       },
-      onClose(ws, status, reason) {
+      onClose(ws, status, reason, error) {
         connections.delete(ws);
-        console.log('onClose', ws, status, reason);
+        console.log('onClose', ws, status, reason, error);
         repl.exit(status != 1000 ? 1 : 0);
       },
       onHttp(req, rsp) {
