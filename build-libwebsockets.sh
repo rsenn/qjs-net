@@ -11,6 +11,7 @@ build_libwebsockets() {
   export CFLAGS="-I$PWD/libwebsockets/lib/plat/unix"
 
   mkdir -p $builddir
+  echo "builddir: $builddir" 1>&2
   (cd $builddir
   cmake $relsrcdir \
     ${TOOLCHAIN+"-DCMAKE_TOOLCHAIN_FILE:FILEPATH=$TOOLCHAIN"} \
