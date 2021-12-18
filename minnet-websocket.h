@@ -35,6 +35,7 @@ struct wsi_opaque_user_data {
   struct socket* ws;
   struct http_request* req;
   int64_t serial;
+  int error;
 };
 
 static inline struct wsi_opaque_user_data*

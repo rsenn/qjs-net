@@ -184,7 +184,7 @@ static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetClient* cli = user;
 
-  lwsl_debug("client " FG("%d") "%-25s" NC " is_ssl=%i in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), (int)MIN(len, 32), (char*)in);
+  lwsl_user("client " FG("%d") "%-25s" NC " is_ssl=%i in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), (int)MIN(len, 32), (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
@@ -224,15 +224,19 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       JSContext* ctx = client_cb_close.ctx;
       if(ctx) {
+        struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+        int err = opaque ? opaque->error : 0;
         JSValueConst cb_argv[] = {
             minnet_ws_object(ctx, wsi),
             close_status(ctx, in, len),
             close_reason(ctx, in, len),
+            JS_NewInt32(ctx, err),
         };
-        minnet_emit(&client_cb_close, 3, cb_argv);
+        minnet_emit(&client_cb_close, 4, cb_argv);
         JS_FreeValue(ctx, cb_argv[0]);
         JS_FreeValue(ctx, cb_argv[1]);
         JS_FreeValue(ctx, cb_argv[2]);
+        JS_FreeValue(ctx, cb_argv[3]);
       }
       break;
     }

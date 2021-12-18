@@ -501,6 +501,30 @@ minnet.c.s:
 	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/minnet.c.s
 .PHONY : minnet.c.s
 
+poll.o: poll.c.o
+.PHONY : poll.o
+
+# target to build an object file
+poll.c.o:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/poll.c.o
+.PHONY : poll.c.o
+
+poll.i: poll.c.i
+.PHONY : poll.i
+
+# target to preprocess a source file
+poll.c.i:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/poll.c.i
+.PHONY : poll.c.i
+
+poll.s: poll.c.s
+.PHONY : poll.s
+
+# target to generate assembly for a file
+poll.c.s:
+	cd /home/roman/Projects/plot-cv && $(MAKE) $(MAKESILENT) -f quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/build.make quickjs/qjs-net/CMakeFiles/quickjs-minnet.dir/poll.c.s
+.PHONY : poll.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -554,6 +578,9 @@ help:
 	@echo "... minnet.o"
 	@echo "... minnet.i"
 	@echo "... minnet.s"
+	@echo "... poll.o"
+	@echo "... poll.i"
+	@echo "... poll.s"
 .PHONY : help
 
 
