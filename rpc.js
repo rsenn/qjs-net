@@ -1,10 +1,9 @@
 //import inspect from 'inspect';
 //import * as bjson from 'bjson';
-import { SyscallError, weakAssign } from '../../lib/misc.js';
-import { EventEmitter } from '../../lib/events.js';
-import extendArray from '../qjs-modules/lib/extendArray.js';
-import { Repeater } from '../../lib/repeater/repeater.js';
-import inspect from '../../lib/objectInspect.js';
+import { SyscallError, weakAssign, extendArray, memoize, types, getPrototypeChain } from 'util';
+import { EventEmitter } from 'events';
+import { Repeater } from 'repeater';
+import inspect from 'inspect';
 
 let sockId;
 
@@ -27,23 +26,7 @@ export const VfnAdapter = vfn => ({
 
 export const VfnDecorator = vfn => define(vfn, VfnAdapter(vfn));
 
-export const Memoize = (globalThis.memoize = function memoize(fn) {
-  let self,
-    storage = {};
-  const v = VfnDecorator((key, value) => (value !== undefined ? (storage[key] = value) : storage[key]));
-  self = function(key, ...args) {
-    let r;
-
-    if((r = v.get(key))) return r;
-    r = fn.call(this, key, ...args);
-    v.set(key, r);
-    return r;
-  };
-  self.cache = storage;
-  return Object.freeze(self);
-});
-
-export const DebugFlags = (globalThis.DebugFlags = Util.memoize((environ = (globalThis.process && process.env['DEBUG']) || '') => {
+export const DebugFlags = (globalThis.DebugFlags = memoize((environ = (globalThis.process && process.env['DEBUG']) || '') => {
   let a = Array.isArray(environ) ? environ : environ.split(/[^A-Za-z0-9_]+/g);
   a = a.filter(n => n !== '');
   a = a.reduce((acc, n) => {
@@ -58,7 +41,7 @@ globalThis.GetClasses = function* GetClasses(obj) {
 
   for(let name of keys) {
     try {
-      if(Util.isConstructor(obj[name])) yield [name, obj[name]];
+      if(types.isConstructor(obj[name])) yield [name, obj[name]];
     } catch(e) {}
   }
 
@@ -943,7 +926,7 @@ export function SerializeValue(value, source = false) {
   let desc = { type };
   if(type == 'object' && value != null) {
     desc['class'] = getPrototypeName(value) ?? getPrototypeName(Object.getPrototypeOf(value));
-    desc['chain'] = Util.getPrototypeChain(value).map(getPrototypeName);
+    desc['chain'] = getPrototypeChain(value).map(getPrototypeName);
   } else if(type == 'symbol') {
     desc['description'] = value.description;
     desc['symbol'] = value.toString();
