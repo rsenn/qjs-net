@@ -112,7 +112,7 @@ function main(...args) {
 
     net.setLog((params.debug ? net.LLL_USER : 0) | (((params.debug ? net.LLL_NOTICE : net.LLL_WARN) << 1) - 1), (level, ...args) => {
       repl.printStatus(...args);
-      if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
+      //if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
 
     return [net.client, net.server][+listen]({
@@ -145,20 +145,23 @@ function main(...args) {
         ['.m', 'text/x-objective-c'],
         ['.sh', 'text/x-shellscript']
       ],
-      mounts: [
-        ['/', '.', 'index.html'],
-        function proxy(req, res) {
+      mounts: {
+        '/': ['/', '.', 'index.html'],
+        '/404.html': function* (req, res) {
+          console.log('/404.html', { req, res });
+          yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
+        },
+        proxy: function proxy(req, res) {
           const { url, method, headers } = req;
           const { status, ok, type } = res;
 
           console.log('proxy', { url, method, headers }, { status, ok, url, type });
         },
-
-        function* config(req, res) {
+        config: function* config(req, res) {
           console.log('/config', { req, res });
           yield '{}';
         },
-        function* files(req, resp) {
+        files: function* files(req, resp) {
           const { body, headers } = req;
           const { 'content-type': content_type } = headers;
           const data = JSON.parse(body);
@@ -216,7 +219,7 @@ function main(...args) {
 
           yield JSON.stringify(...[names, ...(verbose ? [null, 2] : [])]);
         }
-      ],
+      },
       ...url,
 
       ...callbacks,
@@ -241,7 +244,7 @@ function main(...args) {
         return callbacks.onMessage(ws, data);
       },
       onFd(fd, rd, wr) {
-        //console.log('onFd',{fd,rd,wr});
+        console.log('onFd', { fd, rd, wr });
         return callbacks.onFd(fd, rd, wr);
       },
       ...(url && url.host ? url : {})

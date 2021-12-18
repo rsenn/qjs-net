@@ -71,7 +71,7 @@ mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const c
 }
 
 MinnetHttpMount*
-mount_new(JSContext* ctx, JSValueConst obj) {
+mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
   MinnetHttpMount* ret;
   JSValue mnt = JS_UNDEFINED, org = JS_UNDEFINED, def = JS_UNDEFINED;
 
@@ -80,20 +80,28 @@ mount_new(JSContext* ctx, JSValueConst obj) {
     org = JS_GetPropertyUint32(ctx, obj, 1);
     def = JS_GetPropertyUint32(ctx, obj, 2);
   } else if(JS_IsFunction(ctx, obj)) {
-    size_t namelen;
-    JSValue name = JS_GetPropertyStr(ctx, obj, "name");
-    const char* namestr = JS_ToCStringLen(ctx, &namelen, name);
-    char buf[namelen + 2];
-    pstrcpy(&buf[1], namelen + 1, namestr);
-    buf[0] = '/';
-    buf[namelen + 1] = '\0';
-    JS_FreeCString(ctx, namestr);
-    mnt = JS_NewString(ctx, buf);
+
+    if(!key) {
+      size_t namelen;
+      JSValue name = JS_GetPropertyStr(ctx, obj, "name");
+      const char* namestr = JS_ToCStringLen(ctx, &namelen, name);
+      char buf[namelen + 2];
+      pstrcpy(&buf[1], namelen + 1, namestr);
+      buf[0] = '/';
+      buf[namelen + 1] = '\0';
+      JS_FreeCString(ctx, namestr);
+      mnt = JS_NewString(ctx, buf);
+      JS_FreeValue(ctx, name);
+    } else {
+      mnt = JS_NewString(ctx, key);
+    }
+
     org = JS_DupValue(ctx, obj);
-    JS_FreeValue(ctx, name);
   }
 
   const char* path = JS_ToCString(ctx, mnt);
+
+  printf("mount_new '%s'\n", path);
 
   if(JS_IsFunction(ctx, org)) {
     ret = mount_create(ctx, path, 0, 0, LWSMPRO_CALLBACK);
@@ -598,11 +606,14 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
       break;
     }
 
-    case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
-    case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
+    case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
       break;
     }
+
+    case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
+    case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
     case LWS_CALLBACK_CLOSED_HTTP: {
+      lwsl_user("http " FG("%d") "%-25s" NC " wsi#%" PRId64 " done=%i", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, serv->done);
       if(serv) {
         JS_FreeValue(minnet_server.ctx, serv->req_obj);
         serv->req_obj = JS_UNDEFINED;

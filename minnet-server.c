@@ -121,7 +121,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     minnet_server.info.vhost_name = js_strdup(ctx, "localhost");
 
   minnet_server.info.port = port;
-  minnet_server.info.error_document_404 = "/404.html";
+  minnet_server.info.error_document_404 = 0; // "/404.html";
   minnet_server.info.mounts = &mount;
 
   if(is_tls) {
@@ -129,30 +129,49 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   }
 
   if(JS_IsArray(ctx, opt_mimetypes)) {
-    MinnetVhostOptions** vop = (MinnetVhostOptions**)&mimetypes;
+    MinnetVhostOptions *vopts, **vop = (MinnetVhostOptions**)&mimetypes;
     uint32_t i;
     for(i = 0;; i++) {
       JSValue mimetype = JS_GetPropertyUint32(ctx, opt_mimetypes, i);
       if(JS_IsUndefined(mimetype))
         break;
-      ADD(vop, vhost_options_new(ctx, mimetype), next);
+      vopts = vhost_options_new(ctx, mimetype);
+      ADD(vop, vopts, next);
     }
   }
 
   minnet_server.info.mounts = 0;
-  if(JS_IsArray(ctx, opt_mounts)) {
-    MinnetHttpMount *mount, **m = (MinnetHttpMount**)&minnet_server.info.mounts;
-    uint32_t i;
-    for(i = 0;; i++) {
-      JSValue mountval = JS_GetPropertyUint32(ctx, opt_mounts, i);
-      if(JS_IsUndefined(mountval))
-        break;
-      mount = mount_new(ctx, mountval);
-      mount->extra_mimetypes = mimetypes;
-      ADD(m, mount, next);
+  {
+    MinnetHttpMount** m = (MinnetHttpMount**)&minnet_server.info.mounts;
+
+    if(JS_IsArray(ctx, opt_mounts)) {
+      uint32_t i;
+      for(i = 0;; i++) {
+        MinnetHttpMount* mount;
+        JSValue mountval = JS_GetPropertyUint32(ctx, opt_mounts, i);
+        if(JS_IsUndefined(mountval))
+          break;
+        mount = mount_new(ctx, mountval, 0);
+        mount->extra_mimetypes = (struct http_vhost_options*)&mimetypes;
+        ADD(m, mount, next);
+      }
+    } else if(JS_IsObject(opt_mounts)) {
+      JSPropertyEnum* tmp_tab;
+      uint32_t i, tmp_len = 0;
+      JS_GetOwnPropertyNames(ctx, &tmp_tab, &tmp_len, opt_mounts, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK);
+
+      for(i = 0; i < tmp_len; i++) {
+        MinnetHttpMount* mount;
+        JSAtom prop = tmp_tab[i].atom;
+        const char* name = JS_AtomToCString(ctx, prop);
+        JSValue mountval = JS_GetProperty(ctx, opt_mounts, prop);
+        mount = mount_new(ctx, mountval, name);
+        mount->extra_mimetypes = (struct http_vhost_options*)&mimetypes;
+        ADD(m, mount, next);
+        JS_FreeCString(ctx, name);
+      }
     }
   }
-
   if(!(minnet_server.lws = lws_create_context(&minnet_server.info))) {
     lwsl_err("libwebsockets init failed\n");
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
@@ -180,7 +199,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   lws_context_destroy(minnet_server.lws);
 
   if(mimetypes) {
-    const MinnetVhostOptions *vhost_options, *next;
+    MinnetVhostOptions *vhost_options, *next;
 
     for(vhost_options = mimetypes; vhost_options; vhost_options = next) {
       next = (MinnetVhostOptions*)vhost_options->lws.next;

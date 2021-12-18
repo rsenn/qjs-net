@@ -48,6 +48,7 @@
 #endif
 #else
 #include <sys/time.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #endif
 

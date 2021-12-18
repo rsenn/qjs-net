@@ -300,7 +300,7 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
 
   events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
   revents = magic & events;
-  lwsl_user("minnet_io_handler fd=%d wr=%i magic=0x%x events=%s revents=%s", fd, wr, (magic), io_events(events), io_events(revents));
+  lwsl_debug("minnet_io_handler fd=%d wr=%i magic=0x%x events=%s revents=%s", fd, wr, (magic), io_events(events), io_events(revents));
 
   if((revents & PIO) != magic) {
     x.fd = fd;
@@ -312,7 +312,7 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
     else
       revents = x.revents;
 
-    lwsl_user("minnet_io_handler poll() fd=%d, magic=%s, revents=%s", fd, io_events(magic), io_events(revents));
+    lwsl_debug("minnet_io_handler poll() fd=%d, magic=%s, revents=%s", fd, io_events(magic), io_events(revents));
   }
 
   if(revents & PIO) {
@@ -330,9 +330,9 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
         opaque->error = errno;
     }
 
-    lwsl_user("%sHandler lws_service_fd fd=%d, events=%s, revents=%s", ((const char*[]){"Read", "Write"})[wr], x.fd, io_events(x.events), io_events(x.revents));
+    lwsl_debug("minnet_io_handler %s before lws_service_fdfd=%d, events=%s, revents=%s", ((const char*[]){"Read", "Write"})[wr], x.fd, io_events(x.events), io_events(x.revents));
     int ret = lws_service_fd(context, &x);
-    lwsl_user("%sHandler lws_service_fd fd=%d, ret=%d", ((const char*[]){"Read", "Write"})[wr], x.fd, ret);
+    lwsl_debug("minnet_io_handler %s after lws_service_fd fd=%d, ret=%d", ((const char*[]){"Read", "Write"})[wr], x.fd, ret);
   }
 
   return JS_UNDEFINED;
