@@ -4,7 +4,6 @@
 #include <quickjs.h>
 #include "minnet.h"
 
-
 enum { ACCEPTED = 0, ONWARD };
 
 typedef struct proxy_msg {
@@ -17,8 +16,7 @@ typedef struct proxy_connection {
   lws_dll2_owner_t queue[2];
 } MinnetProxyConnection;
 
-
- int proxy_callback(struct lws*, enum lws_callback_reasons reason, void* user, void* in, size_t len);
+int proxy_callback(struct lws*, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 int raw_client_callback(struct lws*, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
 #endif /* MINNET_SERVER_PROXY_H */

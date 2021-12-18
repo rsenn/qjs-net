@@ -21,14 +21,16 @@ proxy_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, vo
     case LWS_CALLBACK_ESTABLISHED: {
       struct lws_client_connect_info info;
 
-      if(!(pc = malloc(sizeof(MinnetProxyConnection)))) {
-        lwsl_err("error allocating MinnetProxyConnection\n");
-        return -1;
+      if(!pc) {
+        if(!(pc = malloc(sizeof(MinnetProxyConnection)))) {
+          lwsl_err("error allocating MinnetProxyConnection\n");
+          return -1;
+        }
+
+        memset(pc, 0, sizeof(MinnetProxyConnection));
+
+        lws_set_opaque_user_data(wsi, pc);
       }
-
-      memset(pc, 0, sizeof(MinnetProxyConnection));
-
-      lws_set_opaque_user_data(wsi, pc);
 
       pc->wsi[ACCEPTED] = wsi;
 

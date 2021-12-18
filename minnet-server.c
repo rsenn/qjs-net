@@ -31,6 +31,8 @@ static struct lws_protocols protocols2[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"defprot", defprot_callback, 0, 0},
     {"http", http_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
+    {"proxy-raw", raw_client_callback, 0, 1024, 0, NULL, 0},
     {0, 0},
 };
 
