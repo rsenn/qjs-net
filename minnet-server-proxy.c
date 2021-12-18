@@ -1,16 +1,5 @@
+#include "minnet-server-proxy.h"
 #include <libwebsockets.h>
-
-enum { ACCEPTED = 0, ONWARD };
-
-typedef struct proxy_msg {
-  lws_dll2_t list;
-  size_t len;
-} MinnetProxyMessage;
-
-typedef struct proxy_connection {
-  struct lws* wsi[2];
-  lws_dll2_owner_t queue[2];
-} MinnetProxyConnection;
 
 static int
 proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {

@@ -151,17 +151,17 @@ function main(...args) {
           console.log('/404.html', { req, res });
           yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
         },
-        proxy: function proxy(req, res) {
+        proxy(req, res) {
           const { url, method, headers } = req;
           const { status, ok, type } = res;
 
           console.log('proxy', { url, method, headers }, { status, ok, url, type });
         },
-        config: function* config(req, res) {
+        *config(req, res) {
           console.log('/config', { req, res });
           yield '{}';
         },
-        files: function* files(req, resp) {
+        *files(req, resp) {
           const { body, headers } = req;
           const { 'content-type': content_type } = headers;
           const data = JSON.parse(body);
@@ -244,7 +244,7 @@ function main(...args) {
         return callbacks.onMessage(ws, data);
       },
       onFd(fd, rd, wr) {
-       // console.log('onFd', { fd, rd, wr });
+        // console.log('onFd', { fd, rd, wr });
         return callbacks.onFd(fd, rd, wr);
       },
       ...(url && url.host ? url : {})
