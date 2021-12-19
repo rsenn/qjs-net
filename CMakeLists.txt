@@ -299,7 +299,7 @@ message("CURL_LIBRARY: ${CURL_LIBRARY}")
 
 target_link_directories(quickjs-minnet PUBLIC ${QUICKJS_LIBRARY_DIR})
 
-target_link_libraries(quickjs-minnet quickjs ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY}
+target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY}
                       ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES})
 
 message(
