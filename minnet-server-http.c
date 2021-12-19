@@ -14,6 +14,10 @@ MinnetVhostOptions*
 vhost_options_create(JSContext* ctx, const char* name, const char* value) {
   MinnetVhostOptions* vo = js_mallocz(ctx, sizeof(MinnetVhostOptions));
 
+#ifdef DEBUG_OUTPUT
+  printf("vhost_options_create %s %s\n", name, value);
+#endif
+  
   vo->name = name ? js_strdup(ctx, name) : 0;
   vo->value = value ? js_strdup(ctx, value) : 0;
 

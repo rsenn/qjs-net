@@ -142,6 +142,14 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     }
   }
 
+  {
+    const struct lws_protocol_vhost_options* pvo;
+
+    for(pvo = mimetypes; pvo; pvo = pvo->next) {
+      // printf("pvo mimetype %s %s\n", pvo->name, pvo->value);
+    }
+  }
+
   minnet_server.info.mounts = 0;
   {
     MinnetHttpMount** m = (MinnetHttpMount**)&minnet_server.info.mounts;
@@ -154,7 +162,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
         if(JS_IsUndefined(mountval))
           break;
         mount = mount_new(ctx, mountval, 0);
-        mount->extra_mimetypes = (struct http_vhost_options*)&mimetypes;
+        mount->extra_mimetypes = mimetypes;
         ADD(m, mount, next);
       }
     } else if(JS_IsObject(opt_mounts)) {
@@ -168,7 +176,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
         const char* name = JS_AtomToCString(ctx, prop);
         JSValue mountval = JS_GetProperty(ctx, opt_mounts, prop);
         mount = mount_new(ctx, mountval, name);
-        mount->extra_mimetypes = (struct http_vhost_options*)&mimetypes;
+        mount->extra_mimetypes = mimetypes;
         ADD(m, mount, next);
         JS_FreeCString(ctx, name);
       }
