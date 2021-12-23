@@ -34,7 +34,8 @@
 #include <errno.h>
 #include <limits.h>
 
-#if defined _WIN32 && !defined __CYGWIN__
+#ifndef __MSYS__
+#if defined(_WIN32) && !defined(__CYGWIN__)
 #define WINDOWS_NATIVE
 #include <winsock2.h>
 #include <windows.h>
@@ -553,3 +554,4 @@ restart:
   return rc;
 #endif
 }
+#endif /* defined(__MSYS__) */
