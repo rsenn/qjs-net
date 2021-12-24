@@ -1,9 +1,11 @@
 #ifndef _POLL_H
 #define _POLL_H
 
-#include <sys/cdefs.h>
+#include <stddef.h>
 
-__BEGIN_DECLS
+#ifdef __cplusplus
+extern "C" {
+#endif /* defined(__cplusplus) */
 
 enum {
   POLLIN = 0x0001,
@@ -53,6 +55,8 @@ extern int poll(struct pollfd* ufds, nfds_t nfds, int timeout);
 int ppoll(struct pollfd* fds, nfds_t nfds, const struct timespec* timeout, const sigset_t* sigmask);
 #endif
 
-__END_DECLS
+#ifdef __cplusplus
+}
+#endif /* defined(__cplusplus) */
 
 #endif /* _POLL_H */
