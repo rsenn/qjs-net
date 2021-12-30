@@ -82,7 +82,7 @@ macro(find_mbedtls)
     endif()
 
     get_target_property(MBEDTLS_LIBRARY_LOCATION mbedtls IMPORTED_LOCATION)
- 
+
     if(EXISTS "${MBEDTLS_ROOT_DIR}/lib")
       set(LIBRARY_DIR "${MBEDTLS_ROOT_DIR}/lib")
     endif(EXISTS "${MBEDTLS_ROOT_DIR}/lib")

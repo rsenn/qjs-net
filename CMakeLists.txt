@@ -299,7 +299,6 @@ if(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
   target_link_directories(quickjs-minnet PUBLIC ${LIBWEBSOCKETS_LIBRARY_DIR})
 endif(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
 
- 
 target_link_directories(quickjs-minnet PUBLIC ${QUICKJS_LIBRARY_DIR})
 
 target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY}
