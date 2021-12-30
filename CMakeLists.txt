@@ -145,6 +145,8 @@ if(NOT BUILD_LIBWEBSOCKETS)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibwebsockets.cmake)
 
   find_libwebsockets()
+
+  include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS})
 endif(NOT BUILD_LIBWEBSOCKETS)
 
 if(NOT LIBWEBSOCKETS_FOUND)
