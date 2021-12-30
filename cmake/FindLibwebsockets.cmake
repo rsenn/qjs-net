@@ -12,10 +12,10 @@ macro(find_libwebsockets)
 
   if(NOT OPENSSL_SSL_LIBRARY AND NOT OPENSSL_CRYPTO_LIBRARY)
     if(pkgcfg_lib_OPENSSL_ssl)
-      set(OPENSSL_SSL_LIBRARY "{pkgcfg_lib_OPENSSL_ssl}" CACHE PATH "OpenSSL ssl library")
+      set(OPENSSL_SSL_LIBRARY "${pkgcfg_lib_OPENSSL_ssl}" CACHE PATH "OpenSSL ssl library")
     endif(pkgcfg_lib_OPENSSL_ssl)
     if(pkgcfg_lib_OPENSSL_crypto)
-      set(OPENSSL_CRYPTO_LIBRARY "{pkgcfg_lib_OPENSSL_crypto}" CACHE PATH "OpenSSL crypto library")
+      set(OPENSSL_CRYPTO_LIBRARY "${pkgcfg_lib_OPENSSL_crypto}" CACHE PATH "OpenSSL crypto library")
     endif(pkgcfg_lib_OPENSSL_crypto)
   endif(NOT OPENSSL_SSL_LIBRARY AND NOT OPENSSL_CRYPTO_LIBRARY)
 
