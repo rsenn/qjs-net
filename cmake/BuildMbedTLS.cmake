@@ -92,8 +92,6 @@ macro(build_mbedtls)
   #add_custom_target(${MBEDTLS_TARGET_NAME}_install COMMAND ${CMAKE_COMMAND} --build ${CMAKE_CURRENT_BINARY_DIR}/mbedtls -- install WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mbedtls COMMENT "Installing mbedtls to ${CMAKE_INSTALL_PREFIX}" VERBATIM)
   #add_dependencies(${MBEDTLS_TARGET_NAME}_install ${MBEDTLS_TARGET_NAME})
 
-  message("mbedtls BINARY_DIR = ${BINARY_DIR}")
-
   set(MBEDTLS_LIBRARY mbedtls CACHE STRING "MbedTLS library" FORCE)
   add_library(${MBEDTLS_LIBRARY} STATIC IMPORTED)
   add_dependencies(${MBEDTLS_LIBRARY} ${MBEDTLS_TARGET_NAME})

@@ -58,8 +58,6 @@ macro(find_mbedtls)
                                                   MBEDTLS_X509_LIBRARY MBEDTLS_LIBRARIES MBEDTLS_VERSION
     VERSION_VAR MBEDTLS_VERSION)
 
-  message("MBEDTLS_FOUND: ${MBEDTLS_FOUND}")
-
   if(MBEDTLS_FOUND)
     if(NOT TARGET mbedcrypto)
       add_library(mbedcrypto UNKNOWN IMPORTED)
@@ -84,9 +82,7 @@ macro(find_mbedtls)
     endif()
 
     get_target_property(MBEDTLS_LIBRARY_LOCATION mbedtls IMPORTED_LOCATION)
-    message("MBEDTLS_LIBRARY: ${MBEDTLS_LIBRARY}")
-    message("MBEDTLS_LIBRARY_LOCATION: ${MBEDTLS_LIBRARY_LOCATION}")
-
+ 
     if(EXISTS "${MBEDTLS_ROOT_DIR}/lib")
       set(LIBRARY_DIR "${MBEDTLS_ROOT_DIR}/lib")
     endif(EXISTS "${MBEDTLS_ROOT_DIR}/lib")
