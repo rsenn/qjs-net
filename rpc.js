@@ -1,8 +1,4 @@
-//import inspect from 'inspect';
-//import * as bjson from 'bjson';
-//import { inherits } from 'util';
-import { EventEmitter } from 'events';
-import inspect from 'inspect';
+import { EventEmitter } from './event-emitter.js';
 
 let sockId;
 
