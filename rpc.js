@@ -1,13 +1,10 @@
 //import inspect from 'inspect';
 //import * as bjson from 'bjson';
-import { SyscallError, weakAssign, extendArray, memoize, types, getPrototypeChain } from 'util';
+//import { inherits } from 'util';
 import { EventEmitter } from 'events';
-import { Repeater } from 'repeater';
 import inspect from 'inspect';
 
 let sockId;
-
-extendArray(Array.prototype);
 
 export const LogWrap = (globalThis.LogWrap = function LogWrap(log) {
   if(typeof log == 'string') {
@@ -26,7 +23,7 @@ export const VfnAdapter = vfn => ({
 
 export const VfnDecorator = vfn => define(vfn, VfnAdapter(vfn));
 
-export const DebugFlags = (globalThis.DebugFlags = memoize((environ = (globalThis.process && process.env['DEBUG']) || '') => {
+/*export const DebugFlags = (globalThis.DebugFlags = memoize((environ = (globalThis.process && process.env['DEBUG']) || '') => {
   let a = Array.isArray(environ) ? environ : environ.split(/[^A-Za-z0-9_]+/g);
   a = a.filter(n => n !== '');
   a = a.reduce((acc, n) => {
@@ -34,14 +31,14 @@ export const DebugFlags = (globalThis.DebugFlags = memoize((environ = (globalThi
     return acc;
   }, {});
   return a;
-}));
+}));*/
 
 globalThis.GetClasses = function* GetClasses(obj) {
   let keys = GetKeys(obj);
 
   for(let name of keys) {
     try {
-      if(types.isConstructor(obj[name])) yield [name, obj[name]];
+      if(typeof obj[name] == 'function' && 'prototype' in obj[name]) yield [name, obj[name]];
     } catch(e) {}
   }
 
@@ -239,7 +236,7 @@ export class Connection extends MessageTransceiver {
       socket,
       exception: null,
       log(...args) {
-        if(DebugFlags()[this[Symbol.toStringTag]]) console.log(...args);
+        /*if(DebugFlags()[this[Symbol.toStringTag]]) */ console.log(...args);
       },
       messages: { requests: {}, responses: {} }
     });
@@ -404,8 +401,10 @@ export class Connection extends MessageTransceiver {
   }
 }
 
-define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
-weakAssign(Connection.prototype, EventEmitter.prototype);
+//inherits(Connection, EventEmitter);
+
+/*define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
+weakAssign(Connection.prototype, EventEmitter.prototype);*/
 
 Connection.list = [];
 
@@ -536,8 +535,15 @@ export class RPCClient extends Connection {
     //this.log('RPCClient.constructor', { socket, instance, log, codec, classes } /*, new Error().stack.replace(/Error\n?/, '')*/);
     this.on('error', e => console.error('RPCClient', e));
     //this.on('response', r => console.log('RPCClient.onresponse', r));
+    let api;
 
-    Object.defineProperties(this, { api: { get: memoize(() => new RPCApi(this)) } });
+    Object.defineProperties(this, {
+      api: {
+        get() {
+          return api ?? (api = new RPCApi(this));
+        }
+      }
+    });
   }
 
   processMessage(response) {
@@ -570,7 +576,7 @@ define(RPCClient.prototype, { [Symbol.toStringTag]: 'RPCClient' });
 export function RPCSocket(url, service = RPCServer, verbosity = 1) {
   if(!new.target) return new RPCSocket(url, service, verbosity);
 
-  const DEBUG = DebugFlags();
+  // const DEBUG = DebugFlags();
   const instance = new.target ? this : new RPCSocket(url, service, verbosity);
   const log = /*console.config
     ? (msg, ...args) => {
@@ -591,8 +597,8 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
     : console.log; */ (...args) => {
     let tok = (args[0] || '').replace(/[^A-Za-z0-9_].*/g, '');
 
-    if(DEBUG[tok]) console.debug(...args);
-    else console.log(...args);
+    /*if(DEBUG[tok]) console.debug(...args);
+    else */ console.log(...args);
   };
 
   define(instance, {
@@ -926,7 +932,7 @@ export function SerializeValue(value, source = false) {
   let desc = { type };
   if(type == 'object' && value != null) {
     desc['class'] = getPrototypeName(value) ?? getPrototypeName(Object.getPrototypeOf(value));
-    desc['chain'] = getPrototypeChain(value).map(getPrototypeName);
+    //desc['chain'] = getPrototypeChain(value).map(getPrototypeName);
   } else if(type == 'symbol') {
     desc['description'] = value.description;
     desc['symbol'] = value.toString();
@@ -937,7 +943,7 @@ export function SerializeValue(value, source = false) {
     let array = new Uint8Array(value);
     value = [...array];
     desc['class'] = 'ArrayBuffer';
-    delete desc['chain'];
+    // delete desc['chain'];
   }
   if(typeof value == 'function') {
     if(source) desc.source = value + '';
@@ -974,9 +980,6 @@ export default {
   SerializeValue,
   DeserializeValue,
   EventLogger,
-  SyscallError,
-  define,
-  DebugFlags,
   connect: RPCConnect,
   listen: RPCListen
 };
