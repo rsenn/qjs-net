@@ -105,7 +105,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 
   const char* path = JS_ToCString(ctx, mnt);
 
-  printf("mount_new '%s'\n", path);
+  //printf("mount_new '%s'\n", path);
 
   if(JS_IsFunction(ctx, org)) {
     ret = mount_create(ctx, path, 0, 0, LWSMPRO_CALLBACK);
