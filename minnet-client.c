@@ -145,8 +145,8 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
     minnet_client_lws = lws_create_context(&info);
     if(!minnet_client_lws) {
-      lwsl_err("Libwebsockets init failed\n");
-      return JS_ThrowInternalError(ctx, "Libwebsockets init failed");
+      lwsl_err("client: Libwebsockets init failed\n");
+      return JS_ThrowInternalError(ctx, "client: Libwebsockets init failed");
     }
   }
 
