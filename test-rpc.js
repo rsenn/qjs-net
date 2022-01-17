@@ -4,7 +4,7 @@ import path from 'path';
 import { Console } from 'console';
 import REPL from 'repl';
 import inspect from 'inspect';
-import { extendArray, ArrayExtensions, SyscallError, errors, types, hasBuiltIn, format, formatWithOptions, assert, setInterval, clearInterval, memoize, once, waitFor, define, weakAssign, getConstructorChain, hasPrototype, filter, curry, split, unique, getFunctionArguments, randInt, toBigInt, lazyProperty, getOpt, toUnixTime, unixTime, fromUnixTime, ansiStyles } from 'util';
+import { types, define, filter, split, getOpt, toUnixTime } from 'util';
 import * as fs from 'fs';
 import * as net from 'net';
 import { Socket } from 'sockets';
