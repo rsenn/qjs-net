@@ -29,18 +29,15 @@ function main(...args) {
     if((matches[0] == ':' && (matches.shift(), true)) || !isNaN(+matches[0])) port = +matches.shift();
     else port = { https: 443, http: 80 }[protocol];
 
-    console.log('matches', { matches });
     let path = matches.join('');
     let [location, query] = path.split(/\?/);
-    console.log('matches', { location, query });
 
-    //    const path = location.reduce((acc, part) => acc + '/' + part, '');
     net.setLog(/* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1, (level, msg) => {
       const l = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
       if(l != 'NOTICE' && l != 'MINNET') console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
     });
 
-    console.log('createWS', { protocol, host, port, location, listen });
+    //console.log('createWS', { protocol, host, port, location, listen });
 
     const fn = [net.client, net.server][+listen];
     return fn({
