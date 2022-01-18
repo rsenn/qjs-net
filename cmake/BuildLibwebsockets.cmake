@@ -55,6 +55,10 @@ macro(build_libwebsockets)
     set(LWS_HAVE_EVP_MD_CTX_free 1 CACHE STRING "Have EVP_MD_CTX_free")
   endif("${LWS_HAVE_EVP_MD_CTX_free}" STREQUAL "")
 
+  if("${LWS_HAVE_X509_VERIFY_PARAM_set1_host}" STREQUAL "")
+    set(LWS_HAVE_X509_VERIFY_PARAM_set1_host 1 CACHE STRING "Have X509_VERIFY_PARAM_set1_host")
+  endif("${LWS_HAVE_X509_VERIFY_PARAM_set1_host}" STREQUAL "")
+
   string(REPLACE " " "\n\t" ARGS "${LIBWEBSOCKETS_ARGS}")
   message("libwebsockets configuration arguments:\n\t${ARGS}")
 
@@ -76,6 +80,7 @@ macro(build_libwebsockets)
       "-DCMAKE_LIBRARY_PATH:PATH=${CMAKE_LIBRARY_PATH};${CMAKE_CURRENT_BINARY_DIR}/mbedtls;${CMAKE_CURRENT_BINARY_DIR}/brotli"
       "-DLWS_HAVE_HMAC_CTX_new:STRING=${LWS_HAVE_HMAC_CTX_new}"
       "-DLWS_HAVE_EVP_MD_CTX_free:STRING=${LWS_HAVE_EVP_MD_CTX_free}"
+      "-DLWS_HAVE_X509_VERIFY_PARAM_set1_host:STRING=${LWS_HAVE_X509_VERIFY_PARAM_set1_host}"
       ${LIBWEBSOCKETS_ARGS}
     CMAKE_CACHE_ARGS
       -DDISABLE_WERROR:BOOL=ON

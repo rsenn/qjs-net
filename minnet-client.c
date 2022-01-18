@@ -29,8 +29,8 @@ close_status(JSContext* ctx, const char* in, size_t len) {
 
 static JSValue
 close_reason(JSContext* ctx, const char* in, size_t len) {
-  if(len > 2)
-    return JS_NewStringLen(ctx, &in[2], len - 2);
+  if(len > 0)
+    return JS_NewStringLen(ctx, in, len);
   return JS_UNDEFINED;
 }
 
