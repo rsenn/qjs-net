@@ -35,9 +35,9 @@ struct http_request;
 #define FREEOPT(name) JS_FreeValue(ctx, opt_##name);
 
 #define CB(obj, name, cb) ((cb).func_obj = JS_GetPropertyStr(ctx, (obj), (name)))
-#define OPTIONS_CB(obj, name, cb) GETCBPROP(obj, name, cb) //(((cb).ctx = ctx), ((cb).this_obj = JS_UNDEFINED), CB(obj,name,cb), ((cb).name = (name)))
+#define OPTIONS_CB(obj, n, cb) (((cb).ctx = ctx), ((cb).this_obj = JS_UNDEFINED), CB(obj,n,cb), ((cb).name = (n)))
 //#define OPTIONS_CB(obj, name, cb) (cb) = (MinnetCallback){ctx, JS_UNDEFINED, JS_GetPropertyStr(ctx, (obj), (name)), (name)};
-#define GETCBPROP(obj, name, cb_ptr) GETCB(JS_GetPropertyStr(ctx, obj, name), cb_ptr)
+//#define GETCBPROP(obj, name, cb_ptr) GETCB(JS_GetPropertyStr(ctx, obj, name), cb_ptr)
 
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj) \
