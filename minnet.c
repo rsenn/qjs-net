@@ -199,6 +199,8 @@ header_set(JSContext* ctx, MinnetBuffer* buffer, const char* name, const char* v
 
 int
 fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args) {
+  /*const char* onFd = JS_ToCString(cb->ctx, cb->func_obj);
+  printf("fd_callback fd=%d onFd=%s\n", lws_get_socket_fd(wsi), onFd);*/
 
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:
@@ -479,6 +481,16 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   JS_SetConstructor(ctx, minnet_ws_ctor, minnet_ws_proto);
 
   JS_SetPropertyFunctionList(ctx, minnet_ws_ctor, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
+
+  // Add class Client
+  JS_NewClassID(&minnet_client_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_client_class_id, &minnet_client_class);
+  minnet_client_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_client_proto, minnet_client_proto_funcs, minnet_client_proto_funcs_size);
+
+  minnet_client_ctor = JS_NewObject(ctx); // JS_NewCFunction2(ctx, minnet_client_constructor, "MinnetClient", 0, JS_CFUNC_constructor, 0);
+
+  JS_SetConstructor(ctx, minnet_client_ctor, minnet_client_proto);
 
   if(m)
     JS_SetModuleExport(ctx, m, "Socket", minnet_ws_ctor);

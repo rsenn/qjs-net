@@ -29,7 +29,11 @@ struct http_request;
 
 #define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
 
-#define GETCBPROP(obj, opt, cb_ptr) GETCB(JS_GetPropertyStr(ctx, obj, opt), cb_ptr)
+#define CB(obj, name, cb) ((cb).func_obj = JS_GetPropertyStr(ctx, (obj), (name)))
+#define OPTIONS_CB(obj, name, cb) GETCBPROP(obj, name, cb) //(((cb).ctx = ctx), ((cb).this_obj = JS_UNDEFINED), CB(obj,name,cb), ((cb).name = (name)))
+//#define OPTIONS_CB(obj, name, cb) (cb) = (MinnetCallback){ctx, JS_UNDEFINED, JS_GetPropertyStr(ctx, (obj), (name)), (name)};
+#define GETCBPROP(obj, name, cb_ptr) GETCB(JS_GetPropertyStr(ctx, obj, name), cb_ptr)
+
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj) \
   if(JS_IsFunction(ctx, opt)) { \
@@ -68,6 +72,9 @@ enum { READ_HANDLER = 0, WRITE_HANDLER };
 enum http_method;
 
 typedef struct lws_pollfd MinnetPollFd;
+
+#define MINNET_CALLBACK(name) \
+  (MinnetCallback) { ctx, JS_UNDEFINED, JS_NULL, #name }
 
 typedef struct ws_callback {
   JSContext* ctx;

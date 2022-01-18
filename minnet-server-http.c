@@ -17,7 +17,7 @@ vhost_options_create(JSContext* ctx, const char* name, const char* value) {
 #ifdef DEBUG_OUTPUT
   printf("vhost_options_create %s %s\n", name, value);
 #endif
-  
+
   vo->name = name ? js_strdup(ctx, name) : 0;
   vo->value = value ? js_strdup(ctx, value) : 0;
 
@@ -105,7 +105,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 
   const char* path = JS_ToCString(ctx, mnt);
 
-  //printf("mount_new '%s'\n", path);
+  // printf("mount_new '%s'\n", path);
 
   if(JS_IsFunction(ctx, org)) {
     ret = mount_create(ctx, path, 0, 0, LWSMPRO_CALLBACK);

@@ -15,6 +15,8 @@ typedef struct socket {
   struct lws* lwsi;
   JSValue handlers[2];
   BOOL binary;
+  /* struct client_data* client;
+   struct server_context* server;*/
 } MinnetWebsocket;
 
 MinnetWebsocket* minnet_ws_from_wsi(struct lws*);
@@ -27,8 +29,8 @@ JSValue minnet_ws_constructor(JSContext*, JSValue new_target, int argc, JSValue 
 extern THREAD_LOCAL JSClassID minnet_ws_class_id;
 extern THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
 extern JSClassDef minnet_ws_class;
-extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_static_funcs[], minnet_ws_proto_defs[];
-extern const size_t minnet_ws_proto_funcs_size, minnet_ws_static_funcs_size, minnet_ws_proto_defs_size;
+extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_proto_defs[];
+extern const size_t minnet_ws_proto_funcs_size, minnet_ws_proto_defs_size;
 
 struct wsi_opaque_user_data {
   JSObject* obj;
