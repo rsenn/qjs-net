@@ -11,21 +11,14 @@ typedef struct client_data {
   struct lws_context* lws;
   struct lws_context_creation_info info;
   MinnetURL url;
-  union {
-    struct {
-      MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd;
-    };
-    MinnetCallback callbacks[5];
-  };
-  /*union {
-    struct {
-      JSValue req_obj;
-      JSValue resp_obj;
-    };
-    JSValue args[2];
-  };*/
   struct byte_buffer body;
   BOOL connected : 1, closed : 1, h2 : 1;
+  union {
+    struct {
+      MinnetCallback cb_message, cb_connect, cb_error, cb_close, cb_pong, cb_fd;
+    };
+    MinnetCallback callbacks[6];
+  };
 } MinnetClient;
 
 extern THREAD_LOCAL JSClassID minnet_client_class_id;

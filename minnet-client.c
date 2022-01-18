@@ -14,9 +14,9 @@ static int raw_callback(struct lws* wsi, enum lws_callback_reasons reason, void*
 THREAD_LOCAL JSContext* minnet_client_ctx = 0;*/
 
 static const struct lws_protocols client_protocols[] = {
-    {"ws", client_callback, 0, 0, 0, 0, 0},
-    {"http", client_callback, 0, 0, 0, 0, 0},
-    {"raw", client_callback, 0, 0, 1024, 0, 0},
+    {"ws", client_callback, sizeof(MinnetClient), MINNET_BUFFER_SIZE, 0, 0, 0},
+    {"http", client_callback, sizeof(MinnetClient), MINNET_BUFFER_SIZE, 0, 0, 0},
+    {"raw", client_callback, sizeof(MinnetClient), MINNET_BUFFER_SIZE, 0, 0, 0},
     {0},
 };
 
@@ -179,6 +179,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   }
 
   OPTIONS_CB(options, "onPong", client->cb_pong);
+  OPTIONS_CB(options, "onError", client->cb_error);
   OPTIONS_CB(options, "onClose", client->cb_close);
   OPTIONS_CB(options, "onConnect", client->cb_connect);
   OPTIONS_CB(options, "onMessage", client->cb_message);
@@ -186,9 +187,9 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
   connect_client(client->lws, &url, &wsi);
 
-  client->ws_obj = minnet_ws_wrap(ctx, wsi);
+  client->ws_obj = minnet_ws_object(ctx, wsi);
 
-  lws_set_opaque_user_data(wsi, client);
+  printf("minnet_ws_client wsi=%p ws_obj=%p client=%p\n", wsi, JS_VALUE_GET_OBJ(client->ws_obj), client);
 
   minnet_exception = FALSE;
 
@@ -227,18 +228,30 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   MinnetClient* client;
   JSContext* ctx = 0;
 
+  if((client = lws_context_user(lws_get_context(wsi))))
+    ctx = client->ctx;
+
   if(reason >= LWS_CALLBACK_ADD_POLL_FD && reason <= LWS_CALLBACK_UNLOCK_POLL) {
-    client = lws_context_user(lws_get_context(lws_get_network_wsi(wsi)));
     return fd_callback(wsi, reason, &client->cb_fd, in);
   }
 
-  lwsl_user("client_callback " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 40), (char*)in);
+  lwsl_user("client_callback " FG("%d") "%-25s" NC " wsi=%p ws_obj=%p client=%p is_ssl=%i len=%zu in='%.*s'\n",
+            22 + (reason * 2),
+            lws_callback_name(reason) + 13,
+            wsi,
+            client ? JS_VALUE_GET_OBJ(client->ws_obj) : 0,
+            client,
+            lws_is_ssl(wsi),
+            len,
+            (int)MIN(len, 40),
+            (char*)in);
 
-  if((client = lws_get_opaque_user_data(wsi)))
-    ctx = client->ctx;
+  /*  if((client = lws_get_opaque_user_data(wsi)))
+      ctx = client->ctx;*/
 
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT: {
+
       return 0;
     }
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
@@ -253,9 +266,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL:
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
-      buffer_free(&client->body, JS_GetRuntime(ctx));
-      JS_FreeValue(ctx, client->ws_obj);
-      client->ws_obj = JS_NULL;
+      // buffer_free(&client->body, JS_GetRuntime(ctx));
+
+      /* JS_FreeValue(ctx, client->ws_obj);
+       client->ws_obj = JS_NULL;*/
       return 0;
     }
 
@@ -268,25 +282,26 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
       return 0;
     }
+
+    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
     case LWS_CALLBACK_CLIENT_CLOSED:
     case LWS_CALLBACK_RAW_CLOSE:
-    case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
-    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      if(client->cb_close.ctx || (client->cb_close.ctx = ctx)) {
-        struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-        int err = opaque ? opaque->error : 0;
+    case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE: {
+      struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+      const char* errstr = in;
+      int err = opaque ? opaque->error : 0;
+      BOOL error = err || errstr;
+      MinnetCallback* cb = error ? &client->cb_error : &client->cb_close;
+
+      if(cb->ctx || (cb->ctx = ctx)) {
         JSValueConst cb_argv[] = {
-            minnet_client_wrap(ctx, wsi),
-            close_status(ctx, in, len),
-            close_reason(ctx, in, len),
-            JS_NewInt32(ctx, err),
+            client->ws_obj,
+            //  errstr ? JS_NewString(ctx, errstr) : JS_NewInt32(ctx, err),
+            error ? JS_NewString(cb->ctx, errstr ? errstr : strerror(err)) : JS_NewInt32(ctx, err),
         };
-        minnet_emit(&client->cb_close, 4, cb_argv);
-        JS_FreeValue(ctx, cb_argv[0]);
+        minnet_emit(cb, error ? 2 : 1, cb_argv);
         JS_FreeValue(ctx, cb_argv[1]);
-        JS_FreeValue(ctx, cb_argv[2]);
-        JS_FreeValue(ctx, cb_argv[3]);
       }
       break;
     }
@@ -313,8 +328,12 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP: {
-      int ret, n = buffer_AVAIL(&client->body);
-      char* buf = client->body.write;
+      /*      int ret, n = buffer_AVAIL(&client->body);
+            char* buf = client->body.write; */
+
+      char buffer[MINNET_BUFFER_SIZE + LWS_PRE];
+      char* buf = buffer + LWS_PRE;
+      int ret, n = sizeof(buffer) - LWS_PRE;
 
       if((ret = lws_http_client_read(wsi, &buf, &n)))
         return -1;
@@ -323,8 +342,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ: {
-      // lwsl_user("RECEIVE_CLIENT_HTTP_READ in=%.*s len=%i\n", (int)MIN(len, 40), in, len);
-      buffer_append(&client->body, in, len, ctx);
+      printf("RECEIVE_CLIENT_HTTP_READ in=%.*s len=%i\n", (int)MIN(len, 100), in, len);
+      //  buffer_append(&client->body, in, len, ctx);
       return 0;
     }
 
@@ -335,21 +354,25 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE:
     case LWS_CALLBACK_RAW_RX: {
-      MinnetWebsocket* ws = minnet_ws_data(client->ws_obj);
+      MinnetWebsocket* ws = 0; // minnet_ws_data(client->ws_obj);
+
+      if(!ws)
+        ws = minnet_ws_from_wsi(wsi);
 
       if(client->cb_message.ctx || (client->cb_message.ctx = ctx)) {
         JSValue msg = ws->binary ? JS_NewArrayBufferCopy(client->cb_message.ctx, in, len) : JS_NewStringLen(client->cb_message.ctx, in, len);
         JSValue cb_argv[2] = {client->ws_obj, msg};
         minnet_emit(&client->cb_message, 2, cb_argv);
+        JS_FreeValue(ctx, cb_argv[1]);
       }
       return 0;
     }
     case LWS_CALLBACK_CLIENT_RECEIVE_PONG: {
       if(client->cb_pong.ctx || (client->cb_pong.ctx = ctx)) {
-        JSValue ws_obj = minnet_client_wrap(client->cb_pong.ctx, wsi);
         JSValue data = JS_NewArrayBufferCopy(client->cb_pong.ctx, in, len);
-        JSValue cb_argv[2] = {ws_obj, data};
+        JSValue cb_argv[2] = {client->ws_obj, data};
         minnet_emit(&client->cb_pong, 2, cb_argv);
+        JS_FreeValue(ctx, cb_argv[1]);
       }
       break;
     }

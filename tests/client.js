@@ -34,7 +34,7 @@ function main(...args) {
 
     net.setLog(/* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1, (level, msg) => {
       const l = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
-      if(l != 'NOTICE' && l != 'MINNET') console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
+      if(l != 'NOTICE' /*&& l != 'MINNET'*/) console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
     });
 
     //console.log('createWS', { protocol, host, port, location, listen });
@@ -59,10 +59,14 @@ function main(...args) {
           console.log('error:', err.message);
         }
       },
-      onClose(ws, status, reason, error) {
+      onClose(ws, status) {
         connections.delete(ws);
-        console.log('onClose', { ws, status, reason, error });
+        console.log('onClose', { ws, status });
         std.exit(status != 1000 ? 1 : 0);
+      },
+      onError(ws, error) {
+        console.log('onError', { ws, error });
+        std.exit(error);
       },
       onHttp(req, rsp) {
         const { url, method, headers } = req;

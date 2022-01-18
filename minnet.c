@@ -39,12 +39,10 @@
 
 JSValue minnet_fetch(JSContext*, JSValueConst, int, JSValueConst*);
 
-// THREAD_LOCAL struct lws_context* minnet_lws_context = 0;
-
 static JSValue minnet_log_cb, minnet_log_this;
 int32_t minnet_log_level = 0;
 JSContext* minnet_log_ctx = 0;
-BOOL minnet_exception = FALSE;
+THREAD_LOCAL BOOL minnet_exception = FALSE;
 
 static void
 lws_log_callback(int level, const char* line) {
@@ -203,6 +201,7 @@ int
 fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args) {
   /*const char* onFd = JS_ToCString(cb->ctx, cb->func_obj);
   printf("fd_callback fd=%d onFd=%s\n", lws_get_socket_fd(wsi), onFd);*/
+  printf("fd_callback %s fd=%d args->events=0x%x\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), args->events);
 
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:

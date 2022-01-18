@@ -97,6 +97,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     JS_ToInt32(ctx, &port, opt_port);
 
   OPTIONS_CB(options, "onPong", minnet_server.cb_pong);
+  OPTIONS_CB(options, "onError", minnet_server.cb_error);
   OPTIONS_CB(options, "onClose", minnet_server.cb_close);
   OPTIONS_CB(options, "onConnect", minnet_server.cb_connect);
   OPTIONS_CB(options, "onMessage", minnet_server.cb_message);
@@ -236,6 +237,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   js_free(ctx, (void*)minnet_server.info.vhost_name);
 
   FREECB(minnet_server.cb_pong)
+  FREECB(minnet_server.cb_error)
   FREECB(minnet_server.cb_close)
   FREECB(minnet_server.cb_connect)
   FREECB(minnet_server.cb_message)
