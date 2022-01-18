@@ -7,11 +7,16 @@
 
 typedef struct client_data {
   JSContext* ctx;
+  JSValue ws_obj;
   struct lws_context* lws;
   struct lws_context_creation_info info;
   MinnetURL url;
-  MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd;
-  JSValue ws_obj;
+  union {
+    struct {
+      MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd;
+    };
+    MinnetCallback callbacks[5];
+  };
   /*union {
     struct {
       JSValue req_obj;

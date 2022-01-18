@@ -205,7 +205,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       }
       js_std_loop(ctx);
 
-      //lws_service(minnet_client_lws, 500);
+      // lws_service(minnet_client_lws, 500);
     }
     if(wsi) {
       JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
@@ -295,13 +295,12 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
     case LWS_CALLBACK_RAW_CONNECTED: {
       if(!client->connected) {
+        client->connected = TRUE;
+        buffer_alloc(&client->body, MINNET_BUFFER_SIZE, ctx);
+
         if(client->cb_connect.ctx || (client->cb_connect.ctx = ctx)) {
-          // JSValue ws_obj = minnet_client_wrap(client->cb_connect.ctx, wsi);
           minnet_emit(&client->cb_connect, 1, &client->ws_obj);
         }
-        client->connected = TRUE;
-
-        buffer_alloc(&client->body, MINNET_BUFFER_SIZE, ctx);
       }
       break;
     }
@@ -380,6 +379,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   return 0;
   //  return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
+
 JSValue
 minnet_client_wrap(JSContext* ctx, MinnetClient* cli) {
   JSValue ret;
@@ -390,26 +390,58 @@ minnet_client_wrap(JSContext* ctx, MinnetClient* cli) {
   return ret;
 }
 
+enum {
+  EVENT_MESSAGE = 0,
+  EVENT_CONNECT,
+  EVENT_CLOSE,
+  EVENT_PONG,
+  EVENT_FD,
+};
+
 static JSValue
-minnet_client_getter(JSContext* ctx, JSValueConst this_val, int magic) {
+minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetClient* cli;
   JSValue ret = JS_UNDEFINED;
 
   if(!(cli = minnet_client_data(this_val)))
     return JS_UNDEFINED;
 
-  switch(magic) {}
+  switch(magic) {
+    case EVENT_MESSAGE:
+    case EVENT_CONNECT:
+    case EVENT_CLOSE:
+    case EVENT_PONG:
+    case EVENT_FD: {
+      ret = JS_DupValue(ctx, cli->callbacks[magic - EVENT_MESSAGE].func_obj);
+      break;
+    }
+  }
   return ret;
 }
 
 static JSValue
-minnet_client_setter(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetClient* cli;
   JSValue ret = JS_UNDEFINED;
+
   if(!(cli = JS_GetOpaque2(ctx, this_val, minnet_client_class_id)))
     return JS_EXCEPTION;
 
-  switch(magic) {}
+  switch(magic) {
+    case EVENT_MESSAGE:
+    case EVENT_CONNECT:
+    case EVENT_CLOSE:
+    case EVENT_PONG:
+    case EVENT_FD: {
+      int index = magic - EVENT_MESSAGE;
+      if(!JS_IsFunction(ctx, value))
+        return JS_ThrowTypeError(ctx, "event handler must be function");
+
+      JS_FreeValue(ctx, cli->callbacks[index].func_obj);
+      cli->callbacks[index].func_obj = JS_DupValue(ctx, value);
+      break;
+    }
+  }
   return ret;
 }
 
@@ -419,7 +451,6 @@ minnet_client_finalizer(JSRuntime* rt, JSValue val) {
   if(cli) {
     js_free_rt(rt, cli);
   }
-  //  JS_FreeValueRT(rt, val);
 }
 
 JSClassDef minnet_client_class = {
@@ -428,8 +459,12 @@ JSClassDef minnet_client_class = {
 };
 
 const JSCFunctionListEntry minnet_client_proto_funcs[] = {
+    JS_CGETSET_MAGIC_DEF("onmessage", minnet_client_get, minnet_client_set, EVENT_MESSAGE),
+    JS_CGETSET_MAGIC_DEF("onconnect", minnet_client_get, minnet_client_set, EVENT_CONNECT),
+    JS_CGETSET_MAGIC_DEF("onclose", minnet_client_get, minnet_client_set, EVENT_CLOSE),
+    JS_CGETSET_MAGIC_DEF("onpong", minnet_client_get, minnet_client_set, EVENT_PONG),
+    JS_CGETSET_MAGIC_DEF("onfd", minnet_client_get, minnet_client_set, EVENT_FD),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetClient", JS_PROP_CONFIGURABLE),
-
 };
 
 const size_t minnet_client_proto_funcs_size = countof(minnet_client_proto_funcs);
