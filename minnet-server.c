@@ -2,7 +2,6 @@
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 #include "minnet-server-http.h"
-#include "minnet-server-proxy.h"
 #include "minnet-response.h"
 #include "minnet-request.h"
 #include <list.h>
@@ -14,7 +13,7 @@
 MinnetServer minnet_server = {0};
 
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-int proxy_raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int http_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
@@ -24,7 +23,7 @@ static struct lws_protocols protocols[] = {
     {"defprot", lws_callback_http_dummy, 0, 0},
     {"http", http_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
-    {"proxy-raw", proxy_raw_client_callback, 0, 1024, 0, NULL, 0},
+    {"proxy-raw", raw_client_callback, 0, 1024, 0, NULL, 0},
     {0},
 };
 
@@ -33,7 +32,7 @@ static struct lws_protocols protocols2[] = {
     {"defprot", defprot_callback, 0, 0},
     {"http", http_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
-    {"proxy-raw", proxy_raw_client_callback, 0, 1024, 0, NULL, 0},
+    {"proxy-raw", raw_client_callback, 0, 1024, 0, NULL, 0},
     {0, 0},
 };
 
@@ -73,12 +72,12 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
   JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
   JSValue opt_tls = JS_GetPropertyStr(ctx, options, "tls");
-  /*  JSValue opt_on_pong = JS_GetPropertyStr(ctx, options, "onPong");
-    JSValue opt_on_close = JS_GetPropertyStr(ctx, options, "onClose");
-    JSValue opt_on_connect = JS_GetPropertyStr(ctx, options, "onConnect");
-    JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
-    JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
-    JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");*/
+  JSValue opt_on_pong = JS_GetPropertyStr(ctx, options, "onPong");
+  JSValue opt_on_close = JS_GetPropertyStr(ctx, options, "onClose");
+  JSValue opt_on_connect = JS_GetPropertyStr(ctx, options, "onConnect");
+  JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
+  JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
+  JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
   JSValue opt_mimetypes = JS_GetPropertyStr(ctx, options, "mimetypes");
 
@@ -96,12 +95,12 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   if(!JS_IsUndefined(opt_port))
     JS_ToInt32(ctx, &port, opt_port);
 
-  OPTIONS_CB(options, "onPong", minnet_server.cb_pong);
-  OPTIONS_CB(options, "onClose", minnet_server.cb_close);
-  OPTIONS_CB(options, "onConnect", minnet_server.cb_connect);
-  OPTIONS_CB(options, "onMessage", minnet_server.cb_message);
-  OPTIONS_CB(options, "onFd", minnet_server.cb_fd);
-  OPTIONS_CB(options, "onHttp", minnet_server.cb_http);
+  GETCB(opt_on_pong, minnet_server.cb_pong)
+  GETCB(opt_on_close, minnet_server.cb_close)
+  GETCB(opt_on_connect, minnet_server.cb_connect)
+  GETCB(opt_on_message, minnet_server.cb_message)
+  GETCB(opt_on_fd, minnet_server.cb_fd)
+  GETCB(opt_on_http, minnet_server.cb_http)
 
   protocols[0].user = ctx;
   protocols[1].user = ctx;
@@ -274,11 +273,46 @@ int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL:
-    case LWS_CALLBACK_ADD_POLL_FD:
-    case LWS_CALLBACK_DEL_POLL_FD:
+    case LWS_CALLBACK_UNLOCK_POLL: return 0;
+    case LWS_CALLBACK_ADD_POLL_FD: {
+      struct lws_pollargs* args = in;
+      if(minnet_server.cb_fd.ctx) {
+        JSValue argv[3] = {JS_NewInt32(minnet_server.cb_fd.ctx, args->fd)};
+        minnet_handlers(minnet_server.cb_fd.ctx, wsi, args, &argv[1]);
+        minnet_emit(&minnet_server.cb_fd, 3, argv);
+        JS_FreeValue(minnet_server.cb_fd.ctx, argv[0]);
+        JS_FreeValue(minnet_server.cb_fd.ctx, argv[1]);
+        JS_FreeValue(minnet_server.cb_fd.ctx, argv[2]);
+      }
+      return 0;
+    }
+    case LWS_CALLBACK_DEL_POLL_FD: {
+      struct lws_pollargs* args = in;
+      if(minnet_server.cb_fd.ctx) {
+        JSValue argv[3] = {
+            JS_NewInt32(minnet_server.cb_fd.ctx, args->fd),
+        };
+        minnet_handlers(minnet_server.cb_fd.ctx, wsi, args, &argv[1]);
+        minnet_emit(&minnet_server.cb_fd, 3, argv);
+        JS_FreeValue(minnet_server.cb_fd.ctx, argv[0]);
+        JS_FreeValue(minnet_server.cb_fd.ctx, argv[1]);
+        JS_FreeValue(minnet_server.cb_fd.ctx, argv[2]);
+      }
+      return 0;
+    }
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-      return fd_callback(wsi, reason, &minnet_server.cb_fd, in);
+      struct lws_pollargs* args = in;
+      if(minnet_server.cb_fd.ctx) {
+        if(args->events != args->prev_events) {
+          JSValue argv[3] = {JS_NewInt32(minnet_server.cb_fd.ctx, args->fd)};
+          minnet_handlers(minnet_server.cb_fd.ctx, wsi, args, &argv[1]);
+          minnet_emit(&minnet_server.cb_fd, 3, argv);
+          JS_FreeValue(minnet_server.cb_fd.ctx, argv[0]);
+          JS_FreeValue(minnet_server.cb_fd.ctx, argv[1]);
+          JS_FreeValue(minnet_server.cb_fd.ctx, argv[2]);
+        }
+      }
+      return 0;
     }
   }
 

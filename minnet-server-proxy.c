@@ -121,7 +121,7 @@ proxy_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, vo
 }
 
 int
-proxy_raw_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+raw_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetProxyConnection* pc = (MinnetProxyConnection*)lws_get_opaque_user_data(wsi);
   MinnetProxyMessage* msg;
   uint8_t* data;

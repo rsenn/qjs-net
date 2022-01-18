@@ -14,8 +14,6 @@ struct http_request;
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
-#define MINNET_BUFFER_SIZE 1024
-
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -31,14 +29,7 @@ struct http_request;
 
 #define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
 
-#define GETOPT(obj, name) JSValue opt_##name = JS_GetPropertyStr(ctx, (obj), #name);
-#define FREEOPT(name) JS_FreeValue(ctx, opt_##name);
-
-#define CB(obj, name, cb) ((cb).func_obj = JS_GetPropertyStr(ctx, (obj), (name)))
-#define OPTIONS_CB(obj, n, cb) (((cb).ctx = ctx), ((cb).this_obj = JS_UNDEFINED), CB(obj, n, cb), ((cb).name = (n)))
-//#define OPTIONS_CB(obj, name, cb) (cb) = (MinnetCallback){ctx, JS_UNDEFINED, JS_GetPropertyStr(ctx, (obj), (name)), (name)};
-//#define GETCBPROP(obj, name, cb_ptr) GETCB(JS_GetPropertyStr(ctx, obj, name), cb_ptr)
-
+#define GETCBPROP(obj, opt, cb_ptr) GETCB(JS_GetPropertyStr(ctx, obj, opt), cb_ptr)
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj) \
   if(JS_IsFunction(ctx, opt)) { \
@@ -78,9 +69,6 @@ enum http_method;
 
 typedef struct lws_pollfd MinnetPollFd;
 
-#define MINNET_CALLBACK(name) \
-  (MinnetCallback) { ctx, JS_UNDEFINED, JS_NULL, #name }
-
 typedef struct ws_callback {
   JSContext* ctx;
   JSValue this_obj;
@@ -112,20 +100,6 @@ void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSV
 void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
 const char* lws_callback_name(int);
-
-static inline BOOL
-url_is_tls(MinnetURL* url) {
-  if(url->protocol)
-    return !strcmp(url->protocol, "wss") || !strcmp(url->protocol, "https");
-  return FALSE;
-}
-
-static inline BOOL
-url_is_raw(MinnetURL* url) {
-  if(url->protocol)
-    return strncmp(url->protocol, "ws", 2) && strncmp(url->protocol, "http", 4);
-  return FALSE;
-}
 
 static inline size_t
 byte_chr(const void* x, size_t len, char c) {

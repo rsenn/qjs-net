@@ -464,6 +464,10 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
 
 };
 
+const JSCFunctionListEntry minnet_ws_static_funcs[] = {
+
+};
+
 const JSCFunctionListEntry minnet_ws_proto_defs[] = {
     JS_PROP_INT32_DEF("CLOSE_STATUS_NORMAL", LWS_CLOSE_STATUS_NORMAL, 0),
     JS_PROP_INT32_DEF("CLOSE_STATUS_GOINGAWAY", LWS_CLOSE_STATUS_GOINGAWAY, 0),
@@ -513,4 +517,5 @@ const JSCFunctionListEntry minnet_ws_proto_defs[] = {
 };
 
 const size_t minnet_ws_proto_funcs_size = countof(minnet_ws_proto_funcs);
+const size_t minnet_ws_static_funcs_size = countof(minnet_ws_static_funcs);
 const size_t minnet_ws_proto_defs_size = countof(minnet_ws_proto_defs);
