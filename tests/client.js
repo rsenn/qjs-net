@@ -4,11 +4,14 @@ import inspect from 'inspect';
 import * as net from 'net';
 import { Console } from 'console';
 
+const escape = s => [[/\r/g, '\\r'],[/\n/g, '\\n']].reduce((a,[exp,rpl]) => a.replace(exp,rpl), s);
+const abbreviate = s => s.length > 100 ? s.substring(0,100)+'...' : s;
+
 const connections = new Set();
 
 function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
-  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true } });
+  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true,maxStringLength:100 } });
 
   const sslCert = 'localhost.crt',
     sslPrivateKey = 'localhost.key';
@@ -30,7 +33,7 @@ function main(...args) {
     //    const path = location.reduce((acc, part) => acc + '/' + part, '');
     net.setLog(/* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1, (level, msg) => {
       const l = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
-      if(l == 'MINNET') console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
+      if(l!= 'NOTICE' && l  != 'MINNET') console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
     });
 
     console.log('createWS', { protocol, host, port, location, listen });
@@ -66,14 +69,14 @@ function main(...args) {
         return rsp;
       },
       onFd(fd, rd, wr) {
-        console.log('onFd', fd, rd, wr);
+       // console.log('onFd', fd, rd, wr);
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
-        console.log('onMessage', { ws, msg });
+        console.log('onMessage',console.config({ maxStringLen: 100 }), {ws,msg});
 
-        std.puts(msg);
+        std.puts(escape(abbreviate(msg))+'\n');
       },
       onError(ws, error) {
         console.log('onError', ws, error);

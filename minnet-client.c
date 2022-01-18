@@ -80,7 +80,7 @@ connect_client(struct lws_context* context, MinnetURL* url, BOOL ssl, BOOL raw, 
 
   url->host = 0;
   url->location = 0;
-  lwsl_user("connect_client { protocol: %s, local_protocol_name: %s, host: %s, path: %s, origin: %s }\n", i.protocol, i.local_protocol_name, i.host, i.path, i.origin);
+  // lwsl_user("connect_client { protocol: %s, local_protocol_name: %s, host: %s, path: %s, origin: %s }\n", i.protocol, i.local_protocol_name, i.host, i.path, i.origin);
 
   return !lws_client_connect_via_info(&i);
 }
@@ -230,7 +230,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   client = lws_get_opaque_user_data(wsi);
   ctx = client ? client->ctx : 0; //((MinnetClient*)lws_context_user(lws_get_context(wsi)))->ctx;
 
-  lwsl_user("client_callback " FG("%d") "%-25s" NC " is_ssl=%i len=%d in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), (int)MIN(len, 32), (char*)in);
+  lwsl_user("client_callback " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 40), (char*)in);
 
   /*  if(client && JS_VALUE_GET_TAG(client->ws_obj) == 0)
       client->ws_obj = minnet_ws_wrap(ctx, wsi);*/
@@ -298,6 +298,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
           minnet_emit(&client->cb_connect, 1, &ws_obj);
         }
         client->connected = TRUE;
+
+        buffer_alloc(&client->body, MINNET_BUFFER_SIZE, ctx);
       }
       break;
     }
@@ -310,12 +312,16 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP: {
-      char buffer[1024 + LWS_PRE];
+      /*char buffer[MINNET_BUFFER_SIZE + LWS_PRE];
       char* buf = buffer + LWS_PRE;
-      int ret, len = sizeof(buffer) - LWS_PRE;
+      int ret, len = sizeof(buffer) - LWS_PRE;*/
+      int ret, n = buffer_AVAIL(&client->body);
+      char* buf = client->body.write;
 
-      if((ret = lws_http_client_read(wsi, &buf, &len)))
-        lwsl_user("RECEIVE_CLIENT_HTTP len=%d ret=%d\n", len, ret);
+      // lwsl_user("\x1b[1;33mRECEIVE_CLIENT_HTTP\x1b[0m n=%d\n", n);
+      ret = lws_http_client_read(wsi, &buf, &n);
+
+      // lwsl_user("\x1b[1;33mRECEIVE_CLIENT_HTTP2\x1b[0m ret=%d n=%d\n", ret, n);
       if(ret)
         return -1;
 
@@ -323,13 +329,12 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ: {
-      lwsl_user("RECEIVE_CLIENT_HTTP_READ in=%.*s len=%i\n", len, in, len);
+      // lwsl_user("RECEIVE_CLIENT_HTTP_READ in=%.*s len=%i\n", (int)MIN(len, 40), in, len);
       buffer_append(&client->body, in, len, ctx);
       return 0;
     }
 
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
-
       in = client->body.read;
       len = buffer_REMAIN(&client->body);
     }
@@ -374,8 +379,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
   }
 
-  if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
-    lwsl_user("client  %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
+  /*if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
+    lwsl_user("client  %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);*/
 
   return 0;
   //  return lws_callback_http_dummy(wsi, reason, user, in, len);

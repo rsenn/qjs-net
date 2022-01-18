@@ -123,7 +123,7 @@ url_init(JSContext* ctx, const char* protocol, const char* host, uint16_t port, 
   url.protocol = protocol ? js_strdup(ctx, protocol) : 0;
   url.host = host ? js_strdup(ctx, host) : 0;
   url.port = port;
-  url.location = location ? js_strdup(ctx, location) : 0;
+  url.location = js_strdup(ctx, location && *location ? location : "/");
   return url;
 }
 
@@ -304,7 +304,7 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
 
   events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
   revents = magic & events;
-  lwsl_debug("minnet_io_handler fd=%d wr=%i magic=0x%x events=%s revents=%s", fd, wr, (magic), io_events(events), io_events(revents));
+  // lwsl_debug("minnet_io_handler fd=%d wr=%i magic=0x%x events=%s revents=%s", fd, wr, (magic), io_events(events), io_events(revents));
 
   if((revents & PIO) != magic) {
     x.fd = fd;
@@ -316,7 +316,7 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
     else
       revents = x.revents;
 
-    lwsl_debug("minnet_io_handler poll() fd=%d, magic=%s, revents=%s", fd, io_events(magic), io_events(revents));
+    // lwsl_debug("minnet_io_handler poll() fd=%d, magic=%s, revents=%s", fd, io_events(magic), io_events(revents));
   }
 
   if(revents & PIO) {
@@ -328,15 +328,15 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
     if(revents & (POLLERR | POLLHUP)) {
       struct lws* wsi = wsi_from_fd(context, fd);
       struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-      lwsl_user("minnet_io_handler opaque=%p fd=%d errno=%d", opaque, fd, errno);
+      // lwsl_user("minnet_io_handler opaque=%p fd=%d errno=%d", opaque, fd, errno);
 
       if(opaque)
         opaque->error = errno;
     }
 
-    lwsl_debug("minnet_io_handler %s before lws_service_fdfd=%d, events=%s, revents=%s", ((const char*[]){"Read", "Write"})[wr], x.fd, io_events(x.events), io_events(x.revents));
+    // lwsl_debug("minnet_io_handler %s before lws_service_fdfd=%d, events=%s, revents=%s", ((const char*[]){"Read", "Write"})[wr], x.fd, io_events(x.events), io_events(x.revents));
     int ret = lws_service_fd(context, &x);
-    lwsl_debug("minnet_io_handler %s after lws_service_fd fd=%d, ret=%d", ((const char*[]){"Read", "Write"})[wr], x.fd, ret);
+    // lwsl_debug("minnet_io_handler %s after lws_service_fd fd=%d, ret=%d", ((const char*[]){"Read", "Write"})[wr], x.fd, ret);
   }
 
   return JS_UNDEFINED;
@@ -357,7 +357,7 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
   JSValue func;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 
-  lwsl_user("minnet_handlers wsi#%" PRIi64 " fd=%d events=%s", opaque ? opaque->serial : (int64_t)-1, args->fd, io_events(args->events));
+  // lwsl_user("minnet_handlers wsi#%" PRIi64 " fd=%d events=%s", opaque ? opaque->serial : (int64_t)-1, args->fd, io_events(args->events));
 
   func = make_handler(ctx, args->fd, args->events /* | args->prev_events*/, lws_get_context(wsi), args->events);
 

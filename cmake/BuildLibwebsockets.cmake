@@ -18,7 +18,8 @@ macro(build_libwebsockets)
       ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
       ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets")
-  set(LIBWEBSOCKETS_LIBRARIES "${MBEDTLS_LIBRARIES};brotlienc;brotlidec;cap" CACHE STRING "libwebsockets libraries")
+  set(LIBWEBSOCKETS_LIBRARIES "${MBEDTLS_LIBRARIES};brotlienc;brotlidec;cap"
+      CACHE STRING "libwebsockets libraries")
   if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
     set(LIBWEBSOCKETS_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a"
                                 ${LIBWEBSOCKETS_LIBRARIES})
@@ -26,9 +27,10 @@ macro(build_libwebsockets)
     set(LIBWEBSOCKETS_LIBRARIES "websockets" ${LIBWEBSOCKETS_LIBRARIES})
   endif(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
 
-  set(LIBWEBSOCKETS_INCLUDE_DIRS "${LIBWEBSOCKETS_INCLUDE_DIRS}" CACHE PATH "libwebsockets include directory")
-  set(LIBWEBSOCKETS_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib CACHE PATH
-                                                                                    "libwebsockets library directory")
+  set(LIBWEBSOCKETS_INCLUDE_DIRS "${LIBWEBSOCKETS_INCLUDE_DIRS}"
+      CACHE PATH "libwebsockets include directory")
+  set(LIBWEBSOCKETS_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib
+      CACHE PATH "libwebsockets library directory")
   # add_subdirectory(libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets)
   include(ExternalProject)
 
@@ -40,9 +42,18 @@ macro(build_libwebsockets)
     )
   endif(WITH_MBEDTLS)
   if(WITH_SSL AND NOT WITH_MBEDTLS)
-    set(LIBWEBSOCKETS_ARGS ${LIBWEBSOCKETS_ARGS} -DLWS_OPENSSL_LIBRARIES:STRING=${OPENSSL_LIBRARIES}
-                           -DLWS_OPENSSL_INCLUDE_DIRS:STRING=${OPENSSL_INCLUDE_DIR})
+    set(LIBWEBSOCKETS_ARGS
+        ${LIBWEBSOCKETS_ARGS} -DLWS_OPENSSL_LIBRARIES:STRING=${OPENSSL_LIBRARIES}
+        -DLWS_OPENSSL_INCLUDE_DIRS:STRING=${OPENSSL_INCLUDE_DIR})
   endif(WITH_SSL AND NOT WITH_MBEDTLS)
+
+  if("${LWS_HAVE_HMAC_CTX_new}" STREQUAL "")
+    set(LWS_HAVE_HMAC_CTX_new 1 CACHE STRING "Have HMAC_CTX_new")
+  endif("${LWS_HAVE_HMAC_CTX_new}" STREQUAL "")
+
+  if("${LWS_HAVE_EVP_MD_CTX_free}" STREQUAL "")
+    set(LWS_HAVE_EVP_MD_CTX_free 1 CACHE STRING "Have EVP_MD_CTX_free")
+  endif("${LWS_HAVE_EVP_MD_CTX_free}" STREQUAL "")
 
   string(REPLACE " " "\n\t" ARGS "${LIBWEBSOCKETS_ARGS}")
   message("libwebsockets configuration arguments:\n\t${ARGS}")
@@ -63,10 +74,10 @@ macro(build_libwebsockets)
       "-DCOMPILER_IS_CLANG:BOOL=OFF"
       "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}"
       "-DCMAKE_LIBRARY_PATH:PATH=${CMAKE_LIBRARY_PATH};${CMAKE_CURRENT_BINARY_DIR}/mbedtls;${CMAKE_CURRENT_BINARY_DIR}/brotli"
+      "-DLWS_HAVE_HMAC_CTX_new:STRING=${LWS_HAVE_HMAC_CTX_new}"
+      "-DLWS_HAVE_EVP_MD_CTX_free:STRING=${LWS_HAVE_EVP_MD_CTX_free}"
       ${LIBWEBSOCKETS_ARGS}
     CMAKE_CACHE_ARGS
-    -DLWS_HAVE_HMAC_CTX_new:STRING=1
-    -DLWS_HAVE_EVP_MD_CTX_free:STRING=
       -DDISABLE_WERROR:BOOL=ON
       -DLWS_HAVE_LIBCAP:BOOL=FALSE
       -DLWS_ROLE_RAW_PROXY:BOOL=ON

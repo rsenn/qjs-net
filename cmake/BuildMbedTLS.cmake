@@ -87,8 +87,9 @@ macro(build_mbedtls)
 
   ExternalProject_Add_Step(${MBEDTLS_TARGET_NAME} COMMAND ${CMAKE_COMMAND} --build . --target clean)
 
-  add_custom_target(${MBEDTLS_TARGET_NAME}_clean COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target clean
-                    WORKING_DIRECTORY "${BINARY_DIR}" COMMENT "Cleaning mbedtls" VERBATIM)
+  add_custom_target(
+    ${MBEDTLS_TARGET_NAME}_clean COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target clean
+    WORKING_DIRECTORY "${BINARY_DIR}" COMMENT "Cleaning mbedtls" VERBATIM)
   #add_custom_target(${MBEDTLS_TARGET_NAME}_install COMMAND ${CMAKE_COMMAND} --build ${CMAKE_CURRENT_BINARY_DIR}/mbedtls -- install WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mbedtls COMMENT "Installing mbedtls to ${CMAKE_INSTALL_PREFIX}" VERBATIM)
   #add_dependencies(${MBEDTLS_TARGET_NAME}_install ${MBEDTLS_TARGET_NAME})
 
@@ -100,12 +101,14 @@ macro(build_mbedtls)
   set(MBEDTLS_X509_LIBRARY mbedx509 CACHE STRING "MbedTLS x509 library" FORCE)
   add_library(${MBEDTLS_X509_LIBRARY} STATIC IMPORTED)
   add_dependencies(${MBEDTLS_X509_LIBRARY} ${MBEDTLS_TARGET_NAME})
-  set_property(TARGET ${MBEDTLS_X509_LIBRARY} PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/libmbedx509.a)
+  set_property(TARGET ${MBEDTLS_X509_LIBRARY} PROPERTY IMPORTED_LOCATION
+                                                       ${BINARY_DIR}/libmbedx509.a)
 
   set(MBEDTLS_CRYPTO_LIBRARY mbedcrypto CACHE STRING "MbedTLS crypto library" FORCE)
   add_library(${MBEDTLS_CRYPTO_LIBRARY} STATIC IMPORTED)
   add_dependencies(${MBEDTLS_CRYPTO_LIBRARY} ${MBEDTLS_TARGET_NAME})
-  set_property(TARGET ${MBEDTLS_CRYPTO_LIBRARY} PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/libmbedcrypto.a)
+  set_property(TARGET ${MBEDTLS_CRYPTO_LIBRARY} PROPERTY IMPORTED_LOCATION
+                                                         ${BINARY_DIR}/libmbedcrypto.a)
 
   set(MBEDTLS_LIBRARIES "${MBEDTLS_LIBRARY};${MBEDTLS_CRYPTO_LIBRARY};${MBEDTLS_X509_LIBRARY}"
       CACHE STRING "MbedTLS libraries" FORCE)

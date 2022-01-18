@@ -43,8 +43,8 @@ macro(find_brotli)
 
   if(NOT BROTLI_LIBRARIES)
     if(BROTLICOMMON_LIBRARY)
-      set(BROTLI_LIBRARIES "${BROTLIENC_LIBRARY};${BROTLIDEC_LIBRARY};${BROTLICOMMON_LIBRARY}" CACHE PATH
-                                                                                                     "Brotli libraries")
+      set(BROTLI_LIBRARIES "${BROTLIENC_LIBRARY};${BROTLIDEC_LIBRARY};${BROTLICOMMON_LIBRARY}"
+          CACHE PATH "Brotli libraries")
     else(BROTLICOMMON_LIBRARY)
       set(BROTLI_LIBRARIES "brotlienc;brotlidec;brotlicommon" CACHE PATH "Brotli libraries")
     endif(BROTLICOMMON_LIBRARY)

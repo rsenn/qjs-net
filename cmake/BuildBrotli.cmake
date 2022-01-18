@@ -34,13 +34,17 @@ macro(build_brotli)
   add_dependencies(brotlienc libbrotli)
 
   if(MSVC)
-    set_target_properties(brotlicommon PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/brotlicommon-static.lib)
+    set_target_properties(brotlicommon PROPERTIES IMPORTED_LOCATION
+                                                  ${BINARY_DIR}/brotlicommon-static.lib)
     set_target_properties(brotlidec PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/brotlidec-static.lib)
     set_target_properties(brotlienc PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/brotlienc-static.lib)
   else()
-    set_target_properties(brotlicommon PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/libbrotlicommon-static.a)
-    set_target_properties(brotlidec PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/libbrotlidec-static.a)
-    set_target_properties(brotlienc PROPERTIES IMPORTED_LOCATION ${BINARY_DIR}/libbrotlienc-static.a)
+    set_target_properties(brotlicommon PROPERTIES IMPORTED_LOCATION
+                                                  ${BINARY_DIR}/libbrotlicommon-static.a)
+    set_target_properties(brotlidec PROPERTIES IMPORTED_LOCATION
+                                               ${BINARY_DIR}/libbrotlidec-static.a)
+    set_target_properties(brotlienc PROPERTIES IMPORTED_LOCATION
+                                               ${BINARY_DIR}/libbrotlienc-static.a)
   endif()
 
   set(BROTLI_INCLUDE_DIR ${SOURCE_DIR}/c/include CACHE PATH "brotli include directory" FORCE)
