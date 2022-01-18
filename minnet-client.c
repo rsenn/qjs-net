@@ -174,8 +174,8 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   sslcert_client(ctx, info, options);
 
   if(!(client->lws = lws_create_context(info))) {
-    lwsl_err("client: Libwebsockets init failed\n");
-    return JS_ThrowInternalError(ctx, "client: Libwebsockets init failed");
+    lwsl_err("minnet-client: libwebsockets init failed\n");
+    return JS_ThrowInternalError(ctx, "minnet-client: libwebsockets init failed");
   }
 
   OPTIONS_CB(options, "onPong", client->cb_pong);
@@ -198,17 +198,14 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   }
 
   if(block) {
-
     while(n >= 0) {
       if(minnet_exception) {
         ret = JS_EXCEPTION;
         break;
       }
-      /* if(wsi)
-         break;*/
       js_std_loop(ctx);
 
-      //  lws_service(minnet_client_lws, 500);
+      //lws_service(minnet_client_lws, 500);
     }
     if(wsi) {
       JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
@@ -221,8 +218,6 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     }
     url_free(ctx, &url);
   }
-
-  // printf("minnet_ws_client onFd=%d\n", JS_VALUE_GET_TAG(client->cb_fd.func_obj));
 
   return ret;
 }
