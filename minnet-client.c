@@ -212,26 +212,31 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     url_free(ctx, &url);
   }
 
-  printf("minnet_ws_client onFd=%d\n", JS_VALUE_GET_TAG(client->cb_fd.func_obj));
+  // printf("minnet_ws_client onFd=%d\n", JS_VALUE_GET_TAG(client->cb_fd.func_obj));
 
   return ret;
 }
 
 static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetClient* client = lws_get_opaque_user_data(wsi);
-  JSContext* ctx = client ? client->ctx : ((MinnetClient*)lws_context_user(lws_get_context(wsi)))->ctx;
+  MinnetClient* client;
+  JSContext* ctx;
 
-  lwsl_user("client_callback " FG("%d") "%-25s" NC " is_ssl=%i in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), (int)MIN(len, 32), (char*)in);
+  if(reason >= LWS_CALLBACK_ADD_POLL_FD && reason <= LWS_CALLBACK_UNLOCK_POLL) {
+    client = lws_context_user(lws_get_context(lws_get_network_wsi(wsi)));
+    return fd_callback(wsi, reason, &client->cb_fd, in);
+  }
 
-  if(client && JS_VALUE_GET_TAG(client->ws_obj) == 0)
-    client->ws_obj = minnet_ws_wrap(ctx, wsi);
+  client = lws_get_opaque_user_data(wsi);
+  ctx = client ? client->ctx : 0; //((MinnetClient*)lws_context_user(lws_get_context(wsi)))->ctx;
+
+  lwsl_user("client_callback " FG("%d") "%-25s" NC " is_ssl=%i len=%d in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), (int)MIN(len, 32), (char*)in);
+
+  /*  if(client && JS_VALUE_GET_TAG(client->ws_obj) == 0)
+      client->ws_obj = minnet_ws_wrap(ctx, wsi);*/
 
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT: {
-
-      lwsl_user("client   " FGC(171, "%-25s") " user=%p client=%p wsi=%p network-wsi=%p\n", lws_callback_name(reason) + 13, user, client, wsi, lws_get_network_wsi(wsi));
-
       return 0;
     }
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
@@ -288,8 +293,6 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
     case LWS_CALLBACK_RAW_CONNECTED: {
       if(!client->connected) {
-        lwsl_user("client   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
-
         if(client->cb_connect.ctx) {
           JSValue ws_obj = minnet_client_wrap(client->cb_connect.ctx, wsi);
           minnet_emit(&client->cb_connect, 1, &ws_obj);
@@ -309,13 +312,18 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP: {
       char buffer[1024 + LWS_PRE];
       char* buf = buffer + LWS_PRE;
-      int len = sizeof(buffer) - LWS_PRE;
-      if(lws_http_client_read(wsi, &buf, &len))
+      int ret, len = sizeof(buffer) - LWS_PRE;
+
+      if((ret = lws_http_client_read(wsi, &buf, &len)))
+        lwsl_user("RECEIVE_CLIENT_HTTP len=%d ret=%d\n", len, ret);
+      if(ret)
         return -1;
-      return 0;
+
+      break;
     }
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ: {
+      lwsl_user("RECEIVE_CLIENT_HTTP_READ in=%.*s len=%i\n", len, in, len);
       buffer_append(&client->body, in, len, ctx);
       return 0;
     }
@@ -329,17 +337,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_RECEIVE:
     case LWS_CALLBACK_RAW_RX: {
       MinnetWebsocket* ws = minnet_ws_data(client->ws_obj);
-      lwsl_user("raw_rx   " FGC(171, "%-25s") " user=%p client=%p ws=%p ws_obj=%d wsi=%p network-wsi=%p\n",
-                lws_callback_name(reason) + 13,
-                user,
-                client,
-                ws,
-                JS_VALUE_GET_TAG(client->ws_obj),
-                wsi,
-                lws_get_network_wsi(wsi));
 
       if(client->cb_message.ctx) {
-        JSValue msg = /*ws->binary ? JS_NewArrayBufferCopy(client->cb_message.ctx, in, len) : */ JS_NewStringLen(client->cb_message.ctx, in, len);
+        JSValue msg = ws->binary ? JS_NewArrayBufferCopy(client->cb_message.ctx, in, len) : JS_NewStringLen(client->cb_message.ctx, in, len);
         JSValue cb_argv[2] = {client->ws_obj, msg};
         minnet_emit(&client->cb_message, 2, cb_argv);
       }

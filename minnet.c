@@ -35,6 +35,8 @@
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
+#define MINNET_BUFFER_SIZE 8192
+
 JSValue minnet_fetch(JSContext*, JSValueConst, int, JSValueConst*);
 
 // THREAD_LOCAL struct lws_context* minnet_lws_context = 0;

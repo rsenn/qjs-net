@@ -14,6 +14,8 @@ struct http_request;
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
+#define MINNET_BUFFER_SIZE 1024
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

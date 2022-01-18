@@ -13,14 +13,13 @@ function main(...args) {
   const sslCert = 'localhost.crt',
     sslPrivateKey = 'localhost.key';
 
-if(args.length==0)
-  args.push('https://github.com/rsenn?tab=repositories');
+  if(args.length == 0) args.push('https://github.com/rsenn?tab=repositories');
 
   function createWS(url, callbacks, listen = 0) {
     let matches = [...url.matchAll(/([:\\/]+|[^:\\/]+)/g)].map(a => a[0]);
     let [protocol, , host] = matches.splice(0, 3);
     let port;
-    if(matches[0]==':' && (matches.shift(),true) || !isNaN(+matches[0])) port = +matches.shift();
+    if((matches[0] == ':' && (matches.shift(), true)) || !isNaN(+matches[0])) port = +matches.shift();
     else port = { https: 443, http: 80 }[protocol];
 
     console.log('matches', { matches });
@@ -29,9 +28,9 @@ if(args.length==0)
     console.log('matches', { location, query });
 
     //    const path = location.reduce((acc, part) => acc + '/' + part, '');
-    net.setLog(/* net.LLL_USER |*/ ((net.LLL_WARN << 1) - 1), (level, ...args) => {
-      const l=['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
-if(l=='MINNET') console.log(('X', l).padEnd(8), ...args);
+    net.setLog(/* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1, (level, msg) => {
+      const l = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
+      if(l == 'MINNET') console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
     });
 
     console.log('createWS', { protocol, host, port, location, listen });
@@ -58,7 +57,7 @@ if(l=='MINNET') console.log(('X', l).padEnd(8), ...args);
       },
       onClose(ws, status, reason, error) {
         connections.delete(ws);
-        console.log('onClose',  { ws, status, reason, error});
+        console.log('onClose', { ws, status, reason, error });
         std.exit(status != 1000 ? 1 : 0);
       },
       onHttp(req, rsp) {
@@ -67,12 +66,14 @@ if(l=='MINNET') console.log(('X', l).padEnd(8), ...args);
         return rsp;
       },
       onFd(fd, rd, wr) {
-       console.log('onFd', fd, rd, wr);
+        console.log('onFd', fd, rd, wr);
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
-        console.log('onMessage',  { ws, msg});
+        console.log('onMessage', { ws, msg });
+
+        std.puts(msg);
       },
       onError(ws, error) {
         console.log('onError', ws, error);
@@ -85,14 +86,14 @@ if(l=='MINNET') console.log(('X', l).padEnd(8), ...args);
     }
   });
 
-for(let arg of args) {
-  createWS(arg, {}, false);
-}
+  for(let arg of args) {
+    createWS(arg, {}, false);
+  }
 
   function quit(why) {
     console.log(`quit('${why}')`);
     std.exit(0);
-   }
+  }
 }
 try {
   main(...scriptArgs.slice(1));
