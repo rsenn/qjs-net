@@ -83,7 +83,26 @@ typedef struct url {
   char* location;
 } MinnetURL;
 
-extern THREAD_LOCAL struct lws_context* minnet_lws_context;
+struct proxy_connection;
+struct http_mount;
+
+typedef struct session_data {
+  JSValue ws_obj;
+  union {
+    struct {
+      JSValue req_obj;
+      JSValue resp_obj;
+    };
+    JSValue args[2];
+  };
+  struct http_mount* mount;
+  struct proxy_connection* proxy;
+  int serial;
+  JSValue generator, next;
+  BOOL connected : 1, responded : 1, closed : 1, h2 : 1, done;
+  int64_t written;
+} MinnetSession;
+
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
 

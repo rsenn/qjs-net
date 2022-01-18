@@ -1,8 +1,10 @@
+#define _GNU_SOURCE
 #include "minnet-request.h"
 #include "minnet-stream.h"
 #include "jsutils.h"
 #include <cutils.h>
 #include <ctype.h>
+#include <strings.h>
 
 THREAD_LOCAL JSClassID minnet_request_class_id;
 THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;

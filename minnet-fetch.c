@@ -1,6 +1,8 @@
+#define _GNU_SOURCE
 #include "minnet-response.h"
 #include "jsutils.h"
 #include "buffer.h"
+#include <strings.h>
 #include <quickjs.h>
 #include <curl/curl.h>
 
