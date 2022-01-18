@@ -12,20 +12,15 @@ typedef struct client_data {
   MinnetURL url;
   MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd;
   JSValue ws_obj;
-  union {
+  /*union {
     struct {
       JSValue req_obj;
       JSValue resp_obj;
     };
     JSValue args[2];
-  };
+  };*/
   struct byte_buffer body;
-  int serial;
-  JSValue generator, next;
-  BOOL connected;
-  unsigned closed : 1;
-  unsigned h2 : 1;
-  int64_t written;
+  BOOL connected : 1, closed : 1, h2 : 1;
 } MinnetClient;
 
 extern THREAD_LOCAL JSClassID minnet_client_class_id;

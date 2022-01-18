@@ -51,8 +51,8 @@ function main(...args) {
       path,
       ...callbacks,
       onConnect(ws, req) {
+        console.log('onConnect', ws, req);
         connections.add(ws);
-        //console.log('onConnect', ws, req);
         try {
           console.log(`Connected to ${protocol}://${host}:${port}${path}`, true);
         } catch(err) {
