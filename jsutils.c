@@ -1,4 +1,5 @@
 #include "jsutils.h"
+#include <stdarg.h>
 
 JSValue
 vector2array(JSContext* ctx, int argc, JSValue argv[]) {
@@ -39,6 +40,18 @@ JSValue
 js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
   return js_function_bind(ctx, func, 1, &arg);
 }
+
+/*JSValue
+js_function_bind_v(JSContext* ctx, JSValueConst func, ...) {
+  va_list args;
+  DynBuf b;
+  JSValueConst arg;
+  dbuf_init2(&b, ctx, (DynBufReallocFunc*)js_realloc);
+  va_start(args, func);
+  while((arg = va_arg(args, JSValueConst))) { dbuf_put(&b, &arg, sizeof(JSValueConst)); }
+  va_end(args);
+  return js_function_bind(ctx, func, b.size / sizeof(JSValueConst), (JSValueConst*)b.buf);
+}*/
 
 JSValue
 js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {

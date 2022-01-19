@@ -247,8 +247,11 @@ fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* c
       }
       return 0;
     }
+
+    default: {
+      return -1;
+    }
   }
-  return -1;
 }
 
 static const char*
@@ -284,68 +287,72 @@ io_parse_events(const char* str) {
 
 #define PIO (POLLIN | POLLOUT | POLLERR)
 
+struct handler_closure {
+  struct pollfd poll;
+  JSContext* ctx;
+  struct lws_context* context;
+};
+
 static JSValue
-minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, JSValue* func_data) {
-  struct pollfd x = {0, 0, 0};
-  struct lws_context* context = value2ptr(ctx, func_data[2]);
-  uint32_t fd, events, revents;
+minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* ptr) {
+  struct handler_closure* c = ptr;
   int32_t wr;
 
-  /* const char* io = JS_ToCString(ctx, func_data[1]);
-   revents = io_parse_events(io);*
-   */
-
-  JS_ToUint32(ctx, &fd, func_data[0]);
   JS_ToInt32(ctx, &wr, argv[0]);
 
-  events = wr == WRITE_HANDLER ? POLLOUT : POLLIN;
-  revents = magic & events;
-  lwsl_debug("minnet_io_handler fd=%d wr=%i magic=0x%x events=%s revents=%s", fd, wr, (magic), io_events(events), io_events(revents));
+  c->poll.revents = magic & (wr == WRITE_HANDLER ? POLLOUT : POLLIN);
+  // lwsl_user("minnet_io_handler fd=%d wr=%i magic=0x%x events=%s revents=%s", c->poll.fd, wr, (magic), io_events(c->poll.events), io_events(c->poll.revents));
 
-  if((revents & PIO) != magic) {
-    x.fd = fd;
-    x.events = magic;
-    x.revents = 0;
-
-    if(poll(&x, 1, 0) < 0)
+  if((c->poll.revents & PIO) != magic) {
+    if(poll(&c->poll, 1, 0) < 0)
       lwsl_err("poll error: %s\n", strerror(errno));
-    else
-      revents = x.revents;
 
-    lwsl_debug("minnet_io_handler poll() fd=%d, magic=%s, revents=%s", fd, io_events(magic), io_events(revents));
+    // lwsl_user("minnet_io_handler poll() fd=%d, magic=%s, revents=%s", c->poll.fd, io_events(magic), io_events(c->poll.revents));
   }
 
-  if(revents & PIO) {
+  if(c->poll.revents & PIO) {
+    MinnetPollFd x = (MinnetPollFd){c->poll.fd, magic, c->poll.revents & PIO};
 
-    x.fd = fd;
-    x.events = magic;
-    x.revents = revents & PIO; // POLLIN|POLLOUT;
-
-    if(revents & (POLLERR | POLLHUP)) {
-      struct lws* wsi = wsi_from_fd(context, fd);
+    if(c->poll.revents & (POLLERR | POLLHUP)) {
+      struct lws* wsi = wsi_from_fd(c->context, c->poll.fd);
       struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-      lwsl_user("minnet_io_handler opaque=%p fd=%d errno=%d", opaque, fd, errno);
-
+      // lwsl_user("minnet_io_handler opaque=%p fd=%d errno=%d", opaque, c->poll.fd, errno);
       if(opaque)
         opaque->error = errno;
     }
 
-    lwsl_debug("minnet_io_handler %s before lws_service_fdfd=%d, events=%s, revents=%s", ((const char*[]){"Read", "Write"})[wr], x.fd, io_events(x.events), io_events(x.revents));
-    int ret = lws_service_fd(context, &x);
-    lwsl_debug("minnet_io_handler %s after lws_service_fd fd=%d, ret=%d", ((const char*[]){"Read", "Write"})[wr], x.fd, ret);
+    // lwsl_user("minnet_io_handler %s before lws_service_fdfd=%d, events=%s, revents=%s", ((const char*[]){"Read", "Write"})[wr], x.fd, io_events(x.events), io_events(x.revents));
+    int ret = lws_service_fd(c->context, &x);
+    // lwsl_user("minnet_io_handler %s after lws_service_fd fd=%d, ret=%d", ((const char*[]){"Read", "Write"})[wr], x.fd, ret);
   }
 
   return JS_UNDEFINED;
 }
 
+static void
+free_handler_closure(void* ptr) {
+  struct handler_closure* closure = ptr;
+  JSContext* ctx = closure->ctx;
+  js_free(ctx, closure);
+};
+
 static JSValue
-make_handler(JSContext* ctx, int fd, int events, void* opaque, int magic) {
-  JSValue data[] = {
-      JS_NewUint32(ctx, fd),
-      JS_NewString(ctx, io_events(events)),
-      ptr2value(ctx, opaque),
-  };
-  return JS_NewCFunctionData(ctx, minnet_io_handler, events, magic, countof(data), data);
+make_handler(JSContext* ctx, int fd, int events, struct lws_context* context) {
+  struct handler_closure* closure;
+
+  if(!(closure = js_mallocz(ctx, sizeof(struct handler_closure))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  *closure = (struct handler_closure){{fd, events, 0}, ctx, context};
+
+  return JS_NewCClosure(ctx, minnet_io_handler, 1, events, closure, free_handler_closure);
+
+  /* JSValue data[] = {
+       JS_NewUint32(ctx, fd),
+       JS_NewString(ctx, io_events(events)),
+       ptr2value(ctx, opaque),
+   };
+   return JS_NewCFunctionData(ctx, minnet_io_handler, events, magic, countof(data), data);*/
 }
 
 void
@@ -355,7 +362,9 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
 
   lwsl_user("minnet_handlers wsi#%" PRIi64 " fd=%d events=%s", opaque ? opaque->serial : (int64_t)-1, args->fd, io_events(args->events));
 
-  func = make_handler(ctx, args->fd, args->events /* | args->prev_events*/, lws_get_context(wsi), args->events);
+  // opaque->args=(struct pollfd){ args->fd, args->events, 0};
+
+  func = make_handler(ctx, args->fd, args->events, lws_get_context(wsi));
 
   out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
   out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;

@@ -34,7 +34,8 @@ function main(...args) {
 
     net.setLog(/* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1, (level, msg) => {
       const l = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
-      if(l != 'NOTICE' /*&& l != 'MINNET'*/) if(!/POLL/.test(msg)) console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
+     if(l == 'NOTICE' || l=='MINNET' ) //if(l != 'NOTICE' ) if(l != 'MINNET') if(!/POLL/.test(msg))
+      console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
     });
 
     //console.log('createWS', { protocol, host, port, location, listen });

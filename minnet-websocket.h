@@ -36,6 +36,7 @@ struct wsi_opaque_user_data {
   struct http_request* req;
   int64_t serial;
   int error;
+  MinnetPollFd pfd;
 };
 
 static inline struct wsi_opaque_user_data*
