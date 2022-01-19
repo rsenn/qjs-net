@@ -278,7 +278,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         }
         cli->connected = TRUE;
         cli->req_obj = JS_UNDEFINED;
-        cli->resp_obj = JS_UNDEFINED;
+        cli->resp_obj =  minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
 
         /*   MinnetBuffer buffer = BUFFER(0);
            http_headers(ctx, &buffer, wsi);*/
