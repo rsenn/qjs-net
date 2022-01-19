@@ -3,6 +3,7 @@
 #include "minnet-websocket.h"
 #include "minnet-request.h"
 #include "minnet-response.h"
+#include "minnet.h"
 #include <quickjs-libc.h>
 #include <strings.h>
 
@@ -278,7 +279,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         }
         cli->connected = TRUE;
         cli->req_obj = JS_UNDEFINED;
-        cli->resp_obj =  minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
+        cli->resp_obj = minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
 
         /*   MinnetBuffer buffer = BUFFER(0);
            http_headers(ctx, &buffer, wsi);*/
@@ -324,9 +325,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
 
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
+      MinnetResponse* resp = minnet_response_data2(ctx, cli->resp_obj);
       cli->done = TRUE;
-      /*in = cli->body.read;
-      len = buffer_REMAIN(&cli->body);*/
+      in = resp->body.read;
+      len = buffer_REMAIN(&resp->body);
     }
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE:
