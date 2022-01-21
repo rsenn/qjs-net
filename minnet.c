@@ -294,7 +294,7 @@ struct handler_closure {
 };
 
 static JSValue
-minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* ptr) {
+minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   struct handler_closure* c = ptr;
   int32_t wr;
 

@@ -113,7 +113,7 @@ minnet_response_wrap(JSContext* ctx, struct http_response* res) {
 }
 
 static JSValue
-minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
 
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id))) {
@@ -125,7 +125,7 @@ minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 }
 
 static JSValue
-minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
     return JS_ParseJSON(ctx, buffer_BEGIN(&res->body), buffer_WRITE(&res->body), res->url);
@@ -134,7 +134,7 @@ minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 }
 
 static JSValue
-minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
     return JS_NewStringLen(ctx, (char*)buffer_BEGIN(&res->body), buffer_WRITE(&res->body));
@@ -143,7 +143,7 @@ minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 }
 
 /*static JSValue
-minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   MinnetHttpHeader* hdr;
   const char *name, *value;
