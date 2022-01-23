@@ -1,7 +1,7 @@
 import * as std from 'std';
 import * as os from 'os';
 import inspect from 'inspect';
-import  net, {URL} from 'net';
+import net, { URL } from 'net';
 import { Console } from 'console';
 
 const escape = s =>
@@ -24,7 +24,7 @@ function main(...args) {
   if(args.length == 0) args.push('https://github.com/rsenn?tab=repositories');
 
   function createWS(url, callbacks, listen = 0) {
-    const {protocol, host,port, path}= new URL(url);
+    const { protocol, host, port, path } = new URL(url);
 
     net.setLog(
       /* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1,
@@ -38,7 +38,7 @@ function main(...args) {
         : () => {}
     );
 
- console.log('createWS', { protocol, host, port, path, listen });
+    console.log('createWS', { protocol, host, port, path, listen });
 
     const fn = [net.client, net.server][+listen];
     return fn({

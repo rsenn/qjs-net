@@ -156,7 +156,7 @@ headers_from(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext*
   uint32_t tab_len, i;
 
   if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
-    return -1;
+    return 0;
 
   for(i = 0; i < tab_len; i++) {
     JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);

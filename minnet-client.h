@@ -7,9 +7,10 @@
 #include "minnet-request.h"
 
 typedef struct {
-  MinnetURL url;
   JSValue headers, body;
+  MinnetURL url;
   struct lws_client_connect_info info;
+  struct http_request* request;
 } MinnetClient;
 
 JSValue minnet_ws_client(JSContext*, JSValue, int, JSValue* argv);

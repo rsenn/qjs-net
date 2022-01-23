@@ -14,7 +14,7 @@ enum http_method { METHOD_GET = 0, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METH
 typedef enum http_method MinnetHttpMethod;
 
 const char* method_string(enum http_method);
-enum http_method method_number(const char*);
+int method_number(const char*);
 
 typedef struct http_request {
   int ref_count;

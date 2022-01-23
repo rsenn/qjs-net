@@ -55,11 +55,10 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   struct lws_context_creation_info info;
   int n = 0, argind = 0;
   JSValue ret = JS_NULL;
-  MinnetClient client = {0, -1, -1};
+  MinnetClient client = {JS_UNDEFINED, JS_UNDEFINED};
   JSValue options = argv[0];
   struct lws* wsi = 0;
-  enum http_method method = -1;
-  const char *str, *url = 0;
+  const char *str, *url = 0, *method_str = 0;
   JSValue value;
 
   SETLOG(LLL_INFO)
@@ -87,8 +86,8 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
 
   value = JS_GetPropertyStr(ctx, options, "method");
   str = JS_ToCString(ctx, value);
+  method_str = js_strdup(ctx, JS_IsString(value) ? str : method_string(METHOD_GET));
   JS_FreeValue(ctx, value);
-  method = method_number(str);
   JS_FreeCString(ctx, str);
 
   if(url) {
@@ -113,20 +112,17 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
 
   {
     char* url = url_format(&client.url, ctx);
-    // client.request = request_new(ctx, url_path(&client.url), url, method);
-
-    value = JS_GetPropertyStr(ctx, options, "headers");
-    client.headers = JS_IsObject(value) ? JS_DupValue(ctx, value) : JS_NewObject(ctx);
-    JS_FreeValue(ctx, value);
-
-    value = JS_GetPropertyStr(ctx, options, "body");
-    client.headers = JS_IsObject(value) || JS_IsString(value) ? JS_DupValue(ctx, value) : JS_UNDEFINED;
-    JS_FreeValue(ctx, value);
+    client.request = request_new(ctx, url_location(&client.url, ctx), url, method_number(method_str));
+    client.headers = JS_GetPropertyStr(ctx, options, "headers");
+    client.body = JS_GetPropertyStr(ctx, options, "body");
   }
 
   url_info(&client.url, &client.info);
   client.info.pwsi = &wsi;
   client.info.context = context;
+  client.info.method = method_str;
+
+  printf("METHOD: %s\n", method_str);
 
   lws_client_connect_via_info(&client.info);
 
@@ -152,6 +148,8 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     ret = JS_ThrowInternalError(ctx, "No websocket!");
   }
   url_free(ctx, &client.url);
+  js_free(ctx, method_str);
+
   return ret;
 }
 
@@ -171,6 +169,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   MinnetHttpMethod method = -1;
   MinnetSession* cli = user;
   MinnetClient* client = lws_context_user(lws_get_context(wsi));
+  int n;
 
   lwsl_user("client " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
@@ -190,7 +189,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL: {
       // struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 
-   break;
+      break;
     }
     case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL:
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
@@ -202,18 +201,18 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       MinnetBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
       // buf.start = scan_backwards(buf.start, '\0');
-if(!JS_IsUndefined(client->headers))
+
       if(headers_from(&buf, wsi, client->headers, ctx))
         return -1;
 
       *(uint8_t**)in = buf.write;
       len = buf.end - buf.write;
 
-      /*      if(!lws_http_is_redirected_to_get(wsi)) {
-              lws_client_http_body_pending(wsi, 1);
-              lws_callback_on_writable(wsi);
-            }
-      */
+      /*if(!lws_http_is_redirected_to_get(wsi)) {
+        lws_client_http_body_pending(wsi, 1);
+        lws_callback_on_writable(wsi);
+      }*/
+
       break;
     }
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
@@ -254,25 +253,26 @@ if(!JS_IsUndefined(client->headers))
       MinnetClient* client = lws_context_user(lwsctx);
 
       if(cli && !cli->connected) {
+
         cli->ws_obj = minnet_ws_object(ctx, wsi);
 
-        // lwsl_user("client   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
-
-        if((client_cb_connect.ctx = ctx)) {
-          JSValue ws_obj = minnet_ws_object(ctx, wsi);
-          minnet_emit(&client_cb_connect, 1, &ws_obj);
-        }
         cli->connected = TRUE;
+        cli->req_obj = minnet_request_wrap(ctx, client->request);
 
-        // cli->req_obj = minnet_request_wrap(ctx, client->request);
+        // lwsl_user("client   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
+        minnet_emit(&client_cb_connect, 2, &cli->ws_obj);
+
         cli->resp_obj = minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
       }
       break;
     }
-    case LWS_CALLBACK_HTTP_WRITEABLE:
     case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
+    case LWS_CALLBACK_HTTP_WRITEABLE: n = LWS_WRITE_HTTP; n = LWS_WRITE_HTTP_FINAL;
+
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
+      if(lws_http_is_redirected_to_get(wsi))
+        break;
       // lws_callback_on_writable(wsi);
       break;
     }
@@ -347,7 +347,7 @@ if(!JS_IsUndefined(client->headers))
     lwsl_notice("client  %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
 
   switch(reason) {
-      case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL:
+    case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL:
     case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL:
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP:
@@ -356,7 +356,7 @@ if(!JS_IsUndefined(client->headers))
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP:
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ:
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
-  case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
+    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
     default: return 0;

@@ -121,36 +121,31 @@ function main(...args) {
     },
     args
   );
-  const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', method} = params;
+  const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', method } = params;
   const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   //console.log('params', params);
   function createWS(url, callbacks, listen = 0) {
     let urlObj = new URL(url);
-        console.log('urlObj',urlObj);
-        console.log('urlObj.toString()',urlObj.toString());
 
-    /* let [protocol, host, port, ...location] = [...url.matchAll(/[^:\/]+/g)].map(a => a[0]);
-    if(!isNaN(+port)) port = +port;
-    const path = location.reduce((acc, part) => acc + '/' + part, '');*/
     net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, msg) => {
-      let p=['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
-      if(!/POLL/.test(msg) && /MINNET/.test(p))
-      if(params.debug && /client/.test(msg)) console.log(p.padEnd(8), msg);
+      let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
+      if(!/POLL/.test(msg) && /MINNET/.test(p)) if (params.debug && /client/.test(msg)) console.log(p.padEnd(8), msg);
     });
 
-   // const repl = new CLI(url);
+    const repl = new CLI(url);
 
     const fn = [net.client, net.server][+listen];
     //console.log('createWS', {url, repl, fn });
     return fn(url, {
       sslCert,
       sslPrivateKey,
-     headers: {
+      method,
+      headers: {
         //'Connection': 'keep-alive',
-   'Range': 'bytes=10-',
-    //    'accept-encoding': 'br gzip',
+       // Range: 'bytes=10-'
+        //    'accept-encoding': 'br gzip',
       },
       ...callbacks,
       onConnect(ws, req) {
@@ -179,7 +174,7 @@ function main(...args) {
       },
       onMessage(ws, msg) {
         //console.log('onMessage', ws, msg);
-        const out = msg.replace(/\n/g, "\\n").replace(/\r/g, "\\r");
+        const out = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
         repl.printStatus(out, true);
       },
       onError(ws, error) {

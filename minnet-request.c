@@ -21,14 +21,14 @@ method_string(enum http_method m) {
   return 0;
 }
 
-enum http_method
+int
 method_number(const char* name) {
-  unsigned long i;
-  for(i = 0; i < countof(method_names); i++) {
+  int i;
+  for(i = countof(method_names) - 1; i >= 0; --i) {
     if(!strcasecmp(name, method_names[i]))
-      return i;
+      break;
   }
-  return -1;
+  return i;
 }
 
 void
@@ -48,7 +48,7 @@ request_dump(struct http_request const* req, JSContext* ctx) {
 }
 
 void
-request_init(struct http_request* req, const char* path, char* url, MinnetHttpMethod method) {
+request_init(struct http_request* req, const char* path, char* url, enum http_method method) {
   memset(req, 0, sizeof(*req));
 
   req->ref_count = 0;
