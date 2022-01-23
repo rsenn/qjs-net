@@ -30,12 +30,12 @@ extern JSClassDef minnet_ws_class;
 extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_static_funcs[], minnet_ws_proto_defs[];
 extern const size_t minnet_ws_proto_funcs_size, minnet_ws_static_funcs_size, minnet_ws_proto_defs_size;
 
-struct wsi_opaque_user_data {
-  MinnetStatus status : 8;
+struct __attribute__((packed)) wsi_opaque_user_data {
   JSObject* obj;
   struct socket* ws;
   struct http_request* req;
   int64_t serial;
+  MinnetStatus status : 8;
   int error;
   MinnetPollFd pfd;
 };

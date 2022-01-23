@@ -365,10 +365,10 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case WEBSOCKET_READYSTATE: {
-      /*      struct wsi_opaque_user_data* opaque;
+      struct wsi_opaque_user_data* opaque;
 
-            if((opaque = ws_opaque(ws)))
-              ret = JS_NewUint32(ctx, opaque->status);*/
+      if((opaque = ((struct wsi_opaque_user_data*)lws_get_opaque_user_data(ws->lwsi))))
+        ret = JS_NewUint32(ctx, opaque->status);
 
       break;
     }

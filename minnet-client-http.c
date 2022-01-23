@@ -10,6 +10,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   MinnetSession* sess = user;
   MinnetClient* client = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = client->ctx;
+  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int n;
 
   lwsl_user("client-http " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);

@@ -209,16 +209,16 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       return 0;
     }
     case LWS_CALLBACK_CLIENT_CLOSED: {
-      if(sess->status < CLOSED) {
-        sess->status = CLOSED;
+      if(opaque->status < CLOSED) {
+        opaque->status = CLOSED;
       }
       break;
     }
     case LWS_CALLBACK_RAW_CLOSE:
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      if(sess->status < CLOSING) {
-        sess->status = CLOSING;
+      if(opaque->status < CLOSING) {
+        opaque->status = CLOSING;
         if((client->cb_close.ctx = ctx)) {
           int err = opaque ? opaque->error : 0;
           JSValueConst cb_argv[] = {
@@ -242,13 +242,13 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       /* struct lws_context* lwsctx = lws_get_context(wsi);
        MinnetClient* client = lws_context_user(lwsctx);
  */
-      if(sess && sess->status == CONNECTING) {
+      if(sess && opaque->status == CONNECTING) {
         const char* method = client->info.method;
 
         if(!minnet_ws_data(sess->ws_obj))
           sess->ws_obj = minnet_ws_object(ctx, wsi);
 
-        sess->status = OPEN;
+        opaque->status = OPEN;
 
         if(!minnet_request_data(sess->req_obj))
           sess->req_obj = minnet_request_wrap(ctx, client->request);
