@@ -1,8 +1,9 @@
 #define _GNU_SOURCE
+#include <quickjs.h>
+#include <cutils.h>
 #include "minnet-request.h"
 #include "minnet-stream.h"
 #include "jsutils.h"
-#include <cutils.h>
 #include <ctype.h>
 #include <strings.h>
 
@@ -13,15 +14,15 @@ enum { REQUEST_TYPE, REQUEST_METHOD, REQUEST_URI, REQUEST_PATH, REQUEST_HEADERS,
 
 static const char* const method_names[] = {"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE", "CONNECT", "HEAD"};
 
-static const char*
-method2name(enum http_method m) {
+const char*
+method_string(enum http_method m) {
   if(m >= 0 && m < countof(method_names))
     return method_names[m];
   return 0;
 }
 
-static enum http_method
-name2method(const char* name) {
+enum http_method
+method_number(const char* name) {
   unsigned long i;
   for(i = 0; i < countof(method_names); i++) {
     if(!strcasecmp(name, method_names[i]))
@@ -65,6 +66,37 @@ request_new(JSContext* ctx, const char* path, char* url, MinnetHttpMethod method
 
   if((req = js_mallocz(ctx, sizeof(MinnetRequest))))
     request_init(req, path, url, method);
+
+  return req;
+}
+
+struct http_request*
+request_from(JSContext* ctx, JSValueConst options) {
+  MinnetRequest* req;
+  JSValue value;
+  const char *url, *path, *method;
+
+  value = JS_GetPropertyStr(ctx, options, "url");
+  url = JS_ToCString(ctx, value);
+  JS_FreeValue(ctx, value);
+
+  value = JS_GetPropertyStr(ctx, options, "path");
+  path = JS_ToCString(ctx, value);
+  JS_FreeValue(ctx, value);
+
+  JS_GetPropertyStr(ctx, options, "method");
+  method = JS_ToCString(ctx, value);
+  JS_FreeValue(ctx, value);
+
+  JS_GetPropertyStr(ctx, options, "headers");
+
+  JS_FreeValue(ctx, value);
+
+  request_init(req, path, url, method_number(method));
+
+  JS_FreeCString(ctx, url);
+  JS_FreeCString(ctx, path);
+  JS_FreeCString(ctx, method);
 
   return req;
 }
@@ -199,7 +231,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_HEADERS: {
-      ret = header_object(ctx, &req->headers);
+      ret = headers_object(ctx, &req->headers);
       // ret = buffer_tostring(&req->headers, ctx);
       break;
     }
@@ -248,8 +280,8 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
       if(JS_IsNumber(value))
         JS_ToInt32(ctx, &m, value);
       else
-        m = name2method(str);
-      if(m >= 0 && method2name(m))
+        m = method_number(str);
+      if(m >= 0 && method_string(m))
         req->method = m;
       break;
     }

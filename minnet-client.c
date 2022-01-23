@@ -59,7 +59,8 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   JSValue options = argv[0];
   struct lws* wsi = 0;
   enum http_method method = -1;
-  const char* url = 0;
+  const char *str, *url = 0;
+  JSValue value;
 
   SETLOG(LLL_INFO)
 
@@ -82,63 +83,13 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   if(!JS_IsObject(options))
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
-  {
-    const char /*
-  */ *method_str = 0;
+  url_from(&client.url, options, ctx);
 
-    /*JSValue opt_protocol = JS_GetPropertyStr(ctx, options, "protocol");
-    JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
-    JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
-    JSValue opt_path = JS_GetPropertyStr(ctx, options, "path");*/
-    /*    JSValue opt_ssl = JS_GetPropertyStr(ctx, options, "ssl");
-        JSValue opt_raw = JS_GetPropertyStr(ctx, options, "raw");*/
-    JSValue opt_method = JS_GetPropertyStr(ctx, options, "method");
-
-    url_from(&client.url, options, ctx);
-
-    /*    if(!JS_IsUndefined(opt_host) || !JS_IsUndefined(opt_path)) {
-          const char *protocol, *host, *path;
-          int32_t port = -1;
-          protocol = JS_ToCString(ctx, opt_protocol);
-          host = JS_ToCString(ctx, opt_host);
-          path = JS_ToCString(ctx, opt_path);
-
-          if(JS_IsNumber(opt_port))
-            JS_ToInt32(ctx, &port, opt_port);
-
-          JS_FreeValue(ctx, opt_protocol);
-          JS_FreeValue(ctx, opt_path);
-          JS_FreeValue(ctx, opt_host);
-          JS_FreeValue(ctx, opt_port);
-
-          url_init(&client.url, protocol, host, port, path, ctx);
-
-          JS_FreeCString(ctx, protocol);
-          JS_FreeCString(ctx, host);
-          JS_FreeCString(ctx, path);
-        }*/
-
-    method_str = JS_ToCString(ctx, opt_method);
-
-    if(!strcasecmp(method_str, "GET"))
-      method = METHOD_GET;
-    else if(!strcasecmp(method_str, "POST"))
-      method = METHOD_POST;
-    else if(!strcasecmp(method_str, "OPTIONS"))
-      method = METHOD_OPTIONS;
-    else if(!strcasecmp(method_str, "PUT"))
-      method = METHOD_PUT;
-    else if(!strcasecmp(method_str, "PATCH"))
-      method = METHOD_PATCH;
-    else if(!strcasecmp(method_str, "DELETE"))
-      method = METHOD_DELETE;
-    else if(!strcasecmp(method_str, "CONNECT"))
-      method = METHOD_CONNECT;
-    else if(!strcasecmp(method_str, "HEAD"))
-      method = METHOD_HEAD;
-
-    JS_FreeCString(ctx, method_str);
-  }
+  value = JS_GetPropertyStr(ctx, options, "method");
+  str = JS_ToCString(ctx, value);
+  JS_FreeValue(ctx, value);
+  method = method_number(str);
+  JS_FreeCString(ctx, str);
 
   if(url) {
     url_parse(&client.url, url, ctx);
@@ -163,6 +114,12 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   {
     char* url = url_format(&client.url, ctx);
     client.request = request_new(ctx, url_path(&client.url), url, method);
+
+    value = JS_GetPropertyStr(ctx, options, "headers");
+    if(JS_IsObject(value))
+      headers_from(&client.request->headers, value, ctx);
+    
+    JS_FreeValue(ctx, value);
   }
 
   url_connect(&client.url, context, &wsi);

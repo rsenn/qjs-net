@@ -276,7 +276,7 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
   /*{
     char disposition[1024];
     snprintf(disposition, sizeof(disposition), "attachment; filename=\"%s\"", basename(path));
-    header_set(ctx, &resp->headers, "Content-Disposition", disposition);
+    headers_set(ctx, &resp->headers, "Content-Disposition", disposition);
   }*/
 
   if((fp = fopen(path, "rb"))) {

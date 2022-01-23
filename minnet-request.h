@@ -13,6 +13,9 @@ enum http_method { METHOD_GET = 0, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METH
 
 typedef enum http_method MinnetHttpMethod;
 
+const char* method_string(enum http_method);
+enum http_method method_number(const char*);
+
 typedef struct http_request {
   int ref_count;
   BOOL read_only;
@@ -25,6 +28,7 @@ typedef struct http_request {
 char* request_dump(struct http_request const*, JSContext* ctx);
 void request_init(struct http_request*, const char* path, char* url, MinnetHttpMethod);
 struct http_request* request_new(JSContext*, const char* path, char* url, MinnetHttpMethod);
+struct http_request* request_from(JSContext*, JSValue options);
 void request_zero(struct http_request*);
 JSValue minnet_request_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
 JSValue minnet_request_new(JSContext*, const char* path, const char* url, enum http_method);

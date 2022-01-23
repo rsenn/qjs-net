@@ -117,7 +117,7 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 }
 
 JSValue
-header_object(JSContext* ctx, const MinnetBuffer* buffer) {
+headers_object(JSContext* ctx, const MinnetBuffer* buffer) {
   JSValue ret = JS_NewObject(ctx);
   size_t len, n;
   uint8_t *x, *end;
@@ -136,8 +136,37 @@ header_object(JSContext* ctx, const MinnetBuffer* buffer) {
   return ret;
 }
 
+void
+headers_from(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
+  JSPropertyEnum* tab;
+  uint32_t tab_len, i;
+
+  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
+    return -1;
+
+  for(i = 0; i < tab_len; i++) {
+    JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);
+    size_t len;
+    const char *prop, *str;
+
+    str = JS_ToCStringLen(ctx, &len, value);
+    JS_FreeValue(ctx, value);
+
+    prop = JS_AtomToCString(ctx, tab[i].atom);
+
+    buffer_append(buffer, prop, strlen(prop), ctx);
+    buffer_append(buffer, ": ", 2,ctx);
+    buffer_append(buffer, str, len, ctx);
+
+    JS_FreeCString(ctx, prop);
+    JS_FreeCString(ctx, str);
+  }
+
+  js_free(ctx, tab);
+}
+
 ssize_t
-header_set(JSContext* ctx, MinnetBuffer* buffer, const char* name, const char* value) {
+headers_set(JSContext* ctx, MinnetBuffer* buffer, const char* name, const char* value) {
   size_t namelen = strlen(name), valuelen = strlen(value);
   size_t len = namelen + 2 + valuelen + 2;
 

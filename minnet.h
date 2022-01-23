@@ -99,8 +99,9 @@ typedef struct session_data {
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
 
-JSValue header_object(JSContext*, const struct byte_buffer*);
-ssize_t header_set(JSContext*, struct byte_buffer*, const char* name, const char* value);
+JSValue headers_object(JSContext*, const struct byte_buffer*);
+ssize_t headers_set(JSContext*, struct byte_buffer*, const char* name, const char* value);
+void headers_from(struct byte_buffer*, JSValue obj, JSContext* ctx);
 int fd_callback(struct lws*, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args);
 int minnet_lws_unhandled(const char* handler, int);
 JSValue minnet_emit_this(const struct ws_callback*, JSValueConst this_obj, int argc, JSValue* argv);
