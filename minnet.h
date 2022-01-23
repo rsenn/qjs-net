@@ -101,6 +101,7 @@ typedef struct session_data {
   JSValue generator, next;
   BOOL h2 : 1;
   int64_t written;
+  MinnetStatus status : 8;
 } MinnetSession;
 
 extern JSContext* minnet_log_ctx;

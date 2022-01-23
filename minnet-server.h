@@ -8,7 +8,6 @@
 struct http_mount;
 
 typedef struct server_context {
-  MinnetStatus status : 8;
   struct lws_context* lws;
   struct lws_context_creation_info info;
   JSContext* ctx;

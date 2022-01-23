@@ -585,12 +585,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           }
           lwsl_user("http " FG("%d") "%-25s" NC " wsi#%" PRId64 " done=%i write=%zu", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, done, buffer_WRITE(&resp->body));
 
-          if(!opaque->status == OPEN) {
+          if(!serv->status == OPEN) {
             if(http_server_respond(wsi, &b, resp, ctx)) {
               JS_FreeValue(ctx, ws_obj);
               return 1;
             }
-            opaque->status = CLOSING;
+            serv->status = CLOSING;
           }
         }
 
