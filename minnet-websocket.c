@@ -3,6 +3,7 @@
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 #include "minnet-server-http.h"
+#include <strings.h>
 
 THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
 THREAD_LOCAL JSClassID minnet_ws_class_id;
@@ -364,9 +365,11 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case WEBSOCKET_READYSTATE: {
-      struct wsi_opaque_user_data* opaque = lws_opaque(ws->lwsi, ctx);
+      struct wsi_opaque_user_data* opaque;
 
-      ret = JS_NewUint32(ctx, ffs(opaque->ready_state));
+      if((opaque = ws_opaque(ws)))
+        ret = JS_NewUint32(ctx, opaque->status);
+
       break;
     }
   }
@@ -463,7 +466,8 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("family", minnet_ws_get, 0, WEBSOCKET_FAMILY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_ws_get, 0, WEBSOCKET_PORT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_get, 0, WEBSOCKET_PEER, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("ssl", minnet_ws_get, 0, WEBSOCKET_SSL, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("ssl", minnet_ws_get, 0, WEBSOCKET_SSL, 0),
+    JS_ALIAS_DEF("tls", "ssl"),
     JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_get, minnet_ws_set, WEBSOCKET_BINARY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, JS_PROP_ENUMERABLE),
     JS_ALIAS_DEF("remote", "peer"),

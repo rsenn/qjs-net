@@ -30,21 +30,14 @@ extern JSClassDef minnet_ws_class;
 extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_static_funcs[], minnet_ws_proto_defs[];
 extern const size_t minnet_ws_proto_funcs_size, minnet_ws_static_funcs_size, minnet_ws_proto_defs_size;
 
-typedef enum status_flags {
-  CONNECTING = 0,
-  OPEN = 1,
-  CLOSING = 2,
-  CLOSED = 4,
-} MinnetStatus;
-
 struct wsi_opaque_user_data {
+  MinnetStatus status : 8;
   JSObject* obj;
   struct socket* ws;
   struct http_request* req;
   int64_t serial;
   int error;
   MinnetPollFd pfd;
-  enum status_flags ready_state;
 };
 
 static inline struct wsi_opaque_user_data*
@@ -65,6 +58,16 @@ lws_opaque(struct lws* wsi, JSContext* ctx) {
 static inline int
 ws_fd(const MinnetWebsocket* ws) {
   return lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
+}
+
+static inline int
+ws_lws(const MinnetWebsocket* ws) {
+  return ws->lwsi;
+}
+
+static inline struct wsi_opaque_user_data*
+ws_opaque(const MinnetWebsocket* ws) {
+  return lws_get_opaque_user_data(ws->lwsi);
 }
 
 static inline MinnetWebsocket*

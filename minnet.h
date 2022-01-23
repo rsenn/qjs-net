@@ -69,6 +69,13 @@ enum http_method;
 
 typedef struct lws_pollfd MinnetPollFd;
 
+typedef enum client_state {
+  CONNECTING = 0,
+  OPEN = 1,
+  CLOSING = 2,
+  CLOSED = 3,
+} MinnetStatus;
+
 typedef struct ws_callback {
   JSContext* ctx;
   JSValue this_obj;

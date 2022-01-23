@@ -103,7 +103,7 @@ class CLI extends REPL {
 
 function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
-  globalThis.console = new Console({ inspectOptions: { compact: 1, customInspect: true } });
+  globalThis.console = new Console({ inspectOptions: { compact: 0, customInspect: true } });
   let params = GetOpt(
     {
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],
@@ -169,8 +169,13 @@ function main(...args) {
       },
       onClose(ws, status, reason, error) {
         connections.delete(ws);
-        console.log('onClose', ws, status, reason, error);
+        console.log('onClose', { ws, status, reason, error});
         //repl.exit(status != 1000 ? 1 : 0);
+
+
+        os.setTimeout(() => {
+console.log('ws', ws);
+        }, 1000);
       },
       onHttp(req, resp) {
         console.log('onHttp', { req, resp });

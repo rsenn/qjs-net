@@ -8,6 +8,7 @@
 
 typedef struct {
   JSValue headers, body, next;
+  MinnetStatus status : 8;
   MinnetURL url;
   struct lws_client_connect_info info;
   struct http_request* request;

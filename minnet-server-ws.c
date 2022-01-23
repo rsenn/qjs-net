@@ -57,11 +57,11 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLOSED: {
-      if(opaque->ready_state < CLOSING) {
+      if(opaque->status < CLOSING) {
         JSValue why = JS_UNDEFINED;
         int code = -1;
 
-        opaque->ready_state = CLOSING;
+        opaque->status = CLOSING;
 
         if(in) {
           uint8_t* codep = in;
