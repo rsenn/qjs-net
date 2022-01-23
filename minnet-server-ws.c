@@ -36,7 +36,6 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
 
       if(minnet_server.cb_connect.ctx) {
-        JSContext* ctx = minnet_server.cb_connect.ctx;
 
         if(!opaque->req)
           opaque->req = request_new(ctx, in, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), METHOD_GET);
@@ -58,10 +57,11 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLOSED: {
-      if(!opaque->closed) {
-        JSContext* ctx = minnet_server.cb_close.ctx;
+      if(opaque->ready_state < CLOSING) {
         JSValue why = JS_UNDEFINED;
         int code = -1;
+
+        opaque->ready_state = CLOSING;
 
         if(in) {
           uint8_t* codep = in;
@@ -79,9 +79,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
           JS_FreeValue(ctx, cb_argv[1]);
         }
         JS_FreeValue(minnet_server.ctx, why);
-        JS_FreeValue(minnet_server.ctx, sess->ws_obj);
-        sess->ws_obj = JS_NULL;
-        opaque->closed = 1;
+        /*JS_FreeValue(minnet_server.ctx, sess->ws_obj);
+        sess->ws_obj = JS_NULL;*/
       }
       return 0;
     }
@@ -92,7 +91,6 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       return 0;
     }
     case LWS_CALLBACK_RECEIVE: {
-      JSContext* ctx = minnet_server.cb_message.ctx;
       if(ctx) {
         MinnetWebsocket* ws = minnet_ws_data2(ctx, sess->ws_obj);
         JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);

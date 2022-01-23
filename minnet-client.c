@@ -208,24 +208,30 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
       return 0;
     }
-    case LWS_CALLBACK_CLIENT_CLOSED:
+    case LWS_CALLBACK_CLIENT_CLOSED: {
+                opaque->ready_state = CLOSED;
+break;
+    }
     case LWS_CALLBACK_RAW_CLOSE:
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       if((client->cb_close.ctx = ctx)) {
-        struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-        int err = opaque ? opaque->error : 0;
-        JSValueConst cb_argv[] = {
-            minnet_ws_object(ctx, wsi),
-            close_status(ctx, in, len),
-            close_reason(ctx, in, len),
-            JS_NewInt32(ctx, err),
-        };
-        minnet_emit(&client->cb_close, 4, cb_argv);
-        JS_FreeValue(ctx, cb_argv[0]);
-        JS_FreeValue(ctx, cb_argv[1]);
-        JS_FreeValue(ctx, cb_argv[2]);
-        JS_FreeValue(ctx, cb_argv[3]);
+        if(opaque->ready_state < CLOSING) {
+          opaque->ready_state = CLOSING;
+          struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+          int err = opaque ? opaque->error : 0;
+          JSValueConst cb_argv[] = {
+              minnet_ws_object(ctx, wsi),
+              close_status(ctx, in, len),
+              close_reason(ctx, in, len),
+              JS_NewInt32(ctx, err),
+          };
+          minnet_emit(&client->cb_close, 4, cb_argv);
+          JS_FreeValue(ctx, cb_argv[0]);
+          JS_FreeValue(ctx, cb_argv[1]);
+          JS_FreeValue(ctx, cb_argv[2]);
+          JS_FreeValue(ctx, cb_argv[3]);
+        }
       }
       break;
     }
@@ -235,13 +241,13 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       /* struct lws_context* lwsctx = lws_get_context(wsi);
        MinnetClient* client = lws_context_user(lwsctx);
  */
-      if(cli && !opaque->connected) {
+      if(cli && opaque->ready_state == CONNECTING) {
         const char* method = client->info.method;
 
         if(!minnet_ws_data(cli->ws_obj))
           cli->ws_obj = minnet_ws_object(ctx, wsi);
 
-        opaque->connected = TRUE;
+        opaque->ready_state = OPEN;
         if(!minnet_ws_data(cli->req_obj))
           cli->req_obj = minnet_request_wrap(ctx, client->request);
 

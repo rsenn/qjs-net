@@ -44,15 +44,7 @@ struct wsi_opaque_user_data {
   int64_t serial;
   int error;
   MinnetPollFd pfd;
-  union {
-    enum status_flags ready_state : 3;
-    struct __attribute__((packed)) {
-      unsigned connected : 1, responded : 1, closed : 1;
-    };
-    struct __attribute__((packed)) {
-      unsigned open : 1, closing : 1;
-    };
-  };
+  enum status_flags ready_state;
 };
 
 static inline struct wsi_opaque_user_data*
