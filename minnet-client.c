@@ -193,7 +193,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
       MinnetBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
-      //buf.start = scan_backwards(buf.start, '\0');
+      // buf.start = scan_backwards(buf.start, '\0');
 
       if(headers_from(&buf, wsi, client->headers, ctx))
         return -1;

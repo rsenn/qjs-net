@@ -136,7 +136,7 @@ function main(...args) {
     net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, msg) => {
       let p=['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
       if(!/POLL/.test(msg) && /MINNET/.test(p))
-      if(params.debug || /client/.test(msg)) console.log(p.padEnd(8), msg);
+      if(params.debug && /client/.test(msg)) console.log(p.padEnd(8), msg);
     });
 
     const repl = new CLI(url);
@@ -146,11 +146,11 @@ function main(...args) {
     return fn(url, {
       sslCert,
       sslPrivateKey,
-      /*   ssl: protocol == 'wss',
-      host,
-      port,
-      path,*/
-      headers: {'accept-encoding': 'br gzip'},
+     headers: {
+        //'Connection': 'keep-alive',
+    //    'Range': 'bytes=10-',
+    //    'accept-encoding': 'br gzip',
+      },
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);

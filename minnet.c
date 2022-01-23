@@ -172,7 +172,7 @@ headers_from(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext*
 
     ret = lws_add_http_header_by_name(wsi, prop, str, len, &buffer->write, buffer->end);
 
-    JS_FreeCString(ctx, prop);
+    js_free(ctx, prop);
     JS_FreeCString(ctx, str);
 
     if(ret)
