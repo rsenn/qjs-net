@@ -136,8 +136,22 @@ headers_object(JSContext* ctx, const MinnetBuffer* buffer) {
   return ret;
 }
 
-void
-headers_from(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
+char*
+headers_atom(JSAtom atom, JSContext* ctx) {
+  char* ret;
+  const char* str = JS_AtomToCString(ctx, atom);
+  size_t len = strlen(str);
+
+  if((ret = js_malloc(ctx, len + 2))) {
+    strcpy(ret, str);
+    ret[len] = ':';
+    ret[len + 1] = '\0';
+  }
+  return ret;
+}
+
+int
+headers_from(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
 
@@ -147,23 +161,26 @@ headers_from(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
   for(i = 0; i < tab_len; i++) {
     JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);
     size_t len;
-    const char *prop, *str;
+    char* prop;
+    const char* str;
+    int ret;
 
     str = JS_ToCStringLen(ctx, &len, value);
     JS_FreeValue(ctx, value);
 
-    prop = JS_AtomToCString(ctx, tab[i].atom);
+    prop = headers_atom(tab[i].atom, ctx);
 
-    buffer_write(buffer, prop, strlen(prop));
-    buffer_write(buffer, ": ", 2);
-    buffer_write(buffer, str, len);
-    buffer_write(buffer, "\r\n", 2);
+    ret = lws_add_http_header_by_name(wsi, prop, str, len, &buffer->write, buffer->end);
 
     JS_FreeCString(ctx, prop);
     JS_FreeCString(ctx, str);
+
+    if(ret)
+      return -1;
   }
 
   js_free(ctx, tab);
+  return 0;
 }
 
 ssize_t

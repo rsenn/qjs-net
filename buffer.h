@@ -31,6 +31,7 @@ typedef struct byte_buffer {
 #define buffer_SIZE(b) ((b)->end - (b)->start)
 #define buffer_BEGIN(b) (void*)(b)->start
 #define buffer_END(b) (void*)(b)->end
+
 #define buffer_zero(b) memset((b), 0, sizeof(MinnetBuffer))
 
 void buffer_init(struct byte_buffer*, uint8_t*, size_t);

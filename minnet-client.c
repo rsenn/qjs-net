@@ -147,6 +147,15 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   return ret;
 }
 
+uint8_t*
+scan_backwards(uint8_t* ptr, uint8_t ch) {
+  if(ptr[-1] == '\n') {
+    do { --ptr; } while(ptr[-1] != ch);
+    return ptr;
+  }
+  return 0;
+}
+
 static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   JSContext* ctx = minnet_client_ctx;
@@ -184,25 +193,14 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
       MinnetBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
-      headers_from(&buf, client->headers, ctx);
+      //buf.start = scan_backwards(buf.start, '\0');
 
-      *(uint8_t**)in = buffer_WRITE(&buf);
+      if(headers_from(&buf, wsi, client->headers, ctx))
+        return -1;
 
-      /*      unsigned char **p = (unsigned char**)in, *end = (*p) + len;
-            MinnetRequest* req = client->request;
-            MinnetBuffer* buffer = &req->headers;
-            size_t bytes;
-            if((bytes = buffer_REMAIN(buffer))) {
-              assert(bytes <= len);
-              memcpy(*p, buffer->read, bytes);
-              *p += bytes;
-            }*/
-      // printf("\x1b[2K\rXXX len = %zu, *p = '%.*s', end = %p\n",len, 10, *p - 10, end);
-
-      /* const char* encodings = "gzip, deflate, brotli, lzma";
-       if(lws_add_http_header_by_name(wsi, (const unsigned char*)"accept-encoding:", (const unsigned char*)encodings, strlen(encodings), p, end))
-         return -1;*/
-      return 0;
+      *(uint8_t**)in = buf.write;
+      len = buf.end - buf.write;
+      break;
     }
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
     case LWS_CALLBACK_CONNECTING: {
@@ -334,6 +332,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
     lwsl_notice("client  %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
 
-  return 0;
-  //  return lws_callback_http_dummy(wsi, reason, user, in, len);
+  switch(reason) {
+    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
+      return lws_callback_http_dummy(wsi, reason, user, in, len);
+    }
+    default: return 0;
+  }
 }
