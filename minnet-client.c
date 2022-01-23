@@ -118,6 +118,10 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     value = JS_GetPropertyStr(ctx, options, "headers");
     client.headers = JS_IsObject(value) ? JS_DupValue(ctx, value) : JS_NewObject(ctx);
     JS_FreeValue(ctx, value);
+
+    value = JS_GetPropertyStr(ctx, options, "body");
+    client.headers = JS_IsObject(value) || JS_IsString(value) ? JS_DupValue(ctx, value) : JS_UNDEFINED;
+    JS_FreeValue(ctx, value);
   }
 
   url_connect(&client.url, context, &wsi);

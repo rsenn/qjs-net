@@ -8,7 +8,7 @@
 
 typedef struct {
   MinnetURL url;
-  JSValue headers;
+  JSValue headers, body;
 } MinnetClient;
 
 JSValue minnet_ws_client(JSContext*, JSValue, int, JSValue* argv);
