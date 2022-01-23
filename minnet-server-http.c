@@ -617,7 +617,7 @@ http_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, voi
     case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
     case LWS_CALLBACK_CLOSED_HTTP: {
-      lwsl_user("http " FG("%d") "%-25s" NC " wsi#%" PRId64 " done=%i", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, serv->done);
+      lwsl_user("http " FG("%d") "%-25s" NC " wsi#%" PRId64, 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial);
       if(serv) {
         JS_FreeValue(minnet_server.ctx, serv->req_obj);
         serv->req_obj = JS_UNDEFINED;

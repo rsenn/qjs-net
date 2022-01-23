@@ -2,7 +2,7 @@ import * as std from 'std';
 import * as os from 'os';
 import REPL from 'repl';
 import inspect from 'inspect';
-import * as net from 'net';
+import net, { Socket, URL } from 'net';
 import { Console } from 'console';
 
 const connections = new Set();
@@ -126,28 +126,34 @@ function main(...args) {
   const server = !params.client || params.server;
   //console.log('params', params);
   function createWS(url, callbacks, listen = 0) {
-   /* let [protocol, host, port, ...location] = [...url.matchAll(/[^:\/]+/g)].map(a => a[0]);
+    let urlObj = new URL(url);
+        console.log('urlObj',urlObj);
+        console.log('urlObj.toString()',urlObj.toString());
+
+    /* let [protocol, host, port, ...location] = [...url.matchAll(/[^:\/]+/g)].map(a => a[0]);
     if(!isNaN(+port)) port = +port;
     const path = location.reduce((acc, part) => acc + '/' + part, '');*/
-    net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, ...args) => {
-      if(params.debug) console.log(('X', ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '').padEnd(8), ...args);
+    net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, msg) => {
+      let p=['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
+      if(!/POLL/.test(msg) && /MINNET/.test(p))
+      if(params.debug || /client/.test(msg)) console.log(p.padEnd(8), msg);
     });
 
     const repl = new CLI(url);
 
     const fn = [net.client, net.server][+listen];
-//console.log('createWS', {url, repl, fn });
-    return fn(url , {
+    //console.log('createWS', {url, repl, fn });
+    return fn(url, {
       sslCert,
       sslPrivateKey,
-   /*   ssl: protocol == 'wss',
+      /*   ssl: protocol == 'wss',
       host,
       port,
       path,*/
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
-       console.log('onConnect', ws, req);
+        console.log('onConnect', ws, req);
         try {
           repl.printStatus(`Connected to ${url}`, true);
         } catch(err) {
@@ -170,8 +176,9 @@ function main(...args) {
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
-            console.log('onMessage', ws, msg);
-   repl.printStatus(msg, true);
+        //console.log('onMessage', ws, msg);
+        const out = msg.replace(/\n/g, "\\n").replace(/\r/g, "\\r");
+        repl.printStatus(out, true);
       },
       onError(ws, error) {
         console.log('onError', ws, error);

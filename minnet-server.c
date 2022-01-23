@@ -4,6 +4,7 @@
 #include "minnet-server-http.h"
 #include "minnet-response.h"
 #include "minnet-request.h"
+#include "minnet-url.h"
 #include <list.h>
 #include <quickjs-libc.h>
 #include <libwebsockets.h>
@@ -58,16 +59,31 @@ static const struct lws_http_mount mount = {
 
 JSValue
 minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-  int a = 0;
-  int port = 7981;
+  int argind = 0, a = 0, port = 7981;
   BOOL is_tls = FALSE;
   MinnetVhostOptions* mimetypes = 0;
+  MinnetURL url = {0};
+  JSValue ret, options;
 
   memset(&minnet_server, 0, sizeof minnet_server);
 
   lwsl_user("Minnet WebSocket Server\n");
-  JSValue ret = JS_NewInt32(ctx, 0);
-  JSValue options = argv[0];
+  ret = JS_NewInt32(ctx, 0);
+  options = argv[0];
+
+  if(argc >= 2 && JS_IsString(argv[argind])) {
+    const char* str;
+    if((str = JS_ToCString(ctx, argv[argind]))) {
+      url_parse(&url, str, ctx);
+      JS_FreeCString(ctx, str);
+    }
+    argind++;
+  }
+
+  options = argv[argind];
+
+  if(!JS_IsObject(options))
+    return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
   JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
   JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");

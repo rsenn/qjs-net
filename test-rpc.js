@@ -6,7 +6,7 @@ import REPL from 'repl';
 import inspect from 'inspect';
 import { types, define, filter, split, getOpt, toUnixTime } from 'util';
 import * as fs from 'fs';
-import * as net from 'net';
+import net, { URL } from 'net';
 import { Socket } from 'sockets';
 import { EventEmitter } from 'events';
 import { Repeater } from 'repeater';
@@ -65,13 +65,13 @@ function main(...args) {
       port: [true, null, 'p'],
       'ssl-cert': [true, null],
       'ssl-private-key': [true, null],
-      '@': 'address,port'
+      '@': 'url'
     },
     args
   );
   if(params['no-tls'] === true) params.tls = false;
   console.log('params', params);
-  const { address = '127.0.0.1', port = 8999, 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key' } = params;
+  const { '@': [url = 'wss://127.0.0.1:8999/ws'], 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key' } = params;
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   Object.assign(globalThis, { ...rpc2, rpc });
@@ -101,21 +101,25 @@ function main(...args) {
   };
 
   console.log = repl.printFunction(log);
+let uri = new URL(url);
+    console.log('main', { url,uri });
 
-  let cli = (globalThis.sock = new rpc.Socket(`${address}:${port}`, rpc[`RPC${server ? 'Server' : 'Client'}Connection`], +params.verbose));
+  let cli = (globalThis.sock = new rpc.Socket(uri, rpc[`RPC${server ? 'Server' : 'Client'}Connection`], +params.verbose));
 
   cli.register({ Socket, Worker: os.Worker, Repeater, REPL, EventEmitter });
 
   let connections = new Set();
   const createWS = (globalThis.createWS = (url, callbacks, listen) => {
     console.log('createWS', { url, callbacks, listen });
-
-    net.setLog((params.debug ? net.LLL_USER : 0) | (((params.debug ? net.LLL_NOTICE : net.LLL_WARN) << 1) - 1), (level, ...args) => {
+const {protocol,host,port,path}= url;
+       console.log('createWS', { protocol,host,port,path});
+ net.setLog((params.debug ? net.LLL_USER : 0) | (((params.debug ? net.LLL_NOTICE : net.LLL_WARN) << 1) - 1), (level, ...args) => {
       repl.printStatus(...args);
       //if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
 
     return [net.client, net.server][+listen]({
+      protocol,host,port,path,
       tls: params.tls,
       sslCert,
       sslPrivateKey,

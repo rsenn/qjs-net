@@ -572,6 +572,9 @@ define(RPCClient.prototype, { [Symbol.toStringTag]: 'RPCClient' });
 export function RPCSocket(url, service = RPCServer, verbosity = 1) {
   if(!new.target) return new RPCSocket(url, service, verbosity);
 
+
+console.log('RPCSocket', {url,service,verbosity});
+
   // const DEBUG = DebugFlags();
   const instance = new.target ? this : new RPCSocket(url, service, verbosity);
   const log = /*console.config
@@ -619,8 +622,8 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
   if(!url) url = globalThis.location?.href;
   if(typeof url != 'object') url = parseURL(url);
 
-  if(url.protocol == 'ws') url.protocol = 'http';
-  if(url.protocol == 'wss') url.protocol = 'https';
+  /*if(url.protocol == 'ws') url.protocol = 'http';
+  if(url.protocol == 'wss') url.protocol = 'https';*/
 
   define(instance, {
     service,

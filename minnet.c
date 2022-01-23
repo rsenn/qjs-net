@@ -347,6 +347,8 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("server", 1, minnet_ws_server),
     JS_CFUNC_DEF("client", 1, minnet_ws_client),
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
+    JS_CFUNC_SPECIAL_DEF("socket", 1, constructor, minnet_ws_constructor),
+    JS_CFUNC_SPECIAL_DEF("url", 1, constructor, minnet_url_constructor),
     // JS_CGETSET_DEF("log", get_log, set_log),
     JS_CFUNC_DEF("setLog", 1, minnet_set_log),
     JS_PROP_INT32_DEF("METHOD_GET", METHOD_GET, 0),
@@ -448,6 +450,12 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Socket", minnet_ws_ctor);
 
+  {
+    JSValue minnet_default = JS_NewObject(ctx);
+    JS_SetPropertyFunctionList(ctx, minnet_default, minnet_funcs, countof(minnet_funcs));
+    JS_SetModuleExport(ctx, m, "default", minnet_default);
+  }
+
   return 0;
 }
 
@@ -462,6 +470,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Stream");
   JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExport(ctx, m, "URL");
+  JS_AddModuleExport(ctx, m, "default");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
   minnet_log_ctx = ctx;

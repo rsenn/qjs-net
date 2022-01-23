@@ -59,6 +59,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   JSValue options = argv[0];
   struct lws* wsi = 0;
   enum http_method method = -1;
+  const char* url = 0;
 
   SETLOG(LLL_INFO)
 
@@ -72,11 +73,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   info.user = &client;
 
   if(argc >= 2 && JS_IsString(argv[argind])) {
-    const char* str;
-    if((str = JS_ToCString(ctx, argv[argind]))) {
-      client.url = url_parse(ctx, str);
-      JS_FreeCString(ctx, str);
-    }
+    url = JS_ToCString(ctx, argv[argind]);
     argind++;
   }
 
@@ -86,37 +83,40 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
   {
-    const char *host, *path = 0, *protocol = 0, *method_str = 0;
+    const char /*
+  */ *method_str = 0;
 
-    JSValue opt_protocol = JS_GetPropertyStr(ctx, options, "protocol");
+    /*JSValue opt_protocol = JS_GetPropertyStr(ctx, options, "protocol");
     JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
     JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
+    JSValue opt_path = JS_GetPropertyStr(ctx, options, "path");*/
     /*    JSValue opt_ssl = JS_GetPropertyStr(ctx, options, "ssl");
         JSValue opt_raw = JS_GetPropertyStr(ctx, options, "raw");*/
-    JSValue opt_path = JS_GetPropertyStr(ctx, options, "path");
     JSValue opt_method = JS_GetPropertyStr(ctx, options, "method");
 
-    if(!JS_IsUndefined(opt_host) || !JS_IsUndefined(opt_path)) {
-      const char *protocol, *host, *path;
-      int32_t port = -1 /*, ssl = -1, raw = -1*/;
-      protocol = JS_ToCString(ctx, opt_protocol);
-      host = JS_ToCString(ctx, opt_host);
-      path = JS_ToCString(ctx, opt_path);
+    url_from(&client.url, options, ctx);
 
-      if(JS_IsNumber(opt_port))
-        JS_ToInt32(ctx, &port, opt_port);
+    /*    if(!JS_IsUndefined(opt_host) || !JS_IsUndefined(opt_path)) {
+          const char *protocol, *host, *path;
+          int32_t port = -1;
+          protocol = JS_ToCString(ctx, opt_protocol);
+          host = JS_ToCString(ctx, opt_host);
+          path = JS_ToCString(ctx, opt_path);
 
-      JS_FreeValue(ctx, opt_protocol);
-      JS_FreeValue(ctx, opt_path);
-      JS_FreeValue(ctx, opt_host);
-      JS_FreeValue(ctx, opt_port);
+          if(JS_IsNumber(opt_port))
+            JS_ToInt32(ctx, &port, opt_port);
 
-      client.url = url_init(ctx, protocol, host, port, path);
+          JS_FreeValue(ctx, opt_protocol);
+          JS_FreeValue(ctx, opt_path);
+          JS_FreeValue(ctx, opt_host);
+          JS_FreeValue(ctx, opt_port);
 
-      JS_FreeCString(ctx, protocol);
-      JS_FreeCString(ctx, host);
-      JS_FreeCString(ctx, path);
-    }
+          url_init(&client.url, protocol, host, port, path, ctx);
+
+          JS_FreeCString(ctx, protocol);
+          JS_FreeCString(ctx, host);
+          JS_FreeCString(ctx, path);
+        }*/
 
     method_str = JS_ToCString(ctx, opt_method);
 
@@ -138,6 +138,11 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
       method = METHOD_HEAD;
 
     JS_FreeCString(ctx, method_str);
+  }
+
+  if(url) {
+    url_parse(&client.url, url, ctx);
+    JS_FreeCString(ctx, url);
   }
 
   GETCBPROP(options, "onPong", client_cb_pong)
@@ -193,6 +198,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetHttpMethod method = -1;
   MinnetSession* cli = user;
+  MinnetClient* client = lws_context_user(lws_get_context(wsi));
 
   lwsl_user("client " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
@@ -210,6 +216,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL:
     case LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL: {
+      // struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+
       return 0;
     }
     case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL:
@@ -220,12 +228,20 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
       unsigned char **p = (unsigned char**)in, *end = (*p) + len;
+      MinnetRequest* req = client->request;
+      MinnetBuffer* buffer = &req->headers;
+      size_t bytes;
+      if((bytes = buffer_REMAIN(buffer))) {
+        assert(bytes <= len);
+        memcpy(*p, buffer->read, bytes);
+        *p += bytes;
+      }
+      // printf("\x1b[2K\rXXX len = %zu, *p = '%.*s', end = %p\n",len, 10, *p - 10, end);
 
-      /* How to send a custom header in the request to the server       */
-
-      if(lws_add_http_header_by_name(wsi, (const unsigned char*)"dnt", (const unsigned char*)"1", 1, p, end))
-        return -1;
-      break;
+      /* const char* encodings = "gzip, deflate, brotli, lzma";
+       if(lws_add_http_header_by_name(wsi, (const unsigned char*)"accept-encoding:", (const unsigned char*)encodings, strlen(encodings), p, end))
+         return -1;*/
+      return 0;
     }
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
     case LWS_CALLBACK_CONNECTING: {
