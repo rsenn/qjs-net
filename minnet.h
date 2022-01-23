@@ -76,13 +76,6 @@ typedef struct ws_callback {
   const char* name;
 } MinnetCallback;
 
-typedef struct url {
-  char* protocol;
-  char* host;
-  int port;
-  char* location;
-} MinnetURL;
-
 struct proxy_connection;
 struct http_mount;
 
@@ -106,9 +99,6 @@ typedef struct session_data {
 extern JSContext* minnet_log_ctx;
 extern BOOL minnet_exception;
 
-MinnetURL url_init(JSContext*, const char* proto, const char* host, uint16_t port, const char* path);
-MinnetURL url_parse(JSContext* ctx, const char* url);
-void url_free(JSContext*, MinnetURL* url);
 JSValue header_object(JSContext*, const struct byte_buffer*);
 ssize_t header_set(JSContext*, struct byte_buffer*, const char* name, const char* value);
 int fd_callback(struct lws*, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args);

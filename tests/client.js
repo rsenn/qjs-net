@@ -20,7 +20,7 @@ function main(...args) {
   const sslCert = 'localhost.crt',
     sslPrivateKey = 'localhost.key';
 
-const debug = args[0] == '-x' && args.shift();
+  const debug = args[0] == '-x' && args.shift();
   if(args.length == 0) args.push('https://github.com/rsenn?tab=repositories');
 
   function createWS(url, callbacks, listen = 0) {
@@ -33,11 +33,17 @@ const debug = args[0] == '-x' && args.shift();
     let path = matches.join('');
     let [location, query] = path.split(/\?/);
 
-    net.setLog(/* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1, debug ?  (level, msg) => {
-      const l = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
-     if(l == 'NOTICE' || l=='MINNET' ) //if(l != 'NOTICE' ) if(l != 'MINNET') if(!/POLL/.test(msg))
-      console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
-    }: () => {});
+    net.setLog(
+      /* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1,
+      debug
+        ? (level, msg) => {
+            const l = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
+            if(l == 'NOTICE' || l == 'MINNET')
+              //if(l != 'NOTICE' ) if(l != 'MINNET') if(!/POLL/.test(msg))
+              console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
+          }
+        : () => {}
+    );
 
     //console.log('createWS', { protocol, host, port, location, listen });
 
