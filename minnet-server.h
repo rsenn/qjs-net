@@ -17,7 +17,7 @@ typedef struct server_context {
 struct proxy_connection;
 
 JSValue minnet_ws_server(JSContext*, JSValue, int argc, JSValue* argv);
-int http_headers(JSContext*, MinnetBuffer*, struct lws* wsi);
+int http_server_headers(JSContext*, MinnetBuffer*, struct lws* wsi);
 
 extern MinnetServer minnet_server;
 

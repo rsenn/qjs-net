@@ -131,6 +131,8 @@ function main(...args) {
 
     net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, msg) => {
       let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
+      msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+
       if(!/POLL/.test(msg) && /MINNET/.test(p)) if (params.debug && /client/.test(msg)) console.log(p.padEnd(8), msg);
     });
 
@@ -142,12 +144,14 @@ function main(...args) {
       sslCert,
       sslPrivateKey,
       method,
-      body: (function *() { yield '{ "test": 1234 }'; })(),
+      body: (function* () {
+        yield '{ "test": 1234 }';
+      })(),
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': 1000,
+        'Content-Length': 1000
         //'Connection': 'keep-alive',
-       // Range: 'bytes=10-'
+        // Range: 'bytes=10-'
         //    'accept-encoding': 'br gzip',
       },
       ...callbacks,
@@ -166,19 +170,18 @@ function main(...args) {
         //repl.exit(status != 1000 ? 1 : 0);
       },
       onHttp(req, rsp) {
-        const { url, method, headers } = req;
-        console.log('\x1b[38;5;82monHttp\x1b[0m(\n\t', Object.setPrototypeOf({ url, method, headers }, Object.getPrototypeOf(req)), ',\n\t', rsp, '\n)');
-        return rsp;
+        console.log('onHttp', { req, rsp });
+        rsp = rsp.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
       },
       onFd(fd, rd, wr) {
         //console.log('onFd', fd, rd, wr);
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
       },
-      onMessage(ws, msg) {
-        //console.log('onMessage', ws, msg);
-        const out = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
-        repl.printStatus(out, true);
+      onMessage(ws, req, msg) {
+        msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        console.log('onMessage', { ws, req, msg: msg.substring(0, 100) });
+        // repl.printStatus(out, true);
       },
       onError(ws, error) {
         console.log('onError', ws, error);

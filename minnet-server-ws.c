@@ -2,7 +2,7 @@
 #include "minnet-websocket.h"
 #include "minnet-request.h"
 
-int http_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 int
 ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
@@ -21,13 +21,13 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
         return -1;
       /* return 0;
-       return http_callback(wsi, reason, user, in, len);*/
+       return http_server_callback(wsi, reason, user, in, len);*/
       /* if(minnet_server.cb_connect.ctx) {*/
       struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
 
       opaque->req = request_new(ctx, in, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), METHOD_GET);
 
-      int num_hdr = http_headers(ctx, &opaque->req->headers, wsi);
+      int num_hdr = http_server_headers(ctx, &opaque->req->headers, wsi);
       break;
     }
 
@@ -135,7 +135,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
     case LWS_CALLBACK_CLOSED_HTTP:
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-      return http_callback(wsi, reason, user, in, len);
+      return http_server_callback(wsi, reason, user, in, len);
     }
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
     default: {

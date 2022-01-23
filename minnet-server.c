@@ -17,12 +17,12 @@ int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t)
 int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-int http_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"defprot", lws_callback_http_dummy, 0, 0},
-    {"http", http_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     {"proxy-raw", raw_client_callback, 0, 1024, 0, NULL, 0},
     {0},
@@ -31,7 +31,7 @@ static struct lws_protocols protocols[] = {
 static struct lws_protocols protocols2[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"defprot", defprot_callback, 0, 0},
-    {"http", http_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     {"proxy-raw", raw_client_callback, 0, 1024, 0, NULL, 0},
     {0, 0},
@@ -261,7 +261,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 }
 
 int
-http_headers(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
+http_server_headers(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
   int tok, len, count = 0;
 
   if(!headers->start)

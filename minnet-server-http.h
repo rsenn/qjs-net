@@ -42,8 +42,8 @@ MinnetHttpMount* mount_create(JSContext*, const char*, const char* origin, const
 MinnetHttpMount* mount_new(JSContext*, JSValueConst, const char* key);
 struct http_mount* mount_find(const char*, size_t);
 void mount_free(JSContext*, MinnetHttpMount const*);
-int http_writable(struct lws*, struct http_response*, BOOL done);
-int http_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
+int http_server_writable(struct lws*, struct http_response*, BOOL done);
+int http_server_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
 
 extern MinnetServer minnet_server;
 
