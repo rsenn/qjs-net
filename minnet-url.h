@@ -36,14 +36,14 @@ const char* url_query_string(const MinnetURL*);
 JSValue url_query_object(const MinnetURL*, JSContext* ctx);
 char* url_query_from(JSContext*, JSValue obj);
 
-extern THREAD_LOCAL JSClassID minnet_url_class_id;
+/*extern THREAD_LOCAL JSClassID minnet_url_class_id;
 extern THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;
 extern JSClassDef minnet_url_class;
 extern const JSCFunctionListEntry minnet_url_proto_funcs[], minnet_url_static_funcs[], minnet_url_proto_defs[];
 extern const size_t minnet_url_proto_funcs_size, minnet_url_static_funcs_size, minnet_url_proto_defs_size;
 
 JSValue minnet_url_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
-
+*/
 static inline const char*
 url_path(const MinnetURL* url) {
   return url->path;
@@ -53,6 +53,10 @@ static inline MinnetProtocol
 url_protocol(const MinnetURL* url) {
   return protocol_number(url->protocol);
 }
+
+extern THREAD_LOCAL JSClassID minnet_url_class_id;
+
+int            minnet_url_init(JSContext*, JSModuleDef* m);
 
 static inline MinnetURL*
 minnet_url_data(JSValueConst obj) {

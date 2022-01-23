@@ -259,7 +259,7 @@ url_query_from(JSContext* ctx, JSValueConst obj) {
   return out.buf;
 }
 
-THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;
+static THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;
 THREAD_LOCAL JSClassID minnet_url_class_id;
 
 enum { URL_PROTOCOL, URL_HOST, URL_PORT, URL_PATH };
@@ -351,12 +351,12 @@ minnet_url_finalizer(JSRuntime* rt, JSValue val) {
   }
 }
 
-JSClassDef minnet_url_class = {
+static JSClassDef minnet_url_class = {
     "MinnetURL",
     .finalizer = minnet_url_finalizer,
 };
 
-const JSCFunctionListEntry minnet_url_proto_funcs[] = {
+static const JSCFunctionListEntry minnet_url_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_url_getter, minnet_url_setter, URL_PROTOCOL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("host", minnet_url_getter, minnet_url_setter, URL_HOST, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_url_getter, minnet_url_setter, URL_PORT, JS_PROP_ENUMERABLE),
@@ -365,4 +365,23 @@ const JSCFunctionListEntry minnet_url_proto_funcs[] = {
 
 };
 
-const size_t minnet_url_proto_funcs_size = countof(minnet_url_proto_funcs);
+static const size_t minnet_url_proto_funcs_size = countof(minnet_url_proto_funcs);
+
+  int
+minnet_url_init(JSContext* ctx, JSModuleDef* m) {
+   
+  // Add class URL
+  JS_NewClassID(&minnet_url_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_url_class_id, &minnet_url_class);
+  minnet_url_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_url_proto, minnet_url_proto_funcs, minnet_url_proto_funcs_size);
+
+  minnet_url_ctor = JS_NewCFunction2(ctx, minnet_url_constructor, "MinnetURL", 0, JS_CFUNC_constructor, 0);
+
+  JS_SetConstructor(ctx, minnet_url_ctor, minnet_url_proto);
+ 
+  if(m)
+    JS_SetModuleExport(ctx, m, "URL", minnet_url_ctor);
+
+  return 0;
+}

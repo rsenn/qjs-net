@@ -430,14 +430,7 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
     JS_SetModuleExport(ctx, m, "Stream", minnet_stream_ctor);
 
   // Add class URL
-  JS_NewClassID(&minnet_url_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_url_class_id, &minnet_url_class);
-  minnet_url_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_url_proto, minnet_url_proto_funcs, minnet_url_proto_funcs_size);
-
-  minnet_url_ctor = JS_NewCFunction2(ctx, minnet_url_constructor, "MinnetURL", 0, JS_CFUNC_constructor, 0);
-
-  JS_SetConstructor(ctx, minnet_url_ctor, minnet_url_proto);
+  minnet_url_init(ctx, m);
 
   // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);
@@ -468,6 +461,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Request");
   JS_AddModuleExport(ctx, m, "Stream");
   JS_AddModuleExport(ctx, m, "Socket");
+  JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
   minnet_log_ctx = ctx;

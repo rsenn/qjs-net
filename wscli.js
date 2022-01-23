@@ -149,7 +149,7 @@ function main(...args) {
         connections.add(ws);
        console.log('onConnect', ws, req);
         try {
-          repl.printStatus(`Connected to ${protocol}://${host}:${port}${path}`, true);
+          repl.printStatus(`Connected to ${url}`, true);
         } catch(err) {
           console.log('error:', err.message);
         }
