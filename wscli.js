@@ -136,7 +136,7 @@ function main(...args) {
     const repl = new CLI(`${host}:${port}`);
 
     const fn = [net.client, net.server][+listen];
-    // console.log('createWS', { protocol, host, port, path, repl, fn });
+console.log('createWS', { protocol, host, port, path, repl, fn });
     return fn({
       sslCert,
       sslPrivateKey,

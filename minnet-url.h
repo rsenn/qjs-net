@@ -6,12 +6,27 @@
 #include <stdint.h>
 #include "minnet.h"
 
+typedef enum protocol {
+  PROTOCOL_WS = 0,
+  PROTOCOL_WSS,
+  PROTOCOL_HTTP,
+  PROTOCOL_HTTPS,
+  PROTOCOL_RAW,
+  PROTOCOL_TLS,
+} MinnetProtocol;
+
+enum protocol protocol_number(const char*);
+const char* protocol_string(const enum protocol);
+uint16_t protocol_default_port(const enum protocol);
+BOOL protocol_is_tls(const enum protocol);
+
 typedef struct url {
-  char *protocol, *host, *path;
+  const char* protocol;
+  char *host, *path;
   uint16_t port;
 } MinnetURL;
 
-MinnetURL url_init(JSContext*, const char* protocol, const char* host, uint16_t port, const char* path);
+MinnetURL url_init(JSContext*, const char* protocol, const char* host, int port, const char* path);
 MinnetURL url_parse(JSContext*, const char* url);
 char* url_format(const MinnetURL*, JSContext* ctx);
 void url_free(JSContext*, MinnetURL* url);
@@ -30,7 +45,7 @@ extern const size_t minnet_url_proto_funcs_size, minnet_url_static_funcs_size, m
 JSValue minnet_url_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
 
 static inline const char*
-url_path(const MinnetURL*url) {
+url_path(const MinnetURL* url) {
   return url->path;
 }
 

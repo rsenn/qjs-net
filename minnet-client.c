@@ -274,6 +274,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
     case LWS_CALLBACK_RAW_CONNECTED: {
+      struct lws_context* lwsctx = lws_get_context(wsi);
+      MinnetClient* client = lws_context_user(lwsctx);
+
       if(!cli->connected) {
         cli->ws_obj = minnet_ws_object(ctx, wsi);
 
@@ -285,12 +288,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         }
         cli->connected = TRUE;
 
-        struct lws_context* lwsctx = lws_get_context(wsi);
-
-        MinnetClient* client = lws_context_user(lwsctx);
-
         cli->req_obj = minnet_request_wrap(ctx, client->request);
-        cli->resp_obj = JS_UNDEFINED; //minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
+        cli->resp_obj = JS_UNDEFINED; // minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
       }
       break;
     }

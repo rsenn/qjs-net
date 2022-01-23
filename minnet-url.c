@@ -1,20 +1,68 @@
 #include "minnet-url.h"
 #include <quickjs.h>
 #include <cutils.h>
+#include <assert.h>
+
+static char const* const protocol_names[] = {"ws", "wss", "http", "https", "raw", "tls"};
+
+enum protocol
+protocol_number(const char* protocol) {
+  enum protocol p;
+
+  for(p = PROTOCOL_TLS-1; p >= PROTOCOL_WS; --p) 
+  if(!strcasecmp(protocol,protocol_names[p]))
+    break;
+
+  return p;
+}
+
+const char*
+protocol_string(const enum protocol p) {
+  assert(p >= 0);
+  assert(p < countof(protocol_names));
+  return protocol_names[p];
+}
+
+uint16_t
+protocol_default_port(const enum protocol p) {
+  switch(p) {
+    case PROTOCOL_WS:
+    case PROTOCOL_HTTP: return 80;
+    case PROTOCOL_WSS:
+    case PROTOCOL_HTTPS: return 443;
+    default: return 0;
+  }
+}
+
+BOOL
+protocol_is_tls(const enum protocol p) {
+  switch(p) {
+    case PROTOCOL_WSS:
+    case PROTOCOL_HTTPS: return TRUE;
+    default: return FALSE;
+  }
+}
 
 MinnetURL
-url_init(JSContext* ctx, const char* protocol, const char* host, uint16_t port, const char* path) {
+url_init(JSContext* ctx, const char* protocol, const char* host, int port, const char* path) {
   MinnetURL url;
-  url.protocol = js_strdup(ctx, protocol ? protocol : "ws");
-  url.host = js_strdup(ctx, host ? host : "0.0.0.0");
-  url.port = port;
+  MinnetProtocol proto = protocol_number(protocol);
+
+  url.protocol = protocol_string(proto);
+  url.host = js_strdup(ctx, host && *host ? host : "0.0.0.0");
+
+  if(port >= 0 && port <= 65535)
+    url.port = port;
+  else
+    url.port = protocol_default_port(proto);
+
   url.path = js_strdup(ctx, path && *path ? path : "/");
   return url;
 }
 
 MinnetURL
 url_parse(JSContext* ctx, const char* url) {
-  MinnetURL ret = {0, 0, -1, 0};
+  MinnetURL ret = {0, 0, 0, 0};
   size_t i = 0, j;
   char* end;
   if((end = strstr(url, "://"))) {
@@ -43,17 +91,20 @@ char*
 url_format(const MinnetURL* url, JSContext* ctx) {
   size_t len = strlen(url->protocol) + 3 + strlen(url->host) + 1 + 5 + strlen(url->path) + 1;
   char* buf;
+  enum protocol p = protocol_number(url->protocol);
 
-  if((buf = js_malloc(ctx, len)))
-    sprintf(buf, "%s://%s:%u%s", url->protocol, url->host, url->port % 0xffff, url->path);
+  if((buf = js_malloc(ctx, len))) {
+    if(url->port == protocol_default_port(p))
+      sprintf(buf, "%s://%s%s", url->protocol, url->host, url->path);
+    else
+      sprintf(buf, "%s://%s:%u%s", url->protocol, url->host, url->port % 0xffff, url->path);
+  }
 
   return buf;
 }
 
 void
 url_free(JSContext* ctx, MinnetURL* url) {
-  if(url->protocol)
-    js_free(ctx, url->protocol);
   if(url->host)
     js_free(ctx, url->host);
   if(url->path)
@@ -96,9 +147,6 @@ url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
   i.host = i.address;
   i.origin = i.address;
   i.pwsi = p_wsi;
-
-  url->host = 0;
-  url->path = 0;
 
   return !lws_client_connect_via_info(&i);
 }
