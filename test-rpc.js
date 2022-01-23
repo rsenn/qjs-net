@@ -71,7 +71,11 @@ function main(...args) {
   );
   if(params['no-tls'] === true) params.tls = false;
   console.log('params', params);
-  const { '@': [url = 'wss://127.0.0.1:8999/ws'], 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key' } = params;
+  const {
+    '@': [url = 'wss://127.0.0.1:8999/ws'],
+    'ssl-cert': sslCert = 'localhost.crt',
+    'ssl-private-key': sslPrivateKey = 'localhost.key'
+  } = params;
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   Object.assign(globalThis, { ...rpc2, rpc });
@@ -101,8 +105,8 @@ function main(...args) {
   };
 
   console.log = repl.printFunction(log);
-let uri = new URL(url);
-    console.log('main', { url,uri });
+  let uri = new URL(url);
+  console.log('main', { url, uri });
 
   let cli = (globalThis.sock = new rpc.Socket(uri, rpc[`RPC${server ? 'Server' : 'Client'}Connection`], +params.verbose));
 
@@ -111,15 +115,18 @@ let uri = new URL(url);
   let connections = new Set();
   const createWS = (globalThis.createWS = (url, callbacks, listen) => {
     console.log('createWS', { url, callbacks, listen });
-const {protocol,host,port,path}= url;
-       console.log('createWS', { protocol,host,port,path});
- net.setLog((params.debug ? net.LLL_USER : 0) | (((params.debug ? net.LLL_NOTICE : net.LLL_WARN) << 1) - 1), (level, ...args) => {
+    const { protocol, host, port, path } = url;
+    console.log('createWS', { protocol, host, port, path });
+    net.setLog((params.debug ? net.LLL_USER : 0) | (((params.debug ? net.LLL_NOTICE : net.LLL_WARN) << 1) - 1), (level, ...args) => {
       repl.printStatus(...args);
       //if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
 
     return [net.client, net.server][+listen]({
-      protocol,host,port,path,
+      protocol,
+      host,
+      port,
+      path,
       tls: params.tls,
       sslCert,
       sslPrivateKey,

@@ -136,7 +136,7 @@ function main(...args) {
       if(!/POLL/.test(msg) && /MINNET/.test(p)) if (/*!params.debug &&*/ /(client|http|read|write)/i.test(msg)) console.log(p.padEnd(8), msg);
     });
 
-    const repl = new CLI(url);
+    let repl;
 
     const fn = [net.client, net.server][+listen];
     //console.log('createWS', {url, repl, fn });
@@ -148,8 +148,9 @@ function main(...args) {
         yield '{ "test": 1234 }';
       })(),
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': 1000
+        'user-agent': 'minnet'
+        /*'Content-Type': 'application/json',
+        'Content-Length': 1000*/
         //'Connection': 'keep-alive',
         // Range: 'bytes=10-'
         //    'accept-encoding': 'br gzip',
@@ -157,8 +158,10 @@ function main(...args) {
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
-        console.log('onConnect',  { ws });
-       /* try {
+        console.log('onConnect', { ws, req });
+
+        repl = new CLI(url);
+        /* try {
           repl.printStatus(`Connected to ${url}`, true);
         } catch(err) {
           console.log('error:', err.message);
@@ -169,17 +172,16 @@ function main(...args) {
         console.log('onClose', ws, status, reason, error);
         //repl.exit(status != 1000 ? 1 : 0);
       },
-      onHttp(...args) {
-               console.log('onHttp', {args});
-/* let rsp2 = rsp.clone();
-        let text = rsp.text();
-        //let json =rsp2.json();
-
+      onHttp(req, resp) {
+        console.log('onHttp', { req, resp });
+        let text = resp.text();
         text = text.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
         console.log('onHttp', { text });
 
-        let buffer = rsp.arrayBuffer();
-        console.log('onHttp', { buffer });*/
+        /* let json =resp.json();
+        console.log('onHttp', { json }); */
+        let buffer = resp.arrayBuffer();
+        console.log('onHttp', { buffer });
       },
       onFd(fd, rd, wr) {
         //console.log('onFd', fd, rd, wr);

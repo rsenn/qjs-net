@@ -211,7 +211,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_CLOSE:
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      if(client->cb_close.ctx) {
+      if((client->cb_close.ctx=ctx)) {
         struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
         int err = opaque ? opaque->error : 0;
         JSValueConst cb_argv[] = {
@@ -289,12 +289,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
 
     default: {
-      // minnet_lws_unhandled(reason);
       break;
     }
   }
 
-  if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
-    lwsl_notice("client  %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
   return 0;
 }
