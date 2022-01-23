@@ -158,14 +158,16 @@ function main(...args) {
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
-        console.log('onConnect', { ws, req });
-
+        //console.log('onConnect', { ws, req });
+        const { address, port } = ws;
+const remote=`${address}:${port}`;
         try {
-          repl = new CLI(url);
-          repl.printStatus(`Connected to ${url}`, true);
+          repl = new CLI(remote);
         } catch(err) {
           console.log('error:', err.message);
         }
+        //        const {url}= req;
+        repl.printStatus(`Connected to ${remote}`);
       },
       onClose(ws, status, reason, error) {
         connections.delete(ws);

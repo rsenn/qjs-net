@@ -132,8 +132,10 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     }
   }
 
+#ifdef DEBUG_OUTPUT
   printf("METHOD: %s\n", method_str);
   printf("PROTOCOL: %s\n", client.info.protocol);
+#endif
 
   lws_client_connect_via_info(&client.info);
 
