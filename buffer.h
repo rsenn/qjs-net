@@ -22,7 +22,7 @@ typedef struct byte_buffer {
   (MinnetBuffer) { 0, 0, 0, 0, 0 }
 
 #define BUFFER_N(buf, n) \
-  (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, ((uint8_t*)(buf)) + n, 0 }
+  (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, 0 }
 
 #define buffer_AVAIL(b) ((b)->end - (b)->write)
 #define buffer_WRITE(b) ((b)->write - (b)->start)

@@ -154,9 +154,10 @@ headers_from(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
 
     prop = JS_AtomToCString(ctx, tab[i].atom);
 
-    buffer_append(buffer, prop, strlen(prop), ctx);
-    buffer_append(buffer, ": ", 2,ctx);
-    buffer_append(buffer, str, len, ctx);
+    buffer_write(buffer, prop, strlen(prop));
+    buffer_write(buffer, ": ", 2);
+    buffer_write(buffer, str, len);
+    buffer_write(buffer, "\r\n", 2);
 
     JS_FreeCString(ctx, prop);
     JS_FreeCString(ctx, str);

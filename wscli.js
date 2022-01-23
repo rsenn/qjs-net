@@ -150,6 +150,7 @@ function main(...args) {
       host,
       port,
       path,*/
+      headers: {'accept-encoding': 'br gzip'},
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);

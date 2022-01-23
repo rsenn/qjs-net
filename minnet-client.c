@@ -113,12 +113,10 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
 
   {
     char* url = url_format(&client.url, ctx);
-    client.request = request_new(ctx, url_path(&client.url), url, method);
+    // client.request = request_new(ctx, url_path(&client.url), url, method);
 
     value = JS_GetPropertyStr(ctx, options, "headers");
-    if(JS_IsObject(value))
-      headers_from(&client.request->headers, value, ctx);
-    
+    client.headers = JS_IsObject(value) ? JS_DupValue(ctx, value) : JS_NewObject(ctx);
     JS_FreeValue(ctx, value);
   }
 
@@ -184,15 +182,21 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
 
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
-      unsigned char **p = (unsigned char**)in, *end = (*p) + len;
-      MinnetRequest* req = client->request;
-      MinnetBuffer* buffer = &req->headers;
-      size_t bytes;
-      if((bytes = buffer_REMAIN(buffer))) {
-        assert(bytes <= len);
-        memcpy(*p, buffer->read, bytes);
-        *p += bytes;
-      }
+      MinnetBuffer buf = BUFFER_N(*(uint8_t**)in, len);
+
+      headers_from(&buf, client->headers, ctx);
+
+      *(uint8_t**)in = buffer_WRITE(&buf);
+
+      /*      unsigned char **p = (unsigned char**)in, *end = (*p) + len;
+            MinnetRequest* req = client->request;
+            MinnetBuffer* buffer = &req->headers;
+            size_t bytes;
+            if((bytes = buffer_REMAIN(buffer))) {
+              assert(bytes <= len);
+              memcpy(*p, buffer->read, bytes);
+              *p += bytes;
+            }*/
       // printf("\x1b[2K\rXXX len = %zu, *p = '%.*s', end = %p\n",len, 10, *p - 10, end);
 
       /* const char* encodings = "gzip, deflate, brotli, lzma";
@@ -248,7 +252,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         }
         cli->connected = TRUE;
 
-        cli->req_obj = minnet_request_wrap(ctx, client->request);
+        // cli->req_obj = minnet_request_wrap(ctx, client->request);
         cli->resp_obj = minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
       }
       break;

@@ -4,9 +4,7 @@
 
 void
 buffer_init(struct byte_buffer* buf, uint8_t* start, size_t len) {
-  buf->start = start;
-  buf->read = buf->start;
-  buf->write = buf->start;
+  buf->start = buf->read = buf->write = start;
   buf->end = start + len;
   buf->alloc = 0;
 }
