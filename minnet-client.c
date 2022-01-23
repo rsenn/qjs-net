@@ -3,6 +3,7 @@
 #include "minnet-websocket.h"
 #include "minnet-request.h"
 #include "minnet-response.h"
+#include "minnet-url.h"
 #include "minnet.h"
 #include <quickjs-libc.h>
 #include <strings.h>
@@ -47,54 +48,16 @@ sslcert_client(JSContext* ctx, struct lws_context_creation_info* info, JSValueCo
     info->client_ssl_private_key_filepath = JS_ToCString(ctx, opt_ssl_private_key);
   if(JS_IsString(opt_ssl_ca))
     info->client_ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
-}
-
-static int
-connect_client(struct lws_context* context, MinnetURL* url, BOOL ssl, BOOL raw, struct lws** p_wsi) {
-  struct lws_client_connect_info i;
-
-  memset(&i, 0, sizeof(i));
-
-  if(raw || !strcasecmp(url->protocol, "raw")) {
-    i.method = "RAW";
-    i.local_protocol_name = "raw";
-  } else if(!strncmp(url->protocol, "http", 4)) {
-    i.alpn = "http/1.1";
-    i.method = "GET";
-    i.protocol = "http";
-  } else if(!strncmp(url->protocol, "ws", 2)) {
-    i.protocol = "ws";
-  }
-
-  i.context = context;
-  i.port = url->port;
-  i.address = url->host;
-
-  if(ssl) {
-    i.ssl_connection = LCCSCF_USE_SSL | LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;
-    i.ssl_connection |= LCCSCF_ALLOW_SELFSIGNED;
-    i.ssl_connection |= LCCSCF_ALLOW_INSECURE;
-  }
-
-  i.path = url->location;
-  i.host = i.address;
-  i.origin = i.address;
-  i.pwsi = p_wsi;
-
-  url->host = 0;
-  url->location = 0;
-
-  return !lws_client_connect_via_info(&i);
-}
+} 
 
 JSValue
-minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct lws_context* context = 0;
   struct lws_context_creation_info info;
   int n = 0;
   JSValue ret = JS_NULL;
   MinnetURL url;
-  BOOL raw = FALSE, ssl = FALSE;
+  int raw = -1, ssl = -1;
   JSValue options = argv[0];
   struct lws* wsi = 0;
 
@@ -126,6 +89,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
     if(JS_IsString(opt_protocol))
       protocol = JS_ToCString(ctx, opt_protocol);
+
     host = JS_ToCString(ctx, opt_host);
 
     if(JS_IsString(opt_path))
@@ -168,8 +132,15 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       return JS_ThrowInternalError(ctx, "minnet-client: libwebsockets init failed");
     }
   }
+  if(url.protocol) {
+    if(ssl == -1)
+      ssl = !strcmp(url.protocol, "wss") || !strcmp(url.protocol, "https");
 
-  connect_client(context, &url, !strcmp(url.protocol, "wss") || !strcmp(url.protocol, "https") || ssl, !strcasecmp(url.protocol, "raw") || raw, &wsi);
+    if(raw == -1)
+      raw = !strcasecmp(url.protocol, "raw");
+  }
+
+  url_connect( &url,context,  &wsi);
 
   minnet_exception = FALSE;
 

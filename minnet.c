@@ -115,54 +115,6 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return ret;
 }
 
-MinnetURL
-url_init(JSContext* ctx, const char* protocol, const char* host, uint16_t port, const char* location) {
-  MinnetURL url;
-  url.protocol = protocol ? js_strdup(ctx, protocol) : 0;
-  url.host = host ? js_strdup(ctx, host) : 0;
-  url.port = port;
-  url.location = location ? js_strdup(ctx, location) : 0;
-  return url;
-}
-
-MinnetURL
-url_parse(JSContext* ctx, const char* url) {
-  MinnetURL ret = {0, 0, -1, 0};
-  size_t i = 0, j;
-  char* end;
-  if((end = strstr(url, "://"))) {
-    i = end - url;
-    ret.protocol = js_strndup(ctx, url, i);
-    i += 3;
-  }
-  for(j = i; url[j]; j++) {
-    if(url[j] == ':' || url[j] == '/')
-      break;
-  }
-  if(j - i)
-    ret.host = js_strndup(ctx, &url[i], j - i);
-  i = url[j] ? j + 1 : j;
-  if(url[j] == ':') {
-    unsigned long n = strtoul(&url[i], &end, 10);
-    if((j = end - url) > i)
-      ret.port = n;
-  }
-  if(url[j])
-    ret.location = js_strdup(ctx, &url[j]);
-  return ret;
-}
-
-void
-url_free(JSContext* ctx, MinnetURL* url) {
-  if(url->protocol)
-    js_free(ctx, url->protocol);
-  if(url->host)
-    js_free(ctx, url->host);
-  if(url->location)
-    js_free(ctx, url->location);
-  memset(url, 0, sizeof(MinnetURL));
-}
-
 JSValue
 header_object(JSContext* ctx, const MinnetBuffer* buffer) {
   JSValue ret = JS_NewObject(ctx);
