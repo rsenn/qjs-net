@@ -98,3 +98,94 @@ url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
 
   return !lws_client_connect_via_info(&i);
 }
+
+char*
+url_path(const MinnetURL* url, JSContext* ctx) {
+  const char* query;
+  if((query = url_query_string(url)))
+    return js_strndup(ctx, url->path, query - url->path);
+  return js_strdup(ctx, url->path);
+}
+
+const char*
+url_query_string(const MinnetURL* url) {
+
+  const char* p;
+
+  for(p = url->path; *p; p++) {
+    if(*p == '\\') {
+      ++p;
+      continue;
+    }
+    if(*p == '?')
+      break;
+  }
+  return *p ? p : 0;
+}
+
+JSValue
+url_query_object(const MinnetURL* url, JSContext* ctx) {
+  const char *p, *q;
+  JSValue ret = JS_NewObject(ctx);
+
+  if((q = url_query(url))) {
+    size_t i, n = strlen(q);
+    for(i = 0, p = q; i <= n; i++, q++) {
+      if(*q == '\\') {
+        ++q;
+        continue;
+      }
+      if(*p == '&' || *p == '\0') {
+        size_t namelen, len = p - q;
+        char *value, *decoded;
+        JSAtom atom;
+        if((value = strchr(q, '='))) {
+          namelen = value - q;
+          ++value;
+          atom = JS_NewAtomLen(ctx, q, namelen);
+          decoded = js_strndup(ctx, value, p - value);
+          lws_urldecode(decoded, decoded, p - value + 1);
+          JS_SetProperty(ctx, ret, atom, JS_NewString(ctx, decoded));
+          JS_FreeAtom(ctx, atom);
+        }
+      }
+    }
+  }
+  return ret;
+}
+
+char*
+url_query_from(JSContext* ctx, JSValueConst obj) {
+  JSPropertyEnum* tab;
+  uint32_t tab_len, i;
+  DynBuf out;
+  dbuf_init2(&out, ctx, (DynBufReallocFunc*)js_realloc);
+
+  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
+    return -1;
+
+  for(i = 0; i < tab_len; i++) {
+    JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);
+    size_t len;
+    const char *prop, *str;
+
+    str = JS_ToCStringLen(ctx, &len, value);
+    prop = JS_AtomToCString(ctx, tab[i].atom);
+
+    dbuf_putstr(&out, prop);
+    dbuf_put(&out, "=", 1);
+    dbuf_realloc(&out, out.size + (len * 3) + 1);
+
+    lws_urlencode(&out.buf[out.size], str, out.allocated_size - out.size);
+    out.size += strlen(&out.buf[out.size]);
+
+    JS_FreeCString(ctx, prop);
+    JS_FreeCString(ctx, str);
+
+    JS_FreeValue(ctx, value);
+  }
+
+js_free(ctx, tab);
+
+  return out.buf;
+}
