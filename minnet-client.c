@@ -265,18 +265,17 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_RX: {
       if((client->cb_message.ctx = ctx)) {
         MinnetWebsocket* ws = minnet_ws_data2(ctx, cli->ws_obj);
-        JSValue ws_obj = minnet_ws_object(ctx, wsi);
+
         JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
-        JSValue cb_argv[2] = {ws_obj, msg};
+        JSValue cb_argv[2] = {cli->ws_obj, msg};
         minnet_emit(&client->cb_message, 2, cb_argv);
       }
       return 0;
     }
     case LWS_CALLBACK_CLIENT_RECEIVE_PONG: {
       if((client->cb_pong.ctx = ctx)) {
-        JSValue ws_obj = minnet_ws_object(client->cb_pong.ctx, wsi);
         JSValue data = JS_NewArrayBufferCopy(client->cb_pong.ctx, in, len);
-        JSValue cb_argv[2] = {ws_obj, data};
+        JSValue cb_argv[2] = {cli->ws_obj, data};
         minnet_emit(&client->cb_pong, 2, cb_argv);
       }
       break;
