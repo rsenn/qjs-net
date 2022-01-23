@@ -125,6 +125,28 @@ minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 }
 
 static JSValue
+minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  MinnetResponse *res, *clone;
+
+  if(!(res = minnet_response_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  if(!(clone = response_new(ctx)))
+    return JS_ThrowOutOfMemory(ctx);
+
+  clone->read_only = res->read_only;
+  clone->status = res->status;
+  clone->read_only = res->read_only;
+  clone->url = js_strdup(ctx, res->url);
+  clone->type = js_strdup(ctx, res->type);
+
+  buffer_clone(&clone->headers, &res->headers, ctx);
+  buffer_clone(&clone->body, &res->body, ctx);
+
+  return minnet_response_wrap(ctx, clone);
+}
+
+static JSValue
 minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
@@ -337,6 +359,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_DEF("arrayBuffer", 0, minnet_response_buffer),
     JS_CFUNC_DEF("json", 0, minnet_response_json),
     JS_CFUNC_DEF("text", 0, minnet_response_text),
+    JS_CFUNC_DEF("clone", 0, minnet_response_clone),
     // JS_CFUNC_DEF("header", 2, minnet_response_header),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("ok", minnet_response_get, minnet_response_set, RESPONSE_OK, JS_PROP_ENUMERABLE),

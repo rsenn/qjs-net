@@ -133,7 +133,7 @@ function main(...args) {
       let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
       msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 
-      if(!/POLL/.test(msg) && /MINNET/.test(p)) if (params.debug && /client/.test(msg)) console.log(p.padEnd(8), msg);
+      if(!/POLL/.test(msg) && /MINNET/.test(p)) if (/*params.debug &&*/ /(client|http|read|write)/i.test(msg)) console.log(p.padEnd(8), msg);
     });
 
     const repl = new CLI(url);
@@ -170,8 +170,16 @@ function main(...args) {
         //repl.exit(status != 1000 ? 1 : 0);
       },
       onHttp(req, rsp) {
-        console.log('onHttp', { req, rsp });
-        rsp = rsp.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+                            let rsp2 = rsp.clone();
+console.log('onHttp', { req, rsp ,rsp2});
+ let text =rsp.text();
+ //let json =rsp2.json();
+
+        text = text.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        console.log('onHttp', { text });
+
+        let buffer =rsp.arrayBuffer();
+                console.log('onHttp', { buffer });
       },
       onFd(fd, rd, wr) {
         //console.log('onFd', fd, rd, wr);

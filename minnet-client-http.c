@@ -140,7 +140,6 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       char buffer[1024 + LWS_PRE];
       char* buf = buffer + LWS_PRE;
       int ret, len = sizeof(buffer) - LWS_PRE;
-      // lwsl_user("http#1  " FGC(171, "%-25s") " fd=%d buf=%p len=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), buf, len);
       ret = lws_http_client_read(wsi, &buf, &len);
       lwsl_user("http-read " FGC(171, "%-25s") " fd=%d ret=%d buf=%p len=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), ret, buf, len);
       if(ret)
@@ -154,8 +153,12 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ: {
-      // lwsl_user("http#read  " FGC(171, "%-25s") " " FGC(226, "fd=%d") " " FGC(87, "len=%zu") " " FGC(125, "in='%.*s'") "\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), len,
-      // (int)MIN(len, 32), (char*)in);
+      lwsl_user("http#read  " FGC(171, "%-25s") " " FGC(226, "fd=%d") " " FGC(87, "len=%zu") " " FGC(125, "in='%.*s'") "\n",
+                lws_callback_name(reason) + 13,
+                lws_get_socket_fd(wsi),
+                len,
+                (int)MIN(len, 32),
+                (char*)in);
       MinnetResponse* resp = minnet_response_data2(ctx, cli->resp_obj);
       buffer_append(&resp->body, in, len, ctx);
       return 0;
@@ -167,11 +170,11 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       in = buffer_BEGIN(&resp->body);
       len = buffer_WRITE(&resp->body);
 
-      if((client->cb_message.ctx = ctx)) {
+      if((client->cb_http.ctx = ctx)) {
         MinnetWebsocket* ws = minnet_ws_data2(ctx, cli->ws_obj);
         JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
-        JSValue cb_argv[3] = {cli->ws_obj, cli->req_obj, msg};
-        minnet_emit(&client->cb_message, 3, cb_argv);
+        JSValue cb_argv[3] = {cli->req_obj, cli->resp_obj, msg};
+        minnet_emit(&client->cb_http, 3, cb_argv);
       }
       return 0;
     }

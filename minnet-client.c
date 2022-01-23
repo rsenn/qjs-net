@@ -123,7 +123,14 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   url_info(&client.url, &client.info);
   client.info.pwsi = &wsi;
   client.info.context = context;
-  client.info.method = method_str;
+
+  switch(protocol_number(client.url.protocol)) {
+    case PROTOCOL_HTTP:
+    case PROTOCOL_HTTPS: {
+      client.info.method = method_str;
+      break;
+    }
+  }
 
   printf("METHOD: %s\n", method_str);
 
@@ -234,17 +241,14 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
           cli->ws_obj = minnet_ws_object(ctx, wsi);
 
         cli->connected = TRUE;
-        cli->req_obj = minnet_request_wrap(ctx, client->request);
+        if(!minnet_ws_data(cli->req_obj))
+          cli->req_obj = minnet_request_wrap(ctx, client->request);
 
         // lwsl_user("client   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
         minnet_emit(&client->cb_connect, 2, &cli->ws_obj);
 
         cli->resp_obj = minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
-
-        if(method_number(method) == METHOD_POST) {
-          lws_client_http_body_pending(wsi, 1);
-          lws_callback_on_writable(wsi);
-        }
+        /**/
       }
       break;
     }

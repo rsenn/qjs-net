@@ -54,6 +54,17 @@ buffer_grow(struct byte_buffer* buf, size_t size, JSContext* ctx) {
   return buffer_realloc(buf, (buf->end - buf->start) + size, ctx);
 }
 
+static inline BOOL
+buffer_clone(struct byte_buffer* buf, const struct byte_buffer* other, JSContext* ctx) {
+  if(!buffer_alloc(buf, buffer_SIZE(other), ctx))
+    return FALSE;
+  memcpy(buf->start, other->start, buffer_WRITE(other));
+
+  buf->read = buf->start + buffer_READ(other);
+  buf->write = buf->start + buffer_WRITE(other);
+  return TRUE;
+}
+
 static inline uint8_t*
 buffer_skip(struct byte_buffer* buf, size_t size) {
   assert(buf->read + size <= buf->write);
