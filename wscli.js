@@ -142,7 +142,10 @@ function main(...args) {
       sslCert,
       sslPrivateKey,
       method,
+      body: '{ "test": 1234 }',
       headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': 1000,
         //'Connection': 'keep-alive',
        // Range: 'bytes=10-'
         //    'accept-encoding': 'br gzip',

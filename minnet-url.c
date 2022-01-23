@@ -160,7 +160,6 @@ url_info(const MinnetURL* url, struct lws_client_connect_info* info) {
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
       info->alpn = "http/1.1";
-      info->method = "GET";
       info->protocol = "http";
       break;
     }
@@ -187,10 +186,10 @@ url_info(const MinnetURL* url, struct lws_client_connect_info* info) {
 
   info->path = url->path ? url->path : "/";
   info->host = info->address;
-  // info->origin = info->address;
+  info->origin = info->address;
 }
 
-int
+/*int
 url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
   struct lws_client_connect_info i;
 
@@ -200,7 +199,7 @@ url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
   i.pwsi = p_wsi;
 
   return !lws_client_connect_via_info(&i);
-}
+}*/
 
 char*
 url_location(const MinnetURL* url, JSContext* ctx) {

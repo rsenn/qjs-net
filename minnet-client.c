@@ -208,10 +208,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       *(uint8_t**)in = buf.write;
       len = buf.end - buf.write;
 
-      /*if(!lws_http_is_redirected_to_get(wsi)) {
-        lws_client_http_body_pending(wsi, 1);
-        lws_callback_on_writable(wsi);
-      }*/
+      /* if(!lws_http_is_redirected_to_get(wsi)) {
+         lws_client_http_body_pending(wsi, 1);
+         lws_callback_on_writable(wsi);
+       }*/
 
       break;
     }
@@ -267,12 +267,16 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       break;
     }
     case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
-    case LWS_CALLBACK_HTTP_WRITEABLE: n = LWS_WRITE_HTTP; n = LWS_WRITE_HTTP_FINAL;
+    case LWS_CALLBACK_HTTP_WRITEABLE: {
+
+      n = LWS_WRITE_HTTP; // n = LWS_WRITE_HTTP_FINAL;
+    }
 
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
       if(lws_http_is_redirected_to_get(wsi))
         break;
+
       // lws_callback_on_writable(wsi);
       break;
     }
