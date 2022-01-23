@@ -4,6 +4,7 @@
 #include "minnet-response.h"
 #include "minnet-websocket.h"
 #include "minnet-stream.h"
+#include "minnet-url.h"
 #include "jsutils.h"
 #include "buffer.h"
 #include <assert.h>
@@ -427,6 +428,16 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
 
   if(m)
     JS_SetModuleExport(ctx, m, "Stream", minnet_stream_ctor);
+
+  // Add class URL
+  JS_NewClassID(&minnet_url_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_url_class_id, &minnet_url_class);
+  minnet_url_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_url_proto, minnet_url_proto_funcs, minnet_url_proto_funcs_size);
+
+  minnet_url_ctor = JS_NewCFunction2(ctx, minnet_url_constructor, "MinnetURL", 0, JS_CFUNC_constructor, 0);
+
+  JS_SetConstructor(ctx, minnet_url_ctor, minnet_url_proto);
 
   // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);

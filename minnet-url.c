@@ -1,13 +1,14 @@
 #include "minnet-url.h"
+#include <quickjs.h>
 #include <cutils.h>
 
 MinnetURL
 url_init(JSContext* ctx, const char* protocol, const char* host, uint16_t port, const char* path) {
   MinnetURL url;
-  url.protocol = protocol ? js_strdup(ctx, protocol) : 0;
-  url.host = host ? js_strdup(ctx, host) : 0;
+  url.protocol = js_strdup(ctx, protocol ? protocol : "ws");
+  url.host = js_strdup(ctx, host ? host : "0.0.0.0");
   url.port = port;
-  url.path = path ? js_strdup(ctx, path) : 0;
+  url.path = js_strdup(ctx, path && *path ? path : "/");
   return url;
 }
 
@@ -40,9 +41,12 @@ url_parse(JSContext* ctx, const char* url) {
 
 char*
 url_format(const MinnetURL* url, JSContext* ctx) {
-  size_t len = strlen(url->protocol) + 3 + strlen(url->host) + 1 + 5 + 1 + strlen(url->path) + 1;
-  char* buf = js_malloc(ctx, len);
-  snprintf(buf, len, "%s://%s:%u/%s", url->protocol, url->host, url->port, url->path);
+  size_t len = strlen(url->protocol) + 3 + strlen(url->host) + 1 + 5 + strlen(url->path) + 1;
+  char* buf;
+
+  if((buf = js_malloc(ctx, len)))
+    sprintf(buf, "%s://%s:%u%s", url->protocol, url->host, url->port % 0xffff, url->path);
+
   return buf;
 }
 
@@ -72,7 +76,7 @@ url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
     i.method = "GET";
     i.protocol = "http";
   } else {
-    i.protocol = "ws";
+    i.protocol = "url";
   }
 
   if(url->protocol && !strncmp(url->protocol, "https", 5) && !strncmp(url->protocol, "wss", 3))
@@ -100,7 +104,7 @@ url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
 }
 
 char*
-url_path(const MinnetURL* url, JSContext* ctx) {
+url_location(const MinnetURL* url, JSContext* ctx) {
   const char* query;
   if((query = url_query_string(url)))
     return js_strndup(ctx, url->path, query - url->path);
@@ -128,7 +132,7 @@ url_query_object(const MinnetURL* url, JSContext* ctx) {
   const char *p, *q;
   JSValue ret = JS_NewObject(ctx);
 
-  if((q = url_query(url))) {
+  if((q = url_query_string(url))) {
     size_t i, n = strlen(q);
     for(i = 0, p = q; i <= n; i++, q++) {
       if(*q == '\\') {
@@ -185,7 +189,115 @@ url_query_from(JSContext* ctx, JSValueConst obj) {
     JS_FreeValue(ctx, value);
   }
 
-js_free(ctx, tab);
+  js_free(ctx, tab);
 
   return out.buf;
 }
+
+THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;
+THREAD_LOCAL JSClassID minnet_url_class_id;
+
+enum { URL_PROTOCOL, URL_HOST, URL_PORT, URL_PATH };
+
+static JSValue
+minnet_url_new(JSContext* ctx, struct lws* wsi) {
+  MinnetURL* url;
+  JSValue url_obj = JS_NewObjectProtoClass(ctx, minnet_url_proto, minnet_url_class_id);
+
+  if(JS_IsException(url_obj))
+    return JS_EXCEPTION;
+
+  if(!(url = js_mallocz(ctx, sizeof(MinnetURL)))) {
+    JS_FreeValue(ctx, url_obj);
+    return JS_EXCEPTION;
+  }
+
+  url->protocol = 0;
+  url->host = 0;
+  url->port = 0;
+  url->path = 0;
+
+  JS_SetOpaque(url_obj, url);
+
+  return url_obj;
+}
+
+static JSValue
+minnet_url_getter(JSContext* ctx, JSValueConst this_val, int magic) {
+  MinnetURL* url;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(url = minnet_url_data(this_val)))
+    return JS_UNDEFINED;
+
+  switch(magic) {}
+  return ret;
+}
+
+static JSValue
+minnet_url_setter(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+  MinnetURL* url;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(url = JS_GetOpaque2(ctx, this_val, minnet_url_class_id)))
+    return JS_EXCEPTION;
+
+  switch(magic) {}
+  return ret;
+}
+
+JSValue
+minnet_url_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+  JSValue proto, obj;
+  MinnetURL* url;
+
+  if(!(url = js_mallocz(ctx, sizeof(MinnetURL))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  /* using new_target to get the prototype is necessary when the class is extended. */
+  proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+  if(JS_IsException(proto))
+    proto = JS_DupValue(ctx, minnet_url_proto);
+
+  obj = JS_NewObjectProtoClass(ctx, proto, minnet_url_class_id);
+  JS_FreeValue(ctx, proto);
+  if(JS_IsException(obj))
+    goto fail;
+
+  url->protocol = 0;
+  url->host = 0;
+  url->port = 0;
+  url->path = 0;
+
+  JS_SetOpaque(obj, url);
+  return obj;
+
+fail:
+  js_free(ctx, url);
+  JS_FreeValue(ctx, obj);
+  return JS_EXCEPTION;
+}
+
+static void
+minnet_url_finalizer(JSRuntime* rt, JSValue val) {
+  MinnetURL* url = JS_GetOpaque(val, minnet_url_class_id);
+  if(url) {
+    js_free_rt(rt, url);
+  }
+}
+
+JSClassDef minnet_url_class = {
+    "MinnetURL",
+    .finalizer = minnet_url_finalizer,
+};
+
+const JSCFunctionListEntry minnet_url_proto_funcs[] = {
+    JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_url_getter, minnet_url_setter, URL_PROTOCOL, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("host", minnet_url_getter, minnet_url_setter, URL_HOST, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_url_getter, minnet_url_setter, URL_PORT, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_url_getter, minnet_url_setter, URL_PATH, JS_PROP_ENUMERABLE),
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetURL", JS_PROP_CONFIGURABLE),
+
+};
+
+const size_t minnet_url_proto_funcs_size = countof(minnet_url_proto_funcs);
