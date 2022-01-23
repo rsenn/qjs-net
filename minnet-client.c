@@ -290,8 +290,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         MinnetClient* client = lws_context_user(lwsctx);
 
         cli->req_obj = minnet_request_wrap(ctx, client->request);
-
-        cli->resp_obj = minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
+        cli->resp_obj = JS_UNDEFINED; //minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
       }
       break;
     }
