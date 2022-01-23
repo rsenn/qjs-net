@@ -22,15 +22,12 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL: {
-      // struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-
       break;
     }
     case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL: {
       break;
     }
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
-
       MinnetBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
       // buf.start = scan_backwards(buf.start, '\0');
@@ -50,18 +47,14 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP: {
-      if((client->cb_close.ctx = ctx)) {
-        struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-        int err = opaque ? opaque->error : 0;
-        JSValueConst cb_argv[] = {
-            minnet_ws_object(ctx, wsi),
-            JS_NewInt32(ctx, err),
-        };
-        minnet_emit(&client->cb_close, 2, cb_argv);
-        JS_FreeValue(ctx, cb_argv[0]);
-        JS_FreeValue(ctx, cb_argv[1]); /*
-         JS_FreeValue(ctx, cb_argv[2]);
-         JS_FreeValue(ctx, cb_argv[3]);*/
+      if(opaque->status < CLOSED) {
+        opaque->status = CLOSED;
+        if((client->cb_close.ctx = ctx)) {
+          JSValueConst cb_argv[] = {JS_DupValue(ctx, sess->ws_obj), JS_NewInt32(ctx, opaque->error)};
+          minnet_emit(&client->cb_close, countof(cb_argv), cb_argv);
+          JS_FreeValue(ctx, cb_argv[0]);
+          JS_FreeValue(ctx, cb_argv[1]);
+        }
       }
       break;
     }

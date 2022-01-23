@@ -86,10 +86,7 @@ typedef struct ws_callback {
 struct proxy_connection;
 struct http_mount;
 
-typedef struct __attribute__((packed)) session_data {
-  int serial;
-  //  MinnetStatus status : 8;
-  BOOL h2 : 1;
+typedef struct /* __attribute__((packed)) */ session_data {
   JSValue ws_obj;
   union {
     struct {
@@ -101,6 +98,8 @@ typedef struct __attribute__((packed)) session_data {
   struct http_mount* mount;
   struct proxy_connection* proxy;
   JSValue generator, next;
+  int serial;
+  BOOL h2 : 1;
   int64_t written;
 } MinnetSession;
 

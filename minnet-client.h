@@ -6,7 +6,7 @@
 #include "minnet-url.h"
 #include "minnet-request.h"
 
-typedef struct __attribute__((packed)) {
+typedef struct /* __attribute__((packed))*/ {
   JSValue headers, body, next;
   MinnetURL url;
   struct lws_client_connect_info info;

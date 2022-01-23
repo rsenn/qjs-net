@@ -5,6 +5,8 @@
 #include "minnet-server-http.h"
 #include <strings.h>
 
+int64_t ws_serial = 0;
+
 THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
 THREAD_LOCAL JSClassID minnet_ws_class_id;
 
@@ -35,27 +37,27 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
 
   opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, ws_obj));
   opaque->ws = ws;
+  opaque->status = 0;
 
-  // lws_set_opaque_user_data(wsi, opaque);
-  //  lws_set_opaque_user_data(wsi,ws);
+  ws->opaque = opaque;
 
   return ws_obj;
 }
 
 MinnetWebsocket*
-minnet_ws_from_wsi(struct lws* wsi) {
+ws_from_wsi(struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = lws_get_opaque_user_data(wsi)))
-    return opaque->ws ? opaque->ws : JS_GetOpaque(JS_MKPTR(JS_TAG_OBJECT, opaque->obj), minnet_ws_class_id);
+    return opaque->ws ? opaque->ws : minnet_ws_data(JS_MKPTR(JS_TAG_OBJECT, opaque->obj));
 
   return 0;
 }
 
 MinnetWebsocket*
-lws_ws(struct lws* wsi, JSContext* ctx) {
+ws_from_wsi2(struct lws* wsi, JSContext* ctx) {
   JSValue ws_obj = minnet_ws_object(ctx, wsi);
-  return JS_GetOpaque(ws_obj, minnet_ws_class_id);
+  return minnet_ws_data(ws_obj);
 }
 
 JSValue
@@ -64,16 +66,15 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
 
   if((opaque = lws_get_opaque_user_data(wsi))) {
     JSValue ws_obj;
-    MinnetWebsocket* ws;
-    if(opaque->obj) {
+    if(opaque->obj && opaque->ws) {
       ws_obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, opaque->obj));
-      ws = JS_GetOpaque2(ctx, ws_obj, minnet_ws_class_id);
-      if(!ws)
-        return JS_EXCEPTION;
-      ws->ref_count++;
+      /*      if(!(opaque->ws = minnet_ws_data2(ctx, ws_obj)))
+              return JS_EXCEPTION;*/
+      opaque->ws->ref_count++;
     } else {
       ws_obj = minnet_ws_wrap(ctx, wsi);
       opaque->obj = JS_VALUE_GET_OBJ(ws_obj);
+      opaque->ws = minnet_ws_data(ws_obj);
     }
     return ws_obj;
   }
@@ -83,7 +84,6 @@ minnet_ws_object(JSContext* ctx, struct lws* wsi) {
 
 JSValue
 minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
-  struct wsi_opaque_user_data* opaque;
   MinnetWebsocket* ws;
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
 
@@ -99,15 +99,12 @@ minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
 
   JS_SetOpaque(ret, ws);
 
-  if(!(opaque = lws_get_opaque_user_data(wsi))) {
-    opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
-    lws_set_opaque_user_data(wsi, opaque);
-  }
+  ws->opaque = lws_opaque(wsi, ctx);
 
-  assert(!opaque->ws);
+  // JSValueConst ws_obj = JS_DupValue(ctx, ret);
 
-  opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, ret));
-  opaque->ws = ws;
+  ws->opaque->obj = JS_VALUE_GET_OBJ(ret);
+  ws->opaque->ws = ws;
 
   return ret;
 }
@@ -133,7 +130,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
   MinnetBuffer buffer = BUFFER_0();
   JSValue ret = JS_UNDEFINED;
 
-  if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
+  if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   m = buffer_fromvalue(&buffer, argv[0], ctx);
@@ -163,8 +160,9 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
 
-  if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
+  if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
+
   MinnetBuffer header = {0, 0, 0, 0, 0};
 
   switch(magic) {
@@ -223,7 +221,7 @@ minnet_ws_ping(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
   uint8_t* data;
   size_t len;
 
-  if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
+  if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   data = JS_GetArrayBuffer(ctx, &len, argv[0]);
@@ -249,7 +247,7 @@ minnet_ws_pong(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
   uint8_t* data;
   size_t len;
 
-  if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
+  if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   data = JS_GetArrayBuffer(ctx, &len, argv[0]);
@@ -365,11 +363,8 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case WEBSOCKET_READYSTATE: {
-      struct wsi_opaque_user_data* opaque;
-
-      if((opaque = ((struct wsi_opaque_user_data*)lws_get_opaque_user_data(ws->lwsi))))
-        ret = JS_NewUint32(ctx, opaque->status);
-
+      if(ws->opaque)
+        ret = JS_NewUint32(ctx, ws->opaque->status);
       break;
     }
   }
@@ -380,7 +375,8 @@ static JSValue
 minnet_ws_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
-  if(!(ws = JS_GetOpaque2(ctx, this_val, minnet_ws_class_id)))
+
+  if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   switch(magic) {
@@ -440,8 +436,8 @@ fail:
 
 static void
 minnet_ws_finalizer(JSRuntime* rt, JSValue val) {
-  MinnetWebsocket* ws = JS_GetOpaque(val, minnet_ws_class_id);
-  if(ws) {
+  MinnetWebsocket* ws;
+  if((ws = minnet_ws_data(val))) {
     if(--ws->ref_count == 0)
       js_free_rt(rt, ws);
   }

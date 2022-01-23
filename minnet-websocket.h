@@ -7,6 +7,7 @@
 struct lws;
 struct http_request;
 struct http_response;
+struct wsi_opaque_user_data;
 
 /* class WebSocket */
 
@@ -15,10 +16,13 @@ typedef struct socket {
   struct lws* lwsi;
   JSValue handlers[2];
   BOOL binary;
+  struct wsi_opaque_user_data* opaque;
 } MinnetWebsocket;
 
-MinnetWebsocket* minnet_ws_from_wsi(struct lws*);
-MinnetWebsocket* lws_ws(struct lws*, JSContext* ctx);
+extern int64_t ws_serial;
+
+MinnetWebsocket* ws_from_wsi(struct lws*);
+MinnetWebsocket* ws_from_wsi2(struct lws*, JSContext* ctx);
 JSValue minnet_ws_object(JSContext*, struct lws* wsi);
 JSValue minnet_ws_wrap(JSContext*, struct lws* wsi);
 void minnet_ws_sslcert(JSContext*, struct lws_context_creation_info* info, JSValue options);
@@ -30,30 +34,42 @@ extern JSClassDef minnet_ws_class;
 extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_static_funcs[], minnet_ws_proto_defs[];
 extern const size_t minnet_ws_proto_funcs_size, minnet_ws_static_funcs_size, minnet_ws_proto_defs_size;
 
-struct __attribute__((packed)) wsi_opaque_user_data {
+struct wsi_opaque_user_data {
   JSObject* obj;
   struct socket* ws;
   struct http_request* req;
   int64_t serial;
-  MinnetStatus status : 8;
+  MinnetStatus status;
   int error;
   MinnetPollFd pfd;
 };
 
 static inline struct wsi_opaque_user_data*
 lws_opaque(struct lws* wsi, JSContext* ctx) {
-  static int64_t opaque_serial;
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = lws_get_opaque_user_data(wsi)))
     return opaque;
 
   opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
-  opaque->serial = ++opaque_serial;
+  opaque->serial = ++ws_serial;
+  opaque->status = CONNECTING;
 
   lws_set_opaque_user_data(wsi, opaque);
   return opaque;
 }
+
+/*static inline struct wsi_opaque_user_data*
+opaque(struct JSContext* ctx) {
+  struct wsi_opaque_user_data* opaque;
+
+  if((opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data)))) {
+    opaque->serial = ++ws_serial;
+    opaque->status = CONNECTING;
+    opaque->error = 0;
+  }
+  return opaque;
+}*/
 
 static inline int
 ws_fd(const MinnetWebsocket* ws) {
