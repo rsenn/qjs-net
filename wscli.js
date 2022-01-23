@@ -160,21 +160,21 @@ function main(...args) {
         connections.add(ws);
         console.log('onConnect', { ws, req });
 
-        repl = new CLI(url);
-        /* try {
+        try {
+          repl = new CLI(url);
           repl.printStatus(`Connected to ${url}`, true);
         } catch(err) {
           console.log('error:', err.message);
-        }*/
+        }
       },
       onClose(ws, status, reason, error) {
         connections.delete(ws);
-        console.log('onClose', { ws, status, reason, error });
-        //repl.exit(status != 1000 ? 1 : 0);
+        repl.printStatus(`Closed (${status}): ${reason}`);
 
         os.setTimeout(() => {
-          console.log('ws', ws);
-        }, 1000);
+          //console.log('ws', ws);
+          repl.exit(status != 1000 ? 1 : 0);
+        }, 100);
       },
       onHttp(req, resp) {
         console.log('onHttp', { req, resp });
