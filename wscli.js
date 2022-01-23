@@ -142,7 +142,7 @@ function main(...args) {
       sslCert,
       sslPrivateKey,
       method,
-      body: '{ "test": 1234 }',
+      body: (function *() { yield '{ "test": 1234 }'; })(),
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': 1000,

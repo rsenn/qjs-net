@@ -5,6 +5,7 @@
 #include "minnet-response.h"
 #include "minnet-url.h"
 #include "minnet.h"
+#include "jsutils.h"
 #include <quickjs-libc.h>
 #include <strings.h>
 
@@ -253,10 +254,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       MinnetClient* client = lws_context_user(lwsctx);
 
       if(cli && !cli->connected) {
-const char* method = client->info.method;
+        const char* method = client->info.method;
 
-if(!minnet_ws_data(cli->ws_obj))
-        cli->ws_obj = minnet_ws_object(ctx, wsi);
+        if(!minnet_ws_data(cli->ws_obj))
+          cli->ws_obj = minnet_ws_object(ctx, wsi);
 
         cli->connected = TRUE;
         cli->req_obj = minnet_request_wrap(ctx, client->request);
@@ -264,24 +265,66 @@ if(!minnet_ws_data(cli->ws_obj))
         // lwsl_user("client   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
         minnet_emit(&client_cb_connect, 2, &cli->ws_obj);
 
-         cli->resp_obj = minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
+        cli->resp_obj = minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
 
-
-        if(method_number(method) == METHOD_POST)
+        if(method_number(method) == METHOD_POST) {
+          lws_client_http_body_pending(wsi, 1);
           lws_callback_on_writable(wsi);
+        }
       }
       break;
     }
     case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
     case LWS_CALLBACK_HTTP_WRITEABLE: {
+      JSValue value, next = JS_NULL;
+      BOOL done = FALSE;
+      ssize_t size, r, i;
+      MinnetRequest* req = client->request;
+      MinnetBuffer buf;
 
-      n = LWS_WRITE_HTTP; // n = LWS_WRITE_HTTP_FINAL;
+      buffer_alloc(&req->body, 1024, ctx);
+
+      if(lws_http_is_redirected_to_get(wsi))
+        break;
+
+      while(!done) {
+        value = js_iterator_next(ctx, client->body, &next, &done, 0, 0);
+
+        // printf("\x1b[2K\rdone %s\n", done ? "TRUE" : "FALSE");
+        // printf("\x1b[2K\ryielded %s\n", JS_ToCString(ctx, value));
+
+        if(!js_is_nullish(value)) {
+          JSBuffer b = js_buffer_from(ctx, value);
+          printf("\x1b[2K\ryielded %p %zu\n", b.data, b.size);
+
+          //if(lws_client_http_multipart(wsi, "text", NULL, NULL, &buf.write, buf.end)) return -1;
+
+          // if(lws_client_http_multipart(wsi, "text", NULL, NULL, &buf.write, buf.end)) return -1;
+
+          buffer_append(&buf, b.data, b.size, ctx);
+          printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_WRITE(&buf));
+          js_buffer_free(&b, ctx);
+        }
+      }
+
+      n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
+      size = buf.write - buf.start;
+
+      if((r = lws_write(wsi, buf.start, size, (enum lws_write_protocol)n)) != size)
+        return 1;
+
+      // req->body.read += r;
+
+      printf("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
+
+      if(n != LWS_WRITE_HTTP_FINAL)
+        lws_callback_on_writable(wsi);
+
+      return 0;
     }
 
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
-      if(lws_http_is_redirected_to_get(wsi))
-        break;
 
       // lws_callback_on_writable(wsi);
       break;

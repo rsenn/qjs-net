@@ -7,7 +7,7 @@
 #include "minnet-request.h"
 
 typedef struct {
-  JSValue headers, body;
+  JSValue headers, body, next;
   MinnetURL url;
   struct lws_client_connect_info info;
   struct http_request* request;
