@@ -174,11 +174,10 @@ scan_backwards(uint8_t* ptr, uint8_t ch) {
 
 static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  JSContext* ctx = minnet_client_ctx;
-  // uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetHttpMethod method = -1;
   MinnetSession* cli = user;
   MinnetClient* client = lws_context_user(lws_get_context(wsi));
+  JSContext* ctx = client->ctx;
   int n;
 
   lwsl_user("client " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
@@ -211,7 +210,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_CLOSE:
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      if((client->cb_close.ctx = ctx)) {
+      if(client->cb_close.ctx) {
         struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
         int err = opaque ? opaque->error : 0;
         JSValueConst cb_argv[] = {
@@ -231,9 +230,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
     case LWS_CALLBACK_RAW_CONNECTED: {
-      struct lws_context* lwsctx = lws_get_context(wsi);
-      MinnetClient* client = lws_context_user(lwsctx);
-
+      /* struct lws_context* lwsctx = lws_get_context(wsi);
+       MinnetClient* client = lws_context_user(lwsctx);
+ */
       if(cli && !cli->connected) {
         const char* method = client->info.method;
 
