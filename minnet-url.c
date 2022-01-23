@@ -150,46 +150,53 @@ url_free_rt(MinnetURL* url, JSRuntime* rt) {
   memset(url, 0, sizeof(MinnetURL));
 }
 
-int
-url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
-  struct lws_client_connect_info i;
+void
+url_info(const MinnetURL* url, struct lws_client_connect_info* info) {
   MinnetProtocol proto = url->protocol ? protocol_number(url->protocol) : PROTOCOL_RAW;
 
-  memset(&i, 0, sizeof(i));
+  memset(info, 0, sizeof(struct lws_client_connect_info));
 
   switch(proto) {
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
-      i.alpn = "http/1.1";
-      i.method = "GET";
-      i.protocol = "http";
+      info->alpn = "http/1.1";
+      info->method = "GET";
+      info->protocol = "http";
       break;
     }
     case PROTOCOL_WS:
     case PROTOCOL_WSS: {
-      i.protocol = "ws";
+      info->protocol = "ws";
       break;
     }
     default: {
-      i.method = "RAW";
-      i.local_protocol_name = "raw";
+      info->method = "RAW";
+      info->local_protocol_name = "raw";
       break;
     }
   }
 
-  i.context = context;
-  i.port = url->port;
-  i.address = url->host;
+  info->port = url->port;
+  info->address = url->host;
 
   if(protocol_is_tls(proto)) {
-    i.ssl_connection = LCCSCF_USE_SSL | LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;
-    i.ssl_connection |= LCCSCF_ALLOW_SELFSIGNED;
-    i.ssl_connection |= LCCSCF_ALLOW_INSECURE;
+    info->ssl_connection = LCCSCF_USE_SSL | LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;
+    info->ssl_connection |= LCCSCF_ALLOW_SELFSIGNED;
+    info->ssl_connection |= LCCSCF_ALLOW_INSECURE;
   }
 
-  i.path = url->path ? url->path : "/";
-  i.host = i.address;
-  // i.origin = i.address;
+  info->path = url->path ? url->path : "/";
+  info->host = info->address;
+  // info->origin = info->address;
+}
+
+int
+url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
+  struct lws_client_connect_info i;
+
+  url_info(url, &i);
+
+  i.context = context;
   i.pwsi = p_wsi;
 
   return !lws_client_connect_via_info(&i);

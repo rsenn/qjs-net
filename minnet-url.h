@@ -31,6 +31,7 @@ void url_parse(MinnetURL*, const char*, JSContext*);
 char* url_format(const MinnetURL*, JSContext*);
 void url_free(MinnetURL*, JSContext*);
 void url_free_rt(MinnetURL*, JSRuntime*);
+void url_info(const MinnetURL*, struct lws_client_connect_info* info);
 int url_connect(MinnetURL*, struct lws_context*, struct lws**);
 char* url_location(const MinnetURL*, JSContext*);
 const char* url_query(const MinnetURL*);

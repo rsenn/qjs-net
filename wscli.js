@@ -114,13 +114,14 @@ function main(...args) {
       debug: [false, null, 'x'],
       address: [true, null, 'a'],
       port: [true, null, 'p'],
+      method: [true, null, 'm'],
       'ssl-cert': [true, null],
       'ssl-private-key': [true, null],
       '@': 'url,'
     },
     args
   );
-  const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key' } = params;
+  const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', method} = params;
   const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
@@ -139,7 +140,7 @@ function main(...args) {
       if(params.debug && /client/.test(msg)) console.log(p.padEnd(8), msg);
     });
 
-    const repl = new CLI(url);
+   // const repl = new CLI(url);
 
     const fn = [net.client, net.server][+listen];
     //console.log('createWS', {url, repl, fn });
@@ -148,7 +149,7 @@ function main(...args) {
       sslPrivateKey,
      headers: {
         //'Connection': 'keep-alive',
-    //    'Range': 'bytes=10-',
+   'Range': 'bytes=10-',
     //    'accept-encoding': 'br gzip',
       },
       ...callbacks,
@@ -164,7 +165,7 @@ function main(...args) {
       onClose(ws, status, reason, error) {
         connections.delete(ws);
         console.log('onClose', ws, status, reason, error);
-        repl.exit(status != 1000 ? 1 : 0);
+        //repl.exit(status != 1000 ? 1 : 0);
       },
       onHttp(req, rsp) {
         const { url, method, headers } = req;

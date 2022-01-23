@@ -124,7 +124,11 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     JS_FreeValue(ctx, value);
   }
 
-  url_connect(&client.url, context, &wsi);
+  url_info(&client.url, &client.info);
+  client.info.pwsi = &wsi;
+  client.info.context = context;
+
+  lws_client_connect_via_info(&client.info);
 
   minnet_exception = FALSE;
 
@@ -186,24 +190,30 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL: {
       // struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 
-      return 0;
+   break;
     }
     case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL:
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
-      return 0;
+      break;
     }
 
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
       MinnetBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
       // buf.start = scan_backwards(buf.start, '\0');
-
+if(!JS_IsUndefined(client->headers))
       if(headers_from(&buf, wsi, client->headers, ctx))
         return -1;
 
       *(uint8_t**)in = buf.write;
       len = buf.end - buf.write;
+
+      /*      if(!lws_http_is_redirected_to_get(wsi)) {
+              lws_client_http_body_pending(wsi, 1);
+              lws_callback_on_writable(wsi);
+            }
+      */
       break;
     }
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
@@ -337,7 +347,16 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     lwsl_notice("client  %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
 
   switch(reason) {
-    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
+      case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL:
+    case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL:
+    case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
+    case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP:
+    case LWS_CALLBACK_HTTP_WRITEABLE:
+    case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
+    case LWS_CALLBACK_RECEIVE_CLIENT_HTTP:
+    case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ:
+    case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
+  case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
     default: return 0;
