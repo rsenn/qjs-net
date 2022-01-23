@@ -253,7 +253,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       MinnetClient* client = lws_context_user(lwsctx);
 
       if(cli && !cli->connected) {
+const char* method = client->info.method;
 
+if(!minnet_ws_data(cli->ws_obj))
         cli->ws_obj = minnet_ws_object(ctx, wsi);
 
         cli->connected = TRUE;
@@ -262,7 +264,11 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         // lwsl_user("client   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
         minnet_emit(&client_cb_connect, 2, &cli->ws_obj);
 
-        cli->resp_obj = minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
+         cli->resp_obj = minnet_response_new(ctx, "/", /* method == METHOD_POST ? 201 :*/ 200, TRUE, "text/html");
+
+
+        if(method_number(method) == METHOD_POST)
+          lws_callback_on_writable(wsi);
       }
       break;
     }
