@@ -572,8 +572,7 @@ define(RPCClient.prototype, { [Symbol.toStringTag]: 'RPCClient' });
 export function RPCSocket(url, service = RPCServer, verbosity = 1) {
   if(!new.target) return new RPCSocket(url, service, verbosity);
 
-
-console.log('RPCSocket', {url,service,verbosity});
+  console.log('RPCSocket', { url, service, verbosity });
 
   // const DEBUG = DebugFlags();
   const instance = new.target ? this : new RPCSocket(url, service, verbosity);
