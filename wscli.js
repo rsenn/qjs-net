@@ -103,7 +103,7 @@ class CLI extends REPL {
 
 function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
-  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true } });
+  globalThis.console = new Console({ inspectOptions: { compact: 1, customInspect: true } });
   let params = GetOpt(
     {
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],

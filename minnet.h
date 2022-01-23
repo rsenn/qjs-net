@@ -92,7 +92,7 @@ typedef struct session_data {
   struct proxy_connection* proxy;
   int serial;
   JSValue generator, next;
-  BOOL connected : 1, responded : 1, closed : 1, h2 : 1, done;
+  BOOL h2 : 1;
   int64_t written;
 } MinnetSession;
 

@@ -8,6 +8,7 @@ int
 ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetSession* sess = user;
   JSContext* ctx = minnet_server.ctx;
+  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
 
   switch(reason) {
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
@@ -57,7 +58,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLOSED: {
-      if(!sess->closed) {
+      if(!opaque->closed) {
         JSContext* ctx = minnet_server.cb_close.ctx;
         JSValue why = JS_UNDEFINED;
         int code = -1;
@@ -80,7 +81,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         JS_FreeValue(minnet_server.ctx, why);
         JS_FreeValue(minnet_server.ctx, sess->ws_obj);
         sess->ws_obj = JS_NULL;
-        sess->closed = 1;
+        opaque->closed = 1;
       }
       return 0;
     }

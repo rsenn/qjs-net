@@ -529,7 +529,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
             serv->generator = gen;
             serv->next = JS_UNDEFINED;
-            serv->done = FALSE;
           } else {
 
             lwsl_user("http " FG("%d") "%-25s" NC " url=%s path=%s mountpoint=%.*s\n", 22 + (reason * 2), lws_callback_name(reason) + 13, url, path, (int)mountpoint_len, url);
@@ -556,42 +555,42 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_WRITEABLE: {
       MinnetBuffer b = BUFFER(buf);
       MinnetResponse* resp = minnet_response_data2(minnet_server.ctx, serv->resp_obj);
+      BOOL done = FALSE;
 
-      if(!serv->done)
-        lwsl_user("http " FG("%d") "%-25s" NC " wsi#%" PRId64 " h2=%u mnt=%s remain=%td type=%s url=%s",
-                  22 + (reason * 2),
-                  lws_callback_name(reason) + 13,
-                  opaque->serial,
-                  serv->h2,
-                  serv->mount ? serv->mount->mnt : 0,
-                  resp ? buffer_REMAIN(&resp->body) : 0,
-                  resp ? resp->type : 0,
-                  resp ? resp->url : 0);
+      lwsl_user("http-writeable " FG("%d") "%-25s" NC " wsi#%" PRId64 " h2=%u mnt=%s remain=%td type=%s url=%s",
+                22 + (reason * 2),
+                lws_callback_name(reason) + 13,
+                opaque->serial,
+                serv->h2,
+                serv->mount ? serv->mount->mnt : 0,
+                resp ? buffer_REMAIN(&resp->body) : 0,
+                resp ? resp->type : 0,
+                resp ? resp->url : 0);
 
       if(JS_IsObject(serv->generator)) {
         JSValue ret = JS_UNDEFINED;
 
-        while(!serv->done) {
-          ret = js_iterator_next(minnet_server.ctx, serv->generator, &serv->next, &serv->done, 0, 0);
+        while(!done) {
+          ret = js_iterator_next(minnet_server.ctx, serv->generator, &serv->next, &done, 0, 0);
 
           if(JS_IsException(ret)) {
             JSValue exception = JS_GetException(ctx);
             fprintf(stderr, "Exception: %s\n", JS_ToCString(ctx, exception));
-            serv->done = TRUE;
-          } else if(!serv->done) {
+            done = TRUE;
+          } else if(!done) {
             JSBuffer out = js_buffer_from(minnet_server.ctx, ret);
             lwsl_user("http " FG("%d") "%-25s" NC " size=%zu", 22 + (reason * 2), lws_callback_name(reason) + 13, out.size);
             buffer_append(&resp->body, out.data, out.size, ctx);
             js_buffer_free(&out, minnet_server.ctx);
           }
-          lwsl_user("http " FG("%d") "%-25s" NC " wsi#%" PRId64 " done=%i write=%zu", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, serv->done, buffer_WRITE(&resp->body));
+          lwsl_user("http " FG("%d") "%-25s" NC " wsi#%" PRId64 " done=%i write=%zu", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, done, buffer_WRITE(&resp->body));
 
-          if(!serv->responded) {
+          if(!opaque->responded) {
             if(http_server_respond(wsi, &b, resp, ctx)) {
               JS_FreeValue(ctx, ws_obj);
               return 1;
             }
-            serv->responded = TRUE;
+            opaque->responded = TRUE;
           }
         }
 
@@ -603,10 +602,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         break;
       } else {
-        serv->done = TRUE;
+        done = TRUE;
       }
 
-      http_server_writable(wsi, resp, serv->done);
+      http_server_writable(wsi, resp, done);
       break;
     }
 

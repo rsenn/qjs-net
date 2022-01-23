@@ -489,6 +489,7 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
 
   minnet_ws_ctor = JS_NewCFunction2(ctx, minnet_ws_constructor, "MinnetWebsocket", 0, JS_CFUNC_constructor, 0);
+  JS_SetPropertyFunctionList(ctx, minnet_ws_ctor, minnet_ws_static_funcs, minnet_ws_static_funcs_size);
 
   JS_SetConstructor(ctx, minnet_ws_ctor, minnet_ws_proto);
 

@@ -179,6 +179,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   MinnetSession* cli = user;
   MinnetClient* client = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = client->ctx;
+  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int n;
 
   lwsl_user("client " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
@@ -211,7 +212,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_CLOSE:
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      if((client->cb_close.ctx=ctx)) {
+      if((client->cb_close.ctx = ctx)) {
         struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
         int err = opaque ? opaque->error : 0;
         JSValueConst cb_argv[] = {
@@ -234,13 +235,13 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       /* struct lws_context* lwsctx = lws_get_context(wsi);
        MinnetClient* client = lws_context_user(lwsctx);
  */
-      if(cli && !cli->connected) {
+      if(cli && !opaque->connected) {
         const char* method = client->info.method;
 
         if(!minnet_ws_data(cli->ws_obj))
           cli->ws_obj = minnet_ws_object(ctx, wsi);
 
-        cli->connected = TRUE;
+        opaque->connected = TRUE;
         if(!minnet_ws_data(cli->req_obj))
           cli->req_obj = minnet_request_wrap(ctx, client->request);
 
