@@ -3,28 +3,36 @@
 #include <cutils.h>
 #include <assert.h>
 
-static char const* const protocol_names[] = {"ws", "wss", "http", "https", "raw", "tls"};
+static char const* const protocol_names[] = {
+    "ws",
+    "wss",
+    "http",
+    "https",
+    "raw",
+    "tls",
+};
 
-enum protocol
+MinnetProtocol
 protocol_number(const char* protocol) {
-  enum protocol p;
+  int i;
 
-  for(p = PROTOCOL_TLS-1; p >= PROTOCOL_WS; --p) 
-  if(!strcasecmp(protocol,protocol_names[p]))
-    break;
+  for(i = countof(protocol_names) - 1; i >= 0; --i)
+    if(!strcasecmp(protocol, protocol_names[i]))
+      break;
 
-  return p;
+  return i;
 }
 
 const char*
-protocol_string(const enum protocol p) {
-  assert(p >= 0);
-  assert(p < countof(protocol_names));
-  return protocol_names[p];
+protocol_string(MinnetProtocol p) {
+  int i = (unsigned int)p;
+  assert(i >= 0);
+  assert(i < countof(protocol_names));
+  return protocol_names[i];
 }
 
 uint16_t
-protocol_default_port(const enum protocol p) {
+protocol_default_port(MinnetProtocol p) {
   switch(p) {
     case PROTOCOL_WS:
     case PROTOCOL_HTTP: return 80;
@@ -35,10 +43,11 @@ protocol_default_port(const enum protocol p) {
 }
 
 BOOL
-protocol_is_tls(const enum protocol p) {
+protocol_is_tls(MinnetProtocol p) {
   switch(p) {
     case PROTOCOL_WSS:
-    case PROTOCOL_HTTPS: return TRUE;
+    case PROTOCOL_HTTPS:
+    case PROTOCOL_TLS: return TRUE;
     default: return FALSE;
   }
 }
@@ -50,57 +59,59 @@ url_init(JSContext* ctx, const char* protocol, const char* host, int port, const
 
   url.protocol = protocol_string(proto);
   url.host = js_strdup(ctx, host && *host ? host : "0.0.0.0");
-
-  if(port >= 0 && port <= 65535)
-    url.port = port;
-  else
-    url.port = protocol_default_port(proto);
-
+  url.port = port >= 0 && port <= 65535 ? port : protocol_default_port(proto);
   url.path = js_strdup(ctx, path && *path ? path : "/");
+
   return url;
 }
 
 MinnetURL
-url_parse(JSContext* ctx, const char* url) {
-  MinnetURL ret = {0, 0, 0, 0};
-  size_t i = 0, j;
-  char* end;
-  if((end = strstr(url, "://"))) {
-    i = end - url;
-    ret.protocol = js_strndup(ctx, url, i);
-    i += 3;
+url_parse(JSContext* ctx, const char* u) {
+  MinnetURL url = {0, 0, 0, 0};
+  MinnetProtocol proto = PROTOCOL_WS;
+  const char *s, *t;
+
+  if((s = strstr(u, "://"))) {
+    url.protocol = js_strndup(ctx, u, s - u);
+    proto = protocol_number(url.protocol);
+    u = s + 3;
   }
-  for(j = i; url[j]; j++) {
-    if(url[j] == ':' || url[j] == '/')
+
+  for(s = u; *s; ++s)
+    if(*s == ':' || *s == '/')
       break;
+
+  if(s > u)
+    url.host = js_strndup(ctx, u, s - u);
+
+  if(*s == ':') {
+    unsigned long n = strtoul(++s, &t, 10);
+
+    url.port = n != ULONG_MAX ? n : 0;
+    if(s < t)
+      s = t;
+  } else {
+    url.port = protocol_default_port(proto);
   }
-  if(j - i)
-    ret.host = js_strndup(ctx, &url[i], j - i);
-  i = url[j] ? j + 1 : j;
-  if(url[j] == ':') {
-    unsigned long n = strtoul(&url[i], &end, 10);
-    if((j = end - url) > i)
-      ret.port = n;
-  }
-  if(url[j])
-    ret.path = js_strdup(ctx, &url[j]);
-  return ret;
+
+  url.path = js_strdup(ctx, s);
+  return url;
 }
 
 char*
 url_format(const MinnetURL* url, JSContext* ctx) {
   size_t len = strlen(url->protocol) + 3 + strlen(url->host) + 1 + 5 + strlen(url->path) + 1;
-  char* buf;
-  enum protocol p = protocol_number(url->protocol);
+  char* str;
+  MinnetProtocol proto = protocol_number(url->protocol);
 
-  if((buf = js_malloc(ctx, len))) {
-    if(url->port == protocol_default_port(p))
-      sprintf(buf, "%s://%s%s", url->protocol, url->host, url->path);
+  if((str = js_malloc(ctx, len))) {
+    if(url->port == protocol_default_port(proto))
+      sprintf(str, "%s://%s%s", url->protocol, url->host, url->path);
     else
-      sprintf(buf, "%s://%s:%u%s", url->protocol, url->host, url->port % 0xffff, url->path);
+      sprintf(str, "%s://%s:%u%s", url->protocol, url->host, url->port % 0xffff, url->path);
   }
 
-  return buf;
+  return str;
 }
 
 void
@@ -115,29 +126,35 @@ url_free(JSContext* ctx, MinnetURL* url) {
 int
 url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
   struct lws_client_connect_info i;
-  BOOL ssl = FALSE;
+  MinnetProtocol proto = protocol_number(url->protocol);
 
   memset(&i, 0, sizeof(i));
 
-  if(url->protocol && !strncmp(url->protocol, "raw", 3)) {
-    i.method = "RAW";
-    i.local_protocol_name = "raw";
-  } else if(url->protocol && !strncmp(url->protocol, "http", 4)) {
-    i.alpn = "http/1.1";
-    i.method = "GET";
-    i.protocol = "http";
-  } else {
-    i.protocol = "url";
+  switch(proto) {
+    case PROTOCOL_HTTP:
+    case PROTOCOL_HTTPS: {
+      i.alpn = "http/1.1";
+      i.method = "GET";
+      i.protocol = "http";
+      break;
+    }
+    case PROTOCOL_WS:
+    case PROTOCOL_WSS: {
+      i.protocol = "ws";
+      break;
+    }
+    default: {
+      i.method = "RAW";
+      i.local_protocol_name = "raw";
+      break;
+    }
   }
-
-  if(url->protocol && !strncmp(url->protocol, "https", 5) && !strncmp(url->protocol, "wss", 3))
-    ssl = TRUE;
 
   i.context = context;
   i.port = url->port;
   i.address = url->host;
 
-  if(ssl) {
+  if(protocol_is_tls(proto)) {
     i.ssl_connection = LCCSCF_USE_SSL | LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;
     i.ssl_connection |= LCCSCF_ALLOW_SELFSIGNED;
     i.ssl_connection |= LCCSCF_ALLOW_INSECURE;
@@ -161,16 +178,16 @@ url_location(const MinnetURL* url, JSContext* ctx) {
 
 const char*
 url_query_string(const MinnetURL* url) {
-
   const char* p;
-
   for(p = url->path; *p; p++) {
     if(*p == '\\') {
       ++p;
       continue;
     }
-    if(*p == '?')
+    if(*p == '?') {
+      ++p;
       break;
+    }
   }
   return *p ? p : 0;
 }
@@ -188,15 +205,16 @@ url_query_object(const MinnetURL* url, JSContext* ctx) {
         continue;
       }
       if(*p == '&' || *p == '\0') {
-        size_t namelen, len = p - q;
+        size_t namelen, len;
         char *value, *decoded;
         JSAtom atom;
         if((value = strchr(q, '='))) {
-          namelen = value - q;
+          namelen = (const char*)value - q;
           ++value;
           atom = JS_NewAtomLen(ctx, q, namelen);
-          decoded = js_strndup(ctx, value, p - value);
-          lws_urldecode(decoded, decoded, p - value + 1);
+          len = p - (const char*)value;
+          decoded = js_strndup(ctx, value, len);
+          lws_urldecode(decoded, decoded, len + 1);
           JS_SetProperty(ctx, ret, atom, JS_NewString(ctx, decoded));
           JS_FreeAtom(ctx, atom);
         }
@@ -238,7 +256,6 @@ url_query_from(JSContext* ctx, JSValueConst obj) {
   }
 
   js_free(ctx, tab);
-
   return out.buf;
 }
 

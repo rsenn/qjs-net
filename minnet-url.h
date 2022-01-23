@@ -15,10 +15,10 @@ typedef enum protocol {
   PROTOCOL_TLS,
 } MinnetProtocol;
 
-enum protocol protocol_number(const char*);
-const char* protocol_string(const enum protocol);
-uint16_t protocol_default_port(const enum protocol);
-BOOL protocol_is_tls(const enum protocol);
+MinnetProtocol protocol_number(const char*);
+const char* protocol_string(MinnetProtocol);
+uint16_t protocol_default_port(MinnetProtocol);
+BOOL protocol_is_tls(MinnetProtocol);
 
 typedef struct url {
   const char* protocol;
@@ -47,6 +47,11 @@ JSValue minnet_url_constructor(JSContext*, JSValue new_target, int argc, JSValue
 static inline const char*
 url_path(const MinnetURL* url) {
   return url->path;
+}
+
+static inline MinnetProtocol
+url_protocol(const MinnetURL* url) {
+  return protocol_number(url->protocol);
 }
 
 static inline MinnetURL*

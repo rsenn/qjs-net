@@ -126,28 +126,28 @@ function main(...args) {
   const server = !params.client || params.server;
   //console.log('params', params);
   function createWS(url, callbacks, listen = 0) {
-    let [protocol, host, port, ...location] = [...url.matchAll(/[^:\/]+/g)].map(a => a[0]);
+   /* let [protocol, host, port, ...location] = [...url.matchAll(/[^:\/]+/g)].map(a => a[0]);
     if(!isNaN(+port)) port = +port;
-    const path = location.reduce((acc, part) => acc + '/' + part, '');
+    const path = location.reduce((acc, part) => acc + '/' + part, '');*/
     net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, ...args) => {
       if(params.debug) console.log(('X', ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
 
-    const repl = new CLI(`${host}:${port}`);
+    const repl = new CLI(url);
 
     const fn = [net.client, net.server][+listen];
-console.log('createWS', { protocol, host, port, path, repl, fn });
-    return fn({
+//console.log('createWS', {url, repl, fn });
+    return fn(url , {
       sslCert,
       sslPrivateKey,
-      ssl: protocol == 'wss',
+   /*   ssl: protocol == 'wss',
       host,
       port,
-      path,
+      path,*/
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
-        //console.log('onConnect', ws, req);
+       console.log('onConnect', ws, req);
         try {
           repl.printStatus(`Connected to ${protocol}://${host}:${port}${path}`, true);
         } catch(err) {
@@ -170,7 +170,8 @@ console.log('createWS', { protocol, host, port, path, repl, fn });
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
-        repl.printStatus(msg, true);
+            console.log('onMessage', ws, msg);
+   repl.printStatus(msg, true);
       },
       onError(ws, error) {
         console.log('onError', ws, error);
