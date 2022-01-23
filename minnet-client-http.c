@@ -15,7 +15,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   lwsl_user("client-http " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
   switch(reason) {
-    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: lwsl_err("CLIENT_CONNECTION_ERROR: %s\n", in ? (char*)in : "(null)"); break;
+    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
+      lwsl_user("http-error #1 " FGC(171, "%-25s") "  in: %s\n", lws_callback_name(reason) + 13, in ? (char*)in : "(null)");
+      break;
+    }
 
     case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL: {
       // struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
@@ -62,11 +65,11 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       break;
     }
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
-      struct lws_context* lwsctx = lws_get_context(wsi);
-      MinnetClient* client = lws_context_user(lwsctx);
-
+      /* struct lws_context* lwsctx = lws_get_context(wsi);
+       MinnetClient* client = lws_context_user(lwsctx);
+ */
       int status = (int)lws_http_client_http_response(wsi);
-      lwsl_user("http-established  " FGC(171, "%-25s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
+      lwsl_user("http-established #1 " FGC(171, "%-25s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
 
       if(cli && !cli->connected) {
         const char* method = client->info.method;
@@ -77,7 +80,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         cli->connected = TRUE;
         cli->req_obj = minnet_request_wrap(ctx, client->request);
 
-        lwsl_user("http-established   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
+        lwsl_user("http-established #2 " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
         minnet_emit(&client->cb_connect, 2, &cli->ws_obj);
 
         cli->resp_obj = minnet_response_new(ctx, client->request->url, method == METHOD_POST ? 201 : status, TRUE, "text/html");

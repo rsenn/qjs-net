@@ -157,12 +157,12 @@ function main(...args) {
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
-        console.log('onConnect', ws, req);
-        try {
+        console.log('onConnect',  { ws });
+       /* try {
           repl.printStatus(`Connected to ${url}`, true);
         } catch(err) {
           console.log('error:', err.message);
-        }
+        }*/
       },
       onClose(ws, status, reason, error) {
         connections.delete(ws);
