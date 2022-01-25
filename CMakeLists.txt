@@ -6,6 +6,7 @@ set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag")
 #option(BUILD_SHARED_LIBWEBSOCKETS "Shared building of dependency libraries" OFF)
 option(BUILD_LIBWEBSOCKETS "in-tree build of libwebsockets" ON)
 option(BUILD_CURL "Build curl library" ${LOCAL_CURL})
+option(DO_TESTS "Perform tests" ON)
 
 #set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "PIC code")
 #set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
@@ -380,3 +381,27 @@ install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}"
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc.js DESTINATION "${QUICKJS_JS_MODULE_DIR}")
 #dump_target(quickjs-minnet)
+
+
+file(GLOB TESTS tests/test-*.js)
+
+relative_path(TESTS "${CMAKE_CURRENT_SOURCE_DIR}" ${TESTS})
+
+if(DO_TESTS)
+  include(CTest)
+
+  foreach(TEST ${TESTS})
+    basename(BASE "${TEST}")
+    string(REPLACE "test_" "" NAME "${BASE}")
+    add_test(NAME "${BASE}"
+             COMMAND env QUICKJS_MODULE_PATH=${CMAKE_CURRENT_SOURCE_DIR}:${CMAKE_CURRENT_BINARY_DIR}
+                     "${QJS}" --bignum "${TEST}" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+  #[[  add_custom_target(
+      "${BASE}" ALL
+      COMMAND
+        env QUICKJS_MODULE_PATH=${CMAKE_CURRENT_SOURCE_DIR}:${CMAKE_CURRENT_BINARY_DIR} "${QJSC}"
+        -fbignum -M std -M os -M ${NAME} -o "${BASE}" "${CMAKE_CURRENT_SOURCE_DIR}/${TEST}"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      SOURCES "${TEST}")]]
+  endforeach(TEST ${TESTS})
+endif(DO_TESTS)

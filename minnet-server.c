@@ -198,6 +198,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
       }
     }
   }
+  
   if(!(minnet_server.lws = lws_create_context(&minnet_server.info))) {
     lwsl_err("libwebsockets init failed\n");
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");

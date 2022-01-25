@@ -1,26 +1,12 @@
 import * as std from 'std';
 import * as os from 'os';
-import net, {
-  URL,
-  LLL_ERR,
-  LLL_WARN,
-  LLL_NOTICE,
-  LLL_INFO,
-  LLL_DEBUG,
-  LLL_PARSER,
-  LLL_HEADER,
-  LLL_EXT,
-  LLL_CLIENT,
-  LLL_LATENCY,
-  LLL_USER,
-  LLL_THREAD
-} from 'net';
+import net, { URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
 
 const w = os.Worker.parent;
 const name = w ? 'CHILD\t' : 'PARENT\t';
 const getpid = () => parseInt(os.readlink('/proc/self')[0]);
-const log = /*w ? (...args) => print(name, ...args) :*/ (...args) => console.log(name, ...args);
-const connections = new  Set();
+const log = (...args) => console.log(name, ...args);
+const connections = new Set();
 const logLevels = Object.getOwnPropertyNames(net)
   .filter(n => /^LLL_/.test(n))
   .reduce((acc, n) => {
@@ -29,13 +15,22 @@ const logLevels = Object.getOwnPropertyNames(net)
     return acc;
   }, {});
 
-log('logLevels', JSON.stringify(logLevels));
-
 const once = fn => {
   let ret,
     ran = false;
   return (...args) => (ran ? ret : ((ran = true), (ret = fn.apply(this, args))));
 };
+const exists = path => {
+  let [st, err] = os.stat(path);
+  return !err;
+};
+
+export function MakeCert(sslCert, sslPrivateKey) {
+  let stderr = os.open('/dev/null', os.O_RDWR);
+  let ret = os.exec(['openssl', 'req', '-x509', '-out', sslCert, '-keyout', sslPrivateKey, '-newkey', 'rsa:2048', '-nodes', '-sha256', '-subj', '/CN=localhost'], { stderr });
+  os.close(stderr);
+  return ret;
+}
 
 export class MinnetServer {
   static ws2id = new WeakMap();
@@ -47,10 +42,24 @@ export class MinnetServer {
     options.protocol ??= options.tls ? 'wss' : 'ws';
     options.path ??= '/ws';
 
-    log(
-      'MinnetServer.constructor',
-      Object.entries(options).reduce((acc, [n, v]) => (acc ? acc + ', ' : '') + n + '=' + v, '')
-    );
+    const { sslCert, sslPrivateKey } = options;
+
+    if(sslCert && sslPrivateKey) {
+      if(!exists(sslCert) || !exists(sslPrivateKey)) MakeCert(sslCert, sslPrivateKey);
+    }
+    let { mounts, mimetypes, ...opts } = options;
+    
+    for(let prop in mounts) {
+      if(typeof mounts[prop] == 'string') {
+        let fn;
+        eval('fn='+mounts[prop]);
+      //log('fn',fn, mounts[prop]);
+        mounts[prop] = fn;
+      }
+    }
+
+//    log('mounts',mounts); 
+log('MinnetServer.constructor', { mounts, mimetypes, ...opts }); // Object.entries(options).reduce((acc, [n, v]) => (acc ? acc + ', ' : '') + n + '=' + v, ''));
 
     Object.defineProperty(this, 'options', { get: () => options });
   }
@@ -63,13 +72,14 @@ export class MinnetServer {
   }
 
   static connections() {
-       let { ws2id } = MinnetServer;
- return [...connections].reduce((acc,wr) => {
-      let ws = wr.deref();
-      if(ws!==undefined)
-        acc.push([ws2id.get(ws), ws]);
-      return acc;
-    }, []);
+    let { ws2id } = MinnetServer;
+    return Object.fromEntries(
+      [...connections].reduce((acc, wr) => {
+        let ws = wr; /*.deref()*/
+        if(ws !== undefined) acc.push([ws2id.get(ws), ws]);
+        return acc;
+      }, [])
+    );
   }
 
   id(ws) {
@@ -87,68 +97,43 @@ export class MinnetServer {
 
     let started = once(() => w.postMessage({ type: 'running' }));
 
-    net.setLog(
-      LLL_ERR |
-        LLL_WARN |
-        /*LLL_NOTICE | LLL_INFO | LLL_DEBUG |LLL_PARSER | 
-        LLL_HEADER |
-        LLL_EXT |*/
-        LLL_CLIENT |
-        LLL_LATENCY |
-        LLL_USER |
-        LLL_THREAD,
-      (level, msg) => {
-        const l = logLevels[level];
-        const n = Math.log2(level);
+    net.setLog(LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD, (level, msg) => {
+      const l = logLevels[level];
+      const n = Math.log2(level);
 
-        if(level >= LLL_NOTICE && level <= LLL_EXT) return;
+      if(level >= LLL_NOTICE && level <= LLL_EXT) return;
 
-        if(l == 'USER') print(`SERVER   ${msg}`);
-        else log(`${l.padEnd(10)} ${msg}`);
-      }
-    );
+      if(l == 'USER') print(`SERVER   ${msg}`);
+      else log(`${l.padEnd(10)} ${msg}`);
+    });
+    const { mounts = {}, mimetypes = [], ...options } = this.options;
 
     net.server({
-      ...this.options,
-      mimetypes: [
-        ['.svgz', 'application/gzip'],
-        ['.mjs', 'application/javascript'],
-        ['.wasm', 'application/octet-stream'],
-        ['.eot', 'application/vnd.ms-fontobject'],
-        ['.lib', 'application/x-archive'],
-        ['.bz2', 'application/x-bzip2'],
-        ['.gitignore', 'text/plain'],
-        ['.cmake', 'text/plain'],
-        ['.hex', 'text/plain'],
-        ['.md', 'text/plain'],
-        ['.pbxproj', 'text/plain'],
-        ['.wat', 'text/plain'],
-        ['.c', 'text/x-c'],
-        ['.h', 'text/x-c'],
-        ['.cpp', 'text/x-c++'],
-        ['.hpp', 'text/x-c++'],
-        ['.filters', 'text/xml'],
-        ['.plist', 'text/xml'],
-        ['.storyboard', 'text/xml'],
-        ['.vcxproj', 'text/xml'],
-        ['.bat', 'text/x-msdos-batch'],
-        ['.mm', 'text/x-objective-c'],
-        ['.m', 'text/x-objective-c'],
-        ['.sh', 'text/x-shellscript']
-      ],
+      mimetypes: [['.svgz', 'application/gzip'], ['.mjs', 'application/javascript'], ['.wasm', 'application/octet-stream'], ['.eot', 'application/vnd.ms-fontobject'], ['.lib', 'application/x-archive'], ['.bz2', 'application/x-bzip2'], ['.gitignore', 'text/plain'], ['.cmake', 'text/plain'], ['.hex', 'text/plain'], ['.md', 'text/plain'], ['.pbxproj', 'text/plain'], ['.wat', 'text/plain'], ['.c', 'text/x-c'], ['.h', 'text/x-c'], ['.cpp', 'text/x-c++'], ['.hpp', 'text/x-c++'], ['.filters', 'text/xml'], ['.plist', 'text/xml'], ['.storyboard', 'text/xml'], ['.vcxproj', 'text/xml'], ['.bat', 'text/x-msdos-batch'], ['.mm', 'text/x-objective-c'], ['.m', 'text/x-objective-c'], ['.sh', 'text/x-shellscript'], ...mimetypes],
       mounts: {
         '/': ['/', '.', 'index.html'],
         '/404.html': function* (req, res) {
           console.log('/404.html', { req, res });
           yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
-        }
+        },
+           proxy(req, res) {
+          const { url, method, headers } = req;
+          const { status, ok, type } = res;
+
+          console.log('proxy', { url, method, headers }, { status, ok, url, type });
+        },
+        *config(req, res) {
+          console.log('/config', { req, res });
+          yield '{}';
+        },
+        ...mounts
       },
       onConnect: (ws, req) => {
         const { url, path } = req;
+        const { family, address, port } = ws;
 
-        w.postMessage({ type: 'connect', id: this.id(ws), url, path });
-        // log('onConnect', +ws, req);
-        connections.add(new WeakRef(ws));
+        w.postMessage({ type: 'connect', id: this.id(ws), url, path, family, address, port });
+        connections.add(ws);
       },
       onClose: (ws, status) => {
         connections.delete(ws);
@@ -158,6 +143,7 @@ export class MinnetServer {
         w.postMessage({ type: 'error', id: this.id(ws), error });
       },
       onHttp: (req, rsp) => {
+        log('onHttp', { req, rsp });
         const { url, path } = req;
         w.postMessage({ type: 'http', id: this.id(ws), url, path });
       },
@@ -167,10 +153,10 @@ export class MinnetServer {
         os.setWriteHandler(fd, wr);
       },
       onMessage: (ws, msg) => {
-        log('onMessage', { ws, msg });
+        //log('onMessage', { ws, msg });
         w.postMessage({ type: 'message', id: this.id(ws), msg });
-        //std.puts(escape(abbreviate(msg)) + '\n');
-      }
+      },
+      ...options
     });
     w.postMessage({ type: 'exit' });
   }
@@ -179,24 +165,36 @@ export class MinnetServer {
     let counter = 0;
 
     this.worker = new os.Worker('./server.js');
-    const { worker } = this;
+    const { worker, options } = this;
     const { host, port, sslCert, sslPrivateKey } = this.options;
-    log('MinnetServer.run', { worker, host, port });
 
-let ret={};
+    let ret = {
+      sendMessage: msg => worker.postMessage(msg)
+    };
 
-    worker.onmessage = function(e) {
+    let opts = Object.entries(options).map(([k, v]) => {
+      if(typeof v == 'object')
+        for(let prop in v)
+          if(typeof v[prop] == 'function') {
+            v[prop] = v[prop] + '';
+            if(!v[prop].startsWith('function')) v[prop] = 'function ' + v[prop];
+          }
+
+      return [k, v];
+    });
+    log('MinnetServer.run', opts);
+
+    worker.onmessage = e => {
       let ev = e.data;
-          log('worker.onmessage', ev);
-  switch (ev.type) {
+      //log('worker.onmessage', ev);
+      switch (ev.type) {
         case 'ready':
-          worker.postMessage({ type: 'start', host, port, sslCert, sslPrivateKey });
+          worker.postMessage({ type: 'start', ...opts.reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {}) });
           break;
 
         default:
           if(typeof ret.onmessage == 'function') ret.onmessage(ev);
-          else
-                      log(`Worker.run`, ev);
+          else log(`Worker.run`, ev);
 
           break;
       }
@@ -219,35 +217,34 @@ let ret={};
           server = globalThis.server = new MinnetServer(event);
           server.start();
           break;
+        case 'exit':
+          const { exitcode } = event;
+          std.exit(exitcode ?? 0);
+          break;
 
         case 'send':
-        const {id, msg}= event;
-        let c=MinnetServer.connections();
-                  log(`send`,{id,msg,c});
+          const { id, msg } = event;
+          let ws = MinnetServer.connections()[id];
+          ws.send(msg);
+          break;
 
-        break;
         default:
           log(`No such message type '${type}'`);
           return;
       }
-      log(`worker.onmessage`, JSON.stringify(e));
+      //log(`worker.onmessage`, JSON.stringify(e));
     };
 
     w.postMessage({ type: 'ready' });
   }
 }
 
-log(`worker: ${w}`);
-
 if(w) {
- log(`Starting worker`, w);
-
-  import('console').then(
-    ({ Console }) =>
-      (globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } }))
-  );
+  import('console').then(({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } })));
 
   try {
+    log(`Starting worker`, w);
+
     MinnetServer.worker(w);
   } catch(error) {
     w.postMessage({ type: 'error', error });
