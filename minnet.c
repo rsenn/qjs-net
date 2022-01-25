@@ -111,8 +111,9 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     argc--;
     argv++;
   }
+
   ret = set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
-  lws_set_log_level(minnet_log_level, lws_log_callback);
+  lws_set_log_level(((unsigned)minnet_log_level & ((1u << LLL_COUNT) - 1)), lws_log_callback);
   return ret;
 }
 

@@ -1,42 +1,59 @@
 {
-  "folders": [
-    {
-      "path": ".",
-    },
-  ],
-  "build_systems": [
-    {
-      "name": "Build debug",
-      "shell_cmd": "make -C build/*-debug install",
-      "working_dir": "${project_path}",
-    },
-    {
-      "name": "Rebuild CTags",
-      "shell_cmd": "ctags -R .",
-    },
-    {
-      "name": "clang-format",
-      "shell_cmd": "clang-format -verbose -style=file -i *.[ch]`",
-      "working_dir": "${project_path}",
-    },
-    {
-      "name": "prettier",
-      "shell_cmd": "(. ~/.nvm/nvm.sh; nvm use 14;  set -x; yarn run format)",
-      "working_dir": "${project_path}",
-    },
-    {
-      "name": "CMake",
-      "shell_cmd": ". ./cfg.sh; TYPE=Debug cfg",
-      "working_dir": "${project_path}",
-    },
-    {
-      "name": "make",
-      "shell_cmd": "make -C ../build/x86_64-linux-debug install -j10",
-      "working_dir": "${project_path}",
-    }
- 
-  ],
-  "debugger_configurations":
-  [
-	],
+    "folders":
+    [
+        {
+            "file_exclude_patterns":
+            [
+                ".git*",
+                "*.xz",
+                "*.txz",
+                "*.log",
+                "*.tmp",
+                "cmake_install.cmake"
+            ],
+            "folder_exclude_patterns":
+            [
+                ".*",
+                ".git",
+                ".git/*",
+                "build*",
+                "inst"
+            ],
+            "path": "."
+        }
+    ],
+    "build_systems":
+    [
+        {
+            "name": "Build debug",
+            "shell_cmd": "make -C build/*-debug install",
+            "working_dir": "${project_path}"
+        },
+        {
+            "name": "Rebuild CTags",
+            "shell_cmd": "ctags -R ."
+        },
+        {
+            "name": "clang-format",
+            "shell_cmd": "clang-format -verbose -style=file -i *.[ch]`",
+            "working_dir": "${project_path}"
+        },
+        {
+            "name": "prettier",
+            "shell_cmd": "(. ~/.nvm/nvm.sh; nvm use 14;  set -x; yarn run format)",
+            "working_dir": "${project_path}"
+        },
+        {
+            "name": "CMake",
+            "shell_cmd": ". ./cfg.sh; TYPE=Debug cfg",
+            "working_dir": "${project_path}"
+        },
+        {
+            "name": "make",
+            "shell_cmd": "make -C ../build/x86_64-linux-debug install -j10",
+            "working_dir": "${project_path}"
+        }
+    ],
+    "debugger_configurations":
+    []
 }

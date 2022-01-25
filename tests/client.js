@@ -30,7 +30,21 @@ function main(...args) {
       /* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1,
       debug
         ? (level, msg) => {
-            const l = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
+            const l =
+              [
+                'ERR',
+                'WARN',
+                'NOTICE',
+                'INFO',
+                'DEBUG',
+                'PARSER',
+                'HEADER',
+                'EXT',
+                'CLIENT',
+                'LATENCY',
+                'MINNET',
+                'THREAD'
+              ][level && Math.log2(level)] ?? level + '';
             if(l == 'NOTICE' || l == 'MINNET')
               //if(l != 'NOTICE' ) if(l != 'MINNET') if(!/POLL/.test(msg))
               console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
@@ -71,7 +85,13 @@ function main(...args) {
       },
       onHttp(req, rsp) {
         const { url, method, headers } = req;
-        console.log('\x1b[38;5;82monHttp\x1b[0m(\n\t', Object.setPrototypeOf({ url, method, headers }, Object.getPrototypeOf(req)), ',\n\t', rsp, '\n)');
+        console.log(
+          '\x1b[38;5;82monHttp\x1b[0m(\n\t',
+          Object.setPrototypeOf({ url, method, headers }, Object.getPrototypeOf(req)),
+          ',\n\t',
+          rsp,
+          '\n)'
+        );
         return rsp;
       },
       onFd(fd, rd, wr) {
