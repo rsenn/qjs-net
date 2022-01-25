@@ -11,6 +11,19 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
 
   switch(reason) {
+    case LWS_CALLBACK_LOCK_POLL:
+    case LWS_CALLBACK_UNLOCK_POLL:
+    case LWS_CALLBACK_ADD_POLL_FD:
+    case LWS_CALLBACK_DEL_POLL_FD:
+    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
+
+      return fd_callback(wsi, reason, &minnet_server.cb_fd, in);
+    }
+  }
+
+  printf("ws_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
+
+  switch(reason) {
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_PROTOCOL_INIT: {
@@ -112,16 +125,6 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       }
       return 0;
     }
-
-    case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL:
-    case LWS_CALLBACK_ADD_POLL_FD:
-    case LWS_CALLBACK_DEL_POLL_FD:
-    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-
-      return fd_callback(wsi, reason, &minnet_server.cb_fd, in);
-    }
-
     case LWS_CALLBACK_WSI_CREATE:
     case LWS_CALLBACK_WSI_DESTROY:
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:

@@ -48,18 +48,18 @@ export class MinnetServer {
       if(!exists(sslCert) || !exists(sslPrivateKey)) MakeCert(sslCert, sslPrivateKey);
     }
     let { mounts, mimetypes, ...opts } = options;
-    
+
     for(let prop in mounts) {
       if(typeof mounts[prop] == 'string') {
         let fn;
-        eval('fn='+mounts[prop]);
-      //log('fn',fn, mounts[prop]);
+        eval('fn=' + mounts[prop]);
+        //log('fn',fn, mounts[prop]);
         mounts[prop] = fn;
       }
     }
 
-//    log('mounts',mounts); 
-log('MinnetServer.constructor', { mounts, mimetypes, ...opts }); // Object.entries(options).reduce((acc, [n, v]) => (acc ? acc + ', ' : '') + n + '=' + v, ''));
+    //    log('mounts',mounts);
+    log('MinnetServer.constructor', { mounts, mimetypes, ...opts }); // Object.entries(options).reduce((acc, [n, v]) => (acc ? acc + ', ' : '') + n + '=' + v, ''));
 
     Object.defineProperty(this, 'options', { get: () => options });
   }
@@ -106,28 +106,32 @@ log('MinnetServer.constructor', { mounts, mimetypes, ...opts }); // Object.entri
       if(l == 'USER') print(`SERVER   ${msg}`);
       else log(`${l.padEnd(10)} ${msg}`);
     });
-    const { mounts = {}, mimetypes = [], ...options } = this.options;
+    let { mounts = {}, mimetypes = [], ...options } = this.options;
+
+    mounts = {
+      proxy(req, res) {
+        const { url, method, headers } = req;
+        const { status, ok, type } = res;
+
+        console.log('proxy', { url, method, headers }, { status, ok, url, type });
+      },
+      *config(req, res) {
+        console.log('/config', { req, res });
+        yield '{}';
+      },
+      ...mounts,
+      '/': ['/', '.', 'index.html'],
+      '/404.html': function* (req, res) {
+        console.log('/404.html', { req, res });
+        yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
+      }
+    };
+
+    log('mounts', mounts);
 
     net.server({
       mimetypes: [['.svgz', 'application/gzip'], ['.mjs', 'application/javascript'], ['.wasm', 'application/octet-stream'], ['.eot', 'application/vnd.ms-fontobject'], ['.lib', 'application/x-archive'], ['.bz2', 'application/x-bzip2'], ['.gitignore', 'text/plain'], ['.cmake', 'text/plain'], ['.hex', 'text/plain'], ['.md', 'text/plain'], ['.pbxproj', 'text/plain'], ['.wat', 'text/plain'], ['.c', 'text/x-c'], ['.h', 'text/x-c'], ['.cpp', 'text/x-c++'], ['.hpp', 'text/x-c++'], ['.filters', 'text/xml'], ['.plist', 'text/xml'], ['.storyboard', 'text/xml'], ['.vcxproj', 'text/xml'], ['.bat', 'text/x-msdos-batch'], ['.mm', 'text/x-objective-c'], ['.m', 'text/x-objective-c'], ['.sh', 'text/x-shellscript'], ...mimetypes],
-      mounts: {
-        '/': ['/', '.', 'index.html'],
-        '/404.html': function* (req, res) {
-          console.log('/404.html', { req, res });
-          yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
-        },
-           proxy(req, res) {
-          const { url, method, headers } = req;
-          const { status, ok, type } = res;
-
-          console.log('proxy', { url, method, headers }, { status, ok, url, type });
-        },
-        *config(req, res) {
-          console.log('/config', { req, res });
-          yield '{}';
-        },
-        ...mounts
-      },
+      mounts,
       onConnect: (ws, req) => {
         const { url, path } = req;
         const { family, address, port } = ws;

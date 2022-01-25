@@ -47,6 +47,7 @@ function main(...args) {
         worker.sendMessage({ type: 'send', id: e.id, msg: e.msg });
         break;
       case 'close':
+        console.log('close', e);
         worker.sendMessage({ type: 'exit' });
         break;
       case 'running':

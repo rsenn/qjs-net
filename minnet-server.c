@@ -179,6 +179,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
           break;
         mount = mount_new(ctx, mountval, 0);
         mount->extra_mimetypes = mimetypes;
+        mount->pro = "http";
         ADD(m, mount, next);
       }
     } else if(JS_IsObject(opt_mounts)) {
@@ -193,12 +194,13 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
         JSValue mountval = JS_GetProperty(ctx, opt_mounts, prop);
         mount = mount_new(ctx, mountval, name);
         mount->extra_mimetypes = mimetypes;
+        mount->pro = "http";
         ADD(m, mount, next);
         JS_FreeCString(ctx, name);
       }
     }
   }
-  
+
   if(!(minnet_server.lws = lws_create_context(&minnet_server.info))) {
     lwsl_err("libwebsockets init failed\n");
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
@@ -293,6 +295,7 @@ http_server_headers(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
 
 int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+  printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:
     case LWS_CALLBACK_UNLOCK_POLL: return 0;

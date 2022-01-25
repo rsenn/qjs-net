@@ -361,7 +361,7 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
   JSValue func;
   int events = args->events & (POLLIN | POLLOUT);
 
-  //lwsl_user("minnet_handlers fd=%d events=%s", args->fd, io_events(events));
+  // lwsl_user("minnet_handlers fd=%d events=%s", args->fd, io_events(events));
 
   if(events)
     func = make_handler(ctx, args->fd, events, lws_get_context(wsi));

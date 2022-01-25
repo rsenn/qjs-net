@@ -105,7 +105,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 
   const char* path = JS_ToCString(ctx, mnt);
 
-  // printf("mount_new '%s'\n", path);
+  printf("mount_new '%s'\n", path);
 
   if(JS_IsFunction(ctx, org)) {
     ret = mount_create(ctx, path, 0, 0, LWSMPRO_CALLBACK);
@@ -404,7 +404,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       int num_hdr = http_server_headers(ctx, h, wsi);
       lwsl_user("http " FGC(171, "%-25s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
 
-      return 0;
+      // return 0;
       break;
     }
 
@@ -467,7 +467,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!opaque->req->path[0])
         pstrcpy(opaque->req->path, sizeof(opaque->req->path), path);
 
-      if(url)
+      serv->mount = mount_find(path, 0);
+      if(url && !serv->mount)
         if(!(serv->mount = mount_find(url, mountpoint_len)))
           serv->mount = mount_find(url, 0);
 
