@@ -1,3 +1,5 @@
+import * as std from 'std';
+import * as os from 'os';
 import net, {
   URL,
   LLL_ERR,
@@ -13,14 +15,12 @@ import net, {
   LLL_USER,
   LLL_THREAD
 } from 'net';
-import * as std from 'std';
-import * as os from 'os';
 
-const parent = os.Worker.parent;
-const name = parent ? 'CHILD\t' : 'PARENT\t';
+const w = os.Worker.parent;
+const name = w ? 'CHILD\t' : 'PARENT\t';
 const getpid = () => parseInt(os.readlink('/proc/self')[0]);
-const log = parent ? (...args) => print(name, ...args) : (...args) => console.log(name, ...args);
-const connections = new Set();
+const log = /*w ? (...args) => print(name, ...args) :*/ (...args) => console.log(name, ...args);
+const connections = new  Set();
 const logLevels = Object.getOwnPropertyNames(net)
   .filter(n => /^LLL_/.test(n))
   .reduce((acc, n) => {
@@ -38,6 +38,8 @@ const once = fn => {
 };
 
 export class MinnetServer {
+  static ws2id = new WeakMap();
+
   constructor(options = {}) {
     options.host ??= 'localhost';
     options.port ??= 30000;
@@ -53,24 +55,56 @@ export class MinnetServer {
     Object.defineProperty(this, 'options', { get: () => options });
   }
 
-  start() {
-    const { host, port } = this;
+  static #currentId = 0;
 
-    let started = once(() => parent.postMessage({ type: 'running' }));
+  static #newId() {
+    let id = (this.#currentId | 0) + 1;
+    return (this.#currentId = id);
+  }
+
+  static connections() {
+       let { ws2id } = MinnetServer;
+ return [...connections].reduce((acc,wr) => {
+      let ws = wr.deref();
+      if(ws!==undefined)
+        acc.push([ws2id.get(ws), ws]);
+      return acc;
+    }, []);
+  }
+
+  id(ws) {
+    let { ws2id } = MinnetServer;
+    let id = ws2id.get(ws);
+    if(typeof id != 'number') {
+      id = MinnetServer.#newId();
+      ws2id.set(ws, id);
+    }
+    return id;
+  }
+
+  start() {
+    const { id, host, port } = this;
+
+    let started = once(() => w.postMessage({ type: 'running' }));
 
     net.setLog(
       LLL_ERR |
         LLL_WARN |
-        /*LLL_NOTICE | LLL_INFO | LLL_DEBUG |LLL_PARSER | */ LLL_HEADER |
-        LLL_EXT |
+        /*LLL_NOTICE | LLL_INFO | LLL_DEBUG |LLL_PARSER | 
+        LLL_HEADER |
+        LLL_EXT |*/
         LLL_CLIENT |
         LLL_LATENCY |
         LLL_USER |
         LLL_THREAD,
       (level, msg) => {
         const l = logLevels[level];
+        const n = Math.log2(level);
 
-        if(['DEBUG', 'INFO'].indexOf(l) == -1) log(`${l.padEnd(10)} ${msg}`);
+        if(level >= LLL_NOTICE && level <= LLL_EXT) return;
+
+        if(l == 'USER') print(`SERVER   ${msg}`);
+        else log(`${l.padEnd(10)} ${msg}`);
       }
     );
 
@@ -109,45 +143,36 @@ export class MinnetServer {
           yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
         }
       },
-      onConnect(ws, req) {
-        parent.postMessage({ type: 'connect', fd: +ws, url: req.url });
-        log('onConnect', +ws, req.url);
-        connections.add(ws);
-        /*    try {
-          log(`Connected to ${protocol}://${host}:${port}${path}`, true);
-        } catch(err) {
-          log('error:', err.message);
-        }*/
+      onConnect: (ws, req) => {
+        const { url, path } = req;
+
+        w.postMessage({ type: 'connect', id: this.id(ws), url, path });
+        // log('onConnect', +ws, req);
+        connections.add(new WeakRef(ws));
       },
-      onClose(ws, status) {
+      onClose: (ws, status) => {
         connections.delete(ws);
-        log('onClose', { ws, status });
-        std.exit(status != 1000 ? 1 : 0);
+        w.postMessage({ type: 'close', id: this.id(ws), status });
       },
-      onError(ws, error) {
-        log('onError', { ws, error });
-        std.exit(error);
+      onError: (ws, error) => {
+        w.postMessage({ type: 'error', id: this.id(ws), error });
       },
-      onHttp(req, rsp) {
-        const { url, method, headers } = req;
-        return rsp;
+      onHttp: (req, rsp) => {
+        const { url, path } = req;
+        w.postMessage({ type: 'http', id: this.id(ws), url, path });
       },
-      onFd(fd, rd, wr) {
+      onFd: (fd, rd, wr) => {
         started();
-        log('onFd', JSON.stringify({ fd, rd, wr }));
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
       },
-      onMessage(ws, msg) {
-        log('onMessage', console.config({ maxStringLen: 100 }), { ws, msg });
-
-        std.puts(escape(abbreviate(msg)) + '\n');
-      },
-      onError(ws, error) {
-        log('onError', ws, error);
+      onMessage: (ws, msg) => {
+        log('onMessage', { ws, msg });
+        w.postMessage({ type: 'message', id: this.id(ws), msg });
+        //std.puts(escape(abbreviate(msg)) + '\n');
       }
     });
-    parent.postMessage({ type: 'exit' });
+    w.postMessage({ type: 'exit' });
   }
 
   run() {
@@ -158,28 +183,33 @@ export class MinnetServer {
     const { host, port, sslCert, sslPrivateKey } = this.options;
     log('MinnetServer.run', { worker, host, port });
 
+let ret={};
+
     worker.onmessage = function(e) {
       let ev = e.data;
-      switch (ev.type) {
+          log('worker.onmessage', ev);
+  switch (ev.type) {
         case 'ready':
           worker.postMessage({ type: 'start', host, port, sslCert, sslPrivateKey });
           break;
 
         default:
-          log(`Worker.run`, ev);
-          return;
+          if(typeof ret.onmessage == 'function') ret.onmessage(ev);
+          else
+                      log(`Worker.run`, ev);
+
+          break;
       }
-      log('worker.onmessage', ev);
     };
 
-    return worker;
+    return ret;
   }
 
-  static worker(parent) {
+  static worker(w) {
     let i;
     let server;
 
-    parent.onmessage = function(e) {
+    w.onmessage = function(e) {
       let ev = e.data;
       const { type, ...event } = ev;
       switch (type) {
@@ -189,6 +219,13 @@ export class MinnetServer {
           server = globalThis.server = new MinnetServer(event);
           server.start();
           break;
+
+        case 'send':
+        const {id, msg}= event;
+        let c=MinnetServer.connections();
+                  log(`send`,{id,msg,c});
+
+        break;
         default:
           log(`No such message type '${type}'`);
           return;
@@ -196,17 +233,23 @@ export class MinnetServer {
       log(`worker.onmessage`, JSON.stringify(e));
     };
 
-    parent.postMessage({ type: 'ready' });
+    w.postMessage({ type: 'ready' });
   }
 }
 
-log(`parent: ${parent}`);
+log(`worker: ${w}`);
 
-if(parent) {
-  //log(`Starting worker (${getpid()})`);
+if(w) {
+ log(`Starting worker`, w);
+
+  import('console').then(
+    ({ Console }) =>
+      (globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } }))
+  );
+
   try {
-    MinnetServer.worker(parent);
+    MinnetServer.worker(w);
   } catch(error) {
-    parent.postMessage({ type: 'error', error });
+    w.postMessage({ type: 'error', error });
   }
 }

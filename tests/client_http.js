@@ -16,7 +16,11 @@ function main(...args) {
   console.log('pid', pid);
   let server = new MinnetServer({ protocol: 'http', sslCert, sslPrivateKey });
 
-  server.run();
+  let worker=server.run();
+
+  worker.onmessage = function(e) {
+    console.log('client_http.onmessage', e);
+  }
 }
 
 try {

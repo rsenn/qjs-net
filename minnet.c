@@ -359,18 +359,18 @@ make_handler(JSContext* ctx, int fd, int events, struct lws_context* context) {
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
   JSValue func;
-  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+  int events = args->events & (POLLIN | POLLOUT);
 
-  lwsl_user("minnet_handlers wsi#%" PRIi64 " fd=%d events=%s", opaque ? opaque->serial : (int64_t)-1, args->fd, io_events(args->events));
+  //lwsl_user("minnet_handlers fd=%d events=%s", args->fd, io_events(events));
 
-  // opaque->args=(struct pollfd){ args->fd, args->events, 0};
+  if(events)
+    func = make_handler(ctx, args->fd, events, lws_get_context(wsi));
 
-  func = make_handler(ctx, args->fd, args->events, lws_get_context(wsi));
+  out[0] = (events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
+  out[1] = (events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
 
-  out[0] = (args->events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
-  out[1] = (args->events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
-
-  JS_FreeValue(ctx, func);
+  if(events)
+    JS_FreeValue(ctx, func);
 }
 
 JSValue
