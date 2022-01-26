@@ -40,10 +40,10 @@ JSValue minnet_fetch(JSContext*, JSValueConst, int, JSValueConst*);
 
 // THREAD_LOCAL struct lws_context* minnet_lws_context = 0;
 
-static JSValue minnet_log_cb, minnet_log_this;
-int32_t minnet_log_level = 0;
-JSContext* minnet_log_ctx = 0;
-BOOL minnet_exception = FALSE;
+static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
+THREAD_LOCAL int32_t minnet_log_level = 0;
+THREAD_LOCAL JSContext* minnet_log_ctx = 0;
+THREAD_LOCAL BOOL minnet_exception = FALSE;
 
 static void
 lws_log_callback(int level, const char* line) {
@@ -80,6 +80,7 @@ lws_log_callback(int level, const char* line) {
 int
 minnet_lws_unhandled(const char* handler, int reason) {
   lwsl_warn("Unhandled %s client event: %i %s\n", handler, reason, lws_callback_name(reason));
+  assert(0);
   return -1;
 }
 

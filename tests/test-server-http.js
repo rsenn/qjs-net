@@ -3,6 +3,7 @@ import * as os from 'os';
 import { Console } from 'console';
 import { MinnetServer, MakeCert } from './server.js';
 import { TestFetch } from './fetch.js';
+import assert from './assert.js';
 
 function main(...args) {
   globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } });
@@ -51,7 +52,7 @@ function main(...args) {
         worker.sendMessage({ type: 'exit' });
         break;
       case 'running':
-        let data = fetch('generator');
+        let data;
         let filename = 'jsutils.h';
 
         data = fetch(filename);
@@ -59,9 +60,11 @@ function main(...args) {
         let file = std.loadFile(filename);
         console.log('data.length == file.length', data.length == file.length);
         console.log('data == file', data == file);
+        assert(data, file);
+        std.exit(0);
         break;
       default:
-        console.log('client_http.onmessage', e);
+        console.log('test-server-http.onmessage', e);
         break;
     }
   };

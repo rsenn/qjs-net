@@ -45,8 +45,6 @@ void mount_free(JSContext*, MinnetHttpMount const*);
 int http_server_writable(struct lws*, struct http_response*, BOOL done);
 int http_server_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
 
-extern MinnetServer minnet_server;
-
 static inline int
 is_h2(struct lws* wsi) {
   return lws_get_network_wsi(wsi) != wsi;

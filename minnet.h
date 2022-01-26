@@ -103,8 +103,9 @@ typedef struct /* __attribute__((packed)) */ session_data {
   int64_t written;
 } MinnetSession;
 
-extern JSContext* minnet_log_ctx;
-extern BOOL minnet_exception;
+extern THREAD_LOCAL int32_t minnet_log_level;
+extern  THREAD_LOCAL JSContext* minnet_log_ctx;
+extern  THREAD_LOCAL BOOL minnet_exception;
 
 JSValue headers_object(JSContext*, const struct byte_buffer* buffer);
 char* headers_atom(JSAtom, JSContext* ctx);

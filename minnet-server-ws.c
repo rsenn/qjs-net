@@ -129,16 +129,32 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_WSI_DESTROY:
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
-    case LWS_CALLBACK_ADD_HEADERS:
     case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL: {
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
-    case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
-    case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
+    case LWS_CALLBACK_ADD_HEADERS:
     case LWS_CALLBACK_CLOSED_HTTP:
-    case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+    case LWS_CALLBACK_FILTER_HTTP_CONNECTION:
+    case LWS_CALLBACK_HTTP:
+    case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+    case LWS_CALLBACK_HTTP_BODY:
+    case LWS_CALLBACK_HTTP_BODY_COMPLETION:
+    case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
+    case LWS_CALLBACK_HTTP_FILE_COMPLETION:
+    case LWS_CALLBACK_HTTP_WRITEABLE: {
       return http_server_callback(wsi, reason, user, in, len);
     }
+      /*    case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL:
+          case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL:
+          case LWS_CALLBACK_CLIENT_HTTP_REDIRECT:
+          case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
+          case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
+          case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
+          case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP:
+          case LWS_CALLBACK_RECEIVE_CLIENT_HTTP:
+          case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ: {
+            return http_client_callback(wsi, reason, user, in, len);
+          }*/
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
     default: {
       minnet_lws_unhandled("WS", reason);

@@ -15,6 +15,8 @@ typedef struct /* __attribute__((packed))*/ {
   MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd, cb_http;
 } MinnetClient;
 
+extern THREAD_LOCAL JSContext* minnet_client_ctx;
+
 JSValue minnet_ws_client(JSContext*, JSValue, int, JSValue* argv);
 
 #endif

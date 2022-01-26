@@ -11,7 +11,7 @@
 
 #include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
 
-MinnetServer minnet_server = {0};
+THREAD_LOCAL MinnetServer minnet_server = {0};
 
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);

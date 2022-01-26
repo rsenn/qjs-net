@@ -19,6 +19,6 @@ struct proxy_connection;
 JSValue minnet_ws_server(JSContext*, JSValue, int argc, JSValue* argv);
 int http_server_headers(JSContext*, MinnetBuffer*, struct lws* wsi);
 
-extern MinnetServer minnet_server;
+extern THREAD_LOCAL MinnetServer minnet_server;
 
 #endif /* MINNET_SERVER_H */

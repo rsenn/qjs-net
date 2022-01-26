@@ -1,5 +1,6 @@
 import * as std from 'std';
 import * as os from 'os';
+import process from 'process';
 import net, { URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
 
 const w = os.Worker.parent;
@@ -97,10 +98,12 @@ export class MinnetServer {
 
     let started = once(() => w.postMessage({ type: 'running' }));
 
-    net.setLog(LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD, (level, msg) => {
+    const flags = LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
+
+    net.setLog(flags /* & 0*/, (level, msg) => {
       const l = logLevels[level];
       const n = Math.log2(level);
-
+      //return;
       if(level >= LLL_NOTICE && level <= LLL_EXT) return;
 
       if(l == 'USER') print(`SERVER   ${msg}`);
@@ -152,6 +155,7 @@ export class MinnetServer {
         w.postMessage({ type: 'http', id: this.id(ws), url, path });
       },
       onFd: (fd, rd, wr) => {
+        log('onFd', { fd, rd, wr });
         started();
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
@@ -243,14 +247,80 @@ export class MinnetServer {
   }
 }
 
-if(w) {
-  import('console').then(({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } })));
+//if(globalThis.console && !console.config)
+import('console').then(({ Console }) => {
+  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } });
 
-  try {
-    log(`Starting worker`, w);
+  if(w) {
+    try {
+      log(`Starting worker`, w);
 
-    MinnetServer.worker(w);
-  } catch(error) {
-    w.postMessage({ type: 'error', error });
+      MinnetServer.worker(w);
+    } catch(error) {
+      w.postMessage({ type: 'error', error });
+    }
+  } else {
+    const args = globalThis.scriptArgs ?? process.argv;
+    console.log('args', args);
+
+    if(/(^|\/)server\.js$/.test(args[0])) {
+      const sslCert = 'localhost.crt',
+        sslPrivateKey = 'localhost.key';
+
+      const host = args[1] ?? 'localhost',
+        port = args[2] ? +args[2] : 30000;
+
+      console.log('MinnetServer', { host, port });
+
+      let server = net.server({
+        host,
+        port,
+        protocol: 'http',
+        sslCert,
+        sslPrivateKey,
+        mounts: {
+          '/': ['/', '.', 'index.html'],
+          '/404.html': function* (req, res) {
+            console.log('/404.html', { req, res });
+            yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
+          },
+          *generator(req, res) {
+            console.log('/generator', { req, res });
+            yield 'This';
+            yield ' ';
+            yield 'is';
+            yield ' ';
+            yield 'a';
+            yield ' ';
+            yield 'generated';
+            yield ' ';
+            yield 'response';
+            yield '\n';
+          }
+        },
+        onConnect: (ws, req) => {
+          const { url, path } = req;
+          const { family, address, port } = ws;
+          console.log('onConnect', { url, path, family, address, port });
+        },
+        onClose: (ws, status) => {
+          console.log('onClose', { ws, status });
+        },
+        onError: (ws, error) => {
+          console.log('onError', { ws, error });
+        },
+        onHttp: (req, rsp) => {
+          console.log('onHttp', { req, rsp });
+        },
+        onFd: (fd, rd, wr) => {
+          console.log('onFd', { fd, rd, wr });
+          os.setReadHandler(fd, rd);
+          os.setWriteHandler(fd, wr);
+        },
+        onMessage: (ws, msg) => {
+          console.log('onMessage', { ws, msg });
+        }
+      });
+    }
   }
-}
+});
