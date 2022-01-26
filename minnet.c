@@ -91,12 +91,11 @@ get_log(JSContext* ctx, JSValueConst this_val) {
 
 static JSValue
 set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst thisObj) {
-  JSValue ret = minnet_log_cb;
+  JSValue ret = JS_VALUE_GET_TAG(minnet_log_cb) == 0 ? JS_UNDEFINED : minnet_log_cb;
 
   minnet_log_ctx = ctx;
   minnet_log_cb = JS_DupValue(ctx, value);
-  if(!JS_IsUndefined(minnet_log_this) || !JS_IsNull(minnet_log_this))
-
+  if(!JS_IsUndefined(minnet_log_this) && !JS_IsNull(minnet_log_this) && JS_VALUE_GET_TAG(minnet_log_this) != 0)
     JS_FreeValue(ctx, minnet_log_this);
 
   minnet_log_this = JS_DupValue(ctx, thisObj);
@@ -433,8 +432,8 @@ value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
-  minnet_log_cb = JS_UNDEFINED;
-  minnet_log_this = JS_UNDEFINED;
+/*  minnet_log_cb = JS_UNDEFINED;
+  minnet_log_this = JS_UNDEFINED;*/
 
   JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 

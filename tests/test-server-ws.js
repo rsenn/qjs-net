@@ -7,29 +7,22 @@ import { TestFetch } from './fetch.js';
 import assert from './assert.js';
 import { getexe, thisdir, spawn } from './spawn.js';
 import { Levels, DefaultLevels, Init } from './log.js';
+import Client from './client.js';
 
 function TestClient(url = 'ws://localhost:30000/ws') {
+  const sslCert = 'localhost.crt',
+    sslPrivateKey = 'localhost.key';
+
   Init('TestClient');
 
-  return net.client(url, {
-    onConnect(ws, req) {
-      console.log('onConnect', { ws, req });
-    },
-    onError(ws, error) {
-      console.log('onError', { ws, error });
-    },
-    onClose(ws, reason) {
-      console.log('onClose', { ws, reason });
-    },
-    onMessage(ws, msg) {
-      console.log('onMessage', { ws, msg });
-    }
-  });
+  return Client(url, { sslCert, sslPrivateKey,
+
+  onConnect(ws,req) {
+    ws.send("HELLO\r\n");
+  } });
 }
 
 function main(...args) {
-  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } });
-
   let pid = spawn('server.js', 'localhost', 30000);
   console.log('pid', pid);
 

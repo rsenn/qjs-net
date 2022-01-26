@@ -6,8 +6,6 @@ import { TestFetch } from './fetch.js';
 import assert from './assert.js';
 
 function main(...args) {
-  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } });
-
   const sslCert = 'localhost.crt',
     sslPrivateKey = 'localhost.key';
 
