@@ -6,16 +6,11 @@ import { MinnetServer, MakeCert } from './server.js';
 import { TestFetch } from './fetch.js';
 import assert from './assert.js';
 import { getexe, thisdir, spawn } from './spawn.js';
+import { Levels, DefaultLevels, Init } from './log.js';
 
 function TestClient(url = 'ws://localhost:30000/ws') {
-  const flags = LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
-  net.setLog(flags, (level, msg) => {
-    const n = Math.log2(level);
-    let l;
-    if(level == LLL_USER) l = 'MINNET';
-    else l = n + '';
-    console.log(`TestClient ${l.padEnd(10)} ${msg}`);
-  });
+  
+Init('TestClient');
 
   return net.client(url, {
     onConnect(ws, req) {

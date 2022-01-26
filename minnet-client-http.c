@@ -13,6 +13,16 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int n;
 
+  switch(reason) {
+    case LWS_CALLBACK_LOCK_POLL:
+    case LWS_CALLBACK_UNLOCK_POLL:
+    case LWS_CALLBACK_ADD_POLL_FD:
+    case LWS_CALLBACK_DEL_POLL_FD:
+    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
+      return fd_callback(wsi, reason, &client->cb_fd, in);
+    }
+  }
+
   lwsl_user("client-http " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
   switch(reason) {
@@ -156,13 +166,6 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         minnet_emit(&client->cb_http, 2, &sess->req_obj);
       }
       break;
-    }
-    case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL:
-    case LWS_CALLBACK_ADD_POLL_FD:
-    case LWS_CALLBACK_DEL_POLL_FD:
-    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-      return fd_callback(wsi, reason, &client->cb_fd, in);
     }
 
     default: {

@@ -14,7 +14,8 @@ export function spawn(script, ...args) {
   let exe = getexe();
   let fd = os.open('child.log', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644);
   let argv = [exe, file].concat(args);
-  let pid = os.exec(argv, { block: false, stdout: fd, stderr: fd });
+  console.log('spawn', { fd, argv, file });
+  let pid = os.exec(argv, { block: false, usePath: false, file: exe, stdout: fd, stderr: fd });
   os.close(fd);
   console.log('spawned', argv.join(' '));
   return pid;

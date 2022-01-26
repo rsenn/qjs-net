@@ -3,6 +3,7 @@ import * as os from 'os';
 import inspect from 'inspect';
 import net, { URL } from 'net';
 import { Console } from 'console';
+import { Levels, DefaultLevels, Set } from './log.js';
 
 const escape = s =>
   [
@@ -26,17 +27,7 @@ function main(...args) {
   function createWS(url, callbacks, listen = 0) {
     const { protocol, host, port, path } = new URL(url);
 
-    net.setLog(
-      /* net.LLL_USER |*/ (net.LLL_WARN << 1) - 1,
-      debug
-        ? (level, msg) => {
-            const l = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
-            if(l == 'NOTICE' || l == 'MINNET')
-              //if(l != 'NOTICE' ) if(l != 'MINNET') if(!/POLL/.test(msg))
-              console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
-          }
-        : () => {}
-    );
+    Set();
 
     console.log('createWS', { protocol, host, port, path, listen });
 

@@ -2,19 +2,13 @@ import * as std from 'std';
 import * as os from 'os';
 import process from 'process';
 import net, { URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
+import { Levels, DefaultLevels, Init } from './log.js';
 
 const w = os.Worker.parent;
 const name = w ? 'CHILD\t' : 'PARENT\t';
 const getpid = () => parseInt(os.readlink('/proc/self')[0]);
 const log = (...args) => console.log(name, ...args);
 const connections = new Set();
-const logLevels = Object.getOwnPropertyNames(net)
-  .filter(n => /^LLL_/.test(n))
-  .reduce((acc, n) => {
-    let v = Math.log2(net[n]);
-    if(Math.floor(v) === v) acc[net[n]] = n.substring(4);
-    return acc;
-  }, {});
 
 const once = fn => {
   let ret,
@@ -25,6 +19,32 @@ const exists = path => {
   let [st, err] = os.stat(path);
   return !err;
 };
+const MimeTypes = [
+  ['.svgz', 'application/gzip'],
+  ['.mjs', 'application/javascript'],
+  ['.wasm', 'application/octet-stream'],
+  ['.eot', 'application/vnd.ms-fontobject'],
+  ['.lib', 'application/x-archive'],
+  ['.bz2', 'application/x-bzip2'],
+  ['.gitignore', 'text/plain'],
+  ['.cmake', 'text/plain'],
+  ['.hex', 'text/plain'],
+  ['.md', 'text/plain'],
+  ['.pbxproj', 'text/plain'],
+  ['.wat', 'text/plain'],
+  ['.c', 'text/x-c'],
+  ['.h', 'text/x-c'],
+  ['.cpp', 'text/x-c++'],
+  ['.hpp', 'text/x-c++'],
+  ['.filters', 'text/xml'],
+  ['.plist', 'text/xml'],
+  ['.storyboard', 'text/xml'],
+  ['.vcxproj', 'text/xml'],
+  ['.bat', 'text/x-msdos-batch'],
+  ['.mm', 'text/x-objective-c'],
+  ['.m', 'text/x-objective-c'],
+  ['.sh', 'text/x-shellscript']
+];
 
 export function MakeCert(sslCert, sslPrivateKey) {
   let stderr = os.open('/dev/null', os.O_RDWR);
@@ -98,17 +118,8 @@ export class MinnetServer {
 
     let started = once(() => w.postMessage({ type: 'running' }));
 
-    const flags = LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
+    Init('SERVER');
 
-    net.setLog(flags /* & 0*/, (level, msg) => {
-      const l = logLevels[level];
-      const n = Math.log2(level);
-      //return;
-      if(level >= LLL_NOTICE && level <= LLL_EXT) return;
-
-      if(l == 'USER') print(`SERVER   ${msg}`);
-      else log(`${l.padEnd(10)} ${msg}`);
-    });
     let { mounts = {}, mimetypes = [], ...options } = this.options;
 
     mounts = {
@@ -132,8 +143,10 @@ export class MinnetServer {
 
     log('mounts', mounts);
 
+    mimetypes = { ...MimeTypes, ...mimetypes };
+
     net.server({
-      mimetypes: [['.svgz', 'application/gzip'], ['.mjs', 'application/javascript'], ['.wasm', 'application/octet-stream'], ['.eot', 'application/vnd.ms-fontobject'], ['.lib', 'application/x-archive'], ['.bz2', 'application/x-bzip2'], ['.gitignore', 'text/plain'], ['.cmake', 'text/plain'], ['.hex', 'text/plain'], ['.md', 'text/plain'], ['.pbxproj', 'text/plain'], ['.wat', 'text/plain'], ['.c', 'text/x-c'], ['.h', 'text/x-c'], ['.cpp', 'text/x-c++'], ['.hpp', 'text/x-c++'], ['.filters', 'text/xml'], ['.plist', 'text/xml'], ['.storyboard', 'text/xml'], ['.vcxproj', 'text/xml'], ['.bat', 'text/x-msdos-batch'], ['.mm', 'text/x-objective-c'], ['.m', 'text/x-objective-c'], ['.sh', 'text/x-shellscript'], ...mimetypes],
+      mimetypes,
       mounts,
       onConnect: (ws, req) => {
         const { url, path } = req;
@@ -248,7 +261,11 @@ export class MinnetServer {
 }
 
 //if(globalThis.console && !console.config)
-import('console').then(({ Console }) => {
+import('console')
+  .then(({ Console }) => main(Console))
+  .catch(() => main());
+
+function main(Console) {
   globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } });
 
   if(w) {
@@ -261,6 +278,7 @@ import('console').then(({ Console }) => {
     }
   } else {
     const args = globalThis.scriptArgs ?? process.argv;
+
     console.log('args', args);
 
     if(/(^|\/)server\.js$/.test(args[0])) {
@@ -273,6 +291,7 @@ import('console').then(({ Console }) => {
       console.log('MinnetServer', { host, port });
 
       let server = net.server({
+        mimetypes: MimeTypes,
         host,
         port,
         protocol: 'http',
@@ -323,4 +342,4 @@ import('console').then(({ Console }) => {
       });
     }
   }
-});
+}
