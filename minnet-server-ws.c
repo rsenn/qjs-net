@@ -1,6 +1,7 @@
 #include "minnet-server.h"
 #include "minnet-websocket.h"
 #include "minnet-request.h"
+#include "minnet-response.h"
 
 int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
@@ -53,6 +54,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
     case LWS_CALLBACK_ESTABLISHED: {
       // struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
+      int status;
+      status = lws_http_client_http_response(wsi);
 
       opaque->status = OPEN;
 
@@ -65,6 +68,9 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
         if(!JS_IsObject(sess->req_obj))
           sess->req_obj = minnet_request_wrap(ctx, opaque->req);
+
+        sess->resp_obj = minnet_response_new(ctx, opaque->req->url, status, TRUE, "text/html");
+
 
         sess->ws_obj = minnet_ws_wrap(ctx, wsi);
         opaque->ws = minnet_ws_data2(ctx, sess->ws_obj);

@@ -65,10 +65,11 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
       int status;
       status = lws_http_client_http_response(wsi);
+
       lwsl_user("http-established #1 " FGC(171, "%-38s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
-      sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
       sess->req_obj = minnet_request_wrap(ctx, client->request);
 
+      sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
       client->response = minnet_response_data(sess->resp_obj);
 
       if(method_number(client->connect_info.method) == METHOD_POST) {

@@ -15,8 +15,8 @@ function main(...args) {
     Client(
       arg,
       {
-        onConnect(ws, req) {
-          console.log('onConnect', { ws, req });
+        onConnect(ws, req, resp) {
+          console.log('onConnect', { ws, req, resp });
           const { protocol } = new URL(req.url);
           console.log('protocol', protocol);
 
