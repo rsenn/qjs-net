@@ -316,8 +316,8 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* a
 
     opaque->status = CLOSED;
 
-    /* lws_close_free_wsi(ws->lwsi, status, "minnet_ws_close");
-      ws->lwsi = 0;*/
+    lws_close_free_wsi(ws->lwsi, status, "minnet_ws_close");
+    ws->lwsi = 0;
 
     return JS_TRUE;
   }
