@@ -23,12 +23,14 @@ function main(...args) {
           if(!protocol.startsWith('http')) {
             if(protocol.startsWith('ws')) {
               setReadHandler(0, () => {
+                stdout.puts(`\r\x1b[0;37m>`);
+                stdout.flush();
                 let line = stdin.getline();
 
                 if(line.length) {
-                  stdout.puts(`\r\x1b[0;37m> ${escape(line)}\x1b[0m\n`);
-                  stdout.flush();
                   ws.send(line);
+                  stdout.puts(`\x1b[0m\n`);
+                  stdout.flush();
                 }
               });
             } else {
