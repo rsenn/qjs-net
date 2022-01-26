@@ -304,9 +304,9 @@ if(w) {
           }
         },
         onConnect: (ws, req) => {
-          const { url, path } = req;
+          /*const { url, path } = req;
           const { family, address, port } = ws;
-          console.log('onConnect', { url, path, family, address, port });
+          console.log('onConnect', { url, path, family, address, port });*/
         },
         onClose: (ws, status) => {
           console.log('onClose', { ws, status });
@@ -323,7 +323,8 @@ if(w) {
           os.setWriteHandler(fd, wr);
         },
         onMessage: (ws, msg) => {
-          ws.send(JSON.stringify({ type: 'message', msg }));
+          ws.send('ECHO: ' + msg);
+          //ws.send(JSON.stringify({ type: 'message', msg }));
         }
       });
     }

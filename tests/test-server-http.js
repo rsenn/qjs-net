@@ -3,7 +3,7 @@ import * as os from 'os';
 import { Console } from 'console';
 import { MinnetServer, MakeCert } from './server.js';
 import { TestFetch } from './fetch.js';
-import assert from './assert.js';
+import { assert } from './common.js';
 
 function main(...args) {
   const sslCert = 'localhost.crt',

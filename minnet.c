@@ -322,9 +322,9 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
         opaque->error = errno;
     }
 
-    // lwsl_user("minnet_io_handler %s before lws_service_fdfd=%d, events=%s, revents=%s", ((const char*[]){"Read", "Write"})[wr], x.fd, io_events(x.events), io_events(x.revents));
+    lwsl_user("minnet_io_handler %s before lws_service_fdfd=%d, events=%s, revents=%s", ((const char*[]){"Read", "Write"})[wr], x.fd, io_events(x.events), io_events(x.revents));
     int ret = lws_service_fd(c->context, &x);
-    // lwsl_user("minnet_io_handler %s after lws_service_fd fd=%d, ret=%d", ((const char*[]){"Read", "Write"})[wr], x.fd, ret);
+    lwsl_user("minnet_io_handler %s after lws_service_fd fd=%d, ret=%d", ((const char*[]){"Read", "Write"})[wr], x.fd, ret);
   }
 
   return JS_UNDEFINED;
@@ -375,15 +375,22 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
 
 JSValue
 minnet_emit_this(const struct ws_callback* cb, JSValueConst this_obj, int argc, JSValue* argv) {
-  if(!cb->ctx)
-    return JS_UNDEFINED;
+  JSValue ret = JS_UNDEFINED;
 
-  size_t len;
-  const char* str = JS_ToCStringLen(cb->ctx, &len, cb->func_obj);
-  // printf("emit %s [%d] \"%.*s\"\n", cb->name, argc, (int)((const char*)memchr(str, '{', len) - str), str);
-  JS_FreeCString(cb->ctx, str);
+  if(cb->ctx) {
+    size_t len;
+    const char* str;
+    str = JS_ToCStringLen(cb->ctx, &len, cb->func_obj);
+    // printf("emit %s [%d] \"%.*s\"\n", cb->name, argc, (int)((const char*)memchr(str, '{', len) - str), str);
+    JS_FreeCString(cb->ctx, str);
 
-  return JS_Call(cb->ctx, cb->func_obj, this_obj, argc, argv);
+    ret = JS_Call(cb->ctx, cb->func_obj, this_obj, argc, argv);
+  }
+
+  if(JS_IsException(ret))
+    minnet_exception = TRUE;
+
+  return ret;
 }
 
 JSValue
@@ -432,8 +439,8 @@ value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
-/*  minnet_log_cb = JS_UNDEFINED;
-  minnet_log_this = JS_UNDEFINED;*/
+  /*  minnet_log_cb = JS_UNDEFINED;
+    minnet_log_this = JS_UNDEFINED;*/
 
   JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 

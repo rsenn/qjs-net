@@ -121,37 +121,46 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     client.body = JS_GetPropertyStr(ctx, options, "body");
   }
 
-  url_info(&client.url, &client.connect_info);
-  client.connect_info.pwsi = &wsi;
-  client.connect_info.context = lws;
-
-  switch(protocol_number(client.url.protocol)) {
-    case PROTOCOL_HTTP:
-    case PROTOCOL_HTTPS: {
-      client.connect_info.method = method_str;
-      break;
-    }
-  }
+  {
+    struct lws_client_connect_info* conn = &client.connect_info;
+    url_info(&client.url, conn);
+    conn->pwsi = &wsi;
+    conn->context = lws;
 
 #ifdef DEBUG_OUTPUT
-  printf("METHOD: %s\n", method_str);
-  printf("PROTOCOL: %s\n", client.connect_info.protocol);
+    printf("METHOD: %s\n", method_str);
+    printf("PROTOCOL: %s\n", conn->protocol);
 #endif
 
-  lws_client_connect_via_info(&client.connect_info);
+    switch(protocol_number(client.url.protocol)) {
+      case PROTOCOL_HTTP:
+      case PROTOCOL_HTTPS: {
+        conn->method = method_str;
+        break;
+      }
+    }
+
+    lws_client_connect_via_info(conn);
+  }
 
   minnet_exception = FALSE;
+  // JSValue except;
 
   while(n >= 0) {
     if(minnet_exception) {
+      minnet_exception = FALSE;
       ret = JS_EXCEPTION;
       break;
     }
 
     js_std_loop(ctx);
 
+    /* except = JS_GetException(ctx);
+     if(!JS_IsNull(except))
+       minnet_exception = TRUE;*/
     //  lws_service(context, 500);
   }
+
   if(wsi) {
     JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
     if(JS_IsBool(opt_binary)) {

@@ -291,12 +291,13 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* a
       optind++;
     }
 
-    // printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
+    printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
 
     lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
 
-    lws_close_free_wsi(ws->lwsi, status, "minnet_ws_close");
-    ws->lwsi = 0;
+    /* lws_close_free_wsi(ws->lwsi, status, "minnet_ws_close");
+     ws->lwsi = 0;*/
+    ws->opaque->status = CLOSING;
 
     return JS_TRUE;
   }
