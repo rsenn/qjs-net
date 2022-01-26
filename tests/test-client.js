@@ -1,7 +1,4 @@
 import * as std from 'std';
-import * as os from 'os';
-import net, { URL } from 'net';
-import { Levels, DefaultLevels, Init, SetLog } from './log.js';
 import Client from './client.js';
 
 function main(...args) {

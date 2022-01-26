@@ -1,6 +1,5 @@
 import * as std from 'std';
 import * as os from 'os';
-import net from 'net';
 import { assert, randStr } from './common.js';
 import { spawn, wait4 } from './spawn.js';
 import Client from './client.js';
