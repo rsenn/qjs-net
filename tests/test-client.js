@@ -19,9 +19,6 @@ function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
   globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } });
 
-  const sslCert = 'localhost.crt',
-    sslPrivateKey = 'localhost.key';
-
   const debug = args[0] == '-x' && args.shift();
   if(args.length == 0) args.push('https://github.com/rsenn?tab=repositories');
 
@@ -31,8 +28,11 @@ function main(...args) {
     }
   });
 
+  const sslCert = 'localhost.crt',
+    sslPrivateKey = 'localhost.key';
+
   for(let arg of args) {
-    Client(arg, {}, false);
+    Client(arg, { sslCert, sslPrivateKey }, false);
   }
 
   function quit(why) {

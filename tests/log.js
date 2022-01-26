@@ -1,11 +1,10 @@
 import net, { URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
 
-export const Levels = Object.keys({ LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD })
-  .reduce((acc, n) => {
-    let v = Math.log2(net[n]);
-    if(Math.floor(v) === v) acc[net[n]] = n.substring(4);
-    return acc;
-  }, {});
+export const Levels = Object.keys({ LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD }).reduce((acc, n) => {
+  let v = Math.log2(net[n]);
+  if(Math.floor(v) === v) acc[net[n]] = n.substring(4);
+  return acc;
+}, {});
 
 export const DefaultLevels = LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
 

@@ -1,26 +1,23 @@
 import * as std from 'std';
 import * as os from 'os';
 import net, { URL } from 'net';
-import { Levels, DefaultLevels, Init, SetLog } from './log.js';
+import { Init } from './log.js';
 
-export default function Client(url, callbacks, listen = 0) {
-  const { protocol, host, port, path } = new URL(url);
+const connections = new Set();
 
+const escape = s =>
+  [
+    [/\r/g, '\\r'],
+    [/\n/g, '\\n']
+  ].reduce((a, [exp, rpl]) => a.replace(exp, rpl), s);
+
+const abbreviate = s => (s.length > 100 ? s.substring(0, 45) + ' ... ' + s.substring(-45) : s);
+
+export default function Client(url, options) {
   Init('CLIENT');
 
-  console.log('createWS', { protocol, host, port, path, listen });
-
-  const fn = [net.client, net.server][+listen];
-  return fn({
-    block: false,
-    sslCert,
-    sslPrivateKey,
-    protocol,
-    ssl: protocol == 'wss',
-    host,
-    port,
-    path,
-    ...callbacks,
+  return net.client(url, {
+    ...options,
     onConnect(ws, req) {
       console.log('onConnect', ws, req);
       connections.add(ws);
@@ -59,3 +56,9 @@ export default function Client(url, callbacks, listen = 0) {
     }
   });
 }
+
+Object.defineProperty(Client, 'connections', {
+  get() {
+    return [...connections];
+  }
+});
