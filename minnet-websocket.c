@@ -1,4 +1,4 @@
-#include "buffer.h"
+#include "minnet-buffer.h"
 #include "jsutils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
@@ -127,27 +127,37 @@ static JSValue
 minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetWebsocket* ws;
   int64_t m, len;
-  MinnetBuffer buffer = BUFFER_0();
+  MinnetSession* sess;
   JSValue ret = JS_UNDEFINED;
+  MinnetBuffer buffer = BUFFER(0);
 
   if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  m = buffer_fromvalue(&buffer, argv[0], ctx);
-  if(!m)
+  if(!(m = buffer_fromvalue(&buffer, argv[0], ctx)))
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
 
   if(m < 0) {
     ret = JS_ThrowOutOfMemory(ctx);
     goto fail;
   }
-  len = buffer_REMAIN(&buffer);
-  m = lws_write(ws->lwsi, buffer.read, buffer_REMAIN(&buffer), JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
 
-  if(m < len)
-    ret = JS_ThrowInternalError(ctx, "lws write failed: %" PRIi64 "/%" PRIi64, m, len);
-  else
-    ret = JS_NewInt64(ctx, m);
+  len = buffer_REMAIN(&buffer);
+
+  if((sess = ws->opaque->sess)) {
+
+    buffer_append(&sess->send_buf, buffer.read, len, ctx);
+    lws_callback_on_writable(ws->lwsi);
+
+  } else {
+
+    m = lws_write(ws->lwsi, buffer.read, buffer_REMAIN(&buffer), JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
+
+    if(m < len)
+      ret = JS_ThrowInternalError(ctx, "lws write failed: %" PRIi64 "/%" PRIi64, m, len);
+    else
+      ret = JS_NewInt64(ctx, m);
+  }
 
 fail:
   buffer_free(&buffer, JS_GetRuntime(ctx));
@@ -292,12 +302,12 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* a
     }
 
     // printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
+    if(ws->opaque->status < CLOSING) {
+      struct lws_protocols* protocol = lws_get_protocol(ws->lwsi);
 
-    struct lws_protocols* protocol = lws_get_protocol(ws->lwsi);
-    // struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(ws->lwsi);
-
-    if(!strncmp(protocol->name, "ws", 2))
-      lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
+      if(!strncmp(protocol->name, "ws", 2))
+        lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
+    }
 
     ws->opaque->status = CLOSED;
 

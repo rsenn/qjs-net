@@ -54,7 +54,7 @@ sslcert_client(JSContext* ctx, struct lws_context_creation_info* info, JSValueCo
 JSValue
 minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct lws_context* lws = 0;
-  int n = 0, argind = 0,status = -1;
+  int n = 0, argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
   MinnetWebsocket* ws;
   MinnetClient client = {.headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
@@ -64,7 +64,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   struct lws* wsi = 0;
   char* url;
   const char *str, *method_str = 0;
-  struct wsi_opaque_user_data* opaque=0;
+  struct wsi_opaque_user_data* opaque = 0;
 
   SETLOG(LLL_INFO)
 
@@ -147,7 +147,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   while(n >= 0) {
     if(status != opaque->status) {
       status = opaque->status;
-      //fprintf(stderr, "STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
+      // fprintf(stderr, "STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
     }
 
     if(status == CLOSED)
@@ -289,7 +289,15 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
-      // lws_callback_on_writable(wsi);
+      MinnetBuffer* buf = &sess->send_buf;
+      int ret, size = buffer_REMAIN(buf);
+
+      if((ret = lws_write(wsi, buf->read, size, LWS_WRITE_TEXT)) != size) {
+        lwsl_err("sending message failed: %d < %d\n", ret, size);
+        return -1;
+      }
+
+      buffer_reset(buf);
       break;
     }
 
@@ -316,6 +324,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
 
     default: {
+      minnet_lws_unhandled(__func__, reason);
       break;
     }
   }

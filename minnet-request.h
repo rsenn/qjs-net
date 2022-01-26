@@ -4,7 +4,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "minnet.h"
-#include "buffer.h"
+#include "minnet-buffer.h"
 
 struct socket;
 struct http_response;

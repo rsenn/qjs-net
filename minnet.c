@@ -6,7 +6,7 @@
 #include "minnet-stream.h"
 #include "minnet-url.h"
 #include "jsutils.h"
-#include "buffer.h"
+#include "minnet-buffer.h"
 #include <assert.h>
 #include <errno.h>
 #include <string.h>

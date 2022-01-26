@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include "minnet-response.h"
 #include "jsutils.h"
-#include "buffer.h"
+#include "minnet-buffer.h"
 #include <strings.h>
 #include <quickjs.h>
 #include <curl/curl.h>
@@ -112,7 +112,7 @@ handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socket
       if(action != CURL_POLL_OUT)
         sock->wantread = TRUE;
 
-      fprintf(stderr,"handle_socket sock=%d, wantwrite=%d, wantread=%d\n", sock->sockfd, sock->wantwrite, sock->wantread);
+      fprintf(stderr, "handle_socket sock=%d, wantwrite=%d, wantread=%d\n", sock->sockfd, sock->wantwrite, sock->wantread);
 
       /*      event_del(sock->event);
             event_assign(sock->event, base, sock->sockfd, events,

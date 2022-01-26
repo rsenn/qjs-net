@@ -2,7 +2,7 @@
 #define MINNET_SERVER_H
 
 #include <quickjs.h>
-#include "buffer.h"
+#include "minnet-buffer.h"
 #include "minnet.h"
 
 struct http_mount;

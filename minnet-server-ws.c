@@ -105,11 +105,15 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       break;
     }
 
-    /*case LWS_CALLBACK_SERVER_WRITEABLE: {
-      //printf("ws   %s fd=%d\n", lws_callback_name(reason), lws_get_socket_fd(wsi));
-      lws_callback_on_writable(wsi);
-      return 0;
-    }*/
+    case LWS_CALLBACK_SERVER_WRITEABLE: {
+      fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));
+
+      MinnetBuffer* buf = &sess->send_buf;
+      fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s buf=%s\n", lws_callback_name(reason) + 13, buffer_escaped(buf, ctx));
+
+      break;
+    }
+
     case LWS_CALLBACK_RECEIVE: {
       if(ctx) {
         MinnetWebsocket* ws = minnet_ws_data2(ctx, sess->ws_obj);

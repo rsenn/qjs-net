@@ -4,7 +4,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "minnet.h"
-#include "buffer.h"
+#include "minnet-buffer.h"
 
 typedef struct stream {
   size_t ref_count;

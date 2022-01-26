@@ -131,7 +131,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       static uint8_t buffer[1024 + LWS_PRE];
 
       MinnetBuffer buf = BUFFER(buffer);
-      lwsl_user("http #1  " FGC(171, "%-38s") " fd=%d buf=%p write=%zu len=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), buffer_BEGIN(&buf), buffer_WRITE(&buf), len);
+      lwsl_user("http #1  " FGC(171, "%-38s") " fd=%d buf=%p write=%zu len=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), block_BEGIN(&buf), buffer_WRITE(&buf), len);
       ret = lws_http_client_read(wsi, &buf, &len);
       if(ret)
         return -1;
@@ -154,7 +154,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
       /*MinnetResponse* resp = minnet_response_data2(ctx, sess->resp_obj);
       sess->done = TRUE;
-      in = buffer_BEGIN(&resp->body);
+      in = block_BEGIN(&resp->body);
       len = buffer_WRITE(&resp->body);*/
 
       if((client->cb.http.ctx = ctx)) {

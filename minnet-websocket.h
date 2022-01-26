@@ -59,6 +59,16 @@ lws_opaque(struct lws* wsi, JSContext* ctx) {
   lws_set_opaque_user_data(wsi, opaque);
   return opaque;
 }
+
+static inline struct session_data*
+lws_session(struct lws* wsi) {
+  struct wsi_opaque_user_data* opaque;
+
+  if((opaque = lws_get_opaque_user_data(wsi)))
+    return opaque->sess;
+
+  return 0;
+}
 /*
 static inline int
 ws_fd(const MinnetWebsocket* ws) {

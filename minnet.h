@@ -4,6 +4,7 @@
 #include <cutils.h>
 #include <quickjs.h>
 #include <libwebsockets.h>
+#include "minnet-buffer.h"
 
 struct byte_buffer;
 struct http_request;
@@ -105,6 +106,7 @@ typedef struct session_data {
   int64_t written;
   struct server_context* server;
   struct client_context* client;
+  struct byte_buffer send_buf;
 } MinnetSession;
 
 typedef struct callbacks {

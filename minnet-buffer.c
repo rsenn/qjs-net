@@ -1,33 +1,96 @@
 #include "jsutils.h"
-#include "buffer.h"
+#include "minnet-buffer.h"
 #include <libwebsockets.h>
 
 void
+block_init(struct byte_block* blk, uint8_t* start, size_t len) {
+  blk->start = start;
+  blk->end = blk->start + len;
+}
+
+BOOL
+block_alloc(struct byte_block* blk, size_t size, JSContext* ctx) {
+  uint8_t* ptr;
+
+  if((ptr = js_malloc(ctx, size + LWS_PRE))) {
+    blk->start = ptr + LWS_PRE;
+    blk->end = blk->start + size;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+uint8_t*
+block_realloc(struct byte_block* blk, size_t size, JSContext* ctx) {
+  uint8_t* ptr;
+
+  if(!size) {
+    block_free(blk, JS_GetRuntime(ctx));
+    return 0;
+  }
+
+  if((ptr = js_realloc(ctx, block_ALLOC(blk), size + LWS_PRE))) {
+    blk->start = ptr + LWS_PRE;
+    blk->end = blk->start + size;
+  } else {
+    blk->end = blk->start = 0;
+  }
+
+  return ptr;
+}
+
+void
+w(struct byte_block* blk, JSRuntime* rt) {
+  if(blk->start)
+    js_free_rt(rt, blk->start - LWS_PRE);
+
+  blk->start = blk->end = 0;
+}
+
+static void
+block_finalizer(JSRuntime* rt, void* alloc, void* start) {
+  js_free_rt(rt, alloc);
+}
+
+int
+block_fromarraybuffer(struct byte_block* blk, JSValueConst value, JSContext* ctx) {
+  size_t len;
+
+  if(!(blk->start = JS_GetArrayBuffer(ctx, &len, value)))
+    return -1;
+
+  blk->end = blk->start + len;
+  return 0;
+}
+
+JSValue
+block_toarraybuffer(struct byte_block* blk, JSContext* ctx) {
+  struct byte_block mem = block_move(blk);
+  return JS_NewArrayBuffer(ctx, block_BEGIN(&mem), block_SIZE(&mem), block_finalizer, block_ALLOC(&mem), FALSE);
+}
+
+JSValue
+block_tostring(struct byte_block const* blk, JSContext* ctx) {
+  return JS_NewStringLen(ctx, block_BEGIN(blk), block_SIZE(blk));
+}
+
+void
 buffer_init(struct byte_buffer* buf, uint8_t* start, size_t len) {
-  buf->start = buf->read = buf->write = start;
-  buf->end = start + len;
+  block_init(&buf->block, start, len);
+
+  buf->read = buf->write = buf->start;
   buf->alloc = 0;
 }
 
-/*struct byte_buffer*
-buffer_new(JSContext* ctx, size_t size) {
-  if(size < LWS_RECOMMENDED_MIN_HEADER_SPACE)
-    size = LWS_RECOMMENDED_MIN_HEADER_SPACE;
-  struct byte_buffer* buf = js_mallocz(ctx, sizeof(struct byte_buffer) + size + LWS_PRE);
-
-  buffer_init(buf, (uint8_t*)&buf[1] + LWS_PRE, size);
-  return buf;
-}*/
-
 BOOL
 buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
-  uint8_t* p;
-  if((p = js_malloc(ctx, size + LWS_PRE))) {
-    buffer_init(buf, p + LWS_PRE, size);
-    buf->alloc = p;
-    return TRUE;
+  BOOL ret;
+  if((ret = block_alloc(&buf->block, size, ctx))) {
+    buf->alloc = buf->start - LWS_PRE;
+    buf->read = buf->write = 0;
   }
-  return FALSE;
+  return ret;
 }
 
 ssize_t
@@ -45,12 +108,8 @@ buffer_append(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) 
 void
 buffer_free(struct byte_buffer* buf, JSRuntime* rt) {
   if(buf->alloc)
-    js_free_rt(rt, buf->alloc);
-  buf->start = 0;
-  buf->read = 0;
-  buf->write = 0;
-  buf->end = 0;
-  buf->alloc = 0;
+    block_free(&buf->block, rt);
+  buf->read = buf->write = buf->alloc = 0;
 }
 
 BOOL
@@ -85,46 +144,40 @@ buffer_printf(struct byte_buffer* buf, const char* format, ...) {
 
 uint8_t*
 buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
-  size_t wrofs = buf->write - buf->start;
-  size_t rdofs = buf->read - buf->start;
+  size_t rd, wr;
   uint8_t* x;
-  assert(size >= wrofs);
-  // assert(buf->alloc);
 
   if(!size) {
     buffer_free(buf, JS_GetRuntime(ctx));
     return 0;
   }
 
-  x = js_realloc(ctx, buf->alloc, size + LWS_PRE);
+  rd = buffer_READ(buf);
+  wr = buffer_WRITE(buf);
+  assert(size >= wr);
 
-  if(x) {
-    if(buf->alloc == 0 && buf->start && wrofs)
-      memcpy(x + LWS_PRE, buf->start, wrofs);
+  if((x = block_realloc(&buf->block, size, ctx))) {
+    if(buf->alloc == 0 && buf->start && wr)
+      memcpy(x + LWS_PRE, buf->start, wr);
 
     buf->alloc = x;
-    buf->start = x + LWS_PRE;
-    buf->write = buf->start + wrofs;
-    buf->read = buf->start + rdofs;
-    buf->end = buf->start + size;
-    return buf->start;
+    buf->write = buf->start + wr;
+    buf->read = buf->start + rd;
   }
-  return 0;
+  return x;
 }
 
-/*int
+int
 buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
-  void* ptr;
-  size_t len;
-  if((ptr = JS_GetArrayBuffer(ctx, &len, value))) {
-    buf->start = ptr;
-    buf->read = ptr;
-    buf->write = ptr;
-    buf->end = buf->start + len;
-    return 0;
+  int ret;
+
+  if(!(ret = block_fromarraybuffer(&buf->block, value, ctx))) {
+    buf->read = buf->start;
+    buf->write = buf->start;
+    buf->alloc = 0;
   }
-  return 1;
-}*/
+  return ret;
+}
 
 int
 buffer_fromvalue(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
@@ -144,9 +197,7 @@ end:
 
 JSValue
 buffer_tostring(struct byte_buffer const* buf, JSContext* ctx) {
-  void* ptr = buf->start;
-  size_t len = buf->write - buf->start;
-  return JS_NewStringLen(ctx, ptr, len);
+  return block_tostring(&buf->block, ctx);
 }
 
 char*

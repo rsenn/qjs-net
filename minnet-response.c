@@ -1,6 +1,6 @@
 #include "minnet-websocket.h"
 #include "minnet-response.h"
-#include "buffer.h"
+#include "minnet-buffer.h"
 #include "jsutils.h"
 #include <cutils.h>
 
@@ -117,7 +117,7 @@ minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   MinnetResponse* res;
 
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id))) {
-    JSValue val = JS_NewArrayBuffer /*Copy*/ (ctx, buffer_BEGIN(&res->body), buffer_SIZE(&res->body), 0, 0, 0);
+    JSValue val = JS_NewArrayBuffer /*Copy*/ (ctx, block_BEGIN(&res->body), block_SIZE(&res->body), 0, 0, 0);
     return val;
   }
 
@@ -150,7 +150,7 @@ static JSValue
 minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
-    return JS_ParseJSON(ctx, buffer_BEGIN(&res->body), buffer_WRITE(&res->body), res->url);
+    return JS_ParseJSON(ctx, block_BEGIN(&res->body), buffer_WRITE(&res->body), res->url);
 
   return JS_EXCEPTION;
 }
@@ -159,7 +159,7 @@ static JSValue
 minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
-    return JS_NewStringLen(ctx, (char*)buffer_BEGIN(&res->body), buffer_WRITE(&res->body));
+    return JS_NewStringLen(ctx, (char*)block_BEGIN(&res->body), buffer_WRITE(&res->body));
 
   return JS_EXCEPTION;
 }
