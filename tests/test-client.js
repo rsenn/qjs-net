@@ -42,6 +42,8 @@ function main(...args) {
                 else if(b < 32 || b > 'z'.charCodeAt(0)) stdout.puts('char: ' + b);
                 stdout.putByte(b);
                 stdout.flush();
+
+                 ws.send(String.fromCharCode(b));
               });
             }
           }
@@ -58,7 +60,7 @@ function main(...args) {
           //console.log('onMessage', { ws, msg });
           stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
           stdout.flush();
-          ws.close(1000);
+         // ws.close(1000);
         },
         onHttp(req, resp) {
           console.log('onHttp', { req, resp });
