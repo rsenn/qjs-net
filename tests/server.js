@@ -1,7 +1,7 @@
 import * as std from 'std';
 import * as os from 'os';
-import process from 'process';
-import net, { URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
+//import process from 'process';
+import net, { URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net.so';
 import { Levels, DefaultLevels, Init } from './log.js';
 
 const w = os.Worker.parent;
@@ -266,7 +266,7 @@ import('console')
   .catch(() => main());
 
 function main(Console) {
-  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } });
+  //globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } });
 
   if(w) {
     try {
@@ -277,69 +277,75 @@ function main(Console) {
       w.postMessage({ type: 'error', error });
     }
   } else {
-    const args = globalThis.scriptArgs ?? process.argv;
+    try {
+      const args = globalThis.scriptArgs ?? process.argv;
 
-    console.log('args', args);
+      console.log('args', args);
 
-    if(/(^|\/)server\.js$/.test(args[0])) {
-      const sslCert = 'localhost.crt',
-        sslPrivateKey = 'localhost.key';
+      if(/(^|\/)server\.js$/.test(args[0])) {
+        const sslCert = 'localhost.crt',
+          sslPrivateKey = 'localhost.key';
 
-      const host = args[1] ?? 'localhost',
-        port = args[2] ? +args[2] : 30000;
+        const host = args[1] ?? 'localhost',
+          port = args[2] ? +args[2] : 30000;
 
-      console.log('MinnetServer', { host, port });
+        console.log('MinnetServer', { host, port });
 
-      let server = net.server({
-        mimetypes: MimeTypes,
-        host,
-        port,
-        protocol: 'http',
-        sslCert,
-        sslPrivateKey,
-        mounts: {
-          '/': ['/', '.', 'index.html'],
-          '/404.html': function* (req, res) {
-            console.log('/404.html', { req, res });
-            yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
+        Init('SERVER');
+
+       net.server({
+          mimetypes: MimeTypes,
+          host,
+          port,
+          protocol: 'http',
+          sslCert,
+          sslPrivateKey,
+          mounts: {
+            '/': ['/', '.', 'index.html'],
+            '/404.html': function* (req, res) {
+              console.log('/404.html', { req, res });
+              yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
+            },
+            *generator(req, res) {
+              console.log('/generator', { req, res });
+              yield 'This';
+              yield ' ';
+              yield 'is';
+              yield ' ';
+              yield 'a';
+              yield ' ';
+              yield 'generated';
+              yield ' ';
+              yield 'response';
+              yield '\n';
+            }
           },
-          *generator(req, res) {
-            console.log('/generator', { req, res });
-            yield 'This';
-            yield ' ';
-            yield 'is';
-            yield ' ';
-            yield 'a';
-            yield ' ';
-            yield 'generated';
-            yield ' ';
-            yield 'response';
-            yield '\n';
+          onConnect: (ws, req) => {
+            const { url, path } = req;
+            const { family, address, port } = ws;
+            console.log('onConnect', { url, path, family, address, port });
+          },
+          onClose: (ws, status) => {
+            console.log('onClose', { ws, status });
+          },
+          onError: (ws, error) => {
+            console.log('onError', { ws, error });
+          },
+          onHttp: (req, rsp) => {
+            console.log('onHttp', { req, rsp });
+          },
+          onFd: (fd, rd, wr) => {
+            //console.log('onFd', { fd, rd, wr });
+            os.setReadHandler(fd, rd);
+            os.setWriteHandler(fd, wr);
+          },
+          onMessage: (ws, msg) => {
+            ws.send(JSON.stringify({ type: 'message', msg }));
           }
-        },
-        onConnect: (ws, req) => {
-          const { url, path } = req;
-          const { family, address, port } = ws;
-          console.log('onConnect', { url, path, family, address, port });
-        },
-        onClose: (ws, status) => {
-          console.log('onClose', { ws, status });
-        },
-        onError: (ws, error) => {
-          console.log('onError', { ws, error });
-        },
-        onHttp: (req, rsp) => {
-          console.log('onHttp', { req, rsp });
-        },
-        onFd: (fd, rd, wr) => {
-          console.log('onFd', { fd, rd, wr });
-          os.setReadHandler(fd, rd);
-          os.setWriteHandler(fd, wr);
-        },
-        onMessage: (ws, msg) => {
-          console.log('onMessage', { ws, msg });
-        }
-      });
+        });
+      }
+    } catch(error) {
+      console.log('ERROR',error);
     }
   }
 }

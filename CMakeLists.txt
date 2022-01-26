@@ -388,13 +388,16 @@ file(GLOB TESTS tests/test-*.js)
 relative_path(TESTS "${CMAKE_CURRENT_SOURCE_DIR}" ${TESTS})
 
 if(DO_TESTS)
+  set(MODULE_PATH "${CMAKE_CURRENT_BINARY_DIR};${CMAKE_CURRENT_SOURCE_DIR}")
+  set(ENV{QUICKJS_MODULE_PATH} "${MODULE_PATH}")
+
   include(CTest)
 
   foreach(TEST ${TESTS})
     basename(BASE "${TEST}")
     string(REPLACE "test_" "" NAME "${BASE}")
     add_test(NAME "${BASE}"
-             COMMAND env QUICKJS_MODULE_PATH=${CMAKE_CURRENT_SOURCE_DIR}:${CMAKE_CURRENT_BINARY_DIR}
+             COMMAND env "QUICKJS_MODULE_PATH=${MODULE_PATH}"
                      "${QJS}" --bignum "${TEST}" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
   #[[  add_custom_target(
       "${BASE}" ALL

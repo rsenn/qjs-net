@@ -9,8 +9,7 @@ import { getexe, thisdir, spawn } from './spawn.js';
 import { Levels, DefaultLevels, Init } from './log.js';
 
 function TestClient(url = 'ws://localhost:30000/ws') {
-  
-Init('TestClient');
+  Init('TestClient');
 
   return net.client(url, {
     onConnect(ws, req) {

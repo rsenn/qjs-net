@@ -9,19 +9,12 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   MinnetHttpMethod method = -1;
   MinnetSession* sess = user;
   MinnetClient* client = lws_context_user(lws_get_context(wsi));
-  JSContext* ctx = client->ctx;
+  JSContext* ctx = client->context.js;
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int n;
 
-  switch(reason) {
-    case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL:
-    case LWS_CALLBACK_ADD_POLL_FD:
-    case LWS_CALLBACK_DEL_POLL_FD:
-    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-      return fd_callback(wsi, reason, &client->cb_fd, in);
-    }
-  }
+  if(lws_is_poll_callback(reason))
+    return fd_callback(wsi, reason, &client->cb.fd, in);
 
   lwsl_user("client-http " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
@@ -59,9 +52,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP: {
       if(opaque->status < CLOSED) {
         opaque->status = CLOSED;
-        if((client->cb_close.ctx = ctx)) {
+        if((client->cb.close.ctx = ctx)) {
           JSValueConst cb_argv[] = {JS_DupValue(ctx, sess->ws_obj), JS_NewInt32(ctx, opaque->error)};
-          minnet_emit(&client->cb_close, countof(cb_argv), cb_argv);
+          minnet_emit(&client->cb.close, countof(cb_argv), cb_argv);
           JS_FreeValue(ctx, cb_argv[0]);
           JS_FreeValue(ctx, cb_argv[1]);
         }
@@ -75,7 +68,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
       sess->req_obj = minnet_request_wrap(ctx, client->request);
 
-      if(method_number(client->info.method) == METHOD_POST) {
+      if(method_number(client->connect_info.method) == METHOD_POST) {
         lws_client_http_body_pending(wsi, 1);
         lws_callback_on_writable(wsi);
       }
@@ -160,10 +153,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       in = buffer_BEGIN(&resp->body);
       len = buffer_WRITE(&resp->body);*/
 
-      if((client->cb_http.ctx = ctx)) {
+      if((client->cb.http.ctx = ctx)) {
         /*MinnetWebsocket* ws = minnet_ws_data2(ctx, sess->ws_obj);
         JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);*/
-        minnet_emit(&client->cb_http, 2, &sess->req_obj);
+        minnet_emit(&client->cb.http, 2, &sess->req_obj);
       }
       break;
     }

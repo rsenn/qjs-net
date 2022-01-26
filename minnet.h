@@ -85,8 +85,10 @@ typedef struct ws_callback {
 
 struct proxy_connection;
 struct http_mount;
+struct server_context;
+struct client_context;
 
-typedef struct /* __attribute__((packed)) */ session_data {
+typedef struct session_data {
   JSValue ws_obj;
   union {
     struct {
@@ -101,7 +103,19 @@ typedef struct /* __attribute__((packed)) */ session_data {
   int serial;
   BOOL h2 : 1;
   int64_t written;
+  struct server_context* server;
+  struct client_context* client;
 } MinnetSession;
+
+typedef struct callbacks {
+  MinnetCallback message, connect, close, pong, fd, http;
+} MinnetCallbacks;
+
+typedef struct context {
+  JSContext* js;
+  struct lws_context* lws;
+  struct lws_context_creation_info info;
+} MinnetContext;
 
 extern THREAD_LOCAL int32_t minnet_log_level;
 extern THREAD_LOCAL JSContext* minnet_log_ctx;
@@ -119,6 +133,36 @@ void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSV
 void value_dump(JSContext*, const char* n, JSValue const* v);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
 const char* lws_callback_name(int);
+
+static inline BOOL
+lws_is_poll_callback(int reason) {
+  switch(reason) {
+    case LWS_CALLBACK_LOCK_POLL:
+    case LWS_CALLBACK_UNLOCK_POLL:
+    case LWS_CALLBACK_ADD_POLL_FD:
+    case LWS_CALLBACK_DEL_POLL_FD:
+    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: return TRUE;
+  }
+  return FALSE;
+}
+
+static inline BOOL
+lws_is_http_callback(int reason) {
+  switch(reason) {
+    case LWS_CALLBACK_ADD_HEADERS:
+    case LWS_CALLBACK_CLOSED_HTTP:
+    case LWS_CALLBACK_FILTER_HTTP_CONNECTION:
+    case LWS_CALLBACK_HTTP:
+    case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
+    case LWS_CALLBACK_HTTP_BODY:
+    case LWS_CALLBACK_HTTP_BODY_COMPLETION:
+    case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
+    case LWS_CALLBACK_HTTP_FILE_COMPLETION:
+    case LWS_CALLBACK_HTTP_WRITEABLE:
+    case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: return TRUE;
+  }
+  return FALSE;
+}
 
 static inline size_t
 byte_chr(const void* x, size_t len, char c) {

@@ -414,7 +414,7 @@ minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValue
     if(JS_IsNumber(argv[0])) {
       uint32_t fd;
       JS_ToUint32(ctx, &fd, argv[0]);
-      ws->lwsi = lws_adopt_socket(minnet_server.lws, fd);
+      ws->lwsi = lws_adopt_socket(minnet_server.context.lws, fd);
     }
   }
 

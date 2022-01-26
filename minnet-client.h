@@ -6,16 +6,16 @@
 #include "minnet-url.h"
 #include "minnet-request.h"
 
-typedef struct /* __attribute__((packed))*/ {
+typedef struct client_context {
+  MinnetContext context;
+  MinnetCallbacks cb;
   JSValue headers, body, next;
   MinnetURL url;
-  struct lws_client_connect_info info;
   struct http_request* request;
-  JSContext* ctx;
-  MinnetCallback cb_message, cb_connect, cb_close, cb_pong, cb_fd, cb_http;
+  struct lws_client_connect_info connect_info;
 } MinnetClient;
 
-extern THREAD_LOCAL JSContext* minnet_client_ctx;
+extern THREAD_LOCAL MinnetClient* minnet_client;
 
 JSValue minnet_ws_client(JSContext*, JSValue, int, JSValue* argv);
 

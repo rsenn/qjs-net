@@ -79,7 +79,7 @@ lws_log_callback(int level, const char* line) {
 
 int
 minnet_lws_unhandled(const char* handler, int reason) {
-  lwsl_warn("Unhandled %s client event: %i %s\n", handler, reason, lws_callback_name(reason));
+  lwsl_warn("Unhandled \x1b[1;31m%s\x1b[0m event: %i %s\n", handler, reason, lws_callback_name(reason));
   assert(0);
   return -1;
 }

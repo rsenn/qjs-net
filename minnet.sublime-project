@@ -31,7 +31,13 @@
         },
         {
             "name": "Rebuild CTags",
-            "shell_cmd": "ctags -R ."
+            "shell_cmd": "ctags *.c *.h",
+            "working_dir": "${project_path}"
+        },
+        {
+            "name": "Rebuild CScope",
+            "shell_cmd": "cscope-indexer .",
+            "working_dir": "${project_path}"
         },
         {
             "name": "clang-format",
