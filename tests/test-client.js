@@ -1,5 +1,9 @@
 import { exit, puts } from 'std';
+import { URL } from 'net';
 import Client from './client.js';
+import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker, ttySetRaw } from 'os';
+import { in as stdin, out as stdout } from 'std';
+import { assert, getpid, exists, randStr, abbreviate, escape } from './common.js'
 
 function main(...args) {
   const debug = args.indexOf('-x') != -1;
@@ -13,6 +17,32 @@ function main(...args) {
       {
         onConnect(ws, req) {
           console.log('onConnect', { ws, req });
+          const { protocol } = new URL(req.url);
+          console.log('protocol', protocol);
+
+          if(!protocol.startsWith('http')) {
+            if(protocol.startsWith('ws')) {
+              setReadHandler(0, () => {
+                let line = stdin.getline();
+
+               if(line.length) {
+                stdout.puts(`\r\x1b[1;36m->\x1b[0m '${escape(line)}'\n`);
+                stdout.flush();
+                  ws.send(line);
+               }
+              });
+            } else {
+              ttySetRaw(0);
+              setReadHandler(0, () => {
+                let b = stdin.getByte();
+                if(b == 13) b = 10;
+                else if(b == 127) b = 8;
+                else if(b < 32 || b > 'z'.charCodeAt(0)) stdout.puts('char: ' + b);
+                stdout.putByte(b);
+                stdout.flush();
+              });
+            }
+          }
         },
         onClose(ws, reason) {
           console.log('onClose', { ws, reason });
@@ -23,9 +53,10 @@ function main(...args) {
           exit(1);
         },
         onMessage(ws, msg) {
-          console.log('onMessage', { ws, msg });
-          puts(msg);
-          ws.close(1008);
+          //console.log('onMessage', { ws, msg });
+          stdout.puts(`\r\x1b[1;31m<-\x1b[0m '${escape(msg)}'\n`);
+          stdout.flush();
+          ws.close(1000);
         },
         onHttp(req, resp) {
           console.log('onHttp', { req, resp });

@@ -54,7 +54,7 @@ sslcert_client(JSContext* ctx, struct lws_context_creation_info* info, JSValueCo
 JSValue
 minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct lws_context* lws = 0;
-  int n = 0, argind = 0;
+  int n = 0, argind = 0,status = -1;
   JSValue value, ret = JS_NULL;
   MinnetWebsocket* ws;
   MinnetClient client = {.headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
@@ -64,6 +64,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   struct lws* wsi = 0;
   char* url;
   const char *str, *method_str = 0;
+  struct wsi_opaque_user_data* opaque=0;
 
   SETLOG(LLL_INFO)
 
@@ -141,16 +142,12 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   lws_client_connect_via_info(conn);
 
   minnet_exception = FALSE;
+  opaque = lws_opaque(wsi, client.context.js);
 
-  fprintf(stderr, "WSI: %p\n", wsi);
-  int status = -1;
-  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, client.context.js);
-
-  //
   while(n >= 0) {
     if(status != opaque->status) {
       status = opaque->status;
-      fprintf(stderr, "STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
+      //fprintf(stderr, "STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
     }
 
     if(status == CLOSED)
