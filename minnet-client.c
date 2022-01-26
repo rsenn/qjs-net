@@ -126,8 +126,8 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   conn->context = lws;
 
 #ifdef DEBUG_OUTPUT
-  printf("METHOD: %s\n", method_str);
-  printf("PROTOCOL: %s\n", conn->protocol);
+  fprintf(stderr, "METHOD: %s\n", method_str);
+  fprintf(stderr, "PROTOCOL: %s\n", conn->protocol);
 #endif
 
   switch(protocol_number(client.url.protocol)) {
@@ -142,9 +142,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
 
   minnet_exception = FALSE;
 
-  printf("WSI: %p\n", wsi);
-  /*ws = ws_from_wsi(wsi);
-  printf("WS: %p\n", ws);*/
+  fprintf(stderr, "WSI: %p\n", wsi);
   int status = -1;
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, client.context.js);
 
@@ -152,7 +150,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   while(n >= 0) {
     if(status != opaque->status) {
       status = opaque->status;
-      printf("STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
+      fprintf(stderr, "STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
     }
 
     if(status == CLOSED)
@@ -198,10 +196,18 @@ static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetHttpMethod method = -1;
   MinnetSession* sess = user;
-  MinnetClient* client = lws_context_user(lws_get_context(wsi));
-  JSContext* ctx = client->context.js;
-  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
+  MinnetClient* client;
+  JSContext* ctx;
+  struct wsi_opaque_user_data* opaque;
   int n;
+
+  if(sess)
+    client = sess->client ? sess->client : (sess->client = lws_client(wsi));
+  else
+    client = lws_client(wsi);
+
+  ctx = client->context.js;
+  opaque = lws_opaque(wsi, ctx);
 
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &client->cb.fd, in);

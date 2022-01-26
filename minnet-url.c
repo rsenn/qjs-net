@@ -100,7 +100,7 @@ url_parse(MinnetURL* url, const char* u, JSContext* ctx) {
     url->port = protocol_default_port(proto);
   }
 
-  url->path = js_strdup(ctx, s);
+  url->path = js_strdup(ctx, *s ? s : "/");
 }
 
 char*

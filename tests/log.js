@@ -15,14 +15,14 @@ export const Init = (name, mask = net.LLL_USER | ((net.LLL_CLIENT << 1) - 1)) =>
     if(!(level & mask)) return;
     if(level >= LLL_NOTICE && level <= LLL_EXT) return;
     if(l == 'USER') l = name ?? l;
-    console.log(`${l.padEnd(10)} ${msg}`);
+    std.err.puts(`${l.padEnd(10)} ${msg}\n`);
   });
 
 export const SetLog = (name, maxLevel = net.LLL_CLIENT) =>
   net.setLog(net.LLL_USER | ((maxLevel << 1) - 1), (level, msg) => {
     let l = Levels[level] ?? 'UNKNOWN';
     if(l == 'USER') l = name ?? l;
-    console.log(('X', l).padEnd(8), msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
+     std.err.puts(('X', l).padEnd(9)+msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
   });
 
 import('console').then(({ Console }) => {

@@ -6,14 +6,14 @@ import Client from './client.js';
 
 function main(...args) {
   const debug = args.indexOf('-x') != -1;
-  args = args.filter(arg => !/^-[x]/.test(arg));
+    args = args.filter(arg => !/^-[x]/.test(arg));
 
   if(args.length == 0) args.push('https://github.com/rsenn?tab=repositories');
-  /*
+
   for(let arg of args) {
     Client(arg, {
       onConnect(ws, req) {
-        ws.send(message);
+        console.log('onConnect', { ws, req });
       },
       onClose(ws, reason) {
         console.log('onClose', { ws, reason });
@@ -24,12 +24,18 @@ function main(...args) {
         std.exit(1);
       },
       onMessage(ws, msg) {
-        // assert(`ECHO:${message}`, msg);
         console.log('onMessage', { ws, msg });
+        std.puts(msg);
         ws.close(1008);
+      },
+      onHttp(req, resp) {
+        console.log('onHttp', { req, resp });
+        let body = resp.text();
+
+        std.puts(body);
       }
-    });
-  }*/
+    }, debug);
+  }
 }
 
 try {

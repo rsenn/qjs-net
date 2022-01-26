@@ -8,10 +8,10 @@ THREAD_LOCAL JSValue minnet_stream_proto, minnet_stream_ctor;
 
 void
 stream_dump(struct stream const* strm) {
-  printf("\nMinnetStream {\n\tref_count = %zu", strm->ref_count);
+  fprintf(stderr, "\nMinnetStream {\n\tref_count = %zu", strm->ref_count);
   buffer_dump("buffer", &strm->buffer);
-  fputs("\n}", stdout);
-  fflush(stdout);
+  fputs("\n}", stderr);
+  fflush(stderr);
 }
 
 void

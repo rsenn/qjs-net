@@ -4,19 +4,24 @@ macro(build_mbedtls)
   include(ExternalProject)
 
   if(NOT DEFINED MBEDTLS_DEBUG)
-    message(FATAL_ERROR "Please set MBEDTLS_DEBUG to 'OFF' or 'ON' before including this file.")
+    message(
+      FATAL_ERROR
+        "Please set MBEDTLS_DEBUG to 'OFF' or 'ON' before including this file.")
   endif()
 
   if(NOT DEFINED MBEDTLS_SOURCE_DIR)
-    message(FATAL_ERROR "Please set MBEDTLS_SOURCE_DIR before including this file.")
+    message(
+      FATAL_ERROR "Please set MBEDTLS_SOURCE_DIR before including this file.")
   endif()
 
   if(NOT DEFINED MBEDTLS_C_FLAGS)
-    message(FATAL_ERROR "Please set MBEDTLS_C_FLAGS before including this file.")
+    message(
+      FATAL_ERROR "Please set MBEDTLS_C_FLAGS before including this file.")
   endif()
 
   if(NOT DEFINED MBEDTLS_TARGET_NAME)
-    message(FATAL_ERROR "Please set MBEDTLS_TARGET_NAME before including this file.")
+    message(
+      FATAL_ERROR "Please set MBEDTLS_TARGET_NAME before including this file.")
   endif()
 
   if(MBEDTLS_DEBUG)
@@ -25,11 +30,16 @@ macro(build_mbedtls)
     set(MBEDTLS_BUILD_TYPE "MinSizeRel")
   endif()
 
-  if((NOT DEFINED MBEDTLS_PREINCLUDE_PREFIX) OR (NOT DEFINED MBEDTLS_PREINCLUDE_HEADER))
-    message(STATUS "Building mbedTLS without pre-included headers and global symbols prefixing.")
+  if((NOT DEFINED MBEDTLS_PREINCLUDE_PREFIX) OR (NOT DEFINED
+                                                 MBEDTLS_PREINCLUDE_HEADER))
+    message(
+      STATUS
+        "Building mbedTLS without pre-included headers and global symbols prefixing."
+    )
   else()
     set(MBEDTLS_PREINCLUDE_C_FLAGS
-        " -DLIB_PREFIX_NAME=${MBEDTLS_PREINCLUDE_PREFIX} -include ${MBEDTLS_PREINCLUDE_HEADER}")
+        " -DLIB_PREFIX_NAME=${MBEDTLS_PREINCLUDE_PREFIX} -include ${MBEDTLS_PREINCLUDE_HEADER}"
+    )
     string(APPEND MBEDTLS_C_FLAGS " ${MBEDTLS_PREINCLUDE_C_FLAGS}")
   endif()
 
@@ -57,8 +67,11 @@ macro(build_mbedtls)
     PREFIX mbedtls
     DOWNLOAD_NAME mbedtls-${MBEDTLS_VERSION}.tar.gz
     URL https://github.com/ARMmbed/mbedtls/archive/refs/tags/v${MBEDTLS_VERSION}.tar.gz
-    CMAKE_ARGS -DENABLE_TESTING=OFF -DENABLE_PROGRAMS=OFF "-DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}"
-               "-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}" "-DCMAKE_BUILD_TYPE=${MBEDTLS_BUILD_TYPE}"
+    CMAKE_ARGS -DENABLE_TESTING=OFF
+               -DENABLE_PROGRAMS=OFF
+               "-DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}"
+               "-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}"
+               "-DCMAKE_BUILD_TYPE=${MBEDTLS_BUILD_TYPE}"
     CMAKE_CACHE_ARGS
       "-DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}"
       "-DCMAKE_C_COMPILER_ID:STRING=${CMAKE_C_COMPILER_ID}"
@@ -85,10 +98,12 @@ macro(build_mbedtls)
     ExternalProject_Add_StepDependencies(${MBEDTLS_TARGET_NAME} build ${ARGN})
   endif(ARGN)
 
-  ExternalProject_Add_Step(${MBEDTLS_TARGET_NAME} COMMAND ${CMAKE_COMMAND} --build . --target clean)
+  ExternalProject_Add_Step(${MBEDTLS_TARGET_NAME} COMMAND
+                           ${CMAKE_COMMAND} --build . --target clean)
 
   add_custom_target(
-    ${MBEDTLS_TARGET_NAME}_clean COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target clean
+    ${MBEDTLS_TARGET_NAME}_clean COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR}
+                                         --target clean
     WORKING_DIRECTORY "${BINARY_DIR}" COMMENT "Cleaning mbedtls" VERBATIM)
   #add_custom_target(${MBEDTLS_TARGET_NAME}_install COMMAND ${CMAKE_COMMAND} --build ${CMAKE_CURRENT_BINARY_DIR}/mbedtls -- install WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mbedtls COMMENT "Installing mbedtls to ${CMAKE_INSTALL_PREFIX}" VERBATIM)
   #add_dependencies(${MBEDTLS_TARGET_NAME}_install ${MBEDTLS_TARGET_NAME})
@@ -96,25 +111,30 @@ macro(build_mbedtls)
   set(MBEDTLS_LIBRARY mbedtls CACHE STRING "MbedTLS library" FORCE)
   add_library(${MBEDTLS_LIBRARY} STATIC IMPORTED)
   add_dependencies(${MBEDTLS_LIBRARY} ${MBEDTLS_TARGET_NAME})
-  set_property(TARGET ${MBEDTLS_LIBRARY} PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/libmbedtls.a)
+  set_property(TARGET ${MBEDTLS_LIBRARY} PROPERTY IMPORTED_LOCATION
+                                                  ${BINARY_DIR}/libmbedtls.a)
 
   set(MBEDTLS_X509_LIBRARY mbedx509 CACHE STRING "MbedTLS x509 library" FORCE)
   add_library(${MBEDTLS_X509_LIBRARY} STATIC IMPORTED)
   add_dependencies(${MBEDTLS_X509_LIBRARY} ${MBEDTLS_TARGET_NAME})
-  set_property(TARGET ${MBEDTLS_X509_LIBRARY} PROPERTY IMPORTED_LOCATION
-                                                       ${BINARY_DIR}/libmbedx509.a)
+  set_property(TARGET ${MBEDTLS_X509_LIBRARY}
+               PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/libmbedx509.a)
 
-  set(MBEDTLS_CRYPTO_LIBRARY mbedcrypto CACHE STRING "MbedTLS crypto library" FORCE)
+  set(MBEDTLS_CRYPTO_LIBRARY mbedcrypto CACHE STRING "MbedTLS crypto library"
+                                              FORCE)
   add_library(${MBEDTLS_CRYPTO_LIBRARY} STATIC IMPORTED)
   add_dependencies(${MBEDTLS_CRYPTO_LIBRARY} ${MBEDTLS_TARGET_NAME})
-  set_property(TARGET ${MBEDTLS_CRYPTO_LIBRARY} PROPERTY IMPORTED_LOCATION
-                                                         ${BINARY_DIR}/libmbedcrypto.a)
+  set_property(TARGET ${MBEDTLS_CRYPTO_LIBRARY}
+               PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/libmbedcrypto.a)
 
-  set(MBEDTLS_LIBRARIES "${MBEDTLS_LIBRARY};${MBEDTLS_CRYPTO_LIBRARY};${MBEDTLS_X509_LIBRARY}"
+  set(MBEDTLS_LIBRARIES
+      "${MBEDTLS_LIBRARY};${MBEDTLS_CRYPTO_LIBRARY};${MBEDTLS_X509_LIBRARY}"
       CACHE STRING "MbedTLS libraries" FORCE)
 
-  set(MBEDTLS_LIBRARY_DIR "${BINARY_DIR}" CACHE PATH "MbedTLS library directory" FORCE)
-  set(MBEDTLS_INCLUDE_DIR "${SOURCE_DIR}/include" CACHE PATH "MbedTLS include directory" FORCE)
+  set(MBEDTLS_LIBRARY_DIR "${BINARY_DIR}"
+      CACHE PATH "MbedTLS library directory" FORCE)
+  set(MBEDTLS_INCLUDE_DIR "${SOURCE_DIR}/include"
+      CACHE PATH "MbedTLS include directory" FORCE)
 
   message(STATUS "MbedTLS libraries: ${MBEDTLS_LIBRARIES}")
   message(STATUS "MbedTLS library directory: ${MBEDTLS_LIBRARY_DIR}")

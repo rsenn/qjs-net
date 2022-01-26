@@ -2,7 +2,9 @@ macro(build_libwebsockets)
   message("-- Building LIBWEBSOCKETS from source")
 
   if(NOT DEFINED LIBWEBSOCKETS_C_FLAGS)
-    message(FATAL_ERROR "Please set LIBWEBSOCKETS_C_FLAGS before including this file.")
+    message(
+      FATAL_ERROR "Please set LIBWEBSOCKETS_C_FLAGS before including this file."
+    )
   endif()
 
   set(LWS_WITHOUT_TESTAPPS TRUE)
@@ -15,14 +17,16 @@ macro(build_libwebsockets)
 
   # include: libwebsockets find_package(libwebsockets)
   set(LIBWEBSOCKETS_INCLUDE_DIRS
-      ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
+      ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include
+      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
       ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets")
   set(LIBWEBSOCKETS_LIBRARIES "${MBEDTLS_LIBRARIES};brotlienc;brotlidec;cap"
       CACHE STRING "libwebsockets libraries")
   if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
-    set(LIBWEBSOCKETS_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a"
-                                ${LIBWEBSOCKETS_LIBRARIES})
+    set(LIBWEBSOCKETS_LIBRARIES
+        "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a"
+        ${LIBWEBSOCKETS_LIBRARIES})
   else(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
     set(LIBWEBSOCKETS_LIBRARIES "websockets" ${LIBWEBSOCKETS_LIBRARIES})
   endif(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
@@ -34,7 +38,8 @@ macro(build_libwebsockets)
   # add_subdirectory(libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets)
   include(ExternalProject)
 
-  set(LIBWEBSOCKETS_ARGS "-DLWS_WITH_SSL:BOOL=${WITH_SSL} -DLWS_WITH_MBEDTLS:BOOL=${WITH_MBEDTLS}")
+  set(LIBWEBSOCKETS_ARGS
+      "-DLWS_WITH_SSL:BOOL=${WITH_SSL} -DLWS_WITH_MBEDTLS:BOOL=${WITH_MBEDTLS}")
 
   if(WITH_MBEDTLS)
     set(LIBWEBSOCKETS_ARGS
@@ -43,7 +48,8 @@ macro(build_libwebsockets)
   endif(WITH_MBEDTLS)
   if(WITH_SSL AND NOT WITH_MBEDTLS)
     set(LIBWEBSOCKETS_ARGS
-        ${LIBWEBSOCKETS_ARGS} -DLWS_OPENSSL_LIBRARIES:STRING=${OPENSSL_LIBRARIES}
+        ${LIBWEBSOCKETS_ARGS}
+        -DLWS_OPENSSL_LIBRARIES:STRING=${OPENSSL_LIBRARIES}
         -DLWS_OPENSSL_INCLUDE_DIRS:STRING=${OPENSSL_INCLUDE_DIR})
   endif(WITH_SSL AND NOT WITH_MBEDTLS)
 
@@ -56,7 +62,8 @@ macro(build_libwebsockets)
   endif("${LWS_HAVE_EVP_MD_CTX_free}" STREQUAL "")
 
   if("${LWS_HAVE_X509_VERIFY_PARAM_set1_host}" STREQUAL "")
-    set(LWS_HAVE_X509_VERIFY_PARAM_set1_host 1 CACHE STRING "Have X509_VERIFY_PARAM_set1_host")
+    set(LWS_HAVE_X509_VERIFY_PARAM_set1_host 1
+        CACHE STRING "Have X509_VERIFY_PARAM_set1_host")
   endif("${LWS_HAVE_X509_VERIFY_PARAM_set1_host}" STREQUAL "")
 
   string(REPLACE " " "\n\t" ARGS "${LIBWEBSOCKETS_ARGS}")

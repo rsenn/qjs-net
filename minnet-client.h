@@ -19,4 +19,8 @@ extern THREAD_LOCAL MinnetClient* minnet_client;
 
 JSValue minnet_ws_client(JSContext*, JSValue, int, JSValue* argv);
 
+static inline struct client_context*
+lws_client(struct lws* wsi) {
+  return lws_context_user(lws_get_context(wsi));
+}
 #endif

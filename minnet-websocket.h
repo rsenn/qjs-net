@@ -38,6 +38,7 @@ struct wsi_opaque_user_data {
   JSObject* obj;
   struct socket* ws;
   struct http_request* req;
+  struct session_data* sess;
   int64_t serial;
   MinnetStatus status;
   int error;

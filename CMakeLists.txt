@@ -14,8 +14,8 @@ option(DO_TESTS "Perform tests" ON)
 if(UNIX AND NOT APPLE)
   include(GNUInstallDirs)
 elseif(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  set(CMAKE_INSTALL_LIBDIR "" CACHE PATH
-                                    "Specify the output directory for libraries (default is lib)")
+  set(CMAKE_INSTALL_LIBDIR ""
+      CACHE PATH "Specify the output directory for libraries (default is lib)")
 endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/functions.cmake)
@@ -85,10 +85,12 @@ if(NOT BUILD_CURL)
   endif(CURL_LIBRARY)
 
   if(NOT CURL_INCLUDE_DIR)
-    string(REGEX REPLACE "/lib" "/include" CURL_INCLUDE_DIR "${CURL_LIBRARY_DIR}")
+    string(REGEX REPLACE "/lib" "/include" CURL_INCLUDE_DIR
+                         "${CURL_LIBRARY_DIR}")
 
     if(CURL_INCLUDE_DIR)
-      set(CURL_INCLUDE_DIR "${CURL_INCLUDE_DIR}" CACHE PATH "curl include directory")
+      set(CURL_INCLUDE_DIR "${CURL_INCLUDE_DIR}" CACHE PATH
+                                                       "curl include directory")
     endif(CURL_INCLUDE_DIR)
   endif(NOT CURL_INCLUDE_DIR)
 
@@ -98,7 +100,8 @@ if(NOT BUILD_CURL)
     endif(EXISTS ${CURL_LIBRARY})
 
     if(CURL_LIBRARY_DIR)
-      set(CURL_LIBRARY_DIR "${CURL_LIBRARY_DIR}" CACHE PATH "curl library directory")
+      set(CURL_LIBRARY_DIR "${CURL_LIBRARY_DIR}" CACHE PATH
+                                                       "curl library directory")
     endif(CURL_LIBRARY_DIR)
   endif(NOT CURL_LIBRARY_DIR)
 
@@ -125,11 +128,13 @@ if(NOT CURL_FOUND OR BUILD_CURL)
       GIT_PROGRESS TRUE
       BINARY_DIR curl
       STEP_TARGETS build
-      CONFIGURE_COMMAND cmake "${CMAKE_CURRENT_SOURCE_DIR}/curl" -DLIBCURL_NO_SHARED:STRING=libcurl
-                        -DBUILD_SHARED_LIBS:BOOL=OFF
+      CONFIGURE_COMMAND
+        cmake "${CMAKE_CURRENT_SOURCE_DIR}/curl"
+        -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
       CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
                  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-      CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF)
+      CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
+                       -DBUILD_SHARED_LIBS:BOOL=OFF)
     set_property(DIRECTORY PROPERTY EP_STEP_TARGETS build)
   endif()
 
@@ -165,13 +170,15 @@ include(CheckCCompilerFlag)
 check_c_compiler_flag("-O0" OPT_C_OPT_NONE)
 if(OPT_C_OPT_NONE)
   if(NOT "${CMAKE_C_FLAGS_DEBUG}" MATCHES "-O0")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0" CACHE STRING "C compiler options")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0"
+        CACHE STRING "C compiler options")
   endif(NOT "${CMAKE_C_FLAGS_DEBUG}" MATCHES "-O0")
 endif(OPT_C_OPT_NONE)
 check_c_compiler_flag("-ggdb" OPT_C_G_GDB)
 if(OPT_C_G_GDB)
   if(NOT "${CMAKE_C_FLAGS_DEBUG}" MATCHES "-ggdb")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb" CACHE STRING "C compiler options")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb"
+        CACHE STRING "C compiler options")
   endif(NOT "${CMAKE_C_FLAGS_DEBUG}" MATCHES "-ggdb")
 endif(OPT_C_G_GDB)
 
@@ -182,8 +189,9 @@ if(NOT BUILD_LIBWEBSOCKETS)
 
   include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS})
 
-  link_libraries(${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY_RELEASE}
-                 ${pkgcfg_lib_CURL_curl} ${OPENSSL_LIBRARIES})
+  link_libraries(
+    ${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY_RELEASE}
+    ${pkgcfg_lib_CURL_curl} ${OPENSSL_LIBRARIES})
 
 endif(NOT BUILD_LIBWEBSOCKETS)
 
@@ -226,7 +234,8 @@ if(BUILD_LIBWEBSOCKETS)
       build_mbedtls()
 
       list(APPEND LIBWEBSOCKETS_DEPS ${MBEDTLS_TARGET_NAME})
-      set(LIBWEBSOCKETS_C_FLAGS "-I${MBEDTLS_INCLUDE_DIR} ${LIBWEBSOCKETS_C_FLAGS}")
+      set(LIBWEBSOCKETS_C_FLAGS
+          "-I${MBEDTLS_INCLUDE_DIR} ${LIBWEBSOCKETS_C_FLAGS}")
     endif(BUILD_MBEDTLS)
   endif(WITH_MBEDTLS)
   if(WITH_SSL AND NOT WITH_MBEDTLS)
@@ -261,7 +270,8 @@ if(BUILD_LIBWEBSOCKETS)
 
       build_brotli()
       list(APPEND LIBWEBSOCKETS_DEPS ${BROTLI_TARGET_NAME})
-      set(LIBWEBSOCKETS_C_FLAGS "-I${BROTLI_INCLUDE_DIR} ${LIBWEBSOCKETS_C_FLAGS}")
+      set(LIBWEBSOCKETS_C_FLAGS
+          "-I${BROTLI_INCLUDE_DIR} ${LIBWEBSOCKETS_C_FLAGS}")
     endif(BUILD_BROTLI)
   endif(WITH_BROTLI)
 
@@ -281,15 +291,18 @@ if(BUILD_LIBWEBSOCKETS)
 endif(BUILD_LIBWEBSOCKETS)
 
 if(OPENSSL_INCLUDE_DIR AND NOT OPENSSL_LIBRARY_DIR)
-  string(REGEX REPLACE "/include" "/lib" OPENSSL_LIBRARY_DIR "${OPENSSL_INCLUDE_DIR}")
+  string(REGEX REPLACE "/include" "/lib" OPENSSL_LIBRARY_DIR
+                       "${OPENSSL_INCLUDE_DIR}")
 
   set(CMAKE_INSTALL_RPATH "${CURL_LIBRARY_DIR}:${OPENSSL_LIBRARY_DIR}")
 endif()
 
-link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${CURL_LIBRARY_DIR}
-                 ${OPENSSL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
-include_directories(${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR}
-                    ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
+link_directories(
+  ${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${CURL_LIBRARY_DIR}
+  ${OPENSSL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
+include_directories(
+  ${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR}
+  ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
 
 file(GLOB JS_BINDINGS_SOURCES *.c *.h)
 
@@ -318,7 +331,9 @@ function(DUMP_TARGET TARGET)
     TYPE)
     get_target_property(VALUE "${TARGET}" "${PROP}")
     if(VALUE)
-      message("${ESC}[1;33m${TARGET} ${ESC}[1;31m${PROP} = ${ESC}[1;36m'${VALUE}'${ESC}[0m")
+      message(
+        "${ESC}[1;33m${TARGET} ${ESC}[1;31m${PROP} = ${ESC}[1;36m'${VALUE}'${ESC}[0m"
+      )
     endif(VALUE)
   endforeach()
 endfunction(DUMP_TARGET TARGET)
@@ -329,22 +344,28 @@ if(BUILD_LIBWEBSOCKETS)
   add_dependencies(quickjs-minnet libwebsockets)
 endif(BUILD_LIBWEBSOCKETS)
 
-set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=${CMAKE_INSTALL_RPATH}:${CURL_LIBRARY_DIR}")
+set(CMAKE_SHARED_LINKER_FLAGS
+    "-Wl,-rpath=${CMAKE_INSTALL_RPATH}:${CURL_LIBRARY_DIR}")
 
-set(OPENSSL_LIBRARIES "${OPENSSL_SSL_LIBRARY};${OPENSSL_CRYPTO_LIBRARY}" CACHE STRING
-                                                                               "OpenSSL libraries")
+set(OPENSSL_LIBRARIES "${OPENSSL_SSL_LIBRARY};${OPENSSL_CRYPTO_LIBRARY}"
+    CACHE STRING "OpenSSL libraries")
 
-target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
+target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS}
+                                                  ${CURL_INCLUDE_DIR})
 set_target_properties(
   quickjs-minnet
-  PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${CURL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
-             COMPILE_FLAGS "-fvisibility=hidden"
-             LINK_DIRECTORIES
-             "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
-             INTERFACE_LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
-             PREFIX ""
-             OUTPUT_NAME "net")
-target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
+  PROPERTIES
+    INSTALL_RPATH
+    "${CMAKE_INSTALL_RPATH};${CURL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
+    COMPILE_FLAGS "-fvisibility=hidden"
+    LINK_DIRECTORIES
+    "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
+    INTERFACE_LINK_DIRECTORIES
+    "${LIBWEBSOCKETS_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
+    PREFIX ""
+    OUTPUT_NAME "net")
+target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1
+                                                  -DJS_BINDINGS_INIT_MODULE=1)
 
 if(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
   target_link_directories(quickjs-minnet PUBLIC ${LIBWEBSOCKETS_LIBRARY_DIR})
@@ -353,9 +374,9 @@ endif(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
 target_link_directories(quickjs-minnet PUBLIC ${QUICKJS_LIBRARY_DIR})
 
 target_link_libraries(
-  quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES}
-  ${ZLIB_LIBRARY_RELEASE} ${pkgcfg_lib_CURL_curl} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY}
-  ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES})
+  quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES}
+  ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY_RELEASE} ${pkgcfg_lib_CURL_curl}
+  ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES})
 
 message(
   "Libraries:\n\
@@ -374,14 +395,16 @@ message(
 ")
 
 if(NOT QUICKJS_C_MODULE_DIR)
-  set(QUICKJS_C_MODULE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/quickjs")
+  set(QUICKJS_C_MODULE_DIR
+      "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/quickjs")
 endif(NOT QUICKJS_C_MODULE_DIR)
 
 install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}"
-        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc.js DESTINATION "${QUICKJS_JS_MODULE_DIR}")
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE
+                    GROUP_READ)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc.js
+        DESTINATION "${QUICKJS_JS_MODULE_DIR}")
 #dump_target(quickjs-minnet)
-
 
 file(GLOB TESTS tests/test-*.js)
 
@@ -396,19 +419,13 @@ if(DO_TESTS)
   foreach(TEST ${TESTS})
     basename(BASE "${TEST}")
     string(REPLACE "test_" "" NAME "${BASE}")
-    add_test(NAME "${BASE}"
-             COMMAND env "QUICKJS_MODULE_PATH=${MODULE_PATH}"
-                     "${QJS}" --bignum "${TEST}" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-  #[[  add_custom_target(
-      "${BASE}" ALL
-      COMMAND
-        env QUICKJS_MODULE_PATH=${CMAKE_CURRENT_SOURCE_DIR}:${CMAKE_CURRENT_BINARY_DIR} "${QJSC}"
-        -fbignum -M std -M os -M ${NAME} -o "${BASE}" "${CMAKE_CURRENT_SOURCE_DIR}/${TEST}"
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      SOURCES "${TEST}")]]
+    add_test(NAME "${BASE}" COMMAND env "QUICKJS_MODULE_PATH=${MODULE_PATH}"
+                                    "${QJS}" --bignum "${TEST}"
+             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
   endforeach(TEST ${TESTS})
 
-  add_custom_target(do_tests COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_CURRENT_BINARY_DIR}" --target "test"
-                  COMMENT "Do all tests"
-                  )
+  add_custom_target(
+    do_tests COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_CURRENT_BINARY_DIR}"
+                     --target "test" COMMENT "Do all tests")
 endif(DO_TESTS)
