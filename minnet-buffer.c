@@ -78,7 +78,8 @@ void
 buffer_init(MinnetBuffer* buf, uint8_t* start, size_t len) {
   block_init(&buf->block, start, len);
 
-  buf->read = buf->write = buf->start;
+  buf->read == buf->start;
+  buf->write = buf->start;
   buf->alloc = 0;
 }
 
@@ -275,7 +276,7 @@ buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
 JSValue
 buffer_toarraybuffer(MinnetBuffer* buf, JSContext* ctx) {
   MinnetBuffer moved = buffer_move(buf);
- return block_toarraybuffer(&moved.block, ctx);
+  return block_toarraybuffer(&moved.block, ctx);
 }
 
 void

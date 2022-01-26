@@ -14,14 +14,12 @@ struct wsi_opaque_user_data;
 typedef struct socket {
   size_t ref_count;
   struct lws* lwsi;
-  JSValue handlers[2];
   BOOL binary;
-  struct wsi_opaque_user_data* opaque;
+  // struct wsi_opaque_user_data* opaque;
 } MinnetWebsocket;
 
 extern int64_t ws_serial;
 
-MinnetWebsocket* ws_from_wsi(struct lws*);
 MinnetWebsocket* ws_from_wsi2(struct lws*, JSContext*);
 JSValue minnet_ws_object(JSContext*, struct lws*);
 JSValue minnet_ws_wrap(JSContext*, struct lws*);
@@ -39,10 +37,11 @@ struct wsi_opaque_user_data {
   struct socket* ws;
   struct http_request* req;
   struct session_data* sess;
+  JSValue handler;
   int64_t serial;
   MinnetStatus status;
+  struct pollfd poll;
   int error;
-  MinnetPollFd pfd;
 };
 
 static inline struct wsi_opaque_user_data*
@@ -69,12 +68,23 @@ lws_session(struct lws* wsi) {
 
   return 0;
 }
-/*
-static inline int
-ws_fd(const MinnetWebsocket* ws) {
- return lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
+
+static inline struct wsi_opaque_user_data*
+ws_opaque(MinnetWebsocket* ws) {
+  return lws_get_opaque_user_data(ws->lwsi);
 }
 
+static inline struct session_data*
+ws_session(MinnetWebsocket* ws) {
+  return lws_session(ws->lwsi);
+}
+
+static inline MinnetWebsocket*
+ws_from_wsi(struct lws* wsi) {
+  return ((struct wsi_opaque_user_data*)lws_get_opaque_user_data(wsi))->ws;
+}
+
+/*
 static inline int
 ws_lws(const MinnetWebsocket* ws) {
  return ws->lwsi;

@@ -12,7 +12,7 @@ function main(...args) {
   if(args.length == 0) args.push('https://localhost/debugger.html');
 
   for(let arg of args) {
-    Client(
+      Client(
       arg,
       {
         onConnect(ws, req) {

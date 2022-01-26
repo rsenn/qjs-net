@@ -14,12 +14,11 @@
 typedef struct byte_block {
   uint8_t *start, *end;
 } MinnetBytes;
- 
 
-#define block_SIZE(b) ((b)->end - (b)->start)
+#define block_SIZE(b) (size_t)((b)->end - (b)->start)
 #define block_BEGIN(b) (void*)(b)->start
 #define block_END(b) (void*)(b)->end
-#define block_ALLOC(b) ((b)->start ? (b)->start - LWS_PRE : 0)
+#define block_ALLOC(b) (void*)((b)->start ? (b)->start - LWS_PRE : 0)
 
 void block_init(MinnetBytes*, uint8_t*, size_t);
 uint8_t* block_alloc(MinnetBytes*, size_t, JSContext*);
@@ -43,29 +42,31 @@ block_move(MinnetBytes* blk) {
 }
 
 typedef union byte_buffer {
+  struct {
+    uint8_t *start, *end, *read, *write, *alloc;
+  };
   struct byte_block;
-  struct {
-    uint8_t *start, *end;
-  };
-  struct {
-    MinnetBytes block;
-    uint8_t *read, *write, *alloc;
-  };
+  MinnetBytes block;
 } MinnetBuffer;
 
 #define BUFFER(buf) \
-  (MinnetBuffer) { ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + LWS_PRE, ((uint8_t*)(buf)) + sizeof((buf)) - 1, 0 }
+  (MinnetBuffer) { (uint8_t*)(buf) + LWS_PRE, (uint8_t*)(buf) + sizeof(buf) - 1, (uint8_t*)(buf) + LWS_PRE, (uint8_t*)(buf) + LWS_PRE, 0 }
 
 #define BUFFER_0() \
   (MinnetBuffer) { 0, 0, 0, 0, 0 }
 
 #define BUFFER_N(buf, n) \
-  (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, 0 }
+  (MinnetBuffer) { (uint8_t*)(buf), (uint8_t*)(buf) + (n), (uint8_t*)(buf), (uint8_t*)(buf), 0 }
 
-#define buffer_AVAIL(b) ((b)->end - (b)->write)
-#define buffer_BYTES(b) ((b)->write - (b)->read)
-#define buffer_HEAD(b) ((b)->write - (b)->start)
-#define buffer_TAIL(b) ((b)->read - (b)->start)
+#define buffer_AVAIL(b) (ptrdiff_t)((b)->end - (b)->write)
+#define buffer_BYTES(b) (ptrdiff_t)((b)->write - (b)->read)
+#define buffer_HEAD(b) (size_t)((b)->write - (b)->start)
+#define buffer_TAIL(b) (size_t)((b)->read - (b)->start)
+#define buffer_ALLOC(b) (void*)((b)->alloc)
+
+#define buffer_BEGIN(b) block_BEGIN(&(b)->block)
+#define buffer_END(b) block_END(&(b)->block)
+#define buffer_SIZE(b) block_SIZE(&(b)->block)
 
 #define buffer_zero(b) memset((b), 0, sizeof(MinnetBuffer))
 
@@ -82,7 +83,7 @@ int buffer_fromvalue(MinnetBuffer*, JSValue, JSContext*);
 JSValue buffer_tostring(MinnetBuffer const*, JSContext*);
 char* buffer_escaped(MinnetBuffer const*, JSContext*);
 void buffer_finalizer(JSRuntime*, void*, void*);
-JSValue  buffer_toarraybuffer(MinnetBuffer*, JSContext*);
+JSValue buffer_toarraybuffer(MinnetBuffer*, JSContext*);
 void buffer_dump(const char*, MinnetBuffer const*);
 
 static inline void
@@ -130,4 +131,5 @@ buffer_move(MinnetBuffer* buf) {
   memset(buf, 0, sizeof(MinnetBuffer));
   return ret;
 }
+
 #endif /* MINNET_BUFFER_H */
