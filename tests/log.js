@@ -29,5 +29,5 @@ export const SetLog = (name, maxLevel = LLL_CLIENT) =>
   });
 
 import('console').then(({ Console }) => {
-  globalThis.console = new Console(err, { inspectOptions: { compact: 2, customInspect: true, maxStringLength: 100 } });
+  globalThis.console = new Console(err, { inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100 } });
 });

@@ -69,6 +69,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
       sess->req_obj = minnet_request_wrap(ctx, client->request);
 
+      client->response = minnet_response_data(sess->resp_obj);
+
       if(method_number(client->connect_info.method) == METHOD_POST) {
         lws_client_http_body_pending(wsi, 1);
         lws_callback_on_writable(wsi);
@@ -152,10 +154,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
-      /*MinnetResponse* resp = minnet_response_data2(ctx, sess->resp_obj);
-      sess->done = TRUE;
-      in = block_BEGIN(&resp->body);
-      len = buffer_HEAD(&resp->body);*/
+      MinnetResponse* resp = client->response;
+      http_server_headers(ctx, &resp->headers, wsi);
 
       if((client->cb.http.ctx = ctx)) {
         /*MinnetWebsocket* ws = minnet_ws_data2(ctx, sess->ws_obj);

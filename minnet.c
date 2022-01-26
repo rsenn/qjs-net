@@ -128,18 +128,20 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 JSValue
 headers_object(JSContext* ctx, const MinnetBuffer* buffer) {
   JSValue ret = JS_NewObject(ctx);
-  size_t len, n;
+  size_t len, namelen, n;
   uint8_t *x, *end;
   for(x = buffer->start, end = buffer->write; x < end; x += len + 1) {
     len = byte_chr(x, end - x, '\n');
     if(len > (n = byte_chr(x, len, ':'))) {
-      const char* prop = js_strndup(ctx, (const char*)x, n);
+      const char* prop = (namelen = n) ? js_strndup(ctx, (const char*)x, namelen) : 0;
       if(x[n] == ':')
         n++;
       if(isspace(x[n]))
         n++;
-      JS_DefinePropertyValueStr(ctx, ret, prop, JS_NewStringLen(ctx, (const char*)&x[n], len - n), JS_PROP_ENUMERABLE);
-      js_free(ctx, (void*)prop);
+      if(prop) {
+        JS_DefinePropertyValueStr(ctx, ret, prop, JS_NewStringLen(ctx, (const char*)&x[n], len - n), JS_PROP_ENUMERABLE);
+        js_free(ctx, (void*)prop);
+      }
     }
   }
   return ret;

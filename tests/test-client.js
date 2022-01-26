@@ -2,7 +2,7 @@ import { exit, puts } from 'std';
 import { URL } from 'net';
 import Client from './client.js';
 import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker, ttySetRaw } from 'os';
-import { in as stdin, out as stdout } from 'std';
+import { in as stdin, out as stdout, err as stderr } from 'std';
 import { assert, getpid, exists, randStr, abbreviate, escape } from './common.js';
 
 function main(...args) {
@@ -64,9 +64,12 @@ function main(...args) {
         },
         onHttp(req, resp) {
           console.log('onHttp', { req, resp });
+
           let body = resp.text();
 
           puts(body);
+
+          console.log(`Headers:`, resp.headers);
         }
       },
       debug
