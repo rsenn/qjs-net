@@ -22,7 +22,7 @@ export const SetLog = (name, maxLevel = net.LLL_CLIENT) =>
   net.setLog(net.LLL_USER | ((maxLevel << 1) - 1), (level, msg) => {
     let l = Levels[level] ?? 'UNKNOWN';
     if(l == 'USER') l = name ?? l;
-     std.err.puts(('X', l).padEnd(9)+msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
+    std.err.puts(('X', l).padEnd(9) + msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
   });
 
 import('console').then(({ Console }) => {

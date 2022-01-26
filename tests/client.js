@@ -7,14 +7,14 @@ import { escape, abbreviate } from './common.js';
 const connections = new Set();
 
 export default function Client(url, options, debug) {
-  Init('Client', net.LLL_CLIENT | ( debug ? net.LLL_USER: 0));
+  Init('Client', net.LLL_CLIENT | (debug ? net.LLL_USER : 0));
 
   const { onConnect, onClose, onError, onHttp, onFd, onMessage, ...opts } = options;
 
   const sslCert = 'localhost.crt',
     sslPrivateKey = 'localhost.key';
 
-        std.err.puts(`Client connecting to ${url} ...\n`);
+  std.err.puts(`Client connecting to ${url} ...\n`);
 
   return net.client(url, {
     sslCert,
