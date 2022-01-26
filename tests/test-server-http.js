@@ -1,71 +1,47 @@
 import * as std from 'std';
 import * as os from 'os';
-import { Console } from 'console';
-import { MinnetServer, MakeCert } from './server.js';
-import { TestFetch } from './fetch.js';
-import { assert } from './common.js';
+import { randStr } from './common.js';
+import { spawn, wait4 } from './spawn.js';
+import Client from './client.js';
 
-function main(...args) {
-  const sslCert = 'localhost.crt',
-    sslPrivateKey = 'localhost.key';
+function TestClient(url) {
+  const message = randStr(100);
 
-  const host = 'localhost',
-    port = 30000;
+  return Client(url, {
+    onConnect(ws, req) {
+      console.log('onConnect', { ws, req });
+    },
+    onClose(ws, reason) {
+      console.log('onClose', { ws, reason });
+      std.exit(1);
+    },
+    onError(ws, error) {
+      console.log('onError', { ws, error });
+      std.exit(1);
+    },
+    onHttp(req, resp) {
+      console.log('onHttp', { req, resp });
 
-  let server = new MinnetServer({
-    host,
-    port,
-    protocol: 'http',
-    sslCert,
-    sslPrivateKey,
-    mounts: {
-      *generator(req, res) {
-        console.log('/generator', { req, res });
-        yield 'This';
-        yield ' ';
-        yield 'is';
-        yield ' ';
-        yield 'a';
-        yield ' ';
-        yield 'generated';
-        yield ' ';
-        yield 'response';
-        yield '\n';
-      }
+      let file = std.loadFile('.' + req.path);
+
+      let body = resp.text();
+      console.log('onHttp', { body, file });
+
+      if(file.length == body.length) if (file === body) std.exit(0);
     }
   });
+}
 
-  let fetch = TestFetch(host, port);
+function main(...args) {
+  let pid = spawn('server.js', 'localhost', 30000);
+  let status = [];
 
-  let worker = server.run();
+  os.sleep(50);
 
-  worker.onmessage = function(e) {
-    const { type, ...event } = e;
-    switch (type) {
-      case 'message':
-        worker.sendMessage({ type: 'send', id: e.id, msg: e.msg });
-        break;
-      case 'close':
-        console.log('close', e);
-        worker.sendMessage({ type: 'exit' });
-        break;
-      case 'running':
-        let data;
-        let filename = 'jsutils.h';
+  TestClient('http://localhost:30000/jsutils.h');
 
-        data = fetch(filename);
-
-        let file = std.loadFile(filename);
-        console.log('data.length == file.length', data.length == file.length);
-        console.log('data == file', data == file);
-        assert(data, file);
-        std.exit(0);
-        break;
-      default:
-        console.log('test-server-http.onmessage', e);
-        break;
-    }
-  };
+  wait4(pid, status);
+  console.log('status', status);
 }
 
 try {

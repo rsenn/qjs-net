@@ -297,8 +297,7 @@ http_server_headers(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
 int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
 
-  if(!lws_is_poll_callback(reason))
-    printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
+  // if(!lws_is_poll_callback(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
 
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:

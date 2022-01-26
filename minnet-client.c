@@ -55,13 +55,15 @@ JSValue
 minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct lws_context* lws = 0;
   int n = 0, argind = 0;
-  JSValue ret = JS_NULL;
+  JSValue value, ret = JS_NULL;
+  MinnetWebsocket* ws;
   MinnetClient client = {.headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
   struct lws_context_creation_info* info = &client.context.info;
+  struct lws_client_connect_info* conn = &client.connect_info;
   JSValue options = argv[0];
   struct lws* wsi = 0;
-  const char *str, *url = 0, *method_str = 0;
-  JSValue value;
+  char* url;
+  const char *str, *method_str = 0;
 
   SETLOG(LLL_INFO)
 
@@ -114,62 +116,55 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     }
   }
 
-  {
-    char* url = url_format(&client.url, ctx);
-    client.request = request_new(ctx, url_location(&client.url, ctx), url, method_number(method_str));
-    client.headers = JS_GetPropertyStr(ctx, options, "headers");
-    client.body = JS_GetPropertyStr(ctx, options, "body");
-  }
+  url = url_format(&client.url, ctx);
+  client.request = request_new(ctx, url_location(&client.url, ctx), url, method_number(method_str));
+  client.headers = JS_GetPropertyStr(ctx, options, "headers");
+  client.body = JS_GetPropertyStr(ctx, options, "body");
 
-  {
-    struct lws_client_connect_info* conn = &client.connect_info;
-    MinnetWebsocket* ws;
-
-    url_info(&client.url, conn);
-    conn->pwsi = &wsi;
-    conn->context = lws;
+  url_info(&client.url, conn);
+  conn->pwsi = &wsi;
+  conn->context = lws;
 
 #ifdef DEBUG_OUTPUT
-    printf("METHOD: %s\n", method_str);
-    printf("PROTOCOL: %s\n", conn->protocol);
+  printf("METHOD: %s\n", method_str);
+  printf("PROTOCOL: %s\n", conn->protocol);
 #endif
 
-    switch(protocol_number(client.url.protocol)) {
-      case PROTOCOL_HTTP:
-      case PROTOCOL_HTTPS: {
-        conn->method = method_str;
-        break;
-      }
+  switch(protocol_number(client.url.protocol)) {
+    case PROTOCOL_HTTP:
+    case PROTOCOL_HTTPS: {
+      conn->method = method_str;
+      break;
+    }
+  }
+
+  lws_client_connect_via_info(conn);
+
+  minnet_exception = FALSE;
+
+  printf("WSI: %p\n", wsi);
+  /*ws = ws_from_wsi(wsi);
+  printf("WS: %p\n", ws);*/
+  int status = -1;
+  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, client.context.js);
+
+  //
+  while(n >= 0) {
+    if(status != opaque->status) {
+      status = opaque->status;
+      printf("STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
     }
 
-    lws_client_connect_via_info(conn);
+    if(status == CLOSED)
+      break;
 
-    minnet_exception = FALSE;
-
-    printf("WSI: %p\n", wsi);
-    /*ws = ws_from_wsi(wsi);
-    printf("WS: %p\n", ws);*/
-    int status = -1;
-    struct wsi_opaque_user_data* opaque = lws_opaque(wsi, client.context.js);
-
-    //
-    while(n >= 0) {
-      if(status != opaque->status) {
-        status = opaque->status;
-        printf("STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
-      }
-
-      if(status == CLOSED)
-        break;
-
-      if(minnet_exception) {
-        minnet_exception = FALSE;
-        ret = JS_EXCEPTION;
-        break;
-      }
-
-      js_std_loop(ctx);
+    if(minnet_exception) {
+      minnet_exception = FALSE;
+      ret = JS_EXCEPTION;
+      break;
     }
+
+    js_std_loop(ctx);
   }
 
   if(wsi) {
@@ -321,6 +316,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       break;
     }
   }
+
   if(opaque && opaque->status >= CLOSING)
     return -1;
 

@@ -1,24 +1,14 @@
 import * as std from 'std';
 import * as os from 'os';
-import net, { LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
-import { Console } from 'console';
-import { MinnetServer, MakeCert } from './server.js';
-import { TestFetch } from './fetch.js';
+import net from 'net';
 import { assert, randStr } from './common.js';
-import { getexe, thisdir, spawn, wait4 } from './spawn.js';
-import { Levels, DefaultLevels, Init } from './log.js';
+import { spawn, wait4 } from './spawn.js';
 import Client from './client.js';
 
-function TestClient(url = 'ws://localhost:30000/ws') {
-  const sslCert = 'localhost.crt',
-    sslPrivateKey = 'localhost.key';
-
+function TestClient(url) {
   const message = randStr(100);
 
   return Client(url, {
-    sslCert,
-    sslPrivateKey,
-
     onConnect(ws, req) {
       ws.send(message);
     },
@@ -31,9 +21,10 @@ function TestClient(url = 'ws://localhost:30000/ws') {
       std.exit(1);
     },
     onMessage(ws, msg) {
-      // assert(`ECHO:${message}`, msg);
       console.log('onMessage', { ws, msg });
-      ws.close(1008);
+      const exitCode = +!(`ECHO: ${message}` == msg);
+      ws.close(1000 + exitCode);
+      //std.exit(exitCode);
     }
   });
 }
@@ -41,14 +32,12 @@ function TestClient(url = 'ws://localhost:30000/ws') {
 function main(...args) {
   let pid = spawn('server.js', 'localhost', 30000);
   let status = [];
-  console.log('pid', pid);
 
-  os.sleep(100);
+  os.sleep(50);
 
-  TestClient();
+  TestClient('ws://localhost:30000/ws');
 
-  console.log(`wait4`, { pid, status });
-  console.log(`wait4`, '=', wait4(pid, status));
+  wait4(pid, status);
   console.log('status', status);
 }
 

@@ -407,4 +407,9 @@ if(DO_TESTS)
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
       SOURCES "${TEST}")]]
   endforeach(TEST ${TESTS})
+
+  add_custom_target(do_tests ALL ${CMAKE_MAKE_PROGRAM} test
+                  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+                  COMMENT "Do all tests"
+                  )
 endif(DO_TESTS)

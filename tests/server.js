@@ -263,7 +263,7 @@ if(w) {
   try {
     const args = globalThis.scriptArgs ?? process.argv;
 
-    console.log('args', args);
+    //console.log('args', args);
 
     if(/(^|\/)server\.js$/.test(args[0])) {
       const sslCert = 'localhost.crt',
@@ -310,6 +310,8 @@ if(w) {
         },
         onClose: (ws, status) => {
           console.log('onClose', { ws, status });
+          ws.close(status);
+          if(status >= 1000) std.exit(status - 1000);
         },
         onError: (ws, error) => {
           console.log('onError', { ws, error });

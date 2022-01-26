@@ -9,13 +9,27 @@ function main(...args) {
   args = args.filter(arg => !/^-[x]/.test(arg));
 
   if(args.length == 0) args.push('https://github.com/rsenn?tab=repositories');
-
-  const sslCert = 'localhost.crt',
-    sslPrivateKey = 'localhost.key';
-
+  /*
   for(let arg of args) {
-    Client(arg, { sslCert, sslPrivateKey });
-  }
+    Client(arg, {
+      onConnect(ws, req) {
+        ws.send(message);
+      },
+      onClose(ws, reason) {
+        console.log('onClose', { ws, reason });
+        std.exit(0);
+      },
+      onError(ws, error) {
+        console.log('onError', { ws, error });
+        std.exit(1);
+      },
+      onMessage(ws, msg) {
+        // assert(`ECHO:${message}`, msg);
+        console.log('onMessage', { ws, msg });
+        ws.close(1008);
+      }
+    });
+  }*/
 }
 
 try {

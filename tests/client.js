@@ -2,23 +2,21 @@ import * as std from 'std';
 import * as os from 'os';
 import net, { URL } from 'net';
 import { Init, SetLog } from './log.js';
+import { escape, abbreviate } from './common.js';
 
 const connections = new Set();
 
-const escape = s =>
-  [
-    [/\r/g, '\\r'],
-    [/\n/g, '\\n']
-  ].reduce((a, [exp, rpl]) => a.replace(exp, rpl), s);
-
-const abbreviate = s => (s.length > 100 ? s.substring(0, 45) + ' ... ' + s.substring(-45) : s);
-
 export default function Client(url, options) {
-  Init('Client', net.LLL_CLIENT);
+  Init('Client', net.LLL_CLIENT /*|net.LLL_USER*/);
 
   const { onConnect, onClose, onError, onHttp, onFd, onMessage, ...opts } = options;
 
+  const sslCert = 'localhost.crt',
+    sslPrivateKey = 'localhost.key';
+
   return net.client(url, {
+    sslCert,
+    sslPrivateKey,
     ...opts,
     onConnect(ws, req) {
       connections.add(ws);

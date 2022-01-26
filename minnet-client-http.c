@@ -5,14 +5,12 @@
 
 int
 http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  uint8_t buffer[1024 + LWS_PRE];
-  MinnetHttpMethod method = -1;
+  //  MinnetHttpMethod method = -1;
   MinnetSession* sess = user;
   MinnetClient* client = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = client->context.js;
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
-  int n;
-
+ 
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &client->cb.fd, in);
 
@@ -79,7 +77,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_WRITEABLE: {
       JSValue value, next = JS_NULL;
       BOOL done = FALSE;
-      ssize_t size, r, i;
+      int n;
+ ssize_t size, r, i;
       MinnetRequest* req = client->request;
       MinnetBuffer buf;
 
@@ -126,7 +125,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP: {
       int ret;
-      MinnetBuffer buf = BUFFER(buffer);
+   static uint8_t buffer[1024 + LWS_PRE];
+    
+   MinnetBuffer buf = BUFFER(buffer);
       lwsl_user("http #1  " FGC(171, "%-38s") " fd=%d buf=%p write=%zu len=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), buffer_BEGIN(&buf), buffer_WRITE(&buf), len);
       ret = lws_http_client_read(wsi, &buf, &len);
       if(ret)
@@ -162,7 +163,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     default: {
-      // minnet_lws_unhandled(0, reason);
+       minnet_lws_unhandled(__func__, reason);
       break;
     }
   }
