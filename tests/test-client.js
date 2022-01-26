@@ -6,13 +6,6 @@ import { Console } from 'console';
 import { Levels, DefaultLevels, Init, SetLog } from './log.js';
 import Client from './client.js';
 
-const escape = s =>
-  [
-    [/\r/g, '\\r'],
-    [/\n/g, '\\n']
-  ].reduce((a, [exp, rpl]) => a.replace(exp, rpl), s);
-const abbreviate = s => (s.length > 100 ? s.substring(0, 45) + ' ... ' + s.substring(-45) : s);
-
 const connections = new Set();
 
 function main(...args) {

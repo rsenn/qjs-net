@@ -16,11 +16,11 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &client->cb.fd, in);
 
-  lwsl_user("client-http " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
+  lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      lwsl_user("http-error #1 " FGC(171, "%-25s") "  in: %s\n", lws_callback_name(reason) + 13, in ? (char*)in : "(null)");
+      lwsl_user("http-error #1 " FGC(171, "%-38s") "  in: %s\n", lws_callback_name(reason) + 13, in ? (char*)in : "(null)");
       break;
     }
 
@@ -64,7 +64,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
       int status;
       status = lws_http_client_http_response(wsi);
-      lwsl_user("http-established #1 " FGC(171, "%-25s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
+      lwsl_user("http-established #1 " FGC(171, "%-38s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
       sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
       sess->req_obj = minnet_request_wrap(ctx, client->request);
 
@@ -127,7 +127,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP: {
       int ret;
       MinnetBuffer buf = BUFFER(buffer);
-      lwsl_user("http #1  " FGC(171, "%-25s") " fd=%d buf=%p write=%zu len=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), buffer_BEGIN(&buf), buffer_WRITE(&buf), len);
+      lwsl_user("http #1  " FGC(171, "%-38s") " fd=%d buf=%p write=%zu len=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), buffer_BEGIN(&buf), buffer_WRITE(&buf), len);
       ret = lws_http_client_read(wsi, &buf, &len);
       if(ret)
         return -1;
@@ -136,7 +136,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ: {
-      lwsl_user("http-read #1  " FGC(171, "%-25s") " " FGC(226, "fd=%d") " " FGC(87, "len=%zu") " " FGC(125, "in='%.*s'") "\n",
+      lwsl_user("http-read #1  " FGC(171, "%-38s") " " FGC(226, "fd=%d") " " FGC(87, "len=%zu") " " FGC(125, "in='%.*s'") "\n",
                 lws_callback_name(reason) + 13,
                 lws_get_socket_fd(wsi),
                 len,
@@ -168,7 +168,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
 
   /* if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
-     lwsl_notice("client-http  %-25s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
+     lwsl_notice("client-http  %-38s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
  */
   return lws_callback_http_dummy(wsi, reason, user, in, len);
 }

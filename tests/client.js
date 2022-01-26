@@ -19,10 +19,10 @@ export default function Client(url, options) {
   return net.client(url, {
     ...options,
     onConnect(ws, req) {
-      console.log('onConnect', ws, req);
       connections.add(ws);
+      console.log('onConnect', ws, req);
       try {
-        console.log(`Connected to ${protocol}://${host}:${port}${path}`, true);
+        console.log(`Connected to: ${req.url}`);
       } catch(err) {
         console.log('error:', err.message);
       }
@@ -33,12 +33,13 @@ export default function Client(url, options) {
       std.exit(status != 1000 ? 1 : 0);
     },
     onError(ws, error) {
+      connections.delete(ws);
       console.log('onError', { ws, error });
       std.exit(error);
     },
     onHttp(req, rsp) {
       const { url, method, headers } = req;
-      console.log('\x1b[38;5;82monHttp\x1b[0m(\n\t', Object.setPrototypeOf({ url, method, headers }, Object.getPrototypeOf(req)), ',\n\t', rsp, '\n)');
+      console.log('\x1b[38;5;82monHttp\x1b[0m',  { url, method, headers });
       return rsp;
     },
     onFd(fd, rd, wr) {
@@ -48,11 +49,7 @@ export default function Client(url, options) {
     },
     onMessage(ws, msg) {
       console.log('onMessage', console.config({ maxStringLen: 100 }), { ws, msg });
-
       std.puts(escape(abbreviate(msg)) + '\n');
-    },
-    onError(ws, error) {
-      console.log('onError', ws, error);
     }
   });
 }

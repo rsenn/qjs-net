@@ -23,11 +23,11 @@ method_string(enum http_method m) {
 
 int
 method_number(const char* name) {
-  int i;
-  for(i = countof(method_names) - 1; i >= 0; --i) {
-    if(!strcasecmp(name, method_names[i]))
-      break;
-  }
+  int i = 0;
+  if(name)
+    for(i = countof(method_names) - 1; i >= 0; --i)
+      if(!strcasecmp(name, method_names[i]))
+        break;
   return i;
 }
 

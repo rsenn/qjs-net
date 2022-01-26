@@ -190,7 +190,16 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &client->cb.fd, in);
 
-  lwsl_user("client " FG("%d") "%-25s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
+  if(lws_is_http_callback(reason))
+    return http_client_callback(wsi, reason, user, in, len);
+
+  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i\n",
+            22 + (reason * 2),
+            lws_callback_name(reason) + 13,
+            lws_is_ssl(wsi),
+            len,
+            (int)MIN(len, 32),
+            (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT: {
@@ -253,7 +262,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         sess->req_obj = minnet_request_wrap(ctx, client->request);
         sess->resp_obj = JS_NULL;
 
-        // lwsl_user("client   " FGC(171, "%-25s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
+        // lwsl_user("client   " FGC(171, "%-38s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
 
         if((client->cb.connect.ctx = ctx))
           minnet_emit(&client->cb.connect, 2, &sess->ws_obj);
