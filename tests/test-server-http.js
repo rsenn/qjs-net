@@ -40,7 +40,8 @@ function main(...args) {
 
   TestClient('http://localhost:30000/jsutils.h');
 
-  wait4(pid, status);
+  os.kill(pid, os.SIGTERM);
+  wait4(pid, status, os.WNOHANG);
   console.log('status', status);
 }
 

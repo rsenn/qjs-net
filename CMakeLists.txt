@@ -408,8 +408,7 @@ if(DO_TESTS)
       SOURCES "${TEST}")]]
   endforeach(TEST ${TESTS})
 
-  add_custom_target(do_tests ALL ${CMAKE_MAKE_PROGRAM} test
-                  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  add_custom_target(do_tests COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_CURRENT_BINARY_DIR}" --target "test"
                   COMMENT "Do all tests"
                   )
 endif(DO_TESTS)

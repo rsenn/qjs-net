@@ -37,7 +37,8 @@ function main(...args) {
 
   TestClient('ws://localhost:30000/ws');
 
-  wait4(pid, status);
+  os.kill(pid, os.SIGTERM);
+  wait4(pid, status, os.WNOHANG);
   console.log('status', status);
 }
 
