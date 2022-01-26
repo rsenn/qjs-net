@@ -7,6 +7,7 @@ import { escape, abbreviate } from './common.js';
 const connections = new Set();
 
 export default function Client(url, options, debug) {
+//console.log('Client',{url,options,debug});
   Init('Client', LLL_CLIENT | (debug ? LLL_USER : 0));
 
   const { onConnect, onClose, onError, onHttp, onFd, onMessage, ...opts } = options;
