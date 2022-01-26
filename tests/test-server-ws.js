@@ -33,7 +33,7 @@ function TestClient(url = 'ws://localhost:30000/ws') {
     onMessage(ws, msg) {
       // assert(`ECHO:${message}`, msg);
       console.log('onMessage', { ws, msg });
-      ws.close(1000);
+      ws.close(1008);
     }
   });
 }
