@@ -8,7 +8,7 @@ function main(...args) {
   const debug = args.indexOf('-x') != -1;
   args = args.filter(arg => !/^-[x]/.test(arg));
 
-  if(args.length == 0) args.push('https://github.com/rsenn?tab=repositories');
+  if(args.length == 0) args.push('https://localhost/debugger.html');
 
   for(let arg of args) {
     Client(
