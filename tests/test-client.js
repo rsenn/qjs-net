@@ -1,4 +1,4 @@
-import * as std from 'std';
+import { exit, puts } from 'std';
 import Client from './client.js';
 
 function main(...args) {
@@ -16,22 +16,22 @@ function main(...args) {
         },
         onClose(ws, reason) {
           console.log('onClose', { ws, reason });
-          std.exit(0);
+          exit(0);
         },
         onError(ws, error) {
           console.log('onError', { ws, error });
-          std.exit(1);
+          exit(1);
         },
         onMessage(ws, msg) {
           console.log('onMessage', { ws, msg });
-          std.puts(msg);
+          puts(msg);
           ws.close(1008);
         },
         onHttp(req, resp) {
           console.log('onHttp', { req, resp });
           let body = resp.text();
 
-          std.puts(body);
+          puts(body);
         }
       },
       debug
@@ -43,5 +43,5 @@ try {
   main(...scriptArgs.slice(1));
 } catch(error) {
   console.log(`FAIL: ${error && error.message}\n${error && error.stack}`);
-  std.exit(1);
+  exit(1);
 }

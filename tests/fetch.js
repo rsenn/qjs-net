@@ -1,5 +1,5 @@
-import * as std from 'std';
-import * as os from 'os';
+import { err, fdopen } from 'std';
+import { pipe, exec, close, waitpid, WNOHANG } from 'os';
 
 const fetchArgs = {
   curl: (url, file) => ['-s', '-k', '-L', url].concat(file ? ['-o', file] : []),
@@ -17,29 +17,29 @@ export function Fetch(url, file) {
     pipe;
 
   if(!(file ?? false)) {
-    [pipe, options.stdout] = os.pipe();
+    [pipe, options.stdout] = pipe();
     //    options.block=false;
   }
 
-  std.err.puts(`Fetching ${url} ...\n`);
+  err.puts(`Fetching ${url} ...\n`);
 
   for(let p of fetchProgram ? [fetchProgram] : programs) {
     let args = [p].concat(fetchArgs[p](url, file));
-    if((ret = os.exec(args, options)) == 0) {
+    if((ret = exec(args, options)) == 0) {
       fetchProgram = p;
       break;
     }
   }
 
   if(pipe) {
-    os.close(options.stdout);
-    let f = std.fdopen(pipe, 'r');
+    close(options.stdout);
+    let f = fdopen(pipe, 'r');
     let str = f.readAsString();
 
     f.close();
-    os.close(pipe);
+    close(pipe);
 
-    os.waitpid(ret, os.WNOHANG);
+    waitpid(ret, WNOHANG);
     ret = str;
   }
 

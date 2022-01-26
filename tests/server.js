@@ -1,11 +1,10 @@
-import * as std from 'std';
-import * as os from 'os';
-//import process from 'process';
-import net, { URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net.so';
+import { exit } from 'std';
+import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker } from 'os';
+import { server, URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
 import { Levels, DefaultLevels, Init } from './log.js';
 import { getpid, once, exists } from './common.js';
 
-const w = os.Worker.parent;
+const w = Worker.parent;
 const name = w ? 'CHILD\t' : 'PARENT\t';
 const log = (...args) => console.log(name, ...args);
 const connections = new Set();
@@ -38,9 +37,9 @@ const MimeTypes = [
 ];
 
 export function MakeCert(sslCert, sslPrivateKey) {
-  let stderr = os.open('/dev/null', os.O_RDWR);
-  let ret = os.exec(['openssl', 'req', '-x509', '-out', sslCert, '-keyout', sslPrivateKey, '-newkey', 'rsa:2048', '-nodes', '-sha256', '-subj', '/CN=localhost'], { stderr });
-  os.close(stderr);
+  let stderr = open('/dev/null', O_RDWR);
+  let ret = exec(['openssl', 'req', '-x509', '-out', sslCert, '-keyout', sslPrivateKey, '-newkey', 'rsa:2048', '-nodes', '-sha256', '-subj', '/CN=localhost'], { stderr });
+  close(stderr);
   return ret;
 }
 
@@ -136,7 +135,7 @@ export class MinnetServer {
 
     mimetypes = { ...MimeTypes, ...mimetypes };
 
-    net.server({
+    server({
       mimetypes,
       mounts,
       onConnect: (ws, req) => {
@@ -161,8 +160,8 @@ export class MinnetServer {
       onFd: (fd, rd, wr) => {
         log('onFd', { fd, rd, wr });
         started();
-        os.setReadHandler(fd, rd);
-        os.setWriteHandler(fd, wr);
+        setReadHandler(fd, rd);
+        setWriteHandler(fd, wr);
       },
       onMessage: (ws, msg) => {
         //log('onMessage', { ws, msg });
@@ -176,7 +175,7 @@ export class MinnetServer {
   run() {
     let counter = 0;
 
-    this.worker = new os.Worker('./server.js');
+    this.worker = new Worker('./server.js');
     const { worker, options } = this;
     const { host, port, sslCert, sslPrivateKey } = this.options;
 
@@ -231,7 +230,7 @@ export class MinnetServer {
           break;
         case 'exit':
           const { exitcode } = event;
-          std.exit(exitcode ?? 0);
+          exit(exitcode ?? 0);
           break;
 
         case 'send':
@@ -276,7 +275,7 @@ if(w) {
 
       Init('SERVER');
 
-      net.server({
+      server({
         mimetypes: MimeTypes,
         host,
         port,
@@ -311,7 +310,7 @@ if(w) {
         onClose: (ws, status) => {
           console.log('onClose', { ws, status });
           ws.close(status);
-          if(status >= 1000) std.exit(status - 1000);
+          if(status >= 1000) exit(status - 1000);
         },
         onError: (ws, error) => {
           console.log('onError', { ws, error });
@@ -321,8 +320,8 @@ if(w) {
         },
         onFd: (fd, rd, wr) => {
           //console.log('onFd', { fd, rd, wr });
-          os.setReadHandler(fd, rd);
-          os.setWriteHandler(fd, wr);
+          setReadHandler(fd, rd);
+          setWriteHandler(fd, wr);
         },
         onMessage: (ws, msg) => {
           ws.send('ECHO: ' + msg);
