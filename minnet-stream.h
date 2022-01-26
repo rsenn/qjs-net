@@ -9,7 +9,7 @@
 typedef struct stream {
   size_t ref_count;
   char type[256];
-  struct byte_buffer buffer;
+  MinnetBuffer buffer;
 } MinnetStream;
 
 void stream_dump(struct stream const*);

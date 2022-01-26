@@ -186,11 +186,11 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp, JS
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int is_ssl = lws_is_ssl(wsi);
 
-  lwsl_user("http " FG("198") "%-38s" NC " wsi#%" PRId64 " url=%s status=%d type=%s length=%zu", "RESPOND", opaque->serial, resp->url, resp->status, resp->type, buffer_WRITE(&resp->body));
+  lwsl_user("http " FG("198") "%-38s" NC " wsi#%" PRId64 " url=%s status=%d type=%s length=%zu", "RESPOND", opaque->serial, resp->url, resp->status, resp->type, buffer_HEAD(&resp->body));
 
   // resp->read_only = TRUE;
 
-  if(lws_add_http_common_headers(wsi, resp->status, resp->type, is_ssl ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_WRITE(&resp->body), &buf->write, buf->end)) {
+  if(lws_add_http_common_headers(wsi, resp->status, resp->type, is_ssl ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(&resp->body), &buf->write, buf->end)) {
     return 1;
   }
   /*  {
@@ -303,7 +303,7 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
     response_write(resp, body, strlen(body), ctx);
   }
 
-  lwsl_user("serve_file path=%s mount=%.*s length=%td", path, mount->lws.mountpoint_len, mount->lws.mountpoint, buffer_WRITE(&resp->body));
+  lwsl_user("serve_file path=%s mount=%.*s length=%td", path, mount->lws.mountpoint_len, mount->lws.mountpoint, buffer_HEAD(&resp->body));
 
   return 0;
 }
@@ -316,9 +316,9 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
   ssize_t ret = 0;
 
   n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
-  /*  if(!buffer_REMAIN(&resp->body) && is_h2(wsi)) buffer_append(&resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
+  /*  if(!buffer_BYTES(&resp->body) && is_h2(wsi)) buffer_append(&resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
 
-  if((remain = buffer_REMAIN(&resp->body))) {
+  if((remain = buffer_BYTES(&resp->body))) {
     uint8_t* x = resp->body.read;
     size_t l = is_h2(wsi) ? (remain > 1024 ? 1024 : remain) : remain;
 
@@ -331,7 +331,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
     }
   }
 
-  lwsl_user("http_server_writable wsi#%" PRIi64 " done=%i remain=%zu final=%d", opaque->serial, done, buffer_REMAIN(&resp->body), p == LWS_WRITE_HTTP_FINAL);
+  lwsl_user("http_server_writable wsi#%" PRIi64 " done=%i remain=%zu final=%d", opaque->serial, done, buffer_BYTES(&resp->body), p == LWS_WRITE_HTTP_FINAL);
 
   if(p == LWS_WRITE_HTTP_FINAL) {
     if(lws_http_transaction_completed(wsi))
@@ -433,7 +433,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_BODY: {
       MinnetRequest* req = minnet_request_data2(ctx, serv->req_obj);
 
-      lwsl_user("http LWS_CALLBACK_HTTP_BODY\tis_h2=%i len: %zu, size: %zu\n", is_h2(wsi), len, buffer_WRITE(&req->body));
+      lwsl_user("http LWS_CALLBACK_HTTP_BODY\tis_h2=%i len: %zu, size: %zu\n", is_h2(wsi), len, buffer_HEAD(&req->body));
 
       if(len) {
         buffer_append(&req->body, in, len, ctx);
@@ -496,7 +496,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetRequest* req = opaque->req;
       MinnetResponse* resp = minnet_response_data2(ctx, args[1]);
 
-      lwsl_user("http " FG("%d") "%-38s" NC " req=%p, header=%zu\n", 22 + (reason * 2), lws_callback_name(reason) + 13, req, buffer_WRITE(&req->headers));
+      lwsl_user("http " FG("%d") "%-38s" NC " req=%p, header=%zu\n", 22 + (reason * 2), lws_callback_name(reason) + 13, req, buffer_HEAD(&req->headers));
 
       ++req->ref_count;
       MinnetCallback* cb = &minnet_server.cb.http;
@@ -564,7 +564,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
                 opaque->serial,
                 serv->h2,
                 serv->mount ? serv->mount->mnt : 0,
-                resp ? buffer_REMAIN(&resp->body) : 0,
+                resp ? buffer_BYTES(&resp->body) : 0,
                 resp ? resp->type : 0,
                 resp ? resp->url : 0);
 
@@ -584,7 +584,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             buffer_append(&resp->body, out.data, out.size, ctx);
             js_buffer_free(&out, minnet_server.context.js);
           }
-          lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " done=%i write=%zu", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, done, buffer_WRITE(&resp->body));
+          lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " done=%i write=%zu", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, done, buffer_HEAD(&resp->body));
 
           if(opaque->status == OPEN) {
             if(http_server_respond(wsi, &b, resp, ctx)) {
@@ -595,7 +595,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           }
         }
 
-      } else if(!buffer_WRITE(&resp->body)) {
+      } else if(!buffer_HEAD(&resp->body)) {
         static int unhandled;
 
         if(!unhandled++)

@@ -109,7 +109,7 @@ request_zero(struct http_request* req) {
 }
 
 static const char*
-header_get(JSContext* ctx, size_t* lenp, struct byte_buffer* buf, const char* name) {
+header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
   size_t len, namelen = strlen(name);
   uint8_t *x, *end;
 
@@ -236,20 +236,20 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_ARRAYBUFFER: {
-      ret = buffer_WRITE(&req->body) ? buffer_toarraybuffer(&req->body, ctx) : JS_NULL;
+      ret = buffer_HEAD(&req->body) ? buffer_toarraybuffer(&req->body, ctx) : JS_NULL;
       break;
     }
     case REQUEST_TEXT: {
-      ret = buffer_WRITE(&req->body) ? buffer_tostring(&req->body, ctx) : JS_NULL;
+      ret = buffer_HEAD(&req->body) ? buffer_tostring(&req->body, ctx) : JS_NULL;
       break;
     }
     case REQUEST_BODY: {
-      if(buffer_WRITE(&req->body)) {
+      if(buffer_HEAD(&req->body)) {
         size_t typelen;
         const char* type = header_get(ctx, &typelen, &req->headers, "content-type");
 
         ret = buffer_tostring(&req->body, ctx);
-        //  ret = minnet_stream_new(ctx, type, typelen, block_BEGIN(&req->body), buffer_WRITE(&req->body));
+        //  ret = minnet_stream_new(ctx, type, typelen, block_BEGIN(&req->body), buffer_HEAD(&req->body));
       } else {
         ret = JS_NULL;
       }

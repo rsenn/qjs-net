@@ -11,39 +11,46 @@
 #include <cutils.h>
 #include <unistd.h>
 
-struct byte_block {
+typedef struct byte_block {
   uint8_t *start, *end;
-};
+} MinnetBytes;
+ 
 
 #define block_SIZE(b) ((b)->end - (b)->start)
 #define block_BEGIN(b) (void*)(b)->start
 #define block_END(b) (void*)(b)->end
 #define block_ALLOC(b) ((b)->start ? (b)->start - LWS_PRE : 0)
 
-void block_init(struct byte_block*, uint8_t*, size_t);
-BOOL block_alloc(struct byte_block*, size_t, JSContext*);
-uint8_t* block_realloc(struct byte_block*, size_t, JSContext*);
-void block_free(struct byte_block*, JSRuntime*);
-int block_fromarraybuffer(struct byte_block*, JSValue, JSContext*);
-JSValue block_toarraybuffer(struct byte_block*, JSContext*);
-JSValue block_tostring(struct byte_block const*, JSContext*);
+void block_init(MinnetBytes*, uint8_t*, size_t);
+uint8_t* block_alloc(MinnetBytes*, size_t, JSContext*);
+uint8_t* block_realloc(MinnetBytes*, size_t, JSContext*);
+void block_free(MinnetBytes*, JSRuntime*);
+int block_fromarraybuffer(MinnetBytes*, JSValue, JSContext*);
+JSValue block_toarraybuffer(MinnetBytes*, JSContext*);
+JSValue block_tostring(MinnetBytes const*, JSContext*);
 
-static inline struct byte_block
-block_move(struct byte_block* blk) {
-  struct byte_block ret = {blk->start, blk->end};
+static inline uint8_t*
+block_grow(MinnetBytes* blk, size_t size, JSContext* ctx) {
+  return block_realloc(blk, block_SIZE(blk) + size, ctx);
+}
+
+static inline MinnetBytes
+block_move(MinnetBytes* blk) {
+  MinnetBytes ret = {blk->start, blk->end};
   blk->start = 0;
   blk->end = 0;
   return ret;
 }
 
-typedef struct byte_buffer {
-  union {
-    struct byte_block block;
-    struct {
-      uint8_t *start, *end;
-    };
+typedef union byte_buffer {
+  struct byte_block;
+  struct {
+    uint8_t *start, *end;
   };
-  uint8_t *alloc, *read, *write;
+  struct {
+    MinnetBytes block;
+    uint8_t *read, *write, *alloc;
+  };
 } MinnetBuffer;
 
 #define BUFFER(buf) \
@@ -56,58 +63,59 @@ typedef struct byte_buffer {
   (MinnetBuffer) { ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)), ((uint8_t*)(buf)) + n, 0 }
 
 #define buffer_AVAIL(b) ((b)->end - (b)->write)
-#define buffer_WRITE(b) ((b)->write - (b)->start)
-#define buffer_REMAIN(b) ((b)->write - (b)->read)
-#define buffer_READ(b) ((b)->read - (b)->start)
+#define buffer_BYTES(b) ((b)->write - (b)->read)
+#define buffer_HEAD(b) ((b)->write - (b)->start)
+#define buffer_TAIL(b) ((b)->read - (b)->start)
 
 #define buffer_zero(b) memset((b), 0, sizeof(MinnetBuffer))
 
-void buffer_init(struct byte_buffer*, uint8_t*, size_t);
-BOOL buffer_alloc(struct byte_buffer*, size_t, JSContext*);
-ssize_t buffer_append(struct byte_buffer*, const void*, size_t, JSContext* ctx);
-void buffer_free(struct byte_buffer*, JSRuntime*);
-BOOL buffer_write(struct byte_buffer*, const char*, size_t);
-int buffer_vprintf(struct byte_buffer*, const char*, va_list);
-int buffer_printf(struct byte_buffer*, const char*, ...);
-uint8_t* buffer_realloc(struct byte_buffer*, size_t, JSContext*);
-int buffer_fromvalue(struct byte_buffer*, JSValue, JSContext*);
-JSValue buffer_tostring(struct byte_buffer const*, JSContext*);
-char* buffer_escaped(struct byte_buffer const*, JSContext*);
+void buffer_init(MinnetBuffer*, uint8_t*, size_t);
+uint8_t* buffer_alloc(MinnetBuffer*, size_t, JSContext*);
+ssize_t buffer_append(MinnetBuffer*, const void*, size_t, JSContext* ctx);
+void buffer_free(MinnetBuffer*, JSRuntime*);
+BOOL buffer_write(MinnetBuffer*, const char*, size_t);
+int buffer_vprintf(MinnetBuffer*, const char*, va_list);
+int buffer_printf(MinnetBuffer*, const char*, ...);
+uint8_t* buffer_realloc(MinnetBuffer*, size_t, JSContext*);
+int buffer_fromarraybuffer(MinnetBuffer*, JSValue, JSContext*);
+int buffer_fromvalue(MinnetBuffer*, JSValue, JSContext*);
+JSValue buffer_tostring(MinnetBuffer const*, JSContext*);
+char* buffer_escaped(MinnetBuffer const*, JSContext*);
 void buffer_finalizer(JSRuntime*, void*, void*);
-JSValue buffer_toarraybuffer(struct byte_buffer const*, JSContext*);
-void buffer_dump(const char*, struct byte_buffer const*);
+JSValue  buffer_toarraybuffer(MinnetBuffer*, JSContext*);
+void buffer_dump(const char*, MinnetBuffer const*);
 
 static inline void
-buffer_reset(struct byte_buffer* buf) {
+buffer_reset(MinnetBuffer* buf) {
   buf->read = buf->start;
   buf->write = buf->start;
 }
 
 static inline uint8_t*
-buffer_grow(struct byte_buffer* buf, size_t size, JSContext* ctx) {
-  return buffer_realloc(buf, (buf->end - buf->start) + size, ctx);
+buffer_grow(MinnetBuffer* buf, size_t size, JSContext* ctx) {
+  return block_grow(&buf->block, size, ctx);
 }
 
 static inline BOOL
-buffer_clone(struct byte_buffer* buf, const struct byte_buffer* other, JSContext* ctx) {
+buffer_clone(MinnetBuffer* buf, const MinnetBuffer* other, JSContext* ctx) {
   if(!buffer_alloc(buf, block_SIZE(other), ctx))
     return FALSE;
-  memcpy(buf->start, other->start, buffer_WRITE(other));
+  memcpy(buf->start, other->start, buffer_HEAD(other));
 
-  buf->read = buf->start + buffer_READ(other);
-  buf->write = buf->start + buffer_WRITE(other);
+  buf->read = buf->start + buffer_TAIL(other);
+  buf->write = buf->start + buffer_HEAD(other);
   return TRUE;
 }
 
 static inline uint8_t*
-buffer_skip(struct byte_buffer* buf, size_t size) {
+buffer_skip(MinnetBuffer* buf, size_t size) {
   assert(buf->read + size <= buf->write);
   buf->read += size;
   return buf->read;
 }
 
 static inline BOOL
-buffer_putchar(struct byte_buffer* buf, char c) {
+buffer_putchar(MinnetBuffer* buf, char c) {
   if(buf->write + 1 <= buf->end) {
     *buf->write = (uint8_t)c;
     buf->write++;
@@ -116,4 +124,10 @@ buffer_putchar(struct byte_buffer* buf, char c) {
   return FALSE;
 }
 
+static inline MinnetBuffer
+buffer_move(MinnetBuffer* buf) {
+  MinnetBuffer ret = *buf;
+  memset(buf, 0, sizeof(MinnetBuffer));
+  return ret;
+}
 #endif /* MINNET_BUFFER_H */

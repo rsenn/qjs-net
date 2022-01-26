@@ -21,7 +21,7 @@ typedef struct http_request {
   BOOL read_only;
   enum http_method method;
   char* url;
-  struct byte_buffer headers, body;
+  MinnetBuffer headers, body;
   char path[256];
 } MinnetRequest;
 

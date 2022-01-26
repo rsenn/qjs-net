@@ -6,7 +6,7 @@
 #include <libwebsockets.h>
 #include "minnet-buffer.h"
 
-struct byte_buffer;
+MinnetBuffer;
 struct http_request;
 
 #ifdef JS_SHARED_LIBRARY
@@ -106,7 +106,7 @@ typedef struct session_data {
   int64_t written;
   struct server_context* server;
   struct client_context* client;
-  struct byte_buffer send_buf;
+  MinnetBuffer send_buf;
 } MinnetSession;
 
 typedef struct callbacks {
@@ -123,10 +123,10 @@ extern THREAD_LOCAL int32_t minnet_log_level;
 extern THREAD_LOCAL JSContext* minnet_log_ctx;
 extern THREAD_LOCAL BOOL minnet_exception;
 
-JSValue headers_object(JSContext*, const struct byte_buffer* buffer);
+JSValue headers_object(JSContext*, const MinnetBuffer* buffer);
 char* headers_atom(JSAtom, JSContext* ctx);
-int headers_from(struct byte_buffer*, struct lws* wsi, JSValue obj, JSContext* ctx);
-ssize_t headers_set(JSContext*, struct byte_buffer*, const char* name, const char* value);
+int headers_from(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);
+ssize_t headers_set(JSContext*, MinnetBuffer*, const char* name, const char* value);
 int fd_callback(struct lws*, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args);
 int minnet_lws_unhandled(const char* handler, int);
 JSValue minnet_emit_this(const struct ws_callback*, JSValueConst this_obj, int argc, JSValue* argv);

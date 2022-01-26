@@ -3,26 +3,25 @@
 #include <libwebsockets.h>
 
 void
-block_init(struct byte_block* blk, uint8_t* start, size_t len) {
+block_init(MinnetBytes* blk, uint8_t* start, size_t len) {
   blk->start = start;
   blk->end = blk->start + len;
 }
 
-BOOL
-block_alloc(struct byte_block* blk, size_t size, JSContext* ctx) {
+uint8_t*
+block_alloc(MinnetBytes* blk, size_t size, JSContext* ctx) {
   uint8_t* ptr;
 
   if((ptr = js_malloc(ctx, size + LWS_PRE))) {
     blk->start = ptr + LWS_PRE;
     blk->end = blk->start + size;
-    return TRUE;
   }
 
-  return FALSE;
+  return ptr;
 }
 
 uint8_t*
-block_realloc(struct byte_block* blk, size_t size, JSContext* ctx) {
+block_realloc(MinnetBytes* blk, size_t size, JSContext* ctx) {
   uint8_t* ptr;
 
   if(!size) {
@@ -41,7 +40,7 @@ block_realloc(struct byte_block* blk, size_t size, JSContext* ctx) {
 }
 
 void
-w(struct byte_block* blk, JSRuntime* rt) {
+block_free(MinnetBytes* blk, JSRuntime* rt) {
   if(blk->start)
     js_free_rt(rt, blk->start - LWS_PRE);
 
@@ -54,7 +53,7 @@ block_finalizer(JSRuntime* rt, void* alloc, void* start) {
 }
 
 int
-block_fromarraybuffer(struct byte_block* blk, JSValueConst value, JSContext* ctx) {
+block_fromarraybuffer(MinnetBytes* blk, JSValueConst value, JSContext* ctx) {
   size_t len;
 
   if(!(blk->start = JS_GetArrayBuffer(ctx, &len, value)))
@@ -65,38 +64,39 @@ block_fromarraybuffer(struct byte_block* blk, JSValueConst value, JSContext* ctx
 }
 
 JSValue
-block_toarraybuffer(struct byte_block* blk, JSContext* ctx) {
-  struct byte_block mem = block_move(blk);
+block_toarraybuffer(MinnetBytes* blk, JSContext* ctx) {
+  MinnetBytes mem = block_move(blk);
   return JS_NewArrayBuffer(ctx, block_BEGIN(&mem), block_SIZE(&mem), block_finalizer, block_ALLOC(&mem), FALSE);
 }
 
 JSValue
-block_tostring(struct byte_block const* blk, JSContext* ctx) {
+block_tostring(MinnetBytes const* blk, JSContext* ctx) {
   return JS_NewStringLen(ctx, block_BEGIN(blk), block_SIZE(blk));
 }
 
 void
-buffer_init(struct byte_buffer* buf, uint8_t* start, size_t len) {
+buffer_init(MinnetBuffer* buf, uint8_t* start, size_t len) {
   block_init(&buf->block, start, len);
 
   buf->read = buf->write = buf->start;
   buf->alloc = 0;
 }
 
-BOOL
-buffer_alloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
-  BOOL ret;
+uint8_t*
+buffer_alloc(MinnetBuffer* buf, size_t size, JSContext* ctx) {
+  uint8_t* ret;
   if((ret = block_alloc(&buf->block, size, ctx))) {
-    buf->alloc = buf->start - LWS_PRE;
-    buf->read = buf->write = 0;
+    buf->alloc = ret;
+    buf->read = buf->start;
+    buf->write = buf->start;
   }
   return ret;
 }
 
 ssize_t
-buffer_append(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) {
+buffer_append(MinnetBuffer* buf, const void* x, size_t n, JSContext* ctx) {
   if((size_t)buffer_AVAIL(buf) < n) {
-    if(!buffer_realloc(buf, buffer_WRITE(buf) + n + 1, ctx))
+    if(!buffer_realloc(buf, buffer_HEAD(buf) + n + 1, ctx))
       return -1;
   }
   memcpy(buf->write, x, n);
@@ -106,14 +106,14 @@ buffer_append(struct byte_buffer* buf, const void* x, size_t n, JSContext* ctx) 
 }
 
 void
-buffer_free(struct byte_buffer* buf, JSRuntime* rt) {
+buffer_free(MinnetBuffer* buf, JSRuntime* rt) {
   if(buf->alloc)
     block_free(&buf->block, rt);
   buf->read = buf->write = buf->alloc = 0;
 }
 
 BOOL
-buffer_write(struct byte_buffer* buf, const char* x, size_t n) {
+buffer_write(MinnetBuffer* buf, const char* x, size_t n) {
   assert((size_t)buffer_AVAIL(buf) >= n);
   memcpy(buf->write, x, n);
   buf->write += n;
@@ -121,7 +121,7 @@ buffer_write(struct byte_buffer* buf, const char* x, size_t n) {
 }
 
 int
-buffer_vprintf(struct byte_buffer* buf, const char* format, va_list ap) {
+buffer_vprintf(MinnetBuffer* buf, const char* format, va_list ap) {
   ssize_t n, size = buffer_AVAIL(buf);
   n = vsnprintf((char*)buf->write, size, format, ap);
   if(n > size)
@@ -133,7 +133,7 @@ buffer_vprintf(struct byte_buffer* buf, const char* format, va_list ap) {
 }
 
 int
-buffer_printf(struct byte_buffer* buf, const char* format, ...) {
+buffer_printf(MinnetBuffer* buf, const char* format, ...) {
   int n;
   va_list ap;
   va_start(ap, format);
@@ -143,7 +143,7 @@ buffer_printf(struct byte_buffer* buf, const char* format, ...) {
 }
 
 uint8_t*
-buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
+buffer_realloc(MinnetBuffer* buf, size_t size, JSContext* ctx) {
   size_t rd, wr;
   uint8_t* x;
 
@@ -152,8 +152,8 @@ buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
     return 0;
   }
 
-  rd = buffer_READ(buf);
-  wr = buffer_WRITE(buf);
+  rd = buffer_TAIL(buf);
+  wr = buffer_HEAD(buf);
   assert(size >= wr);
 
   if((x = block_realloc(&buf->block, size, ctx))) {
@@ -168,7 +168,7 @@ buffer_realloc(struct byte_buffer* buf, size_t size, JSContext* ctx) {
 }
 
 int
-buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
+buffer_fromarraybuffer(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
   int ret;
 
   if(!(ret = block_fromarraybuffer(&buf->block, value, ctx))) {
@@ -180,7 +180,7 @@ buffer_fromarraybuffer(struct byte_buffer* buf, JSValueConst value, JSContext* c
 }
 
 int
-buffer_fromvalue(struct byte_buffer* buf, JSValueConst value, JSContext* ctx) {
+buffer_fromvalue(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
   int ret = -1;
   JSBuffer input = js_buffer_from(ctx, value);
 
@@ -196,16 +196,16 @@ end:
 }
 
 JSValue
-buffer_tostring(struct byte_buffer const* buf, JSContext* ctx) {
+buffer_tostring(MinnetBuffer const* buf, JSContext* ctx) {
   return block_tostring(&buf->block, ctx);
 }
 
 char*
-buffer_escaped(struct byte_buffer const* buf, JSContext* ctx) {
-  struct byte_buffer out = BUFFER_0();
+buffer_escaped(MinnetBuffer const* buf, JSContext* ctx) {
+  MinnetBuffer out = BUFFER_0();
   uint8_t* ptr;
 
-  buffer_alloc(&out, (buffer_WRITE(buf) * 4) + 1, ctx);
+  buffer_alloc(&out, (buffer_HEAD(buf) * 4) + 1, ctx);
 
   out.start -= LWS_PRE;
   out.read = out.write = out.start;
@@ -269,18 +269,17 @@ buffer_escaped(struct byte_buffer const* buf, JSContext* ctx) {
 
 void
 buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
-  // struct byte_buffer* buf = opaque;
+  // MinnetBuffer* buf = opaque;
 }
 
 JSValue
-buffer_toarraybuffer(struct byte_buffer const* buf, JSContext* ctx) {
-  void* ptr = buf->start;
-  size_t len = buf->end - buf->start;
-  return JS_NewArrayBuffer(ctx, ptr, len, buffer_finalizer, (void*)buf, FALSE);
+buffer_toarraybuffer(MinnetBuffer* buf, JSContext* ctx) {
+  MinnetBuffer moved = buffer_move(buf);
+ return block_toarraybuffer(&moved.block, ctx);
 }
 
 void
-buffer_dump(const char* n, struct byte_buffer const* buf) {
+buffer_dump(const char* n, MinnetBuffer const* buf) {
   fprintf(stderr, "%s\t{ write = %td, read = %td, size = %td }\n", n, buf->write - buf->start, buf->read - buf->start, buf->end - buf->start);
   fflush(stderr);
 }

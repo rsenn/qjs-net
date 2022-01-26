@@ -150,7 +150,7 @@ static JSValue
 minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
-    return JS_ParseJSON(ctx, block_BEGIN(&res->body), buffer_WRITE(&res->body), res->url);
+    return JS_ParseJSON(ctx, block_BEGIN(&res->body), buffer_HEAD(&res->body), res->url);
 
   return JS_EXCEPTION;
 }
@@ -159,7 +159,7 @@ static JSValue
 minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
-    return JS_NewStringLen(ctx, (char*)block_BEGIN(&res->body), buffer_WRITE(&res->body));
+    return JS_NewStringLen(ctx, (char*)block_BEGIN(&res->body), buffer_HEAD(&res->body));
 
   return JS_EXCEPTION;
 }
@@ -216,7 +216,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case RESPONSE_OFFSET: {
-      ret = JS_NewInt64(ctx, buffer_WRITE(&res->body));
+      ret = JS_NewInt64(ctx, buffer_HEAD(&res->body));
       break;
     }
     case RESPONSE_HEADERS: {
