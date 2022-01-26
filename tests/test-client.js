@@ -12,7 +12,7 @@ function main(...args) {
   if(args.length == 0) args.push('https://localhost/debugger.html');
 
   for(let arg of args) {
-      Client(
+    Client(
       arg,
       {
         onConnect(ws, req) {
@@ -26,7 +26,7 @@ function main(...args) {
                 let line = stdin.getline();
 
                 if(line.length) {
-                  stdout.puts(`\r\x1b[1;36m->\x1b[0m '${escape(line)}'\n`);
+                  stdout.puts(`\r\x1b[0;37m> ${escape(line)}\x1b[0m\n`);
                   stdout.flush();
                   ws.send(line);
                 }
@@ -54,7 +54,7 @@ function main(...args) {
         },
         onMessage(ws, msg) {
           //console.log('onMessage', { ws, msg });
-          stdout.puts(`\r\x1b[1;31m<-\x1b[0m '${escape(msg)}'\n`);
+          stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
           stdout.flush();
           ws.close(1000);
         },
