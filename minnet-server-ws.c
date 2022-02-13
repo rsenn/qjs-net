@@ -71,7 +71,6 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
         sess->resp_obj = minnet_response_new(ctx, opaque->req->url, status, TRUE, "text/html");
 
-
         sess->ws_obj = minnet_ws_wrap(ctx, wsi);
         opaque->ws = minnet_ws_data2(ctx, sess->ws_obj);
 

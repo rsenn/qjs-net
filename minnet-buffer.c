@@ -201,38 +201,38 @@ buffer_tostring(MinnetBuffer const* buf, JSContext* ctx) {
   return block_tostring(&buf->block, ctx);
 }
 
-char*
-buffer_escaped(MinnetBuffer const* buf, JSContext* ctx) {
-  MinnetBuffer out = BUFFER_0();
-  uint8_t* ptr;
+size_t
+buffer_escape(MinnetBuffer* buf, const char* x, size_t len, JSContext* ctx) {
+  const uint8_t *ptr, *end;
 
-  buffer_alloc(&out, (buffer_HEAD(buf) * 4) + 1, ctx);
+  size_t prev = buffer_BYTES(buf);
 
-  out.start -= LWS_PRE;
-  out.read = out.write = out.start;
-
-  for(ptr = buf->start; ptr < buf->write; ptr++) {
+  for(ptr = (const uint8_t*)x, end = (const uint8_t*)x + len; ptr < end; ptr++) {
     char c = *ptr;
+
+    if(buffer_AVAIL(buf) < 4)
+      break;
+
     switch(c) {
       case '\n':
-        buffer_putchar(&out, '\\');
-        buffer_putchar(&out, 'n');
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 'n');
         break;
       case '\r':
-        buffer_putchar(&out, '\\');
-        buffer_putchar(&out, 'r');
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 'r');
         break;
       case '\t':
-        buffer_putchar(&out, '\\');
-        buffer_putchar(&out, 't');
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 't');
         break;
       case '\v':
-        buffer_putchar(&out, '\\');
-        buffer_putchar(&out, 'v');
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 'v');
         break;
       case '\b':
-        buffer_putchar(&out, '\\');
-        buffer_putchar(&out, 'b');
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 'b');
         break;
       case 0:
       case 1:
@@ -260,12 +260,29 @@ buffer_escaped(MinnetBuffer const* buf, JSContext* ctx) {
       case 28:
       case 29:
       case 30:
-      case 31: buffer_printf(&out, "\\x%02", c); break;
-      default: buffer_putchar(&out, c); break;
+      case 31: buffer_printf(buf, "\\x%02", c); break;
+      default: buffer_putchar(buf, c); break;
     }
   }
-  *out.write = '\0';
-  return (char*)out.start;
+  return buffer_BYTES(buf) - prev;
+}
+
+char*
+buffer_escaped(MinnetBuffer const* buf, JSContext* ctx) {
+  char* ptr;
+  MinnetBuffer out;
+  size_t size = buffer_BYTES(buf) * 4;
+
+  size = (size + 8) & (~7);
+
+  if(!(ptr = js_malloc(ctx, size)))
+    return 0;
+
+  out = BUFFER_N(ptr, size - 1);
+
+  ptr[buffer_escape(&out, buf->read, buffer_BYTES(buf), ctx)] = '\0';
+
+  return ptr;
 }
 
 void

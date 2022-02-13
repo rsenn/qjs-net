@@ -374,6 +374,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
   url_len = url ? strlen(url) : 0;
 
+      lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)url_len, url);
+
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
@@ -616,7 +618,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP_FILE_COMPLETION: {
-      break;
+      return 0;
     }
 
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
@@ -635,8 +637,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       break;
     }
   }
-  int ret = lws_callback_http_dummy(wsi, reason, user, in, len);
-
+  int ret = 0;
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE && (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
     lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " fd=%i is_h2=%i is_ssl=%i url=%s method=%s in='%.*s' ret=%d\n",
               22 + (reason * 2),
@@ -651,6 +652,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               (char*)in,
               ret);
   }
+
+  ret = lws_callback_http_dummy(wsi, reason, user, in, len);
 
   return ret;
 }

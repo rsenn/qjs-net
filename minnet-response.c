@@ -93,7 +93,7 @@ minnet_response_new(JSContext* ctx, const char* url, int32_t status, BOOL ok, co
   MinnetResponse* res;
 
   if((res = response_new(ctx))) {
-    response_init(res, js_strdup(ctx, url), status, ok, js_strdup(ctx, type));
+    response_init(res, url ? js_strdup(ctx, url) : 0, status, ok, type ? js_strdup(ctx, type) : 0);
 
     return minnet_response_wrap(ctx, res);
   }
