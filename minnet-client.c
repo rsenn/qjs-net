@@ -14,7 +14,7 @@
 
 static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
-THREAD_LOCAL MinnetClient* minnet_client = 0;
+// THREAD_LOCAL MinnetClient* minnet_client = 0;
 
 static const struct lws_protocols client_protocols[] = {
     {"http", http_client_callback, sizeof(MinnetSession), 0, 0, 0, 0},
@@ -57,26 +57,34 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   int n = 0, argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
   MinnetWebsocket* ws;
-  MinnetClient client = {.headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
-  struct lws_context_creation_info* info = &client.context.info;
-  struct lws_client_connect_info* conn = &client.connect_info;
+  MinnetClient* client = 0;
+  struct lws_context_creation_info* info;
+  struct lws_client_connect_info* conn;
   JSValue options = argv[0];
   struct lws* wsi = 0;
   char* url;
   const char *str, *method_str = 0;
+  BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
 
   SETLOG(LLL_INFO)
 
-  client.context.js = ctx;
-  minnet_client = &client;
+  if(!(client = js_mallocz(ctx, sizeof(MinnetClient))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  *client = (MinnetClient){.headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
+  info = &client->context.info;
+  conn = &client->connect_info;
+
+  client->context.js = ctx;
+  // minnet_client = &client;
 
   memset(info, 0, sizeof(struct lws_context_creation_info));
   info->options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
   info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
   info->port = CONTEXT_PORT_NO_LISTEN;
   info->protocols = client_protocols;
-  info->user = &client;
+  info->user = client;
 
   if(argc >= 2 && JS_IsString(argv[argind])) {
     url = JS_ToCString(ctx, argv[argind]);
@@ -88,7 +96,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   if(!JS_IsObject(options))
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
-  url_from(&client.url, options, ctx);
+  url_from(&client->url, options, ctx);
 
   value = JS_GetPropertyStr(ctx, options, "method");
   str = JS_ToCString(ctx, value);
@@ -97,16 +105,16 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   JS_FreeCString(ctx, str);
 
   if(url) {
-    url_parse(&client.url, url, ctx);
+    url_parse(&client->url, url, ctx);
     JS_FreeCString(ctx, url);
   }
 
-  GETCBPROP(options, "onPong", client.cb.pong)
-  GETCBPROP(options, "onClose", client.cb.close)
-  GETCBPROP(options, "onConnect", client.cb.connect)
-  GETCBPROP(options, "onMessage", client.cb.message)
-  GETCBPROP(options, "onFd", client.cb.fd)
-  GETCBPROP(options, "onHttp", client.cb.http)
+  GETCBPROP(options, "onPong", client->cb.pong)
+  GETCBPROP(options, "onClose", client->cb.close)
+  GETCBPROP(options, "onConnect", client->cb.connect)
+  GETCBPROP(options, "onMessage", client->cb.message)
+  GETCBPROP(options, "onFd", client->cb.fd)
+  GETCBPROP(options, "onHttp", client->cb.http)
 
   if(!lws) {
     sslcert_client(ctx, info, options);
@@ -117,12 +125,12 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     }
   }
 
-  url = url_format(&client.url, ctx);
-  client.request = request_new(ctx, url_location(&client.url, ctx), url, method_number(method_str));
-  client.headers = JS_GetPropertyStr(ctx, options, "headers");
-  client.body = JS_GetPropertyStr(ctx, options, "body");
+  url = url_format(&client->url, ctx);
+  client->request = request_new(ctx, url_location(&client->url, ctx), url, method_number(method_str));
+  client->headers = JS_GetPropertyStr(ctx, options, "headers");
+  client->body = JS_GetPropertyStr(ctx, options, "body");
 
-  url_info(&client.url, conn);
+  url_info(&client->url, conn);
   conn->pwsi = &wsi;
   conn->context = lws;
 
@@ -131,7 +139,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   fprintf(stderr, "PROTOCOL: %s\n", conn->protocol);
 #endif
 
-  switch(protocol_number(client.url.protocol)) {
+  switch(protocol_number(client->url.protocol)) {
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
       conn->method = method_str;
@@ -141,8 +149,24 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
 
   lws_client_connect_via_info(conn);
 
+  if(!wsi) {
+    ret = JS_ThrowInternalError(ctx, "No websocket!");
+    goto fail;
+  }
+
   minnet_exception = FALSE;
-  opaque = lws_opaque(wsi, client.context.js);
+  opaque = lws_opaque(wsi, client->context.js);
+
+  JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
+  if(JS_IsBool(opt_binary))
+    opaque->binary = JS_ToBool(ctx, opt_binary);
+
+  JSValue opt_block = JS_GetPropertyStr(ctx, options, "block");
+  if(JS_IsBool(opt_block))
+    block = JS_ToBool(ctx, opt_block);
+
+  if(!block)
+    return ret;
 
   while(n >= 0) {
     if(status != opaque->status) {
@@ -162,21 +186,11 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     js_std_loop(ctx);
   }
 
-  if(wsi) {
-    JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
-    if(JS_IsBool(opt_binary)) {
-      MinnetWebsocket* ws = minnet_ws_data2(ctx, ret);
-      ws->binary = JS_ToBool(ctx, opt_binary);
-    }
-  } else {
-    ret = JS_ThrowInternalError(ctx, "No websocket!");
-  }
-
-  url_free(&client.url, ctx);
+  url_free(&client->url, ctx);
   js_free(ctx, method_str);
 
-  minnet_client = NULL;
-
+  // minnet_client = NULL;
+fail:
   return ret;
 }
 
@@ -274,6 +288,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         status = lws_http_client_http_response(wsi);
 
         opaque->status = OPEN;
+        opaque->ws = ws_new(wsi, ctx);
 
         sess->ws_obj = minnet_ws_wrap(ctx, wsi);
         sess->req_obj = minnet_request_wrap(ctx, client->request);
@@ -310,7 +325,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_RX: {
       if((client->cb.message.ctx = ctx)) {
         MinnetWebsocket* ws = minnet_ws_data(sess->ws_obj);
-        JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
+        JSValue msg = opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
         JSValue cb_argv[] = {sess->ws_obj, msg};
         minnet_emit(&client->cb.message, countof(cb_argv), cb_argv);
         JS_FreeValue(ctx, cb_argv[1]);

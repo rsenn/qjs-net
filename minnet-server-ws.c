@@ -2,6 +2,7 @@
 #include "minnet-websocket.h"
 #include "minnet-request.h"
 #include "minnet-response.h"
+#include <assert.h>
 
 int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
@@ -122,7 +123,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_RECEIVE: {
       if(ctx) {
         MinnetWebsocket* ws = minnet_ws_data2(ctx, sess->ws_obj);
-        JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
+        JSValue msg = opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
         JSValue cb_argv[2] = {JS_DupValue(ctx, sess->ws_obj), msg};
         minnet_emit(&minnet_server.cb.message, 2, cb_argv);
         JS_FreeValue(ctx, cb_argv[0]);

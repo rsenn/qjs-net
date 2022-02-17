@@ -13,9 +13,9 @@
 #include <ctype.h>
 #include <sys/time.h>
 
-#ifdef _WIN32
+/*#ifdef _WIN32
 #include "poll.h"
-#endif
+#endif*/
 
 #ifndef POLLIN
 #define POLLIN 1
@@ -29,13 +29,13 @@
 #ifndef POLLHUP
 #define POLLHUP 16
 #endif
-
+/*
 #ifdef JS_SHARED_LIBRARY
 #define JS_INIT_MODULE js_init_module
 #else
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
-
+*/
 #define PIO (POLLIN | POLLOUT | POLLERR)
 
 struct handler_closure {

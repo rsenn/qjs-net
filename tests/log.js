@@ -1,8 +1,36 @@
-import { setLog, URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
+import {
+  setLog,
+  URL,
+  LLL_ERR,
+  LLL_WARN,
+  LLL_NOTICE,
+  LLL_INFO,
+  LLL_DEBUG,
+  LLL_PARSER,
+  LLL_HEADER,
+  LLL_EXT,
+  LLL_CLIENT,
+  LLL_LATENCY,
+  LLL_USER,
+  LLL_THREAD
+} from 'net';
 import { err } from 'std';
 
 export const Levels = (() => {
-  const llObj = { LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD };
+  const llObj = {
+    LLL_ERR,
+    LLL_WARN,
+    LLL_NOTICE,
+    LLL_INFO,
+    LLL_DEBUG,
+    LLL_PARSER,
+    LLL_HEADER,
+    LLL_EXT,
+    LLL_CLIENT,
+    LLL_LATENCY,
+    LLL_USER,
+    LLL_THREAD
+  };
   return Object.keys(llObj).reduce((acc, n) => {
     let v = Math.log2(llObj[n]);
     if(Math.floor(v) === v) acc[llObj[n]] = n.substring(4);
@@ -10,7 +38,8 @@ export const Levels = (() => {
   }, {});
 })();
 
-export const DefaultLevels = LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
+export const DefaultLevels =
+  LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
 
 export const Init = (name, mask = LLL_USER | ((LLL_CLIENT << 1) - 1)) =>
   setLog(mask, (level, msg) => {

@@ -15,6 +15,14 @@ struct http_request;
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
+#if defined(_WIN32) || defined(__MINGW32__)
+#define VISIBLE __declspec(dllexport)
+#define HIDDEN
+#else
+#define VISIBLE __attribute__((visibility("default")))
+#define HIDDEN __attribute__((visibility("hidden")))
+#endif
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -133,7 +141,7 @@ JSValue minnet_emit_this(const struct ws_callback*, JSValueConst this_obj, int a
 JSValue minnet_emit(const struct ws_callback*, int argc, JSValue* argv);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]);
 void value_dump(JSContext*, const char* n, JSValue const* v);
-JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
+VISIBLE JSModuleDef* JS_INIT_MODULE(JSContext*, const char* module_name);
 const char* lws_callback_name(int);
 
 static inline BOOL

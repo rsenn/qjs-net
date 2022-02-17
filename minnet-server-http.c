@@ -2,6 +2,7 @@
 #include <cutils.h>
 #include <ctype.h>
 #include <libgen.h>
+#include <assert.h>
 
 #include "jsutils.h"
 #include "minnet-websocket.h"
@@ -374,7 +375,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
   url_len = url ? strlen(url) : 0;
 
-      lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)url_len, url);
+  lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)url_len, url);
 
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:

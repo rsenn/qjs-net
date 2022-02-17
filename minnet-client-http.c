@@ -6,6 +6,9 @@
 int
 http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   //  MinnetHttpMethod method = -1;
+  if(reason == LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS)
+    return 0;
+  //
   MinnetSession* sess = user;
   MinnetClient* client = sess && sess->client ? sess->client : lws_client(wsi);
   JSContext* ctx = client->context.js;

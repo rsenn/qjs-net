@@ -58,6 +58,6 @@ build_libwebsockets() {
     -DLWS_WITH_ZLIB:BOOL=ON \
     -DLWS_HAVE_HMAC_CTX_new:STRING=1 \
     -DLWS_HAVE_EVP_MD_CTX_free:STRING=1 \
-    "$@" && make ${jobs:+-j$jobs}) 2>&1 | tee cmake.log
+    "$@" && make ${njobs:+-j$njobs}) 2>&1 | tee cmake.log
     )
 }

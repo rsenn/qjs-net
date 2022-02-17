@@ -12,7 +12,8 @@ function GetOpt(options = {}, args) {
   let r = {};
   let positional = (r['@'] = []);
   if(!(options instanceof Array)) options = Object.entries(options);
-  const findOpt = a => options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
+  const findOpt = a =>
+    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
   let [, params] = options.find(o => o[0] == '@') || [];
   if(typeof params == 'string') params = params.split(',');
   for(let i = 0; i < args.length; i++) {
@@ -108,6 +109,7 @@ function main(...args) {
     {
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],
       listen: [false, null, 'l'],
+      binary: [false, null, 'b'],
       connect: [false, null, 'c'],
       client: [false, null, 'C'],
       server: [false, null, 'S'],
@@ -125,25 +127,32 @@ function main(...args) {
   const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
+  const { binary } = params;
   //console.log('params', params);
   function createWS(url, callbacks, listen = 0) {
     let urlObj = new URL(url);
 
     net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, msg) => {
-      let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
+      let p =
+        ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][
+          level && Math.log2(level)
+        ] ?? level + '';
       msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 
-      if(!/POLL/.test(msg) && /MINNET/.test(p)) if (params.debug && /(client|http|read|write)/i.test(msg)) console.log(p.padEnd(8), msg);
+      if(!/POLL/.test(msg) && /MINNET/.test(p))
+        if(params.debug && /(client|http|read|write)/i.test(msg)) console.log(p.padEnd(8), msg);
     });
 
     let repl;
 
     const fn = [net.client, net.server][+listen];
-    //console.log('createWS', {url, repl, fn });
+    console.log('createWS', { url, binary });
     return fn(url, {
       sslCert,
       sslPrivateKey,
       method,
+      binary,
+      block: false,
       body: (function* () {
         yield '{ "test": 1234 }';
       })(),
@@ -195,8 +204,11 @@ function main(...args) {
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
-        msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
-        console.log('onMessage', { ws, msg: msg.substring(0, 100) });
+        if(typeof msg == 'string') {
+          msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+          msg = msg.substring(0, 100);
+        }
+        console.log('onMessage', { ws, msg });
       },
       onError(ws, error) {
         console.log('onError', ws, error);

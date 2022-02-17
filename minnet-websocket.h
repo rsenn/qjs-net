@@ -9,17 +9,24 @@ struct http_request;
 struct http_response;
 struct wsi_opaque_user_data;
 
+#ifdef _WIN32
+struct pollfd {
+  int fd;
+  short events, revents;
+};
+#endif
+
 /* class WebSocket */
 
 typedef struct socket {
   size_t ref_count;
   struct lws* lwsi;
-  BOOL binary;
   // struct wsi_opaque_user_data* opaque;
 } MinnetWebsocket;
 
 extern int64_t ws_serial;
 
+MinnetWebsocket* ws_new(struct lws*, JSContext*);
 MinnetWebsocket* ws_from_wsi2(struct lws*, JSContext*);
 JSValue minnet_ws_object(JSContext*, struct lws*);
 JSValue minnet_ws_wrap(JSContext*, struct lws*);
@@ -42,6 +49,7 @@ struct wsi_opaque_user_data {
   MinnetStatus status;
   struct pollfd poll;
   int error;
+  BOOL binary;
 };
 
 static inline struct wsi_opaque_user_data*

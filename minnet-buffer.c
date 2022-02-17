@@ -1,6 +1,7 @@
-#include "jsutils.h"
 #include "minnet-buffer.h"
+#include "jsutils.h"
 #include <libwebsockets.h>
+#include <assert.h>
 
 void
 block_init(MinnetBytes* blk, uint8_t* start, size_t len) {
@@ -300,4 +301,39 @@ void
 buffer_dump(const char* n, MinnetBuffer const* buf) {
   fprintf(stderr, "%s\t{ write = %td, read = %td, size = %td }\n", n, buf->write - buf->start, buf->read - buf->start, buf->end - buf->start);
   fflush(stderr);
+}
+
+BOOL
+buffer_clone(MinnetBuffer* buf, const MinnetBuffer* other, JSContext* ctx) {
+  if(!buffer_alloc(buf, block_SIZE(other), ctx))
+    return FALSE;
+  memcpy(buf->start, other->start, buffer_HEAD(other));
+
+  buf->read = buf->start + buffer_TAIL(other);
+  buf->write = buf->start + buffer_HEAD(other);
+  return TRUE;
+}
+
+uint8_t*
+buffer_skip(MinnetBuffer* buf, size_t size) {
+  assert(buf->read + size <= buf->write);
+  buf->read += size;
+  return buf->read;
+}
+
+BOOL
+buffer_putchar(MinnetBuffer* buf, char c) {
+  if(buf->write + 1 <= buf->end) {
+    *buf->write = (uint8_t)c;
+    buf->write++;
+    return TRUE;
+  }
+  return FALSE;
+}
+
+MinnetBuffer
+buffer_move(MinnetBuffer* buf) {
+  MinnetBuffer ret = *buf;
+  memset(buf, 0, sizeof(MinnetBuffer));
+  return ret;
 }
