@@ -21,6 +21,13 @@ typedef struct input_buffer {
   JSValue value;
 } JSBuffer;
 
+typedef union resolve_functions {
+  JSValue array[2];
+  struct {
+    JSValue resolve, reject;
+  };
+} ResolveFunctions;
+
 JSValue vector2array(JSContext*, int argc, JSValue argv[]);
 void js_console_log(JSContext*, JSValue* console, JSValue* console_log);
 JSValue js_function_bound(JSContext*, JSValue this_val, int argc, JSValue argv[], int magic, JSValue* func_data);
@@ -39,6 +46,12 @@ JSAtom js_symbol_static_atom(JSContext*, const char* name);
 JSValue js_symbol_static_value(JSContext*, const char* name);
 JSValue js_symbol_ctor(JSContext*);
 JSValue js_global_get(JSContext*, const char* prop);
+JSValue promise_create(JSContext*, ResolveFunctions*);
+JSValue promise_resolve(JSContext*, ResolveFunctions*, JSValue);
+JSValue promise_reject(JSContext*, ResolveFunctions*, JSValue);
+void promise_zero(ResolveFunctions*);
+BOOL promise_pending(ResolveFunctions const*);
+BOOL promise_done(ResolveFunctions const*);
 
 static inline void
 js_dump_string(const char* str, size_t len, size_t maxlen) {

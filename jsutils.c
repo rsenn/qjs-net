@@ -1,5 +1,6 @@
 #include "jsutils.h"
 #include <stdarg.h>
+#include <assert.h>
 
 JSValue
 vector2array(JSContext* ctx, int argc, JSValue argv[]) {
@@ -208,4 +209,63 @@ js_global_get(JSContext* ctx, const char* prop) {
   ret = JS_GetPropertyStr(ctx, global_obj, prop);
   JS_FreeValue(ctx, global_obj);
   return ret;
+}
+
+static inline void
+js_resolve_functions_zero(ResolveFunctions* funcs) {
+  funcs->array[0] = JS_NULL;
+  funcs->array[1] = JS_NULL;
+}
+static inline BOOL
+js_resolve_functions_is_null(ResolveFunctions const* funcs) {
+  return JS_IsNull(funcs->array[0]) && JS_IsNull(funcs->array[1]);
+}
+
+static void
+js_resolve_functions_free(JSContext* ctx, ResolveFunctions* funcs) {
+  JS_FreeValue(ctx, funcs->array[0]);
+  JS_FreeValue(ctx, funcs->array[1]);
+  js_resolve_functions_zero(funcs);
+}
+
+static inline JSValue
+js_resolve_functions_call(JSContext* ctx, ResolveFunctions* funcs, int index, JSValueConst arg) {
+  JSValue ret = JS_UNDEFINED;
+  assert(!JS_IsNull(funcs->array[index]));
+  ret = JS_Call(ctx, funcs->array[index], JS_UNDEFINED, 1, &arg);
+  js_resolve_functions_free(ctx, funcs);
+  return ret;
+}
+
+JSValue
+promise_create(JSContext* ctx, ResolveFunctions* funcs) {
+  JSValue ret;
+
+  ret = JS_NewPromiseCapability(ctx, funcs->array);
+  return ret;
+}
+
+JSValue
+promise_resolve(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
+  return js_resolve_functions_call(ctx, funcs, 0, value);
+}
+
+JSValue
+promise_reject(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
+  return js_resolve_functions_call(ctx, funcs, 1, value);
+}
+
+void
+promise_zero(ResolveFunctions* funcs) {
+  js_resolve_functions_zero(funcs);
+}
+
+BOOL
+promise_pending(ResolveFunctions const* funcs) {
+  return !js_resolve_functions_is_null(funcs);
+}
+
+BOOL
+promise_done(ResolveFunctions const* funcs) {
+  return js_resolve_functions_is_null(funcs);
 }

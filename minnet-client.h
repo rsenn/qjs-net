@@ -5,6 +5,7 @@
 #include "minnet.h"
 #include "minnet-url.h"
 #include "minnet-request.h"
+#include "jsutils.h"
 
 typedef struct client_context {
   MinnetContext context;
@@ -14,6 +15,8 @@ typedef struct client_context {
   struct http_request* request;
   struct http_response* response;
   struct lws_client_connect_info connect_info;
+  ResolveFunctions promise;
+  JSValue error;
 } MinnetClient;
 
 extern THREAD_LOCAL MinnetClient* minnet_client;

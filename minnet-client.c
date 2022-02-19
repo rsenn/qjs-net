@@ -165,8 +165,10 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   if(JS_IsBool(opt_block))
     block = JS_ToBool(ctx, opt_block);
 
-  if(!block)
+  if(!block) {
+    ret = JS_NewPromiseCapability(ctx, &client->promise);
     return ret;
+  }
 
   while(n >= 0) {
     if(status != opaque->status) {
@@ -247,6 +249,11 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
+      BOOL is_error = JS_IsUndefined(client->error);
+
+      (is_error ? promise_reject : promise_resolve)(ctx, &client->promise, client->error);
+      JS_FreeValue(ctx, client->error);
+      client->error = JS_UNDEFINED;
       break;
     }
 
@@ -267,6 +274,11 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       if(opaque->status < CLOSING) {
+        if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in)
+          client->error = JS_NewStringLen(ctx, in, len);
+        else
+          client->error = JS_UNDEFINED;
+
         opaque->status = CLOSING;
         if((client->cb.close.ctx = ctx)) {
           int err = opaque ? opaque->error : 0;
