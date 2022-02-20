@@ -54,7 +54,7 @@ sslcert_client(JSContext* ctx, struct lws_context_creation_info* info, JSValueCo
 JSValue
 minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct lws_context* lws = 0;
-  int  argind = 0, status = -1;
+  int argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
   MinnetWebsocket* ws;
   MinnetClient* client = 0;
@@ -182,7 +182,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
 
     js_std_loop(ctx);
 
-     if(client->context.exception) {
+    if(client->context.exception) {
       ret = JS_EXCEPTION;
       break;
     }
