@@ -227,6 +227,16 @@ headers_set(JSContext* ctx, MinnetBuffer* buffer, const char* name, const char* 
 }
 
 int
+fd_handler(struct lws* wsi, MinnetCallback* cb, struct lws_pollargs args) {
+  JSValue argv[3] = {JS_NewInt32(cb->ctx, args.fd)};
+  minnet_handlers(cb->ctx, wsi, args, &argv[1]);
+  minnet_emit(cb, 3, argv);
+  JS_FreeValue(cb->ctx, argv[0]);
+  JS_FreeValue(cb->ctx, argv[1]);
+  JS_FreeValue(cb->ctx, argv[2]);
+}
+
+int
 fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args) {
 
   switch(reason) {
@@ -236,42 +246,21 @@ fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* c
     case LWS_CALLBACK_ADD_POLL_FD: {
 
       if(cb->ctx) {
-        JSValue argv[3] = {JS_NewInt32(cb->ctx, args->fd)};
-        minnet_handlers(cb->ctx, wsi, args, &argv[1]);
-
-        minnet_emit(cb, 3, argv);
-
-        JS_FreeValue(cb->ctx, argv[0]);
-        JS_FreeValue(cb->ctx, argv[1]);
-        JS_FreeValue(cb->ctx, argv[2]);
+        fd_handler(wsi, cb, *args);
       }
       return 0;
     }
     case LWS_CALLBACK_DEL_POLL_FD: {
 
       if(cb->ctx) {
-        JSValue argv[3] = {
-            JS_NewInt32(cb->ctx, args->fd),
-        };
-        minnet_handlers(cb->ctx, wsi, args, &argv[1]);
-        minnet_emit(cb, 3, argv);
-        JS_FreeValue(cb->ctx, argv[0]);
-        JS_FreeValue(cb->ctx, argv[1]);
-        JS_FreeValue(cb->ctx, argv[2]);
+        fd_handler(wsi, cb, *args);
       }
       return 0;
     }
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-
       if(cb->ctx) {
         if(args->events != args->prev_events) {
-          JSValue argv[3] = {JS_NewInt32(cb->ctx, args->fd)};
-          minnet_handlers(cb->ctx, wsi, args, &argv[1]);
-
-          minnet_emit(cb, 3, argv);
-          JS_FreeValue(cb->ctx, argv[0]);
-          JS_FreeValue(cb->ctx, argv[1]);
-          JS_FreeValue(cb->ctx, argv[2]);
+          fd_handler(wsi, cb, *args);
         }
       }
       return 0;
@@ -385,13 +374,13 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
 }
 */
 void
-minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
+minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {
   JSValue func;
-  int events = args->events & (POLLIN | POLLOUT);
+  int events = args.events & (POLLIN | POLLOUT);
   // struct wsi_opaque_user_data*opaque =lws_opaque(wsi, ctx);
 
   if(events)
-    func = make_handler(ctx, args->fd, events, wsi);
+    func = make_handler(ctx, args.fd, events, wsi);
 
   out[0] = (events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
   out[1] = (events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;

@@ -312,7 +312,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
       struct lws_pollargs* args = in;
       if(minnet_server.cb.fd.ctx) {
         JSValue argv[3] = {JS_NewInt32(minnet_server.cb.fd.ctx, args->fd)};
-        minnet_handlers(minnet_server.cb.fd.ctx, wsi, args, &argv[1]);
+        minnet_handlers(minnet_server.cb.fd.ctx, wsi, *args, &argv[1]);
         server_exception(&minnet_server, minnet_emit(&minnet_server.cb.fd, 3, argv));
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[0]);
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[1]);
@@ -326,7 +326,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
         JSValue argv[3] = {
             JS_NewInt32(minnet_server.cb.fd.ctx, args->fd),
         };
-        minnet_handlers(minnet_server.cb.fd.ctx, wsi, args, &argv[1]);
+        minnet_handlers(minnet_server.cb.fd.ctx, wsi, *args, &argv[1]);
         server_exception(&minnet_server, minnet_emit(&minnet_server.cb.fd, 3, argv));
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[0]);
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[1]);
@@ -339,7 +339,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
       if(minnet_server.cb.fd.ctx) {
         if(args->events != args->prev_events) {
           JSValue argv[3] = {JS_NewInt32(minnet_server.cb.fd.ctx, args->fd)};
-          minnet_handlers(minnet_server.cb.fd.ctx, wsi, args, &argv[1]);
+          minnet_handlers(minnet_server.cb.fd.ctx, wsi, *args, &argv[1]);
           server_exception(&minnet_server, minnet_emit(&minnet_server.cb.fd, 3, argv));
           JS_FreeValue(minnet_server.cb.fd.ctx, argv[0]);
           JS_FreeValue(minnet_server.cb.fd.ctx, argv[1]);
