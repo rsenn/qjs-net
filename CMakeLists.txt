@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(minnet C)
+project(qjs-net C)
 
 set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag")
 

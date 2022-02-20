@@ -234,7 +234,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
             lws_is_ssl(wsi),
             len,
             (int)MIN(len, 32),
-            (char*)in);
+            (reason == LWS_CALLBACK_RAW_RX || reason == LWS_CALLBACK_CLIENT_RECEIVE || reason == LWS_CALLBACK_RECEIVE) ? 0 : (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT: {

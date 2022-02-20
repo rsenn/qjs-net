@@ -103,7 +103,7 @@ set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst 
 
   minnet_log_ctx = ctx;
   minnet_log_cb = JS_DupValue(ctx, value);
-  
+
   if(!JS_IsUndefined(minnet_log_this) && !JS_IsNull(minnet_log_this) && JS_VALUE_GET_TAG(minnet_log_this) != 0)
     JS_FreeValue(ctx, minnet_log_this);
 
