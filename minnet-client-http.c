@@ -60,7 +60,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         opaque->status = CLOSED;
         if((client->cb.close.ctx = ctx)) {
           JSValueConst cb_argv[] = {JS_DupValue(ctx, sess->ws_obj), JS_NewInt32(ctx, opaque->error)};
-          minnet_emit(&client->cb.close, countof(cb_argv), cb_argv);
+          client_exception(client, minnet_emit(&client->cb.close, countof(cb_argv), cb_argv));
           JS_FreeValue(ctx, cb_argv[0]);
           JS_FreeValue(ctx, cb_argv[1]);
         }
@@ -166,7 +166,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if((client->cb.http.ctx = ctx)) {
         /*MinnetWebsocket* ws = minnet_ws_data2(ctx, sess->ws_obj);
         JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);*/
-        minnet_emit(&client->cb.http, 2, &sess->req_obj);
+        client_exception(client, minnet_emit(&client->cb.http, 2, &sess->req_obj));
       }
       break;
     }

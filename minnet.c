@@ -51,7 +51,7 @@ JSValue minnet_fetch(JSContext*, JSValueConst, int, JSValueConst*);
 static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 THREAD_LOCAL int32_t minnet_log_level = 0;
 THREAD_LOCAL JSContext* minnet_log_ctx = 0;
-THREAD_LOCAL BOOL minnet_exception = FALSE;
+// THREAD_LOCAL BOOL minnet_exception = FALSE;
 
 static void
 lws_log_callback(int level, const char* line) {
@@ -73,8 +73,10 @@ lws_log_callback(int level, const char* line) {
       JSValueConst argv[2] = {JS_NewInt32(minnet_log_ctx, level), JS_NewStringLen(minnet_log_ctx, line + n, len - n)};
       JSValue ret = JS_Call(minnet_log_ctx, minnet_log_cb, minnet_log_this, 2, argv);
 
-      if(JS_IsException(ret))
-        minnet_exception = TRUE;
+      if(JS_IsException(ret)) {
+        JSValue exception = JS_GetException(minnet_log_ctx);
+        JS_FreeValue(minnet_log_ctx, exception);
+      }
 
       JS_FreeValue(minnet_log_ctx, argv[0]);
       JS_FreeValue(minnet_log_ctx, argv[1]);
@@ -397,8 +399,8 @@ minnet_emit_this(const struct ws_callback* cb, JSValueConst this_obj, int argc, 
     ret = JS_Call(cb->ctx, cb->func_obj, this_obj, argc, argv);
   }
 
-  if(JS_IsException(ret))
-    minnet_exception = TRUE;
+  /*if(JS_IsException(ret))
+    minnet_exception = TRUE; */
 
   return ret;
 }

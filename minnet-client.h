@@ -22,6 +22,7 @@ typedef struct client_context {
 extern THREAD_LOCAL MinnetClient* minnet_client;
 
 JSValue minnet_ws_client(JSContext*, JSValue, int, JSValue* argv);
+BOOL client_exception(MinnetClient* client, JSValue retval);
 
 static inline struct client_context*
 lws_client(struct lws* wsi) {
