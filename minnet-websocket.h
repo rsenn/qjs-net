@@ -1,6 +1,17 @@
 #ifndef MINNET_WEBSOCKET_H
 #define MINNET_WEBSOCKET_H
 
+#if defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)
+
+#warning winsock2
+#include <winsock2.h>
+struct pollfd {
+  int fd;
+  short events, revents;
+};
+#endif
+
+
 #include "minnet.h"
 #include <quickjs.h>
 
@@ -8,14 +19,6 @@ struct lws;
 struct http_request;
 struct http_response;
 struct wsi_opaque_user_data;
-
-#ifdef _WIN32
-#include <winsock2.h>
-/*struct pollfd {
-  int fd;
-  short events, revents;
-};*/
-#endif
 
 /* class WebSocket */
 

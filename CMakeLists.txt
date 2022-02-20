@@ -182,6 +182,26 @@ if(OPT_C_G_GDB)
   endif(NOT "${CMAKE_C_FLAGS_DEBUG}" MATCHES "-ggdb")
 endif(OPT_C_G_GDB)
 
+include(CheckTypeSize)
+
+if(MSYS OR MINGW OR CYGWIN OR WIN32 OR WIN64)
+  check_includes(winsock2.h)
+
+  if(HAVE_WINSOCK2_H)
+    set(CMAKE_EXTRA_INCLUDE_FILES winsock2.h)
+
+    add_definitions(-DHAVE_WINSOCK2_H)
+
+    check_type_size("struct pollfd" HAVE_STRUCT_POLLFD)
+    message("HAVE_STRUCT_POLLFD: ${HAVE_STRUCT_POLLFD}")
+
+    check_type_size(WSAPOLLFD HAVE_WSAPOLLFD)
+    message("HAVE_WSAPOLLFD: ${HAVE_WSAPOLLFD}")
+
+  endif()
+
+endif()
+
 if(NOT BUILD_LIBWEBSOCKETS)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibwebsockets.cmake)
 
