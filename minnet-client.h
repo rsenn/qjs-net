@@ -7,6 +7,8 @@
 #include "minnet-request.h"
 #include "jsutils.h"
 
+#define client_exception(client, retval) context_exception(&(client->context), (retval))
+
 typedef struct client_context {
   MinnetContext context;
   MinnetCallbacks cb;
@@ -16,13 +18,11 @@ typedef struct client_context {
   struct http_response* response;
   struct lws_client_connect_info connect_info;
   ResolveFunctions promise;
-  JSValue error;
 } MinnetClient;
 
 extern THREAD_LOCAL MinnetClient* minnet_client;
 
 JSValue minnet_ws_client(JSContext*, JSValue, int, JSValue* argv);
-BOOL client_exception(MinnetClient* client, JSValue retval);
 
 static inline struct client_context*
 lws_client(struct lws* wsi) {

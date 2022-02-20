@@ -125,12 +125,15 @@ typedef struct context {
   JSContext* js;
   struct lws_context* lws;
   struct lws_context_creation_info info;
+  BOOL exception;
+  JSValue error;
 } MinnetContext;
 
 extern THREAD_LOCAL int32_t minnet_log_level;
 extern THREAD_LOCAL JSContext* minnet_log_ctx;
 extern THREAD_LOCAL BOOL minnet_exception;
 
+BOOL context_exception(MinnetContext* context, JSValue retval);
 JSValue headers_object(JSContext*, const MinnetBuffer* buffer);
 char* headers_atom(JSAtom, JSContext* ctx);
 int headers_from(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);

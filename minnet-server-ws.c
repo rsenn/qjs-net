@@ -76,7 +76,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         opaque->ws = minnet_ws_data2(ctx, sess->ws_obj);
 
         lwsl_user("ws   " FG("%d") "%-38s" NC " wsi#%" PRId64 " req=%p url=%s\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, opaque->req, opaque->req->url);
-        minnet_emit_this(&minnet_server.cb.connect, sess->ws_obj, 2, &sess->ws_obj);
+        server_exception(&minnet_server, minnet_emit_this(&minnet_server.cb.connect, sess->ws_obj, 2, &sess->ws_obj));
       }
 
       return 0;
@@ -101,7 +101,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
         if(ctx) {
           JSValue cb_argv[3] = {sess->ws_obj, code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED, why};
-          minnet_emit(&minnet_server.cb.close, code != -1 ? 3 : 1, cb_argv);
+          server_exception(&minnet_server, minnet_emit(&minnet_server.cb.close, code != -1 ? 3 : 1, cb_argv));
           JS_FreeValue(ctx, cb_argv[1]);
         }
         JS_FreeValue(minnet_server.context.js, why);
@@ -125,7 +125,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         MinnetWebsocket* ws = minnet_ws_data2(ctx, sess->ws_obj);
         JSValue msg = opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
         JSValue cb_argv[2] = {JS_DupValue(ctx, sess->ws_obj), msg};
-        minnet_emit(&minnet_server.cb.message, 2, cb_argv);
+        server_exception(&minnet_server, minnet_emit(&minnet_server.cb.message, 2, cb_argv));
         JS_FreeValue(ctx, cb_argv[0]);
         JS_FreeValue(ctx, cb_argv[1]);
       }
@@ -136,7 +136,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         // ws_obj = minnet_ws_wrap(minnet_server.cb.pong.ctx, wsi);
         JSValue msg = JS_NewArrayBufferCopy(minnet_server.cb.pong.ctx, in, len);
         JSValue cb_argv[2] = {JS_DupValue(minnet_server.cb.pong.ctx, sess->ws_obj), msg};
-        minnet_emit(&minnet_server.cb.pong, 2, cb_argv);
+        server_exception(&minnet_server, minnet_emit(&minnet_server.cb.pong, 2, cb_argv));
         JS_FreeValue(minnet_server.cb.pong.ctx, cb_argv[0]);
         JS_FreeValue(minnet_server.cb.pong.ctx, cb_argv[1]);
       }

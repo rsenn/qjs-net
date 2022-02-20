@@ -5,6 +5,8 @@
 #include "minnet-buffer.h"
 #include "minnet.h"
 
+#define server_exception(server, retval) context_exception(&((server)->context), (retval))
+
 struct http_mount;
 
 typedef struct server_context {

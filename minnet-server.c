@@ -122,6 +122,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   protocols[1].user = ctx;
 
   minnet_server.context.js = ctx;
+  minnet_server.context.error = JS_NULL;
   minnet_server.context.info.user = &minnet_server;
   minnet_server.context.info.protocols = protocols2;
   // minnet_server.context.info.options = LWS_SERVER_OPTION_EXPLICIT_VHOSTS;
@@ -215,8 +216,8 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   lws_service_adjust_timeout(minnet_server.context.lws, 1, 0);
 
   while(a >= 0) {
-    if(minnet_exception) {
-      ret = JS_EXCEPTION;
+    if(!JS_IsNull(minnet_server.context.error)) {
+      ret = JS_Throw(ctx, minnet_server.context.error);
       break;
     }
 
@@ -312,7 +313,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
       if(minnet_server.cb.fd.ctx) {
         JSValue argv[3] = {JS_NewInt32(minnet_server.cb.fd.ctx, args->fd)};
         minnet_handlers(minnet_server.cb.fd.ctx, wsi, args, &argv[1]);
-        minnet_emit(&minnet_server.cb.fd, 3, argv);
+        server_exception(&minnet_server, minnet_emit(&minnet_server.cb.fd, 3, argv));
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[0]);
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[1]);
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[2]);
@@ -326,7 +327,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
             JS_NewInt32(minnet_server.cb.fd.ctx, args->fd),
         };
         minnet_handlers(minnet_server.cb.fd.ctx, wsi, args, &argv[1]);
-        minnet_emit(&minnet_server.cb.fd, 3, argv);
+        server_exception(&minnet_server, minnet_emit(&minnet_server.cb.fd, 3, argv));
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[0]);
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[1]);
         JS_FreeValue(minnet_server.cb.fd.ctx, argv[2]);
@@ -339,7 +340,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
         if(args->events != args->prev_events) {
           JSValue argv[3] = {JS_NewInt32(minnet_server.cb.fd.ctx, args->fd)};
           minnet_handlers(minnet_server.cb.fd.ctx, wsi, args, &argv[1]);
-          minnet_emit(&minnet_server.cb.fd, 3, argv);
+          server_exception(&minnet_server, minnet_emit(&minnet_server.cb.fd, 3, argv));
           JS_FreeValue(minnet_server.cb.fd.ctx, argv[0]);
           JS_FreeValue(minnet_server.cb.fd.ctx, argv[1]);
           JS_FreeValue(minnet_server.cb.fd.ctx, argv[2]);

@@ -53,6 +53,21 @@ THREAD_LOCAL int32_t minnet_log_level = 0;
 THREAD_LOCAL JSContext* minnet_log_ctx = 0;
 // THREAD_LOCAL BOOL minnet_exception = FALSE;
 
+BOOL
+context_exception(MinnetContext* context, JSValue retval) {
+  if(JS_IsException(retval)) {
+    context->exception = TRUE;
+    JSValue exception = JS_GetException(context->js);
+
+    const char* err = JS_ToCString(context->js, exception);
+    printf("Got exception: %s\n", err);
+    JS_FreeCString(context->js, err);
+    JS_Throw(context->js, exception);
+  }
+
+  return context->exception;
+}
+
 static void
 lws_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {

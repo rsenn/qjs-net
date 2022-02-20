@@ -54,7 +54,7 @@ sslcert_client(JSContext* ctx, struct lws_context_creation_info* info, JSValueCo
 JSValue
 minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct lws_context* lws = 0;
-  int n = 0, argind = 0, status = -1;
+  int  argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
   MinnetWebsocket* ws;
   MinnetClient* client = 0;
@@ -77,6 +77,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   conn = &client->connect_info;
 
   client->context.js = ctx;
+  client->context.error = JS_NULL;
   // minnet_client = &client;
 
   memset(info, 0, sizeof(struct lws_context_creation_info));
@@ -154,7 +155,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     goto fail;
   }
 
-  //minnet_exception = FALSE;
+  // minnet_exception = FALSE;
   opaque = lws_opaque(wsi, client->context.js);
 
   JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
@@ -170,7 +171,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     return ret;
   }
 
-  while(n >= 0) {
+  for(;;) {
     if(status != opaque->status) {
       status = opaque->status;
       // fprintf(stderr, "STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
@@ -179,12 +180,12 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     if(status == CLOSED)
       break;
 
-   /* if(minnet_exception) {
-      minnet_exception = FALSE;
-      ret = JS_EXCEPTION;
-      break;    }*/
-
     js_std_loop(ctx);
+
+     if(client->context.exception) {
+      ret = JS_EXCEPTION;
+      break;
+    }
   }
 
   url_free(&client->url, ctx);
@@ -202,15 +203,6 @@ scan_backwards(uint8_t* ptr, uint8_t ch) {
     return ptr;
   }
   return 0;
-}
-
-BOOL
-client_exception(MinnetClient* client, JSValue retval) {
-  if(JS_IsException(retval)) {
-    client->error = JS_GetException(client->context.js);
-    return TRUE;
-  }
-  return FALSE;
 }
 
 static int
@@ -259,11 +251,11 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
-      BOOL is_error = JS_IsUndefined(client->error);
+      BOOL is_error = JS_IsUndefined(client->context.error);
 
-      (is_error ? promise_reject : promise_resolve)(ctx, &client->promise, client->error);
-      JS_FreeValue(ctx, client->error);
-      client->error = JS_UNDEFINED;
+      (is_error ? promise_reject : promise_resolve)(ctx, &client->promise, client->context.error);
+      JS_FreeValue(ctx, client->context.error);
+      client->context.error = JS_UNDEFINED;
       break;
     }
 
@@ -285,9 +277,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       if(opaque->status < CLOSING) {
         if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in)
-          client->error = JS_NewStringLen(ctx, in, len);
+          client->context.error = JS_NewStringLen(ctx, in, len);
         else
-          client->error = JS_UNDEFINED;
+          client->context.error = JS_UNDEFINED;
 
         opaque->status = CLOSING;
         if((client->cb.close.ctx = ctx)) {
@@ -296,7 +288,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
           if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR) {
             argc = 2;
-            cb_argv[1] = JS_DupValue(ctx, client->error);
+            cb_argv[1] = JS_DupValue(ctx, client->context.error);
           } else {
             argc = 4;
             cb_argv[1] = close_status(ctx, in, len);
