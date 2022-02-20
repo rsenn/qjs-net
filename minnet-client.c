@@ -245,6 +245,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
     case LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL: {
+      sess->req_obj = JS_NULL;
+      sess->resp_obj = JS_NULL;
       break;
     }
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
@@ -281,9 +283,19 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
         opaque->status = CLOSING;
         if((client->cb.close.ctx = ctx)) {
-          int err = opaque ? opaque->error : 0;
-          JSValueConst cb_argv[] = {sess->ws_obj, close_status(ctx, in, len), close_reason(ctx, in, len), JS_NewInt32(ctx, err)};
-          minnet_emit(&client->cb.close, 4, cb_argv);
+          int argc, err = opaque ? opaque->error : 0;
+          JSValueConst cb_argv[4] = {sess->ws_obj};
+
+          if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR) {
+            argc = 2;
+            cb_argv[1] = JS_DupValue(ctx, client->error);
+          } else {
+            argc = 4;
+            cb_argv[1] = close_status(ctx, in, len);
+            cb_argv[2] = close_reason(ctx, in, len);
+            cb_argv[3] = JS_NewInt32(ctx, err);
+          }
+          minnet_emit(&client->cb.close, argc, cb_argv);
           // JS_FreeValue(ctx, cb_argv[0]);
           JS_FreeValue(ctx, cb_argv[1]);
           JS_FreeValue(ctx, cb_argv[2]);
@@ -303,11 +315,14 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         opaque->ws = ws_new(wsi, ctx);
 
         sess->ws_obj = minnet_ws_wrap(ctx, wsi);
-        sess->req_obj = minnet_request_wrap(ctx, client->request);
-        sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
 
-        client->response = minnet_response_data(sess->resp_obj);
+        if(reason != LWS_CALLBACK_RAW_CONNECTED) {
+          sess->req_obj = minnet_request_wrap(ctx, client->request);
 
+          /* sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
+
+          client->response = minnet_response_data(sess->resp_obj);*/
+        }
         // lwsl_user("client   " FGC(171, "%-38s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
 
         if((client->cb.connect.ctx = ctx))

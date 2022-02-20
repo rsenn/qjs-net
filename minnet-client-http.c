@@ -29,6 +29,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL: {
+      sess->req_obj = JS_NULL;
+      sess->resp_obj = JS_NULL;
       break;
     }
     case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL: {

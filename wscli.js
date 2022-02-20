@@ -12,8 +12,7 @@ function GetOpt(options = {}, args) {
   let r = {};
   let positional = (r['@'] = []);
   if(!(options instanceof Array)) options = Object.entries(options);
-  const findOpt = a =>
-    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
+  const findOpt = a => options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
   let [, params] = options.find(o => o[0] == '@') || [];
   if(typeof params == 'string') params = params.split(',');
   for(let i = 0; i < args.length; i++) {
@@ -105,6 +104,7 @@ class CLI extends REPL {
 function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
   globalThis.console = new Console({ inspectOptions: { compact: 1, customInspect: true } });
+  let headers = [];
   let params = GetOpt(
     {
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],
@@ -117,6 +117,17 @@ function main(...args) {
       address: [true, null, 'a'],
       port: [true, null, 'p'],
       method: [true, null, 'm'],
+      header: [
+        true,
+        arg => {
+          const pos = arg.search(/: /);
+          const name = arg.substring(0, pos);
+          const value = arg.substring(pos + 2);
+
+          headers.push([name, value]);
+        },
+        'H'
+      ],
       'ssl-cert': [true, null],
       'ssl-private-key': [true, null],
       '@': 'url,'
@@ -129,18 +140,15 @@ function main(...args) {
   const server = !params.client || params.server;
   const { binary } = params;
   //console.log('params', params);
+  console.log('headers', headers);
   function createWS(url, callbacks, listen = 0) {
     let urlObj = new URL(url);
 
     net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, msg) => {
-      let p =
-        ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][
-          level && Math.log2(level)
-        ] ?? level + '';
+      let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
       msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 
-      if(!/POLL/.test(msg) && /MINNET/.test(p))
-        if(params.debug && /(client|http|read|write)/i.test(msg)) console.log(p.padEnd(8), msg);
+      if(!/POLL/.test(msg) && /MINNET/.test(p)) if (params.debug && /(client|http|read|write)/i.test(msg)) console.log(p.padEnd(8), msg);
     });
 
     let repl;
@@ -157,7 +165,8 @@ function main(...args) {
         yield '{ "test": 1234 }';
       })(),
       headers: {
-        'user-agent': 'minnet'
+        'user-agent': 'minnet',
+        ...Object.fromEntries(headers)
         /*'Content-Type': 'application/json',
         'Content-Length': 1000*/
         //'Connection': 'keep-alive',
@@ -179,13 +188,16 @@ function main(...args) {
         repl.printStatus(`Connected to ${remote}`);
       },
       onClose(ws, status, reason, error) {
+        console.log('onClose', { ws, status, reason, error });
         connections.delete(ws);
-        repl.printStatus(`Closed (${status}): ${reason}`);
+        if(repl) {
+          repl.printStatus(`Closed (${status}): ${reason}`);
 
-        os.setTimeout(() => {
-          //console.log('ws', ws);
-          repl.exit(status != 1000 ? 1 : 0);
-        }, 100);
+          os.setTimeout(() => {
+            //console.log('ws', ws);
+            repl.exit(status != 1000 ? 1 : 0);
+          }, 100);
+        }
       },
       onHttp(req, resp) {
         console.log('onHttp', { req, resp });

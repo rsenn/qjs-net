@@ -11,7 +11,6 @@ struct pollfd {
 };
 #endif
 
-
 #include "minnet.h"
 #include <quickjs.h>
 
