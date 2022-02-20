@@ -10,10 +10,11 @@ struct http_response;
 struct wsi_opaque_user_data;
 
 #ifdef _WIN32
-struct pollfd {
+#include <winsock2.h>
+/*struct pollfd {
   int fd;
   short events, revents;
-};
+};*/
 #endif
 
 /* class WebSocket */
