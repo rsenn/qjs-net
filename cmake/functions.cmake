@@ -1,3 +1,5 @@
+include(CheckFunctionExists)
+
 function(DUMP)
   foreach(VAR ${ARGN})
     if("${SEPARATOR}" STREQUAL "")

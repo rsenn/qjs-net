@@ -18,6 +18,8 @@
    You should have received a copy of the GNU General Public License along
    with this program; if not, see <https://www.gnu.org/licenses/>.  */
 
+#ifndef HAVE_POLL
+
 /* Tell gcc not to warn about the (nfd < 0) tests, below.  */
 #if(__GNUC__ == 4 && 3 <= __GNUC_MINOR__) || 4 < __GNUC__
 #pragma GCC diagnostic ignored "-Wtype-limits"
@@ -555,3 +557,5 @@ restart:
 #endif
 }
 #endif /* defined(__MSYS__) */
+
+#endif /* !defined(HAVE_POLL) */

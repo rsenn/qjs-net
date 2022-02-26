@@ -150,6 +150,8 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
 
   lws_client_connect_via_info(conn);
 
+  errno = 0;
+
   if(!wsi) {
     ret = JS_ThrowInternalError(ctx, "No websocket!");
     goto fail;
