@@ -46,6 +46,8 @@ JSAtom js_symbol_static_atom(JSContext*, const char* name);
 JSValue js_symbol_static_value(JSContext*, const char* name);
 JSValue js_symbol_ctor(JSContext*);
 JSValue js_global_get(JSContext*, const char* prop);
+char* js_tostringlen(JSContext* ctx, size_t* lenp, JSValueConst value);
+char* js_tostring(JSContext* ctx, JSValueConst value);
 JSValue promise_create(JSContext*, ResolveFunctions*);
 JSValue promise_resolve(JSContext*, ResolveFunctions*, JSValue);
 JSValue promise_reject(JSContext*, ResolveFunctions*, JSValue);

@@ -6,7 +6,7 @@
 #include <libwebsockets.h>
 #include "minnet-buffer.h"
 
-MinnetBuffer;
+union byte_buffer;
 struct http_request;
 
 #ifdef JS_SHARED_LIBRARY
@@ -133,11 +133,13 @@ extern THREAD_LOCAL int32_t minnet_log_level;
 extern THREAD_LOCAL JSContext* minnet_log_ctx;
 extern THREAD_LOCAL BOOL minnet_exception;
 
+int socket_geterror(int fd);
 BOOL context_exception(MinnetContext* context, JSValue retval);
 JSValue headers_object(JSContext*, const MinnetBuffer* buffer);
 char* headers_atom(JSAtom, JSContext* ctx);
 int headers_from(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);
 ssize_t headers_set(JSContext*, MinnetBuffer*, const char* name, const char* value);
+int headers_get(JSContext*, MinnetBuffer*, struct lws* wsi);
 int fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
 int fd_callback(struct lws*, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args);
 int minnet_lws_unhandled(const char* handler, int);

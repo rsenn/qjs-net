@@ -12,7 +12,16 @@ THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;
 
 enum { REQUEST_TYPE, REQUEST_METHOD, REQUEST_URI, REQUEST_PATH, REQUEST_HEADERS, REQUEST_ARRAYBUFFER, REQUEST_TEXT, REQUEST_BODY };
 
-static const char* const method_names[] = {"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE", "CONNECT", "HEAD"};
+static const char* const method_names[] = {
+    "GET",
+    "POST",
+    "OPTIONS",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "CONNECT",
+    "HEAD",
+};
 
 const char*
 method_string(enum http_method m) {
@@ -92,7 +101,7 @@ request_from(JSContext* ctx, JSValueConst options) {
 
   JS_FreeValue(ctx, value);
 
-  request_init(req, path, url, method_number(method));
+  request_init(req, path, js_strdup(ctx, url), method_number(method));
 
   JS_FreeCString(ctx, url);
   JS_FreeCString(ctx, path);

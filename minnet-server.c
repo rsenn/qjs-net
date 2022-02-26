@@ -161,7 +161,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   }
 
   {
-    const struct lws_protocol_vhost_options* pvo;
+    MinnetVhostOptions* pvo;
 
     for(pvo = mimetypes; pvo; pvo = pvo->next) {
       // printf("pvo mimetype %s %s\n", pvo->name, pvo->value);
@@ -263,39 +263,6 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   FREECB(minnet_server.cb.http)
 
   return ret;
-}
-
-int
-http_server_headers(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
-  int tok, len, count = 0;
-
-  if(!headers->start)
-    buffer_alloc(headers, 1024, ctx);
-
-  for(tok = WSI_TOKEN_HOST; tok < WSI_TOKEN_COUNT; tok++) {
-    if(tok == WSI_TOKEN_HTTP || tok == WSI_TOKEN_HTTP_URI_ARGS)
-      continue;
-
-    if((len = lws_hdr_total_length(wsi, tok)) > 0) {
-      char hdr[len + 1];
-      const char* name;
-
-      if((name = (const char*)lws_token_to_string(tok))) {
-        int namelen = byte_chr(name, strlen(name), ':');
-        lws_hdr_copy(wsi, hdr, len + 1, tok);
-        hdr[len] = '\0';
-
-        // printf("headers %i %.*s '%s'\n", tok, namelen, name, hdr);
-
-        if(!headers->alloc)
-          buffer_alloc(headers, 1024, ctx);
-
-        while(!buffer_printf(headers, "%.*s: %s\n", namelen, name, hdr)) { buffer_grow(headers, 1024, ctx); }
-        ++count;
-      }
-    }
-  }
-  return count;
 }
 
 int

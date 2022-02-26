@@ -7,14 +7,13 @@
 struct http_request;
 struct http_response;
 
-typedef struct http_vhost_option {
-  union {
-    struct {
-      struct http_vhost_options *next, *options;
-      const char *name, *value;
-    };
-    struct lws_protocol_vhost_options lws;
+typedef union http_vhost_options {
+  struct lws_protocol_vhost_options lws;
+  struct {
+    union http_vhost_options *next, *options;
+    const char *name, *value;
   };
+
 } MinnetVhostOptions;
 
 typedef struct http_mount {
@@ -22,7 +21,7 @@ typedef struct http_mount {
     struct {
       struct http_mount* next;
       const char *mnt, *org, *def, *pro;
-      struct http_vhost_options *cgienv, *extra_mimetypes, *interpret;
+      union http_vhost_options *cgienv, *extra_mimetypes, *interpret;
     };
     struct lws_http_mount lws;
   };

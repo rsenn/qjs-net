@@ -53,6 +53,19 @@ THREAD_LOCAL int32_t minnet_log_level = 0;
 THREAD_LOCAL JSContext* minnet_log_ctx = 0;
 // THREAD_LOCAL BOOL minnet_exception = FALSE;
 
+int
+socket_geterror(int fd) {
+  int e;
+  socklen_t sl = sizeof(e);
+
+  if(!getsockopt(fd, SOL_SOCKET, SO_ERROR, &e, &sl)) {
+    setsockopt(fd, SOL_SOCKET, SO_ERROR, &e, sl);
+    return e;
+  }
+
+  return -1;
+}
+
 BOOL
 context_exception(MinnetContext* context, JSValue retval) {
   if(JS_IsException(retval)) {
@@ -224,6 +237,39 @@ headers_set(JSContext* ctx, MinnetBuffer* buffer, const char* name, const char* 
   buffer_write(buffer, "\r\n", 2);
 
   return len;
+}
+
+int
+headers_get(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
+  int tok, len, count = 0;
+
+  if(!headers->start)
+    buffer_alloc(headers, 1024, ctx);
+
+  for(tok = WSI_TOKEN_HOST; tok < WSI_TOKEN_COUNT; tok++) {
+    if(tok == WSI_TOKEN_HTTP || tok == WSI_TOKEN_HTTP_URI_ARGS)
+      continue;
+
+    if((len = lws_hdr_total_length(wsi, tok)) > 0) {
+      char hdr[len + 1];
+      const char* name;
+
+      if((name = (const char*)lws_token_to_string(tok))) {
+        int namelen = byte_chr(name, strlen(name), ':');
+        lws_hdr_copy(wsi, hdr, len + 1, tok);
+        hdr[len] = '\0';
+
+        // printf("headers %i %.*s '%s'\n", tok, namelen, name, hdr);
+
+        if(!headers->alloc)
+          buffer_alloc(headers, 1024, ctx);
+
+        while(!buffer_printf(headers, "%.*s: %s\n", namelen, name, hdr)) { buffer_grow(headers, 1024, ctx); }
+        ++count;
+      }
+    }
+  }
+  return count;
 }
 
 int

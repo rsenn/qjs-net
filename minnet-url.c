@@ -91,7 +91,7 @@ url_parse(MinnetURL* url, const char* u, JSContext* ctx) {
     url->host = js_strndup(ctx, u, s - u);
 
   if(*s == ':') {
-    unsigned long n = strtoul(++s, &t, 10);
+    unsigned long n = strtoul(++s, (char**)&t, 10);
 
     url->port = n != ULONG_MAX ? n : 0;
     if(s < t)
@@ -287,7 +287,7 @@ query_from(JSValueConst obj, JSContext* ctx) {
   dbuf_init2(&out, ctx, (DynBufReallocFunc*)js_realloc);
 
   if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
-    return -1;
+    return 0;
 
   for(i = 0; i < tab_len; i++) {
     JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);

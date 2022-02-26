@@ -62,10 +62,10 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   struct lws_client_connect_info* conn;
   JSValue options = argv[0];
   struct lws* wsi = 0;
-  char* url;
-  const char *str, *method_str = 0;
+  const char *tmp, *str;
   BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
+  char *url, *method_str = 0;
 
   SETLOG(LLL_INFO)
 
@@ -88,7 +88,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   info->user = client;
 
   if(argc >= 2 && JS_IsString(argv[argind])) {
-    url = JS_ToCString(ctx, argv[argind]);
+    tmp = JS_ToCString(ctx, argv[argind]);
     argind++;
   }
 
@@ -105,9 +105,9 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   JS_FreeValue(ctx, value);
   JS_FreeCString(ctx, str);
 
-  if(url) {
-    url_parse(&client->url, url, ctx);
-    JS_FreeCString(ctx, url);
+  if(tmp) {
+    url_parse(&client->url, tmp, ctx);
+    JS_FreeCString(ctx, tmp);
   }
 
   GETCBPROP(options, "onPong", client->cb.pong)
@@ -169,7 +169,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
     block = JS_ToBool(ctx, opt_block);
 
   if(!block) {
-    ret = JS_NewPromiseCapability(ctx, &client->promise);
+    ret = promise_create(ctx, &client->promise);
     return ret;
   }
 

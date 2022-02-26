@@ -357,7 +357,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   MinnetSession* serv = user;
   JSValue ws_obj = minnet_ws_object(ctx, wsi);
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
-  char* url;
+  char* url = 0;
   size_t url_len;
 
   if(serv) {
@@ -371,7 +371,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     url = opaque->req->url;
     method = opaque->req->method;
   } else {
-    url = lws_uri_and_method(wsi, ctx, &method);
+    // url = lws_uri_and_method(wsi, ctx, &method);
   }
   url_len = url ? strlen(url) : 0;
 
@@ -390,7 +390,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!opaque->req)
         opaque->req = request_new(minnet_server.context.js, in, url, method);
 
-      int num_hdr = http_server_headers(ctx, &opaque->req->headers, wsi);
+      int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
 
       lwsl_user("http " FGC(171, "%-38s") " fd=%i, num_hdr=%i\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), num_hdr);
 
@@ -404,7 +404,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         opaque->req = request_new(ctx, 0, url, method);
 
       MinnetBuffer* h = &opaque->req->headers;
-      int num_hdr = http_server_headers(ctx, h, wsi);
+      int num_hdr = headers_get(ctx, h, wsi);
       lwsl_user("http " FGC(171, "%-38s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
 
       // return 0;
@@ -464,7 +464,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         opaque->req = request_new(ctx, path, url, method);
 
       if(!opaque->req->headers.write) {
-        int num_hdr = http_server_headers(ctx, &opaque->req->headers, wsi);
+        int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
       }
 
       if(!opaque->req->path[0])

@@ -49,7 +49,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       opaque->req = request_new(ctx, in, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), METHOD_GET);
 
-      int num_hdr = http_server_headers(ctx, &opaque->req->headers, wsi);
+      int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
       break;
     }
 

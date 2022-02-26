@@ -237,6 +237,25 @@ js_resolve_functions_call(JSContext* ctx, ResolveFunctions* funcs, int index, JS
   return ret;
 }
 
+char*
+js_tostringlen(JSContext* ctx, size_t* lenp, JSValueConst value) {
+  size_t len;
+  const char* cstr;
+  char* ret = 0;
+  if((cstr = JS_ToCStringLen(ctx, &len, value))) {
+    ret = js_strndup(ctx, cstr, len);
+    if(lenp)
+      *lenp = len;
+    JS_FreeCString(ctx, cstr);
+  }
+  return ret;
+}
+
+char*
+js_tostring(JSContext* ctx, JSValueConst value) {
+  return js_tostringlen(ctx, 0, value);
+}
+
 JSValue
 promise_create(JSContext* ctx, ResolveFunctions* funcs) {
   JSValue ret;
