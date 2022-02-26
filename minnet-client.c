@@ -9,6 +9,7 @@
 #include "jsutils.h"
 #include <quickjs-libc.h>
 #include <strings.h>
+#include <errno.h>
 
 // static MinnetCallback client_cb_message, client_cb_connect, client_cb_close, client_cb_pong, client_cb_fd;
 
