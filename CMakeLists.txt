@@ -22,6 +22,8 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/functions.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/UseMultiArch.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/QuickJSModule.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindQuickJS.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildCURL.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindCURL.cmake)
 
 find_quickjs()
 configure_quickjs()
@@ -61,91 +63,11 @@ endif(BUILD_CURL)
 #message("BUILD_CURL: ${BUILD_CURL}")
 
 if(NOT BUILD_CURL)
-  include(FindCURL)
-  include(FindPkgConfig)
-  pkg_search_module(CURL libcurl)
-
-  if(NOT CURL_FOUND)
-    find_library(CURL NAMES libcurl curl PATHS "${CMAKE_INSTALL_PREFIX}/lib")
-  endif(NOT CURL_FOUND)
-
-  if(NOT CURL_LIBRARY)
-    if(CURL_LIBRARY_DEBUG)
-      set(CURL_LIBRARY "${CURL_LIBRARY_DEBUG}")
-    endif(CURL_LIBRARY_DEBUG)
-  endif(NOT CURL_LIBRARY)
-  if(NOT CURL_LIBRARY)
-    if(pkgcfg_lib_CURL_curl)
-      set(CURL_LIBRARY "${pkgcfg_lib_CURL_curl}")
-    endif(pkgcfg_lib_CURL_curl)
-  endif(NOT CURL_LIBRARY)
-
-  if(CURL_LIBRARY)
-    set(CURL_LIBRARY "${CURL_LIBRARY}" CACHE PATH "curl library")
-  endif(CURL_LIBRARY)
-
-  if(NOT CURL_INCLUDE_DIR)
-    string(REGEX REPLACE "/lib" "/include" CURL_INCLUDE_DIR
-                         "${CURL_LIBRARY_DIR}")
-
-    if(CURL_INCLUDE_DIR)
-      set(CURL_INCLUDE_DIR "${CURL_INCLUDE_DIR}" CACHE PATH
-                                                       "curl include directory")
-    endif(CURL_INCLUDE_DIR)
-  endif(NOT CURL_INCLUDE_DIR)
-
-  if(NOT CURL_LIBRARY_DIR)
-    if(EXISTS ${CURL_LIBRARY})
-      get_filename_component(CURL_LIBRARY_DIR "${CURL_LIBRARY}" DIRECTORY)
-    endif(EXISTS ${CURL_LIBRARY})
-
-    if(CURL_LIBRARY_DIR)
-      set(CURL_LIBRARY_DIR "${CURL_LIBRARY_DIR}" CACHE PATH
-                                                       "curl library directory")
-    endif(CURL_LIBRARY_DIR)
-  endif(NOT CURL_LIBRARY_DIR)
-
-  include_directories(${CURL_INCLUDE_DIR})
-
+   find_curl()
 endif(NOT BUILD_CURL)
 
 if(NOT CURL_FOUND OR BUILD_CURL)
-  set(BUILD_CURL TRUE CACHE BOOL "Build curl from source")
-  # set(LIBCURL_NO_SHARED libcurl CACHE STRING "Build static libcurl")
-  message("-- Building CURL from source")
-  include(ExternalProject)
-  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/curl/CMakeLists.txt")
-    set(CURL_REPO "")
-    # add_subdirectory(curl)
-  else()
-    set(CURL_REPO "https://github.com/curl/curl.git")
-
-    ExternalProject_Add(
-      curl
-      SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl"
-      GIT_REPOSITORY "${CURL_REPO}"
-      GIT_SUBMODULES_RECURSE TRUE
-      GIT_PROGRESS TRUE
-      BINARY_DIR curl
-      STEP_TARGETS build
-      CONFIGURE_COMMAND
-        cmake "${CMAKE_CURRENT_SOURCE_DIR}/curl"
-        -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
-      CMAKE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl -DBUILD_SHARED_LIBS:BOOL=OFF
-                 -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-      CMAKE_CACHE_ARGS -DLIBCURL_NO_SHARED:STRING=libcurl
-                       -DBUILD_SHARED_LIBS:BOOL=OFF)
-    set_property(DIRECTORY PROPERTY EP_STEP_TARGETS build)
-  endif()
-
-  if(CURL_LIBRARIES AND NOT CURL_LIBRARY)
-    #set(CURL_LIBRARY "${CURL_LIBRARIES}")
-  else(LIBCURL_NO_SHARED AND NOT CURL_LIBRARY)
-    set(CURL_LIBRARY curl)
-  endif()
-  set(CURL_LIBRARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/curl/lib")
-  set(CURL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/curl/include")
-  link_directories(${CMAKE_CURRENT_BINARY_DIR}/curl/lib)
+  build_curl()
 endif()
 message(STATUS "CURL library: ${CURL_LIBRARY}")
 
@@ -314,7 +236,7 @@ if(OPENSSL_INCLUDE_DIR AND NOT OPENSSL_LIBRARY_DIR)
   string(REGEX REPLACE "/include" "/lib" OPENSSL_LIBRARY_DIR
                        "${OPENSSL_INCLUDE_DIR}")
 
-  set(CMAKE_INSTALL_RPATH "${CURL_LIBRARY_DIR}:${OPENSSL_LIBRARY_DIR}")
+  set(CMAKE_INSTALL_RPATH "${OPENSSL_LIBRARY_DIR}")
 endif()
 
 check_functions(poll)
@@ -370,8 +292,7 @@ if(BUILD_LIBWEBSOCKETS)
   add_dependencies(quickjs-minnet libwebsockets)
 endif(BUILD_LIBWEBSOCKETS)
 
-set(CMAKE_SHARED_LINKER_FLAGS
-    "-Wl,-rpath=${CMAKE_INSTALL_RPATH}:${CURL_LIBRARY_DIR}")
+#set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=${CMAKE_INSTALL_RPATH}:${CURL_LIBRARY_DIR}")
 
 set(OPENSSL_LIBRARIES "${OPENSSL_SSL_LIBRARY};${OPENSSL_CRYPTO_LIBRARY}"
     CACHE STRING "OpenSSL libraries")
@@ -382,12 +303,12 @@ set_target_properties(
   quickjs-minnet
   PROPERTIES
     INSTALL_RPATH
-    "${CMAKE_INSTALL_RPATH};${CURL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
+    "${OPENSSL_LIBRARY_DIR}"
     COMPILE_FLAGS "-fvisibility=hidden"
     LINK_DIRECTORIES
     "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
     INTERFACE_LINK_DIRECTORIES
-    "${LIBWEBSOCKETS_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
+    "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
     PREFIX ""
     OUTPUT_NAME "net")
 target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1
