@@ -465,7 +465,9 @@ minnet_emit(const struct ws_callback* cb, int argc, JSValue* argv) {
 static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("server", 1, minnet_ws_server),
     JS_CFUNC_DEF("client", 1, minnet_ws_client),
+#ifdef USE_CURL
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
+#endif
     JS_CFUNC_SPECIAL_DEF("socket", 1, constructor, minnet_ws_constructor),
     JS_CFUNC_SPECIAL_DEF("url", 1, constructor, minnet_url_constructor),
     // JS_CGETSET_DEF("log", get_log, set_log),

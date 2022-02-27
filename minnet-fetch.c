@@ -21,6 +21,39 @@ struct curl_socket {
   curl_socket_t sockfd;
 };
 
+static size_t
+header_callback(char* x, size_t n, size_t nitems, void* userdata) {
+  struct header_context* hc = userdata;
+  size_t i;
+
+  for(i = nitems; i > 0; --i)
+    if(!(x[i - 1] == '\r' || x[i - 1] == '\n'))
+      break;
+
+  if(i > 0 && buffer_append(hc->buf, x, i + 1, hc->ctx) > 0)
+    hc->buf->write[-1] = '\n';
+
+  return nitems * n;
+}
+
+static int
+start_timeout(CURLM* multi, long timeout_ms, void* userp) {
+  struct curl_callback* callback_data = userp;
+  /*if(timeout_ms < 0) {
+     evtimer_del(timeout);
+   } else {
+     if(timeout_ms == 0)
+       timeout_ms = 1;
+     struct timeval tv;
+     tv.tv_sec = timeout_ms / 1000;
+     tv.tv_usec = (timeout_ms % 1000) * 1000;
+     evtimer_del(timeout);
+     evtimer_add(timeout, &tv);
+   }*/
+  return 0;
+}
+
+#ifdef USE_CURL
 static void
 header_list(JSContext* ctx, JSValueConst headers, struct curl_slist** list_ptr) {
   JSValue global_obj, object_ctor, keys, names, length;
@@ -76,21 +109,6 @@ header_list(JSContext* ctx, JSValueConst headers, struct curl_slist** list_ptr) 
   JS_FreeValue(ctx, length);
 }
 
-static size_t
-header_callback(char* x, size_t n, size_t nitems, void* userdata) {
-  struct header_context* hc = userdata;
-  size_t i;
-
-  for(i = nitems; i > 0; --i)
-    if(!(x[i - 1] == '\r' || x[i - 1] == '\n'))
-      break;
-
-  if(i > 0 && buffer_append(hc->buf, x, i + 1, hc->ctx) > 0)
-    hc->buf->write[-1] = '\n';
-
-  return nitems * n;
-}
-
 static int
 handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socketp) {
   struct curl_callback* callback_data = userp;
@@ -140,23 +158,6 @@ on_timeout(evutil_socket_t fd, short events, void* arg) {
   curl_multi_socket_action(curl_handle, CURL_SOCKET_TIMEOUT, 0, &running_handles);
   check_multi_info();
 }*/
-
-static int
-start_timeout(CURLM* multi, long timeout_ms, void* userp) {
-  struct curl_callback* callback_data = userp;
-  /*if(timeout_ms < 0) {
-     evtimer_del(timeout);
-   } else {
-     if(timeout_ms == 0)
-       timeout_ms = 1;
-     struct timeval tv;
-     tv.tv_sec = timeout_ms / 1000;
-     tv.tv_usec = (timeout_ms % 1000) * 1000;
-     evtimer_del(timeout);
-     evtimer_add(timeout, &tv);
-   }*/
-  return 0;
-}
 
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -309,3 +310,4 @@ fail:
   curl_global_cleanup();
   return resObj;
 }
+#endif /* defined(USE_CURL) */

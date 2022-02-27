@@ -49,6 +49,8 @@ if(USE_CURL)
   message(STATUS "CURL library: ${CURL_LIBRARY}")
 
   set(CURL_LIBRARY "${CURL_LIBRARY}" CACHE PATH "curl library")
+
+  add_definitions(-DUSE_CURL)
 endif(USE_CURL)
 
 include(CheckCCompilerFlag)
@@ -84,7 +86,7 @@ if(NOT BUILD_LIBWEBSOCKETS)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibwebsockets.cmake)
   find_libwebsockets()
   include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS})
-  link_libraries(${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY_RELEASE} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES})
+  link_libraries(${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES})
 endif(NOT BUILD_LIBWEBSOCKETS)
 
 if(NOT LIBWEBSOCKETS_FOUND)
@@ -167,6 +169,8 @@ if(BUILD_LIBWEBSOCKETS)
 
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildLibwebsockets.cmake)
 
+  include(FindZLIB)
+
   build_libwebsockets()
 
   if(TARGET libmbedtls)
@@ -231,7 +235,7 @@ endif(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
 
 target_link_directories(quickjs-minnet PUBLIC ${QUICKJS_LIBRARY_DIR})
 
-target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY_RELEASE} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES})
+target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES})
 
 message(
   "Libraries:\n\

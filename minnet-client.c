@@ -63,7 +63,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   struct lws_client_connect_info* conn;
   JSValue options = argv[0];
   struct lws* wsi = 0;
-  const char *tmp, *str;
+  const char *tmp=0, *str;
   BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
   char *url, *method_str = 0;
@@ -98,17 +98,17 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   if(!JS_IsObject(options))
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
-  url_from(&client->url, options, ctx);
-
   value = JS_GetPropertyStr(ctx, options, "method");
   str = JS_ToCString(ctx, value);
   method_str = js_strdup(ctx, JS_IsString(value) ? str : method_string(METHOD_GET));
   JS_FreeValue(ctx, value);
   JS_FreeCString(ctx, str);
 
-  if(tmp) {
+  if(argind > 0) {
     url_parse(&client->url, tmp, ctx);
     JS_FreeCString(ctx, tmp);
+  } else {
+    url_from(&client->url, options, ctx);
   }
 
   GETCBPROP(options, "onPong", client->cb.pong)
@@ -148,6 +148,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
       break;
     }
   }
+ //url_from(&client->url, options, ctx);
 
   lws_client_connect_via_info(conn);
 
