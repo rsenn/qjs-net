@@ -403,10 +403,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!opaque->req)
         opaque->req = request_new(ctx, 0, url, method);
 
-      MinnetBuffer* h = &opaque->req->headers;
+    /*  MinnetBuffer* h = &opaque->req->headers;
       int num_hdr = headers_get(ctx, h, wsi);
       lwsl_user("http " FGC(171, "%-38s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
-
+*/
       // return 0;
       break;
     }
