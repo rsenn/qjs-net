@@ -93,7 +93,7 @@ macro(CHECK_INCLUDES)
     string(TOUPPER "HAVE_${INC}" RESULT_VAR)
     string(REGEX REPLACE "[^A-Za-z0-9_]" "_" RESULT_VAR "${RESULT_VAR}")
     check_include_file("${INC}" "${RESULT_VAR}")
-   message(STATUS "Checked for ${INC} -- ${${RESULT_VAR}}")
+    message(STATUS "Checked for ${INC} -- ${${RESULT_VAR}}")
   endforeach(INC ${ARGN})
 endmacro(CHECK_INCLUDES)
 
