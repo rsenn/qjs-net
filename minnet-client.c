@@ -52,8 +52,20 @@ sslcert_client(JSContext* ctx, struct lws_context_creation_info* info, JSValueCo
     info->ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
 }
 
+static void
+client_free(MinnetClient* client) {
+  JSContext* ctx = client->context.js;
+
+  context_clear(&client->context);
+
+  if(client->info.method)
+    js_free(ctx, client->info.method);
+
+  js_free(ctx, client);
+}
+
 JSValue
-minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct lws_context* lws = 0;
   int argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
@@ -63,7 +75,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   struct lws_client_connect_info* conn;
   JSValue options = argv[0];
   struct lws* wsi = 0;
-  const char *tmp=0, *str;
+  const char *tmp = 0, *str;
   BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
   char *url, *method_str = 0;
@@ -148,7 +160,7 @@ minnet_ws_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
       break;
     }
   }
- //url_from(&client->url, options, ctx);
+  // url_from(&client->url, options, ctx);
 
   lws_client_connect_via_info(conn);
 

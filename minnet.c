@@ -81,6 +81,28 @@ context_exception(MinnetContext* context, JSValue retval) {
   return context->exception;
 }
 
+void
+context_clear(MinnetContext* context) {
+  JSContext* ctx = context->js;
+
+  lws_context_destroy(context->lws);
+
+  if(context->info.ssl_cert_filepath)
+    JS_FreeCString(ctx, info->ssl_cert_filepath);
+  if(context->info.ssl_private_key_filepath)
+    JS_FreeCString(ctx, info->ssl_private_key_filepath);
+  if(context->info.ssl_ca_filepath)
+    JS_FreeCString(ctx, info->ssl_ca_filepath);
+
+  JS_FreeValue(ctx, context->error);
+}
+/*  void
+context_free(MinnetContext* context) {
+  JSContext* ctx = context->js;
+context_clear(context);
+js_free(ctx, context);
+}*/
+
 static void
 lws_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
@@ -464,7 +486,7 @@ minnet_emit(const struct ws_callback* cb, int argc, JSValue* argv) {
 
 static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("server", 1, minnet_ws_server),
-    JS_CFUNC_DEF("client", 1, minnet_ws_client),
+    JS_CFUNC_DEF("client", 1, minnet_client),
 #ifdef USE_CURL
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
 #endif

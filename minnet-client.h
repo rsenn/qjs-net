@@ -20,9 +20,7 @@ typedef struct client_context {
   ResolveFunctions promise;
 } MinnetClient;
 
-extern THREAD_LOCAL MinnetClient* minnet_client;
-
-JSValue minnet_ws_client(JSContext*, JSValue, int, JSValue* argv);
+JSValue minnet_client(JSContext*, JSValue, int, JSValue* argv);
 
 static inline struct client_context*
 lws_client(struct lws* wsi) {
