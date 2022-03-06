@@ -58,8 +58,10 @@ client_free(MinnetClient* client) {
 
   context_clear(&client->context);
 
-  if(client->info.method)
-    js_free(ctx, client->info.method);
+  if(client->connect_info.method)
+    js_free(ctx, client->connect_info.method);
+
+  url_free(&client->url, ctx);
 
   js_free(ctx, client);
 }
@@ -204,8 +206,7 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     }
   }
 
-  url_free(&client->url, ctx);
-  js_free(ctx, method_str);
+  client_free(client);
 
   // minnet_client = NULL;
 fail:

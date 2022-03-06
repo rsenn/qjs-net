@@ -88,11 +88,11 @@ context_clear(MinnetContext* context) {
   lws_context_destroy(context->lws);
 
   if(context->info.ssl_cert_filepath)
-    JS_FreeCString(ctx, info->ssl_cert_filepath);
+    JS_FreeCString(ctx, context->info.ssl_cert_filepath);
   if(context->info.ssl_private_key_filepath)
-    JS_FreeCString(ctx, info->ssl_private_key_filepath);
+    JS_FreeCString(ctx, context->info.ssl_private_key_filepath);
   if(context->info.ssl_ca_filepath)
-    JS_FreeCString(ctx, info->ssl_ca_filepath);
+    JS_FreeCString(ctx, context->info.ssl_ca_filepath);
 
   JS_FreeValue(ctx, context->error);
 }
