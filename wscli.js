@@ -211,7 +211,7 @@ function main(...args) {
         console.log('onHttp', { buffer });
       },
       onFd(fd, rd, wr) {
-        //console.log('onFd', fd, rd, wr);
+       console.log('onFd', fd, rd, wr);
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
       },
