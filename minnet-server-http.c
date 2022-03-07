@@ -356,7 +356,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   MinnetSession* session = user;
   MinnetServer* server = session ? session->server : lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server ? server->context.js : 0;
-  JSValue ws_obj = ctx ? minnet_ws_object(ctx, wsi) : JS_UNDEFINED;
+  JSValue ws_obj = /*ctx ? minnet_ws_object(ctx, wsi) :*/ JS_UNDEFINED;
   struct wsi_opaque_user_data* opaque = ctx ? lws_opaque(wsi, ctx) : lws_get_opaque_user_data(wsi);
   char* url = 0;
   MinnetWebsocket* ws = ws_from_wsi(wsi);

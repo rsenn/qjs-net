@@ -327,26 +327,29 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
     case LWS_CALLBACK_RAW_CONNECTED: {
       if(opaque->status < OPEN) {
+        JSContext* ctx;
         int status;
         status = lws_http_client_http_response(wsi);
 
         opaque->status = OPEN;
-        opaque->ws = ws_new(wsi, ctx);
+        if((ctx = client->cb.connect.ctx)) {
 
-        sess->ws_obj = minnet_ws_wrap(ctx, wsi);
+          opaque->ws = ws_new(wsi, ctx);
 
-        if(reason != LWS_CALLBACK_RAW_CONNECTED) {
-          sess->req_obj = minnet_request_wrap(ctx, client->request);
+          sess->ws_obj = minnet_ws_wrap(ctx, wsi);
 
-          /* sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
+          if(reason != LWS_CALLBACK_RAW_CONNECTED) {
+            sess->req_obj = minnet_request_wrap(ctx, client->request);
 
-          client->response = minnet_response_data(sess->resp_obj);*/
+            /* sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
+
+            client->response = minnet_response_data(sess->resp_obj);*/
+          }
+          // lwsl_user("client   " FGC(171, "%-38s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
+
+          if((client->cb.connect.ctx = ctx))
+            client_exception(client, minnet_emit(&client->cb.connect, 3, &sess->ws_obj));
         }
-        // lwsl_user("client   " FGC(171, "%-38s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
-
-        if((client->cb.connect.ctx = ctx))
-          client_exception(client, minnet_emit(&client->cb.connect, 3, &sess->ws_obj));
-
         /*if(!minnet_response_data(sess->resp_obj))*/
       }
       break;
