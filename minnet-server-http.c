@@ -389,6 +389,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: {
+      return 0;
       break;
     }
     case LWS_CALLBACK_PROTOCOL_INIT: {
