@@ -8,6 +8,7 @@ int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, s
 
 int
 ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+  MinnetSession* sess = user;
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server ? server->context.js : 0;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
