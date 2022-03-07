@@ -112,8 +112,7 @@ js_buffer_from(JSContext* ctx, JSValueConst value) {
   if(JS_IsString(value)) {
     ret.data = (uint8_t*)JS_ToCStringLen(ctx, &ret.size, value);
     ret.value = value;
-  } else {
-    ret.data = JS_GetArrayBuffer(ctx, &ret.size, value);
+  } else if((ret.data = JS_GetArrayBuffer(ctx, &ret.size, value))) {
     ret.value = JS_DupValue(ctx, value);
   }
 

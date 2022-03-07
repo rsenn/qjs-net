@@ -109,9 +109,9 @@ js_free(ctx, context);
 void
 context_certificate(MinnetContext* context, JSValueConst options) {
   struct lws_context_creation_info* i = &context->info;
-  context->crt = js_buffer_from(ctx, JS_GetPropertyStr(context->js, options, "sslCert"));
-  context->key = js_buffer_from(ctx, JS_GetPropertyStr(context->js, options, "sslPrivateKey"));
-  context->ca = js_buffer_from(ctx, JS_GetPropertyStr(context->js, options, "sslCA"));
+  context->crt = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslCert"));
+  context->key = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslPrivateKey"));
+  context->ca = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslCA"));
 
   js_buffer_to3(context->crt, &i->ssl_cert_filepath, &i->server_ssl_cert_mem, &i->server_ssl_cert_mem_len);
   js_buffer_to3(context->key, &i->ssl_private_key_filepath, &i->server_ssl_private_key_mem, &i->server_ssl_private_key_mem_len);
