@@ -163,9 +163,8 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
   info->error_document_404 = 0; // "/404.html";
   info->mounts = &mount;
 
-  if(is_tls) {
-    minnet_tls_certificate(ctx, &server->context.info, options);
-  }
+  if(is_tls)
+    context_certificate(&server->context, options);
 
   if(JS_IsArray(ctx, opt_mimetypes)) {
     MinnetVhostOptions *vopts, **vop = (MinnetVhostOptions**)&mimetypes;

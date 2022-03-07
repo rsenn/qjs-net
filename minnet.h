@@ -5,6 +5,7 @@
 #include <quickjs.h>
 #include <libwebsockets.h>
 #include "minnet-buffer.h"
+#include "jsutils.h"
 
 union byte_buffer;
 struct http_request;
@@ -127,6 +128,7 @@ typedef struct context {
   struct lws_context_creation_info info;
   BOOL exception;
   JSValue error;
+  JSBuffer crt, key, ca;
 } MinnetContext;
 
 extern THREAD_LOCAL int32_t minnet_log_level;
@@ -136,7 +138,7 @@ extern THREAD_LOCAL BOOL minnet_exception;
 int socket_geterror(int fd);
 BOOL context_exception(MinnetContext* context, JSValue retval);
 void context_clear(MinnetContext*);
-void minnet_tls_certificate(JSContext*, struct lws_context_creation_info*, JSValue options);
+void context_certificate(MinnetContext*, JSValueConst);
 JSValue headers_object(JSContext*, const MinnetBuffer* buffer);
 char* headers_atom(JSAtom, JSContext* ctx);
 int headers_from(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);

@@ -123,17 +123,6 @@ minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
   return ret;
 }
 
-void
-minnet_tls_certificate(JSContext* ctx, struct lws_context_creation_info* i, JSValueConst options) {
-  JSBuffer crt = js_buffer_from(ctx, JS_GetPropertyStr(ctx, options, "sslCert"));
-  JSBuffer key = js_buffer_from(ctx, JS_GetPropertyStr(ctx, options, "sslPrivateKey"));
-  JSBuffer ca = js_buffer_from(ctx, JS_GetPropertyStr(ctx, options, "sslCA"));
-
-  js_buffer_to3(crt, &i->ssl_cert_filepath, &i->server_ssl_cert_mem, &i->server_ssl_cert_mem_len);
-  js_buffer_to3(key, &i->ssl_private_key_filepath, &i->server_ssl_private_key_mem, &i->server_ssl_private_key_mem_len);
-  js_buffer_to3(ca, &i->ssl_ca_filepath, &i->server_ssl_ca_mem, &i->server_ssl_ca_mem_len);
-}
-
 static JSValue
 minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetWebsocket* ws;

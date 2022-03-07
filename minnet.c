@@ -86,13 +86,16 @@ context_clear(MinnetContext* context) {
   JSContext* ctx = context->js;
 
   lws_context_destroy(context->lws);
-
-  if(context->info.ssl_cert_filepath)
-    JS_FreeCString(ctx, context->info.ssl_cert_filepath);
-  if(context->info.ssl_private_key_filepath)
-    JS_FreeCString(ctx, context->info.ssl_private_key_filepath);
-  if(context->info.ssl_ca_filepath)
-    JS_FreeCString(ctx, context->info.ssl_ca_filepath);
+  /*
+    if(context->info.ssl_cert_filepath)
+      JS_FreeCString(ctx, context->info.ssl_cert_filepath);
+    if(context->info.ssl_private_key_filepath)
+      JS_FreeCString(ctx, context->info.ssl_private_key_filepath);
+    if(context->info.ssl_ca_filepath)
+      JS_FreeCString(ctx, context->info.ssl_ca_filepath);*/
+  js_buffer_free(&context->crt, ctx);
+  js_buffer_free(&context->key, ctx);
+  js_buffer_free(&context->ca, ctx);
 
   JS_FreeValue(ctx, context->error);
 }
@@ -104,14 +107,15 @@ js_free(ctx, context);
 }*/
 
 void
-minnet_tls_certificate(JSContext* ctx, struct lws_context_creation_info* i, JSValueConst options) {
-  JSBuffer crt = js_buffer_from(ctx, JS_GetPropertyStr(ctx, options, "sslCert"));
-  JSBuffer key = js_buffer_from(ctx, JS_GetPropertyStr(ctx, options, "sslPrivateKey"));
-  JSBuffer ca = js_buffer_from(ctx, JS_GetPropertyStr(ctx, options, "sslCA"));
+context_certificate(MinnetContext* context, JSValueConst options) {
+  struct lws_context_creation_info* i = &context->info;
+  context->crt = js_buffer_from(ctx, JS_GetPropertyStr(context->js, options, "sslCert"));
+  context->key = js_buffer_from(ctx, JS_GetPropertyStr(context->js, options, "sslPrivateKey"));
+  context->ca = js_buffer_from(ctx, JS_GetPropertyStr(context->js, options, "sslCA"));
 
-  js_buffer_to3(crt, &i->ssl_cert_filepath, &i->server_ssl_cert_mem, &i->server_ssl_cert_mem_len);
-  js_buffer_to3(key, &i->ssl_private_key_filepath, &i->server_ssl_private_key_mem, &i->server_ssl_private_key_mem_len);
-  js_buffer_to3(ca, &i->ssl_ca_filepath, &i->server_ssl_ca_mem, &i->server_ssl_ca_mem_len);
+  js_buffer_to3(context->crt, &i->ssl_cert_filepath, &i->server_ssl_cert_mem, &i->server_ssl_cert_mem_len);
+  js_buffer_to3(context->key, &i->ssl_private_key_filepath, &i->server_ssl_private_key_mem, &i->server_ssl_private_key_mem_len);
+  js_buffer_to3(context->ca, &i->ssl_ca_filepath, &i->server_ssl_ca_mem, &i->server_ssl_ca_mem_len);
 }
 
 static void
