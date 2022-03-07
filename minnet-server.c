@@ -59,7 +59,7 @@ static const struct lws_http_mount mount = {
 
 JSValue
 minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-  int argind = 0, a = 0, port = 7981;
+  int argind = 0, a = 0;
   BOOL is_tls = FALSE;
   MinnetServer* server;
   MinnetVhostOptions* mimetypes = 0;
@@ -81,7 +81,8 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
       url_parse(&url, str, ctx);
 
       server->context.info.port = url.port;
-
+      server->context.info.vhost_name = js_strdup(ctx, url.host);
+      server->context.info.listen_accept_protocol = js_strdup(ctx, url.protocol);
       JS_FreeCString(ctx, str);
     }
     argind++;
@@ -115,9 +116,6 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
     JS_FreeValue(ctx, opt_private_key);
   }
 
-  if(!JS_IsUndefined(opt_port))
-    JS_ToInt32(ctx, &port, opt_port);
-
   GETCB(opt_on_pong, server->cb.pong)
   GETCB(opt_on_close, server->cb.close)
   GETCB(opt_on_connect, server->cb.connect)
@@ -143,12 +141,22 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
     server->context.info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
     server->context.info.options |= /*LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | */ LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
   }
-  if(JS_IsString(opt_host))
+
+  if(!JS_IsUndefined(opt_port)) {
+    int32_t port;
+    JS_ToInt32(ctx, &port, opt_port);
+    server->context.info.port = port;
+  }
+
+  if(JS_IsString(opt_host)) {
+    if(server->context.info.vhost_name)
+      js_free(ctx, server->context.info.vhost_name);
     server->context.info.vhost_name = js_to_string(ctx, opt_host);
-  else
+  }
+
+  if(!server->context.info.vhost_name)
     server->context.info.vhost_name = js_strdup(ctx, "localhost");
 
-  server->context.info.port = port;
   server->context.info.error_document_404 = 0; // "/404.html";
   server->context.info.mounts = &mount;
 
