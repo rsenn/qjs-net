@@ -6,7 +6,8 @@ import REPL from 'repl';
 import inspect from 'inspect';
 import { types, define, filter, split, getOpt, toUnixTime } from 'util';
 import * as fs from 'fs';
-import net, { URL } from 'net';
+import {setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server
+ } from 'net';
 import { Socket } from 'sockets';
 import { EventEmitter } from 'events';
 import { Repeater } from 'repeater';
@@ -71,6 +72,8 @@ function main(...args) {
   );
   if(params['no-tls'] === true) params.tls = false;
   console.log('params', params);
+  console.log('server', server);
+  console.log('setLog', setLog);
   const {
     '@': [url = 'wss://127.0.0.1:8999/ws'],
     'ssl-cert': sslCert = 'localhost.crt',
@@ -106,7 +109,7 @@ function main(...args) {
 
   console.log = repl.printFunction(log);
   let uri = new URL(url);
-  console.log('main', { url, uri });
+console.log('main', { url, uri });
 
   let cli = (globalThis.sock = new rpc.Socket(uri, rpc[`RPC${server ? 'Server' : 'Client'}Connection`], +params.verbose));
 
@@ -117,12 +120,12 @@ function main(...args) {
     console.log('createWS', { url, callbacks, listen });
     const { protocol, host, port, path } = url;
     console.log('createWS', { protocol, host, port, path });
-    net.setLog((params.debug ? net.LLL_USER : 0) | (((params.debug ? net.LLL_NOTICE : net.LLL_WARN) << 1) - 1), (level, ...args) => {
+    setLog((params.debug ? LLL_USER : 0) | (((params.debug ? LLL_NOTICE : LLL_WARN) << 1) - 1), (level, ...args) => {
       repl.printStatus(...args);
       //if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
 
-    return [net.client, net.server][+listen]({
+    return [client, server][+listen]({
       protocol,
       host,
       port,
@@ -305,7 +308,7 @@ function main(...args) {
 }
 
 try {
-  main(...scriptArgs.slice(1));
+      main(...scriptArgs.slice(1));
 } catch(error) {
   console.log(`FAIL: ${error?.message ?? error}\n${error?.stack}`);
   std.exit(1);
