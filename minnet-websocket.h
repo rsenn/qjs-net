@@ -33,7 +33,6 @@ MinnetWebsocket* ws_new(struct lws*, JSContext*);
 MinnetWebsocket* ws_from_wsi2(struct lws*, JSContext*);
 JSValue minnet_ws_object(JSContext*, struct lws*);
 JSValue minnet_ws_wrap(JSContext*, struct lws*);
-void minnet_ws_sslcert(JSContext*, struct lws_context_creation_info*, JSValue options);
 JSValue minnet_ws_constructor(JSContext*, JSValue, int, JSValue[]);
 
 extern THREAD_LOCAL JSClassID minnet_ws_class_id;

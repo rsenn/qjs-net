@@ -65,11 +65,14 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
   MinnetVhostOptions* mimetypes = 0;
   MinnetURL url = {0};
   JSValue ret, options;
+  struct lws_context_creation_info* info;
 
   SETLOG(LLL_INFO)
 
   if(!(server = js_mallocz(ctx, sizeof(MinnetServer))))
     return JS_ThrowOutOfMemory(ctx);
+
+  info = &server->context.info;
 
   lwsl_user("Minnet WebSocket Server\n");
   ret = JS_NewInt32(ctx, 0);
@@ -80,9 +83,9 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
     if((str = JS_ToCString(ctx, argv[argind]))) {
       url_parse(&url, str, ctx);
 
-      server->context.info.port = url.port;
-      server->context.info.vhost_name = js_strdup(ctx, url.host);
-      // server->context.info.listen_accept_protocol = js_strdup(ctx, url.protocol);
+      info->port = url.port;
+      info->vhost_name = js_strdup(ctx, url.host);
+      // info->listen_accept_protocol = js_strdup(ctx, url.protocol);
       JS_FreeCString(ctx, str);
     }
     argind++;
@@ -128,40 +131,40 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
 
   server->context.js = ctx;
   server->context.error = JS_NULL;
-  server->context.info.user = server;
-  server->context.info.protocols = protocols2;
-  // server->context.info.options = LWS_SERVER_OPTION_EXPLICIT_VHOSTS;
-  server->context.info.options = 0
+  info->user = server;
+  info->protocols = protocols2;
+  // info->options = LWS_SERVER_OPTION_EXPLICIT_VHOSTS;
+  info->options = 0
       //| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE
       ;
-  server->context.info.user = server;
+  info->user = server;
 
-  //  server->context.info.options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
+  //  info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
   if(is_tls) {
-    server->context.info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-    server->context.info.options |= /*LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | */ LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
+    info->options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+    info->options |= /*LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | */ LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
   }
 
   if(!JS_IsUndefined(opt_port)) {
     int32_t port;
     JS_ToInt32(ctx, &port, opt_port);
-    server->context.info.port = port;
+    info->port = port;
   }
 
   if(JS_IsString(opt_host)) {
-    if(server->context.info.vhost_name)
-      js_free(ctx, server->context.info.vhost_name);
-    server->context.info.vhost_name = js_to_string(ctx, opt_host);
+    if(info->vhost_name)
+      js_free(ctx, info->vhost_name);
+    info->vhost_name = js_to_string(ctx, opt_host);
   }
 
-  if(!server->context.info.vhost_name)
-    server->context.info.vhost_name = js_strdup(ctx, "localhost");
+  if(!info->vhost_name)
+    info->vhost_name = js_strdup(ctx, "localhost");
 
-  server->context.info.error_document_404 = 0; // "/404.html";
-  server->context.info.mounts = &mount;
+  info->error_document_404 = 0; // "/404.html";
+  info->mounts = &mount;
 
   if(is_tls) {
-    minnet_ws_sslcert(ctx, &server->context.info, options);
+    minnet_tls_certificate(ctx, &server->context.info, options);
   }
 
   if(JS_IsArray(ctx, opt_mimetypes)) {
@@ -184,9 +187,9 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
     }
   }
 
-  server->context.info.mounts = 0;
+  info->mounts = 0;
   {
-    MinnetHttpMount** m = (MinnetHttpMount**)&server->context.info.mounts;
+    MinnetHttpMount** m = (MinnetHttpMount**)&info->mounts;
 
     if(JS_IsArray(ctx, opt_mounts)) {
       uint32_t i;
@@ -254,22 +257,22 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
     }
   }
 
-  if(server->context.info.mounts) {
+  if(info->mounts) {
     const MinnetHttpMount *mount, *next;
 
-    for(mount = (MinnetHttpMount*)server->context.info.mounts; mount; mount = next) {
+    for(mount = (MinnetHttpMount*)info->mounts; mount; mount = next) {
       next = (MinnetHttpMount*)mount->lws.mount_next;
       mount_free(ctx, mount);
     }
   }
 
-  if(server->context.info.ssl_cert_filepath)
-    JS_FreeCString(ctx, server->context.info.ssl_cert_filepath);
+  if(info->ssl_cert_filepath)
+    JS_FreeCString(ctx, info->ssl_cert_filepath);
 
-  if(server->context.info.ssl_private_key_filepath)
-    JS_FreeCString(ctx, server->context.info.ssl_private_key_filepath);
+  if(info->ssl_private_key_filepath)
+    JS_FreeCString(ctx, info->ssl_private_key_filepath);
 
-  js_free(ctx, (void*)server->context.info.vhost_name);
+  js_free(ctx, (void*)info->vhost_name);
 
   FREECB(server->cb.pong)
   FREECB(server->cb.close)

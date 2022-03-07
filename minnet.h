@@ -136,6 +136,7 @@ extern THREAD_LOCAL BOOL minnet_exception;
 int socket_geterror(int fd);
 BOOL context_exception(MinnetContext* context, JSValue retval);
 void context_clear(MinnetContext*);
+void minnet_tls_certificate(JSContext*, struct lws_context_creation_info*, JSValue options);
 JSValue headers_object(JSContext*, const MinnetBuffer* buffer);
 char* headers_atom(JSAtom, JSContext* ctx);
 int headers_from(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);

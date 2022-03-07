@@ -120,6 +120,22 @@ js_buffer_from(JSContext* ctx, JSValueConst value) {
   return ret;
 }
 
+void
+js_buffer_to(JSBuffer buf, void** pptr, size_t* plen) {
+  if(pptr)
+    *pptr = buf.data;
+  if(plen)
+    *plen = buf.size;
+}
+
+void
+js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, size_t* plen) {
+  if(!JS_IsString(buf.value))
+    js_buffer_to(buf, pptr, plen);
+  else
+    *pstr = buf.data;
+}
+
 BOOL
 js_buffer_valid(const JSBuffer* in) {
   return !JS_IsException(in->value);

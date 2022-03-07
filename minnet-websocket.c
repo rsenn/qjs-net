@@ -124,17 +124,14 @@ minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
 }
 
 void
-minnet_ws_sslcert(JSContext* ctx, struct lws_context_creation_info* info, JSValueConst options) {
-  JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");
-  JSValue opt_ssl_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
-  JSValue opt_ssl_ca = JS_GetPropertyStr(ctx, options, "sslCA");
+minnet_tls_certificate(JSContext* ctx, struct lws_context_creation_info* i, JSValueConst options) {
+  JSBuffer crt = js_buffer_from(ctx, JS_GetPropertyStr(ctx, options, "sslCert"));
+  JSBuffer key = js_buffer_from(ctx, JS_GetPropertyStr(ctx, options, "sslPrivateKey"));
+  JSBuffer ca = js_buffer_from(ctx, JS_GetPropertyStr(ctx, options, "sslCA"));
 
-  if(JS_IsString(opt_ssl_cert))
-    info->ssl_cert_filepath = JS_ToCString(ctx, opt_ssl_cert);
-  if(JS_IsString(opt_ssl_private_key))
-    info->ssl_private_key_filepath = JS_ToCString(ctx, opt_ssl_private_key);
-  if(JS_IsString(opt_ssl_ca))
-    info->ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
+  js_buffer_to3(crt, &i->ssl_cert_filepath, &i->server_ssl_cert_mem, &i->server_ssl_cert_mem_len);
+  js_buffer_to3(key, &i->ssl_private_key_filepath, &i->server_ssl_private_key_mem, &i->server_ssl_private_key_mem_len);
+  js_buffer_to3(ca, &i->ssl_ca_filepath, &i->server_ssl_ca_mem, &i->server_ssl_ca_mem_len);
 }
 
 static JSValue
