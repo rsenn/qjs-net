@@ -79,6 +79,9 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
     const char* str;
     if((str = JS_ToCString(ctx, argv[argind]))) {
       url_parse(&url, str, ctx);
+
+      server->context.info.port = url.port;
+
       JS_FreeCString(ctx, str);
     }
     argind++;
