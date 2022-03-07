@@ -23,6 +23,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
   switch(reason) {
+    case LWS_CALLBACK_CONNECTING:
     case LWS_CALLBACK_PROTOCOL_INIT: {
       break;
     }
