@@ -14,10 +14,10 @@
 // THREAD_LOCAL MinnetServer minnet_server = {0};
 
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+/*int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 int ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);*/
+// int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
@@ -273,7 +273,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
 int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetSession* sess = user;
-  MinnetServer* server = sess->server;
+  MinnetServer* server = sess ? sess->server : lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
 
   // if(!lws_is_poll_callback(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);

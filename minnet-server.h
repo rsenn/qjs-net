@@ -17,6 +17,11 @@ typedef struct server_context {
 struct proxy_connection;
 
 JSValue minnet_server(JSContext*, JSValue, int argc, JSValue* argv);
+int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 // extern THREAD_LOCAL MinnetServer minnet_server;
 
