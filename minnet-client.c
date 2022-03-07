@@ -334,7 +334,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         opaque->status = OPEN;
         if((ctx = client->cb.connect.ctx)) {
 
-          opaque->ws = ws_new(wsi, ctx);
+          // opaque->ws = ws_new(wsi, ctx);
 
           sess->ws_obj = minnet_ws_wrap(ctx, wsi);
 
