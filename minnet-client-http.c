@@ -58,6 +58,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       break;
     }
 
+    case LWS_CALLBACK_WSI_DESTROY:
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP: {
       if(opaque->status < CLOSED) {
         opaque->status = CLOSED;

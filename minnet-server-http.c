@@ -379,7 +379,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)url_len, url);
 
   switch(reason) {
-    case LWS_CALLBACK_HTTP_BIND_PROTOCOL:
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
     case LWS_CALLBACK_PROTOCOL_INIT: {
