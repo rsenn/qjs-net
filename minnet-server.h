@@ -12,6 +12,7 @@ struct http_mount;
 typedef struct server_context {
   MinnetContext context;
   MinnetCallbacks cb;
+  MinnetSession session;
 } MinnetServer;
 
 struct proxy_connection;

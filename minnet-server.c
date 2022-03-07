@@ -20,20 +20,20 @@ int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_
 // int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
-    {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"defprot", lws_callback_http_dummy, sizeof(MinnetSession), 0},
-    {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"ws", ws_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
+    {"defprot", lws_callback_http_dummy, /*(sizeof(MinnetSession))*/ 0, 0},
+    {"http", http_server_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
-    {"proxy-raw", raw_client_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"proxy-raw", raw_client_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
     {0},
 };
 
 static struct lws_protocols protocols2[] = {
-    {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"defprot", defprot_callback, sizeof(MinnetSession), 0},
-    {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"proxy-raw", raw_client_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"ws", ws_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
+    {"defprot", defprot_callback, /*(sizeof(MinnetSession))*/ 0, 0},
+    {"http", http_server_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
+    {"proxy-ws", proxy_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
+    {"proxy-raw", raw_client_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
     {0, 0},
 };
 
@@ -82,7 +82,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
 
       server->context.info.port = url.port;
       server->context.info.vhost_name = js_strdup(ctx, url.host);
-      server->context.info.listen_accept_protocol = js_strdup(ctx, url.protocol);
+      // server->context.info.listen_accept_protocol = js_strdup(ctx, url.protocol);
       JS_FreeCString(ctx, str);
     }
     argind++;

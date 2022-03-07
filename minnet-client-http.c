@@ -9,8 +9,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   if(reason == LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS)
     return 0;
   //
-  MinnetSession* sess = user;
-  MinnetClient* client = sess && sess->client ? sess->client : lws_client(wsi);
+  MinnetClient* client = /*sess && sess->client ? sess->client :*/ lws_client(wsi);
+  MinnetSession* sess = &client->session;
   JSContext* ctx = client->context.js;
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
 
@@ -23,6 +23,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
   switch(reason) {
+    case LWS_CALLBACK_WSI_CREATE:
+    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_CONNECTING:
     case LWS_CALLBACK_PROTOCOL_INIT: {
       break;

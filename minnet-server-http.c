@@ -353,18 +353,21 @@ int
 http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetHttpMethod method = -1;
-  MinnetSession* session = user;
-  MinnetServer* server = session ? session->server : lws_context_user(lws_get_context(wsi));
+  MinnetServer* server = /* session ? session->server : */ lws_context_user(lws_get_context(wsi));
+  MinnetSession* session = &server->session;
   JSContext* ctx = server ? server->context.js : 0;
-  JSValue ws_obj = /*ctx ? minnet_ws_object(ctx, wsi) :*/ JS_UNDEFINED;
-  struct wsi_opaque_user_data* opaque = ctx ? lws_opaque(wsi, ctx) : lws_get_opaque_user_data(wsi);
+  //  JSValue ws_obj = /*ctx ? minnet_ws_object(ctx, wsi) :*/ JS_UNDEFINED;
+  struct wsi_opaque_user_data* opaque = /*ctx ? lws_opaque(wsi, ctx) : */ lws_get_opaque_user_data(wsi);
   char* url = 0;
   MinnetWebsocket* ws = ws_from_wsi(wsi);
   size_t url_len;
 
-  if(JS_IsUndefined(ws_obj))
-    if(ws && ctx)
-      ws_obj = minnet_ws_wrap(ctx, ws);
+  if(!ctx && session->server)
+    ctx = session->server->context.js;
+
+  /* if(JS_IsUndefined(ws_obj))
+     if(ws && ctx)
+       ws_obj = minnet_ws_wrap(ctx, ws);*/
 
   if(session) {
     if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION || reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
@@ -385,13 +388,16 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
-    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
+    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: {
+      break;
+    }
     case LWS_CALLBACK_PROTOCOL_INIT: {
+
       break;
     }
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
-      JSValueConst args[2] = {ws_obj, JS_NULL};
+      JSValueConst args[2] = {session->ws_obj, JS_NULL};
 
       if(!opaque->req)
         opaque->req = request_new(server->context.js, in, url, method);
@@ -427,7 +433,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetResponse* resp = request_handler(session, cb);
 
       if(cb && cb->ctx) {
-        JSValue ret = minnet_emit_this(cb, ws_obj, 2, session->args);
+        JSValue ret = minnet_emit_this(cb, session->ws_obj, 2, session->args);
 
         assert(js_is_iterator(ctx, ret));
         session->generator = ret;
@@ -515,13 +521,15 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if((ret = serve_file(wsi, path, mount, resp, ctx))) {
 
           lwsl_user("http " FG("%d") "%-38s" NC " serve_file FAIL %d", 22 + (reason * 2), lws_callback_name(reason) + 13, ret);
-          JS_FreeValue(ctx, ws_obj);
+          JS_FreeValue(ctx, session->ws_obj);
+          session->ws_obj = JS_NULL;
           return 1;
         }
         if((ret = http_server_respond(wsi, &b, resp, ctx))) {
 
           lwsl_user("http " FG("%d") "%-38s" NC " http_server_respond FAIL %d", 22 + (reason * 2), lws_callback_name(reason) + 13, ret);
-          JS_FreeValue(ctx, ws_obj);
+          JS_FreeValue(ctx, session->ws_obj);
+          session->ws_obj = JS_NULL;
           return 1;
         }
 
@@ -533,7 +541,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           resp = request_handler(session, cb);
 
           if(cb && cb->ctx) {
-            JSValue gen = minnet_emit_this(cb, ws_obj, 2, args);
+            JSValue gen = minnet_emit_this(cb, session->ws_obj, 2, args);
             assert(js_is_iterator(ctx, gen));
             lwsl_user("http " FG("%d") "%-38s" NC " gen=%s", 22 + (reason * 2), lws_callback_name(reason) + 13, JS_ToCString(ctx, gen));
 
@@ -546,7 +554,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               return -1;
           }
           if(http_server_respond(wsi, &b, resp, ctx)) {
-            JS_FreeValue(ctx, ws_obj);
+            JS_FreeValue(ctx, session->ws_obj);
+            session->ws_obj = JS_NULL;
             return 1;
           }
         }
@@ -557,7 +566,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(req->method == METHOD_GET || is_h2(wsi))
         (wsi);
 
-      JS_FreeValue(ctx, ws_obj);
+      JS_FreeValue(ctx, session->ws_obj);
 
       return ret;
     }
@@ -597,7 +606,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
           if(opaque->status == OPEN) {
             if(http_server_respond(wsi, &b, resp, ctx)) {
-              JS_FreeValue(ctx, ws_obj);
+              JS_FreeValue(ctx, session->ws_obj);
+              session->ws_obj = JS_NULL;
+
               return 1;
             }
             opaque->status = CLOSING;

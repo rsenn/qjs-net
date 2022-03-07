@@ -14,6 +14,7 @@ typedef struct client_context {
   MinnetCallbacks cb;
   JSValue headers, body, next;
   MinnetURL url;
+  MinnetSession session;
   struct http_request* request;
   struct http_response* response;
   struct lws_client_connect_info connect_info;

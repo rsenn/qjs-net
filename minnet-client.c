@@ -18,9 +18,9 @@ static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, vo
 // THREAD_LOCAL MinnetClient* minnet_client = 0;
 
 static const struct lws_protocols client_protocols[] = {
-    {"http", http_client_callback, sizeof(MinnetSession), 0, 0, 0, 0},
-    {"ws", client_callback, sizeof(MinnetSession), 0, 0, 0, 0},
-    {"raw", client_callback, sizeof(MinnetSession), 0, 0, 0, 0},
+    {"http", http_client_callback, /*(sizeof(MinnetSession))*/ 0, 0, 0, 0, 0},
+    {"ws", client_callback, /*(sizeof(MinnetSession))*/ 0, 0, 0, 0, 0},
+    {"raw", client_callback, /*(sizeof(MinnetSession))*/ 0, 0, 0, 0, 0},
     {0},
 };
 
