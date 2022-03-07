@@ -356,10 +356,15 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   MinnetSession* session = user;
   MinnetServer* server = session ? session->server : lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server ? server->context.js : 0;
-  JSValue ws_obj = minnet_ws_object(ctx, wsi);
+  JSValue ws_obj = ctx ? minnet_ws_object(ctx, wsi) : JS_UNDEFINED;
   struct wsi_opaque_user_data* opaque = ctx ? lws_opaque(wsi, ctx) : lws_get_opaque_user_data(wsi);
   char* url = 0;
+  MinnetWebsocket* ws = ws_from_wsi(wsi);
   size_t url_len;
+
+  if(JS_IsUndefined(ws_obj))
+    if(ws && ctx)
+      ws_obj = minnet_ws_wrap(ctx, ws);
 
   if(session) {
     if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION || reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
