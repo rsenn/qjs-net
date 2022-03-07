@@ -441,13 +441,13 @@ minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValue
   if(JS_IsException(obj))
     goto fail;
 
-  if(argc > 0) {
-    if(JS_IsNumber(argv[0])) {
-      uint32_t fd;
-      JS_ToUint32(ctx, &fd, argv[0]);
-      ws->lwsi = lws_adopt_socket(minnet_server.context.lws, fd);
-    }
-  }
+  /* if(argc > 0) {
+     if(JS_IsNumber(argv[0])) {
+       uint32_t fd;
+       JS_ToUint32(ctx, &fd, argv[0]);
+       ws->lwsi = lws_adopt_socket(server->context.lws, fd);
+     }
+   }*/
 
   JS_SetOpaque(obj, ws);
 
