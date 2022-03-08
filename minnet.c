@@ -129,7 +129,10 @@ lws_log_callback(int level, const char* line) {
       if(len > 0 && line[len - 1] == '\n')
         len--;
 
-      JSValueConst argv[2] = {JS_NewInt32(minnet_log_ctx, level), JS_NewStringLen(minnet_log_ctx, line + n, len - n)};
+      JSValueConst argv[2] = {
+          JS_NewInt32(minnet_log_ctx, level),
+          JS_NewStringLen(minnet_log_ctx, line + n, len - n),
+      };
       JSValue ret = JS_Call(minnet_log_ctx, minnet_log_cb, minnet_log_this, 2, argv);
 
       if(JS_IsException(ret)) {

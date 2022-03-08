@@ -6,8 +6,7 @@ import REPL from 'repl';
 import inspect from 'inspect';
 import { types, define, filter, split, getOpt, toUnixTime } from 'util';
 import * as fs from 'fs';
-import {setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server
- } from 'net';
+import { setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server } from 'net';
 import { Socket } from 'sockets';
 import { EventEmitter } from 'events';
 import { Repeater } from 'repeater';
@@ -109,9 +108,13 @@ function main(...args) {
 
   console.log = repl.printFunction(log);
   let uri = new URL(url);
-console.log('main', { url, uri });
+  console.log('main', { url, uri });
 
-  let cli = (globalThis.sock = new rpc.Socket(uri, rpc[`RPC${server ? 'Server' : 'Client'}Connection`], +params.verbose));
+  let cli = (globalThis.sock = new rpc.Socket(
+    uri,
+    rpc[`RPC${server ? 'Server' : 'Client'}Connection`],
+    +params.verbose
+  ));
 
   cli.register({ Socket, Worker: os.Worker, Repeater, REPL, EventEmitter });
 
@@ -182,7 +185,13 @@ console.log('main', { url, uri });
 
           resp.type = 'application/json';
 
-          let { dir = 'tmp', filter = '.(brd|sch|G[A-Z][A-Z])$', verbose = false, objects = false, key = 'mtime' } = data;
+          let {
+            dir = 'tmp',
+            filter = '.(brd|sch|G[A-Z][A-Z])$',
+            verbose = false,
+            objects = false,
+            key = 'mtime'
+          } = data;
           let absdir = path.realpath(dir);
           let components = absdir.split(path.sep);
 
@@ -308,7 +317,7 @@ console.log('main', { url, uri });
 }
 
 try {
-      main(...scriptArgs.slice(1));
+  main(...scriptArgs.slice(1));
 } catch(error) {
   console.log(`FAIL: ${error?.message ?? error}\n${error?.stack}`);
   std.exit(1);
