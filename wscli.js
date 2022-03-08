@@ -206,7 +206,7 @@ function main(...args) {
         }
       },
       onHttp(req, resp) {
-        console.log('onHttp', { req, resp });
+        console.log('onHttp',console.config({compact: false }), { req, resp });
         let text = resp.text();
         text = text.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
         console.log('onHttp', { text });

@@ -18,9 +18,9 @@ static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, vo
 // THREAD_LOCAL MinnetClient* minnet_client = 0;
 
 static const struct lws_protocols client_protocols[] = {
-    {"http", http_client_callback, /*(sizeof(MinnetSession))*/ 0, 0, 0, 0, 0},
-    {"ws", client_callback, /*(sizeof(MinnetSession))*/ 0, 0, 0, 0, 0},
-    {"raw", client_callback, /*(sizeof(MinnetSession))*/ 0, 0, 0, 0, 0},
+    {"http", http_client_callback, 0, 0, 0, 0, 0},
+    {"ws", client_callback, 0, 0, 0, 0, 0},
+    {"raw", client_callback, 0, 0, 0, 0, 0},
     {0},
 };
 
@@ -225,16 +225,16 @@ scan_backwards(uint8_t* ptr, uint8_t ch) {
 static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetHttpMethod method = -1;
-  MinnetSession* sess = user;
-  MinnetClient* client;
+  MinnetClient* client = lws_client(wsi);
+  MinnetSession* sess = &client->session;
   JSContext* ctx;
   struct wsi_opaque_user_data* opaque;
   int n;
 
-  if(sess)
-    client = sess->client ? sess->client : (sess->client = lws_client(wsi));
-  else
-    client = lws_client(wsi);
+  /*  if(sess)
+      client = sess->client ? sess->client : (sess->client = lws_client(wsi));
+    else
+      client */
 
   ctx = client->context.js;
   opaque = lws_opaque(wsi, ctx);

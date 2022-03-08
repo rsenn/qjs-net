@@ -353,13 +353,12 @@ int
 http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetHttpMethod method = -1;
-  MinnetServer* server = /* session ? session->server : */ lws_context_user(lws_get_context(wsi));
+  MinnetServer* server = lws_context_user(lws_get_context(wsi));
   MinnetSession* session = user;
   JSContext* ctx = server ? server->context.js : 0;
-  //  JSValue ws_obj = /*ctx ? minnet_ws_object(ctx, wsi) :*/ JS_UNDEFINED;
-  struct wsi_opaque_user_data* opaque = /*ctx ? lws_opaque(wsi, ctx) : */ lws_get_opaque_user_data(wsi);
+  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
   char* url = 0;
-  MinnetWebsocket* ws = ws_from_wsi(wsi);
+  MinnetWebsocket* ws = opaque->ws;
   size_t url_len;
 
   /* if(!ctx && session->server)

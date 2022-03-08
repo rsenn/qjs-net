@@ -20,20 +20,20 @@ int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_
 // int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
-    {"ws", ws_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
-    {"defprot", lws_callback_http_dummy, /*(sizeof(MinnetSession))*/ 0, 0},
-    {"http", http_server_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
+    {"ws", ws_callback, 0, 1024, sizeof(MinnetSession), NULL, 0},
+    {"defprot", lws_callback_http_dummy, 0, 0},
+    {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
-    {"proxy-raw", raw_client_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
+    {"proxy-raw", raw_client_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {0},
 };
 
 static struct lws_protocols protocols2[] = {
-    {"ws", ws_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
-    {"defprot", defprot_callback, /*(sizeof(MinnetSession))*/ 0, 0},
-    {"http", http_server_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
-    {"proxy-ws", proxy_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
-    {"proxy-raw", raw_client_callback, /*(sizeof(MinnetSession))*/ 0, 1024, 0, NULL, 0},
+    {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"defprot", defprot_callback, sizeof(MinnetSession), 0},
+    {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"proxy-raw", raw_client_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {0, 0},
 };
 
@@ -139,7 +139,10 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
       ;
   info->user = server;
 
-  //  info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
+  info->options |= LWS_SERVER_OPTION_PEER_CERT_NOT_REQUIRED;
+  info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
+  info->options |= LWS_SERVER_OPTION_VH_H2_HALF_CLOSED_LONG_POLL;
+
   if(is_tls) {
     info->options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
     info->options |= /*LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | */ LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
@@ -285,8 +288,8 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* arg
 
 int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetSession* sess = user;
-  MinnetServer* server = sess ? sess->server : lws_context_user(lws_get_context(wsi));
+  MinnetSession* session = user;
+  MinnetServer* server = session ? session->server : lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
 
   // if(!lws_is_poll_callback(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
