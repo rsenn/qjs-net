@@ -37,9 +37,9 @@ struct http_request;
     .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} } \
   }
 
-#define JS_INDEX_STRING_DEF(index, cstr, flags) \
+#define JS_INDEX_STRING_DEF(index, cstr) \
   { \
-    .name = #index, .prop_flags = flags, .def_type = JS_DEF_PROP_STRING, .magic = 0, .u = {.str = cstr } \
+    .name = #index, .prop_flags = JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, .def_type = JS_DEF_PROP_STRING, .magic = 0, .u = {.str = cstr } \
   }
 
 #define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
