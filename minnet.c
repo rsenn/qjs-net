@@ -496,6 +496,22 @@ minnet_emit(const struct ws_callback* cb, int argc, JSValue* argv) {
   return minnet_emit_this(cb, cb->this_obj /* ? *cb->this_obj : JS_NULL*/, argc, argv);
 }
 
+static const JSCFunctionListEntry minnet_loglevels[] = {
+    JS_INDEX_STRING_DEF(LLL_ERR, "LLL_ERR"),
+    JS_INDEX_STRING_DEF(LLL_WARN, "LLL_WARN"),
+    JS_INDEX_STRING_DEF(LLL_NOTICE, "LLL_NOTICE"),
+    JS_INDEX_STRING_DEF(LLL_INFO, "LLL_INFO"),
+    JS_INDEX_STRING_DEF(LLL_DEBUG, "LLL_DEBUG"),
+    JS_INDEX_STRING_DEF(LLL_PARSER, "LLL_PARSER"),
+    JS_INDEX_STRING_DEF(LLL_HEADER, "LLL_HEADER"),
+    JS_INDEX_STRING_DEF(LLL_EXT, "LLL_EXT"),
+    JS_INDEX_STRING_DEF(LLL_CLIENT, "LLL_CLIENT"),
+    JS_INDEX_STRING_DEF(LLL_LATENCY, "LLL_LATENCY"),
+    JS_INDEX_STRING_DEF(LLL_USER, "LLL_USER"),
+    JS_INDEX_STRING_DEF(LLL_THREAD, "LLL_THREAD"),
+    JS_INDEX_STRING_DEF(LLL_ALL, "LLL_ALL"),
+};
+
 static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("server", 1, minnet_server),
     JS_CFUNC_DEF("client", 1, minnet_client),
@@ -528,6 +544,7 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_PROP_INT32_DEF("LLL_USER", LLL_USER, 0),
     JS_PROP_INT32_DEF("LLL_THREAD", LLL_THREAD, 0),
     JS_PROP_INT32_DEF("LLL_ALL", ~((~0u) << LLL_COUNT), 0),
+    JS_OBJECT_DEF("logLevels", minnet_loglevels, countof(minnet_loglevels), JS_PROP_CONFIGURABLE),
 };
 
 void
