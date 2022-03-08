@@ -368,21 +368,22 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   /* if(JS_IsUndefined(ws_obj))
      if(ws && ctx)
        ws_obj = minnet_ws_wrap(ctx, ws);*/
-
-  if(session) {
-    if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION || reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
-      session->serial = opaque->serial;
-      session->h2 = is_h2(wsi);
+  if(opaque) {
+    if(session) {
+      if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION || reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
+        session->serial = opaque->serial;
+        session->h2 = is_h2(wsi);
+      }
     }
-  }
 
-  if(opaque->req) {
-    url = opaque->req->url;
-    method = opaque->req->method;
-  } else {
-    // url = lws_uri_and_method(wsi, ctx, &method);
+    if(opaque->req) {
+      url = opaque->req->url;
+      method = opaque->req->method;
+    } else {
+      // url = lws_uri_and_method(wsi, ctx, &method);
+    }
+    url_len = url ? strlen(url) : 0;
   }
-  url_len = url ? strlen(url) : 0;
 
   lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)url_len, url);
 
