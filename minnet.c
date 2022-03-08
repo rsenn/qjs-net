@@ -99,12 +99,6 @@ context_clear(MinnetContext* context) {
 
   JS_FreeValue(ctx, context->error);
 }
-/*  void
-context_free(MinnetContext* context) {
-  JSContext* ctx = context->js;
-context_clear(context);
-js_free(ctx, context);
-}*/
 
 void
 context_certificate(MinnetContext* context, JSValueConst options) {

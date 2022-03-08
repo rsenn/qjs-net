@@ -91,7 +91,8 @@ ws_session(MinnetWebsocket* ws) {
 
 static inline MinnetWebsocket*
 ws_from_wsi(struct lws* wsi) {
-  return ((struct wsi_opaque_user_data*)lws_get_opaque_user_data(wsi))->ws;
+  struct wsi_opaque_user_data* opaque;
+  return (opaque = lws_get_opaque_user_data(wsi)) ? opaque->ws : 0;
 }
 
 /*
