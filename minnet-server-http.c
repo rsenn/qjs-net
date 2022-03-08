@@ -385,7 +385,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     url_len = url ? strlen(url) : 0;
   }
 
-  lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)url_len, url);
+  lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, (int)url_len, url);
 
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
@@ -413,6 +413,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+
+      if(!opaque)
+        opaque = lws_opaque(server->context->js, wsi);
 
       if(!opaque->req)
         opaque->req = request_new(ctx, 0, url, method);
