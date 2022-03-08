@@ -50,8 +50,12 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       // buf.start = scan_backwards(buf.start, '\0');
 
+      client->request->headers.start = buf.start;
+
       if(headers_from(&buf, wsi, client->headers, ctx))
         return -1;
+
+      client->request->headers.end = buf.end;
 
       *(uint8_t**)in = buf.write;
       len = buf.end - buf.write;
@@ -177,9 +181,18 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       headers_get(ctx, &resp->headers, wsi);
 
       if((client->cb.http.ctx = ctx)) {
+        int32_t result = -1;
+        JSValue ret;
+        ret = minnet_emit(&client->cb.http, 2, &sess->req_obj);
+
         /*MinnetWebsocket* ws = minnet_ws_data2(ctx, sess->ws_obj);
         JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);*/
-        client_exception(client, minnet_emit(&client->cb.http, 2, &sess->req_obj));
+        if(!client_exception(client, ret)) {
+          if(JS_IsNumber(ret))
+            JS_ToInt32(ctx, &result, ret);
+        }
+
+        return result;
       }
       break;
     }

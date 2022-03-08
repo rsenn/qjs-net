@@ -144,7 +144,7 @@ int socket_geterror(int fd);
 BOOL context_exception(MinnetContext* context, JSValue retval);
 void context_clear(MinnetContext*);
 void context_certificate(MinnetContext*, JSValueConst);
-JSValue headers_object(JSContext*, const MinnetBuffer* buffer);
+JSValue headers_object(JSContext*, const char*, const char*);
 char* headers_atom(JSAtom, JSContext* ctx);
 int headers_from(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);
 ssize_t headers_set(JSContext*, MinnetBuffer*, const char* name, const char* value);

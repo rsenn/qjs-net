@@ -191,12 +191,12 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 }
 
 JSValue
-headers_object(JSContext* ctx, const MinnetBuffer* buffer) {
+headers_object(JSContext* ctx, const char* start, const char* e) {
   JSValue ret = JS_NewObject(ctx);
   size_t len, namelen, n;
   uint8_t *x, *end;
-  for(x = buffer->start, end = buffer->write; x < end; x += len + 1) {
-    len = byte_chr(x, end - x, '\n');
+  for(x = start, end = e; x < end; x += len + 1) {
+    len = byte_chrs(x, end - x, "\r\n", 2);
     if(len > (n = byte_chr(x, len, ':'))) {
       const char* prop = (namelen = n) ? js_strndup(ctx, (const char*)x, namelen) : 0;
       if(x[n] == ':')

@@ -146,6 +146,8 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   client->headers = JS_GetPropertyStr(ctx, options, "headers");
   client->body = JS_GetPropertyStr(ctx, options, "body");
 
+  // headers_from(&client->request->headers, wsi, client->headers, ctx);
+
   url_info(&client->url, conn);
   conn->pwsi = &wsi;
   conn->context = lws;
