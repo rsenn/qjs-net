@@ -272,7 +272,15 @@ js_tostring(JSContext* ctx, JSValueConst value) {
 }
 
 JSValue
-promise_create(JSContext* ctx, ResolveFunctions* funcs) {
+js_invoke(JSContext* ctx, JSValueConst this_obj, const char* method, int argc, JSValueConst argv[]) {
+  JSAtom atom = JS_NewAtom(ctx, method);
+  JSValue ret = JS_Invoke(ctx, this_obj, atom, argc, argv);
+  JS_FreeAtom(ctx, atom);
+  return ret;
+}
+
+JSValue
+js_promise_create(JSContext* ctx, ResolveFunctions* funcs) {
   JSValue ret;
 
   ret = JS_NewPromiseCapability(ctx, funcs->array);
@@ -280,26 +288,26 @@ promise_create(JSContext* ctx, ResolveFunctions* funcs) {
 }
 
 JSValue
-promise_resolve(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
+js_promise_resolve(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
   return js_resolve_functions_call(ctx, funcs, 0, value);
 }
 
 JSValue
-promise_reject(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
+js_promise_reject(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
   return js_resolve_functions_call(ctx, funcs, 1, value);
 }
 
 void
-promise_zero(ResolveFunctions* funcs) {
+js_promise_zero(ResolveFunctions* funcs) {
   js_resolve_functions_zero(funcs);
 }
 
 BOOL
-promise_pending(ResolveFunctions const* funcs) {
+js_promise_pending(ResolveFunctions const* funcs) {
   return !js_resolve_functions_is_null(funcs);
 }
 
 BOOL
-promise_done(ResolveFunctions const* funcs) {
+js_promise_done(ResolveFunctions const* funcs) {
   return js_resolve_functions_is_null(funcs);
 }

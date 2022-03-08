@@ -35,6 +35,10 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_WSI_CREATE: {
+      if(!opaque)
+        if(ctx)
+          opaque = lws_opaque(wsi, ctx);
+
       return 0;
     }
 

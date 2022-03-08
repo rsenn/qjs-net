@@ -354,7 +354,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetHttpMethod method = -1;
   MinnetServer* server = /* session ? session->server : */ lws_context_user(lws_get_context(wsi));
-  MinnetSession* session = &server->session;
+  MinnetSession* session = user;
   JSContext* ctx = server ? server->context.js : 0;
   //  JSValue ws_obj = /*ctx ? minnet_ws_object(ctx, wsi) :*/ JS_UNDEFINED;
   struct wsi_opaque_user_data* opaque = /*ctx ? lws_opaque(wsi, ctx) : */ lws_get_opaque_user_data(wsi);
@@ -362,20 +362,17 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   MinnetWebsocket* ws = ws_from_wsi(wsi);
   size_t url_len;
 
-  if(!ctx && session->server)
-    ctx = session->server->context.js;
+  /* if(!ctx && session->server)
+     ctx = session->server->context.js;*/
 
-  /* if(JS_IsUndefined(ws_obj))
-     if(ws && ctx)
-       ws_obj = minnet_ws_wrap(ctx, ws);*/
   if(opaque) {
-    if(session) {
-      if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION || reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
-        session->serial = opaque->serial;
-        session->h2 = is_h2(wsi);
-      }
-    }
-
+    /*    if(session) {
+          if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION || reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
+            session->serial = opaque->serial;
+            session->h2 = is_h2(wsi);
+          }
+        }
+    */
     if(opaque->req) {
       url = opaque->req->url;
       method = opaque->req->method;

@@ -185,7 +185,7 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     block = JS_ToBool(ctx, opt_block);
 
   if(!block) {
-    ret = promise_create(ctx, &client->promise);
+    ret = js_promise_create(ctx, &client->promise);
     return ret;
   }
 
@@ -271,7 +271,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
       BOOL is_error = JS_IsUndefined(client->context.error);
 
-      (is_error ? promise_reject : promise_resolve)(ctx, &client->promise, client->context.error);
+      (is_error ? js_promise_reject : js_promise_resolve)(ctx, &client->promise, client->context.error);
       JS_FreeValue(ctx, client->context.error);
       client->context.error = JS_UNDEFINED;
       break;

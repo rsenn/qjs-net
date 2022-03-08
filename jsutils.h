@@ -50,12 +50,13 @@ JSValue js_symbol_ctor(JSContext*);
 JSValue js_global_get(JSContext*, const char* prop);
 char* js_tostringlen(JSContext* ctx, size_t* lenp, JSValueConst value);
 char* js_tostring(JSContext* ctx, JSValueConst value);
-JSValue promise_create(JSContext*, ResolveFunctions*);
-JSValue promise_resolve(JSContext*, ResolveFunctions*, JSValueConst);
-JSValue promise_reject(JSContext*, ResolveFunctions*, JSValueConst);
-void promise_zero(ResolveFunctions*);
-BOOL promise_pending(ResolveFunctions const*);
-BOOL promise_done(ResolveFunctions const*);
+JSValue js_invoke(JSContext*, JSValueConst, const char*, int argc, JSValueConst argv[]);
+JSValue js_promise_create(JSContext*, ResolveFunctions*);
+JSValue js_promise_resolve(JSContext*, ResolveFunctions*, JSValueConst);
+JSValue js_promise_reject(JSContext*, ResolveFunctions*, JSValueConst);
+void js_promise_zero(ResolveFunctions*);
+BOOL js_promise_pending(ResolveFunctions const*);
+BOOL js_promise_done(ResolveFunctions const*);
 
 static inline void
 js_dump_string(const char* str, size_t len, size_t maxlen) {
