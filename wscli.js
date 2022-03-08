@@ -206,7 +206,7 @@ function main(...args) {
         }
       },
       onHttp(req, resp) {
-        console.log('onHttp',console.config({compact: false }), { req, resp });
+        console.log('onHttp', console.config({ compact: false }), { req, resp });
         let text = resp.text();
         text = text.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
         console.log('onHttp', { text });
@@ -215,8 +215,6 @@ function main(...args) {
         console.log('onHttp', { json }); */
         let buffer = resp.arrayBuffer();
         console.log('onHttp', { buffer });
-
-
       },
       onFd(fd, rd, wr) {
         //console.log('onFd', fd, rd, wr);
@@ -240,7 +238,11 @@ function main(...args) {
       return [...connections];
     }
   });
-  createWS(url, {});
+
+  createWS(url, {}).then(() => {
+    console.log('FINISHED');
+  });
+
   function quit(why) {
     console.log(`quit('${why}')`);
     repl.cleanup(why);
