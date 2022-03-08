@@ -415,7 +415,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
 
       if(!opaque)
-        opaque = lws_opaque(server->context->js, wsi);
+        opaque = lws_opaque(server->context.js, wsi);
 
       if(!opaque->req)
         opaque->req = request_new(ctx, 0, url, method);
@@ -646,7 +646,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
     case LWS_CALLBACK_CLOSED_HTTP: {
-      lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64, 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial);
+      lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64, 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1);
       if(session) {
         JS_FreeValue(server->context.js, session->req_obj);
         session->req_obj = JS_UNDEFINED;
@@ -665,7 +665,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " fd=%i is_h2=%i is_ssl=%i url=%s method=%s in='%.*s' ret=%d\n",
               22 + (reason * 2),
               lws_callback_name(reason) + 13,
-              opaque->serial,
+              opaque ? opaque->serial : -1,
               lws_get_socket_fd(wsi),
               (session && session->h2) || is_h2(wsi),
               lws_is_ssl(wsi),
