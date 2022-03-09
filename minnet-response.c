@@ -310,7 +310,7 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
     } else if(JS_IsString(argv[i])) {
       const char* str = JS_ToCString(ctx, argv[i]);
       if(!resp->url.path)
-      url_parse(&resp->url,str,ctx);
+        url_parse(&resp->url, str, ctx);
       else if(!resp->type)
         resp->type = js_strdup(ctx, str);
       JS_FreeCString(ctx, str);

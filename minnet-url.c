@@ -135,7 +135,7 @@ url_format(const MinnetURL* url, JSContext* ctx) {
 size_t
 url_length(const MinnetURL* url) {
   size_t portlen = url->port >= 10000 ? 6 : url->port >= 1000 ? 5 : url->port >= 100 ? 4 : url->port >= 10 ? 3 : url->port >= 1 ? 2 : 0;
-return (url->protocol ? strlen(url->protocol) + 3 : 0) + (url->host ? strlen(url->host) + portlen : 0) + (url->path ? strlen(url->path) : 0) + 1;
+  return (url->protocol ? strlen(url->protocol) + 3 : 0) + (url->host ? strlen(url->host) + portlen : 0) + (url->path ? strlen(url->path) : 0) + 1;
 }
 
 void
@@ -338,7 +338,7 @@ minnet_url_new(JSContext* ctx, MinnetURL u) {
     return JS_EXCEPTION;
   }
 
-  *url = u;
+  *url = url_dup(u, ctx);
 
   JS_SetOpaque(url_obj, url);
 

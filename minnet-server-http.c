@@ -357,9 +357,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   MinnetSession* session = user;
   JSContext* ctx = server ? server->context.js : 0;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-  MinnetURL url={0,0,0,0};
+  MinnetURL url = {0, 0, 0, 0};
   MinnetWebsocket* ws = opaque->ws;
-  size_t url_len=0;
+  size_t url_len = 0;
 
   /* if(!ctx && session->server)
      ctx = session->server->context.js;*/

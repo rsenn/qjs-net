@@ -44,7 +44,6 @@ JSValue minnet_url_from(JSContext*, JSValue, int, JSValue argv[]);
 JSValue minnet_url_constructor(JSContext*, JSValue, int, JSValue argv[]);
 int minnet_url_init(JSContext*, JSModuleDef*);
 
- 
 static inline const char*
 url_path(const MinnetURL* url) {
   return url->path;
