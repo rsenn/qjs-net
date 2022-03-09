@@ -5,6 +5,7 @@
 #include <cutils.h>
 #include "minnet.h"
 #include "minnet-buffer.h"
+#include "minnet-url.h"
 
 struct socket;
 struct http_response;
@@ -20,18 +21,18 @@ typedef struct http_request {
   int ref_count;
   BOOL read_only;
   enum http_method method;
-  char* url;
+  MinnetURL url;
   MinnetBuffer headers, body;
   char path[256];
 } MinnetRequest;
 
 char* request_dump(struct http_request const*, JSContext* ctx);
-void request_init(struct http_request*, const char* path, char* url, MinnetHttpMethod);
-struct http_request* request_new(JSContext*, const char* path, char* url, MinnetHttpMethod);
+void request_init(struct http_request*, const char* path, MinnetURL url, MinnetHttpMethod);
+struct http_request* request_new(JSContext*, const char* path, MinnetURL url, MinnetHttpMethod);
 struct http_request* request_from(JSContext*, JSValue options);
 void request_zero(struct http_request*);
 JSValue minnet_request_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
-JSValue minnet_request_new(JSContext*, const char* path, const char* url, enum http_method);
+JSValue minnet_request_new(JSContext*, const char* path, MinnetURL url, enum http_method);
 JSValue minnet_request_wrap(JSContext*, struct http_request* req);
 
 extern THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;

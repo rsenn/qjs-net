@@ -49,7 +49,7 @@ response_zero(struct http_response* res) {
 }
 
 void
-response_init(struct http_response* res, char* url, int32_t status, BOOL ok, char* type) {
+response_init(struct http_response* res, MinnetURL url, int32_t status, BOOL ok, char* type) {
   memset(res, 0, sizeof(MinnetResponse));
 
   res->status = status;
@@ -67,8 +67,7 @@ response_write(struct http_response* res, const void* x, size_t n, JSContext* ct
 
 void
 response_free(JSRuntime* rt, struct http_response* res) {
-  js_free_rt(rt, (void*)res->url);
-  res->url = 0;
+  url_free_rt((void*)res->url, rt);
   js_free_rt(rt, (void*)res->type);
   res->type = 0;
 
@@ -89,11 +88,11 @@ response_new(JSContext* ctx) {
 }
 
 JSValue
-minnet_response_new(JSContext* ctx, const char* url, int32_t status, BOOL ok, const char* type) {
+minnet_response_new(JSContext* ctx, MinnetURL url, int32_t status, BOOL ok, const char* type) {
   MinnetResponse* res;
 
   if((res = response_new(ctx))) {
-    response_init(res, url ? js_strdup(ctx, url) : 0, status, ok, type ? js_strdup(ctx, type) : 0);
+    response_init(res, url, status, ok, type ? js_strdup(ctx, type) : 0);
 
     return minnet_response_wrap(ctx, res);
   }
@@ -137,7 +136,7 @@ minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   clone->read_only = res->read_only;
   clone->status = res->status;
   clone->read_only = res->read_only;
-  clone->url = js_strdup(ctx, res->url);
+  clone->url = url_dup(res->url, ctx);
   clone->type = js_strdup(ctx, res->type);
 
   buffer_clone(&clone->headers, &res->headers, ctx);
@@ -150,7 +149,7 @@ static JSValue
 minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
-    return JS_ParseJSON(ctx, block_BEGIN(&res->body), buffer_HEAD(&res->body), res->url);
+    return JS_ParseJSON(ctx, block_BEGIN(&res->body), buffer_HEAD(&res->body), res->url.path);
 
   return JS_EXCEPTION;
 }

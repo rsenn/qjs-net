@@ -57,7 +57,7 @@ request_dump(struct http_request const* req, JSContext* ctx) {
 }
 
 void
-request_init(struct http_request* req, const char* path, char* url, enum http_method method) {
+request_init(struct http_request* req, const char* path, MinnetURL url, enum http_method method) {
   memset(req, 0, sizeof(*req));
 
   req->ref_count = 0;
@@ -70,7 +70,7 @@ request_init(struct http_request* req, const char* path, char* url, enum http_me
 }
 
 struct http_request*
-request_new(JSContext* ctx, const char* path, char* url, MinnetHttpMethod method) {
+request_new(JSContext* ctx, const char* path, MinnetURL url, MinnetHttpMethod method) {
   MinnetRequest* req;
 
   if((req = js_mallocz(ctx, sizeof(MinnetRequest))))
@@ -101,7 +101,7 @@ request_from(JSContext* ctx, JSValueConst options) {
 
   JS_FreeValue(ctx, value);
 
-  request_init(req, path, js_strdup(ctx, url), method_number(method));
+  request_init(req, path, url_new(url, ctx), method_number(method));
 
   JS_FreeCString(ctx, url);
   JS_FreeCString(ctx, path);
@@ -168,7 +168,7 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   if(argc >= 1) {
     if(JS_IsString(argv[0])) {
       const char* str = JS_ToCString(ctx, argv[0]);
-      req->url = js_strdup(ctx, str);
+      req->url = url_new(str, ctx);
       JS_FreeCString(ctx, str);
     }
     argc--;
@@ -188,13 +188,11 @@ fail:
 }
 
 JSValue
-minnet_request_new(JSContext* ctx, const char* path, const char* url, enum http_method method) {
+minnet_request_new(JSContext* ctx, const char* path, MinnetURL url, enum http_method method) {
   struct http_request* req;
 
-  if(!(req = request_new(ctx, 0, 0, 0)))
+  if(!(req = request_new(ctx, path, url, method)))
     return JS_ThrowOutOfMemory(ctx);
-
-  request_init(req, path, js_strdup(ctx, url), method);
 
   return minnet_request_wrap(ctx, req);
 }

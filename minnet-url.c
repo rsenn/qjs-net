@@ -319,7 +319,7 @@ THREAD_LOCAL JSClassID minnet_url_class_id;
 
 enum { URL_PROTOCOL, URL_HOST, URL_PORT, URL_PATH, URL_TLS };
 
-static JSValue
+JSValue
 minnet_url_new(JSContext* ctx, MinnetURL u) {
   MinnetURL* url;
   JSValue url_obj = JS_NewObjectProtoClass(ctx, minnet_url_proto, minnet_url_class_id);

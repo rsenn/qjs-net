@@ -209,7 +209,8 @@ function main(...args) {
         console.log('onHttp', console.config({ compact: false }), { req, resp });
         let text = resp.text();
         text = text.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
-        console.log('onHttp', { text });
+        const { url } = resp;
+        console.log('onHttp', url, { text });
 
         /* let json =resp.json();
         console.log('onHttp', { json }); */
@@ -241,6 +242,8 @@ function main(...args) {
 
   createWS(url, {}).then(() => {
     console.log('FINISHED');
+  }).catch(err => {
+    console.log('Failed',err);
   });
 
   function quit(why) {

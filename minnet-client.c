@@ -141,8 +141,8 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     }
   }
 
-  url = url_format(&client->url, ctx);
-  client->request = request_new(ctx, url_location(&client->url, ctx), url, method_number(method_str));
+  // url = url_format(&client->url, ctx);
+  client->request = request_new(ctx, url_location(&client->url, ctx), client->url, method_number(method_str));
   client->headers = JS_GetPropertyStr(ctx, options, "headers");
   client->body = JS_GetPropertyStr(ctx, options, "body");
 
@@ -296,6 +296,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       if(opaque->status < CLOSING) {
+        int32_t result = -1;
         if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in)
           client->context.error = JS_NewStringLen(ctx, in, len);
         else
@@ -303,6 +304,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
         opaque->status = CLOSING;
         if((client->cb.close.ctx = ctx)) {
+          JSValue ret;
           int argc, err = opaque ? opaque->error : 0;
           JSValueConst cb_argv[4] = {sess->ws_obj};
 
@@ -315,16 +317,20 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
             cb_argv[2] = close_reason(ctx, in, len);
             cb_argv[3] = JS_NewInt32(ctx, err);
           }
-          client_exception(client, minnet_emit(&client->cb.close, argc, cb_argv));
 
-          // JS_FreeValue(ctx, cb_argv[0]);
+          ret = minnet_emit(&client->cb.close, argc, cb_argv);
+          if(!client_exception(client, ret))
+            if(JS_IsNumber(ret))
+              JS_ToInt32(ctx, &result, ret);
+          JS_FreeValue(ctx, ret);
           JS_FreeValue(ctx, cb_argv[1]);
           JS_FreeValue(ctx, cb_argv[2]);
           JS_FreeValue(ctx, cb_argv[3]);
         }
+        return result;
       }
-      break;
     }
+
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
     case LWS_CALLBACK_RAW_CONNECTED: {
