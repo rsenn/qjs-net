@@ -29,6 +29,7 @@ typedef struct url {
 void url_init(MinnetURL*, const char*, const char*, int port, const char* path, JSContext* ctx);
 void url_parse(MinnetURL*, const char*, JSContext*);
 char* url_format(const MinnetURL*, JSContext*);
+size_t url_length(const MinnetURL* url);
 void url_free(MinnetURL*, JSContext*);
 void url_free_rt(MinnetURL*, JSRuntime*);
 void url_info(const MinnetURL*, struct lws_client_connect_info*);
@@ -43,8 +44,7 @@ JSValue minnet_url_from(JSContext*, JSValue, int, JSValue argv[]);
 JSValue minnet_url_constructor(JSContext*, JSValue, int, JSValue argv[]);
 int minnet_url_init(JSContext*, JSModuleDef*);
 
-* / JSValue minnet_url_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
-
+ 
 static inline const char*
 url_path(const MinnetURL* url) {
   return url->path;
@@ -61,11 +61,13 @@ url_new(const char* s, JSContext* ctx) {
   url_parse(&url, s, ctx);
   return url;
 }
+
 static inline MinnetURL
 url_dup(MinnetURL url, JSContext* ctx) {
   MinnetURL ret = {url.protocol, js_strdup(ctx, url.host), js_strdup(ctx, url.path), url.port};
   return ret;
 }
+
 extern THREAD_LOCAL JSClassID minnet_url_class_id;
 
 int minnet_url_init(JSContext*, JSModuleDef* m);

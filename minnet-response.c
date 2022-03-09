@@ -67,7 +67,7 @@ response_write(struct http_response* res, const void* x, size_t n, JSContext* ct
 
 void
 response_free(JSRuntime* rt, struct http_response* res) {
-  url_free_rt((void*)res->url, rt);
+  url_free_rt(&res->url, rt);
   js_free_rt(rt, (void*)res->type);
   res->type = 0;
 
@@ -207,7 +207,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case RESPONSE_URL: {
-      ret = res->url ? JS_NewString(ctx, res->url) : JS_NULL;
+      ret = minnet_url_new(ctx, res->url);
       break;
     }
     case RESPONSE_TYPE: {
@@ -253,7 +253,8 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       break;
     }
     case RESPONSE_URL: {
-      resp->url = js_strdup(ctx, str);
+      url_free(&resp->url, ctx);
+      url_parse(&resp->url, str, ctx);
       break;
     }
     case RESPONSE_TYPE: {
@@ -308,8 +309,8 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
       argv++;
     } else if(JS_IsString(argv[i])) {
       const char* str = JS_ToCString(ctx, argv[i]);
-      if(!resp->url)
-        resp->url = js_strdup(ctx, str);
+      if(!resp->url.path)
+      url_parse(&resp->url,str,ctx);
       else if(!resp->type)
         resp->type = js_strdup(ctx, str);
       JS_FreeCString(ctx, str);
@@ -340,8 +341,7 @@ minnet_response_finalizer(JSRuntime* rt, JSValue val) {
     buffer_free(&res->headers, rt);
     buffer_free(&res->body, rt);
 
-    if(res->url)
-      js_free_rt(rt, res->url);
+    url_free_rt(&res->url, rt);
     if(res->type)
       js_free_rt(rt, res->type);
 

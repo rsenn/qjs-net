@@ -357,9 +357,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   MinnetSession* session = user;
   JSContext* ctx = server ? server->context.js : 0;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-  MinnetURL url;
+  MinnetURL url={0,0,0,0};
   MinnetWebsocket* ws = opaque->ws;
-  size_t url_len;
+  size_t url_len=0;
 
   /* if(!ctx && session->server)
      ctx = session->server->context.js;*/
@@ -378,7 +378,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     } else {
       // url = lws_uri_and_method(wsi, ctx, &method);
     }
-    url_len = url ? strlen(url) : 0;
+    url_len = url_length(&url);
   }
 
   lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, (int)url_len, url);
@@ -468,7 +468,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       int ret = 0;
       size_t mountpoint_len = 0;
 
-      if(url && in && len < url_len && !strcmp((url_len - len) + url, in))
+      if(url.path && in && len < url_len && !strcmp(url.path, in))
         mountpoint_len = url_len - len;
 
       lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " mountpoint='%.*s' path='%s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)mountpoint_len, url, path);
@@ -484,16 +484,16 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         pstrcpy(opaque->req->path, sizeof(opaque->req->path), path);
 
       session->mount = mount_find(server->context.info.mounts, path, 0);
-      if(url && !session->mount)
-        if(!(session->mount = mount_find(server->context.info.mounts, url, mountpoint_len)))
-          session->mount = mount_find(server->context.info.mounts, url, 0);
+      if(url.path && !session->mount)
+        if(!(session->mount = mount_find(server->context.info.mounts, url.path, mountpoint_len)))
+          session->mount = mount_find(server->context.info.mounts, url.path, 0);
 
       session->h2 = is_h2(wsi);
 
       if((mount = session->mount)) {
         size_t mlen = strlen(mount->mnt);
-        assert(!strncmp(url, mount->mnt, mlen));
-        assert(!strcmp(url + mlen, path));
+        assert(!strncmp(url.path, mount->mnt, mlen));
+        assert(!strcmp(url.path + mlen, path));
 
         lwsl_user("http " FG("%d") "%-38s" NC " mount: mnt='%s', org='%s', pro='%s', origin_protocol='%s'\n",
                   22 + (reason * 2),
@@ -577,7 +577,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetResponse* resp = minnet_response_data2(server->context.js, session->resp_obj);
       BOOL done = FALSE;
 
-      lwsl_user("http-writeable " FG("%d") "%-38s" NC " wsi#%" PRId64 " h2=%u mnt=%s remain=%td type=%s url=%s",
+      lwsl_user("http-writeable " FG("%d") "%-38s" NC " wsi#%" PRId64 " h2=%u mnt=%s remain=%td type=%s url.path=%s",
                 22 + (reason * 2),
                 lws_callback_name(reason) + 13,
                 opaque->serial,
@@ -585,7 +585,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
                 session->mount ? session->mount->mnt : 0,
                 resp ? buffer_BYTES(&resp->body) : 0,
                 resp ? resp->type : 0,
-                resp ? resp->url : 0);
+                resp ? resp->url.path : 0);
 
       if(JS_IsObject(session->generator)) {
         JSValue ret = JS_UNDEFINED;

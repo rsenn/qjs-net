@@ -132,6 +132,12 @@ url_format(const MinnetURL* url, JSContext* ctx) {
   return str;
 }
 
+size_t
+url_length(const MinnetURL* url) {
+  size_t portlen = url->port >= 10000 ? 6 : url->port >= 1000 ? 5 : url->port >= 100 ? 4 : url->port >= 10 ? 3 : url->port >= 1 ? 2 : 0;
+return (url->protocol ? strlen(url->protocol) + 3 : 0) + (url->host ? strlen(url->host) + portlen : 0) + (url->path ? strlen(url->path) : 0) + 1;
+}
+
 void
 url_free(MinnetURL* url, JSContext* ctx) {
   if(url->host)

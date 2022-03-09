@@ -229,8 +229,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_URI: {
-      if(req->url)
-        ret = JS_NewString(ctx, req->url);
+      ret = minnet_url_new(ctx, req->url);
       break;
     }
     case REQUEST_PATH: {
@@ -293,11 +292,8 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
       break;
     }
     case REQUEST_URI: {
-      if(req->url) {
-        js_free(ctx, req->url);
-        req->url = 0;
-      }
-      req->url = js_strdup(ctx, str);
+      url_free(&req->url, ctx);
+      url_parse(&req->url, str, ctx);
       break;
     }
     case REQUEST_PATH: {
@@ -319,8 +315,7 @@ static void
 minnet_request_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRequest* req = JS_GetOpaque(val, minnet_request_class_id);
   if(req && --req->ref_count == 0) {
-    if(req->url)
-      js_free_rt(rt, req->url);
+    url_free_rt(&req->url, rt);
 
     js_free_rt(rt, req);
   }
