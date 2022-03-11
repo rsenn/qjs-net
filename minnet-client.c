@@ -52,7 +52,7 @@ sslcert_client(JSContext* ctx, struct lws_context_creation_info* info, JSValueCo
     info->ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
 }
 
-static void
+void
 client_free(MinnetClient* client) {
   JSContext* ctx = client->context.js;
 

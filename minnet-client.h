@@ -21,7 +21,9 @@ typedef struct client_context {
   ResolveFunctions promise;
 } MinnetClient;
 
-JSValue minnet_client(JSContext*, JSValue, int, JSValue* argv);
+void client_free(MinnetClient*);
+JSValue minnet_client(JSContext*, JSValue, int, JSValue argv[]);
+uint8_t* scan_backwards(uint8_t*, uint8_t);
 
 static inline struct client_context*
 lws_client(struct lws* wsi) {
