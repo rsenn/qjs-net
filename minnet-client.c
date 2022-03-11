@@ -66,8 +66,8 @@ client_free(MinnetClient* client) {
   js_free(ctx, client);
 }
 
-JSValue
-minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue
+minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   struct lws_context* lws = 0;
   int argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
@@ -215,6 +215,21 @@ fail:
   return ret;
 }
 
+JSValue
+minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  MinnetClient* client = 0;
+  JSValue func, ret;
+
+  if(!(client = js_mallocz(ctx, sizeof(MinnetClient))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  func = JS_NewCClosure(ctx, &minnet_client_closure, 1, 0, client, client_free);
+
+  ret = JS_Call(ctx, func, this_val, argc, argv);
+  JS_FreeValue(ctx, func);
+
+  return ret;
+}
 uint8_t*
 scan_backwards(uint8_t* ptr, uint8_t ch) {
   if(ptr[-1] == '\n') {
