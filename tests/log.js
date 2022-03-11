@@ -1,19 +1,4 @@
-import {
-  setLog,
-  URL,
-  LLL_ERR,
-  LLL_WARN,
-  LLL_NOTICE,
-  LLL_INFO,
-  LLL_DEBUG,
-  LLL_PARSER,
-  LLL_HEADER,
-  LLL_EXT,
-  LLL_CLIENT,
-  LLL_LATENCY,
-  LLL_USER,
-  LLL_THREAD
-} from 'net';
+import { setLog, URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
 import { err } from 'std';
 
 export const Levels = (() => {
@@ -57,6 +42,5 @@ export const SetLog = (name, maxLevel = LLL_CLIENT) =>
     err.puts(('X', l).padEnd(9) + msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
   });
 
-import('console').then(({ Console }) => {
-  globalThis.console = new Console(err, { inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100 } });
+import('console').then(({ Console }) => { globalThis.console = new Console(err, { inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100 } });
 });

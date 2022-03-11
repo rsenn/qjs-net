@@ -240,11 +240,13 @@ function main(...args) {
     }
   });
 
-  createWS(url, {}).then(() => {
-    console.log('FINISHED');
-  }).catch(err => {
-    console.log('Failed',err);
-  });
+  createWS(url, {})
+    .then(() => {
+      console.log('FINISHED');
+    })
+    .catch(err => {
+      console.log('Failed', err);
+    });
 
   function quit(why) {
     console.log(`quit('${why}')`);
