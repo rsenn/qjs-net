@@ -14,11 +14,14 @@ struct fetch_closure {
 static void
 fetch_closure_free(void* ptr) {
   struct fetch_closure* closure = ptr;
-  JSContext* ctx = closure->client->context.js;
 
-  client_free(closure->client);
+  if(closure->client) {
+    JSContext* ctx = closure->client->context.js;
 
-  js_free(ctx, closure);
+    client_free(closure->client);
+
+    js_free(ctx, closure);
+  }
 }
 
 enum {
@@ -60,8 +63,8 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   if(!(client_closure = client_closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  http_handler = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, closure, fetch_closure_free);
-  error_handler = JS_NewCClosure(ctx, &error_handler, 2, ON_ERROR, closure, fetch_closure_free);
+  http_handler = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, http_closure, fetch_closure_free);
+  error_handler = JS_NewCClosure(ctx, &error_handler, 2, ON_ERROR, error_closure, fetch_closure_free);
 
   JS_SetPropertyStr(ctx, argv[1], "onHttp", http_handler);
   JS_SetPropertyStr(ctx, argv[1], "onError", error_handler);
