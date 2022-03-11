@@ -24,6 +24,21 @@ static const struct lws_protocols client_protocols[] = {
     {0},
 };
 
+void
+client_closure_free(void* ptr) {
+  struct client_closure* closure = ptr;
+  JSContext* ctx = closure->client->context.js;
+
+  client_free(closure->client);
+
+  js_free(ctx, closure);
+}
+
+struct client_closure*
+client_closure_new(JSContext* ctx) {
+  return js_mallocz(ctx, sizeof(struct client_closure));
+}
+
 static JSValue
 close_status(JSContext* ctx, const char* in, size_t len) {
   if(len >= 2)
@@ -66,8 +81,8 @@ client_free(MinnetClient* client) {
   js_free(ctx, client);
 }
 
-static JSValue
-minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+JSValue
+minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   struct lws_context* lws = 0;
   int argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
@@ -86,6 +101,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   if(!(client = js_mallocz(ctx, sizeof(MinnetClient))))
     return JS_ThrowOutOfMemory(ctx);
+
+  if(ptr)
+    ((struct client_closure*)ptr)->client = client;
 
   *client = (MinnetClient){.headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
   info = &client->context.info;
@@ -230,6 +248,7 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   return ret;
 }
+
 uint8_t*
 scan_backwards(uint8_t* ptr, uint8_t ch) {
   if(ptr[-1] == '\n') {

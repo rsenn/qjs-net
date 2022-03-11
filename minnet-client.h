@@ -23,7 +23,14 @@ typedef struct client_context {
 
 void client_free(MinnetClient*);
 JSValue minnet_client(JSContext*, JSValue, int, JSValue argv[]);
-uint8_t* scan_backwards(uint8_t*, uint8_t);
+JSValue minnet_client_closure(JSContext*, JSValue, int, JSValue argv[], int magic, void* ptr);
+
+struct client_closure {
+  MinnetClient* client;
+};
+
+void client_closure_free(void*);
+struct client_closure* client_closure_new(JSContext*);
 
 static inline struct client_context*
 lws_client(struct lws* wsi) {

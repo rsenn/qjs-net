@@ -48,9 +48,16 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret, http_handler, error_handler;
-  struct fetch_closure* closure;
+  struct client_closure* client_closure;
+  struct fetch_closure *http_closure, *error_closure;
 
-  if(!(closure = js_mallocz(ctx, sizeof(struct fetch_closure))))
+  if(!(http_closure = js_mallocz(ctx, sizeof(struct fetch_closure))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  if(!(error_closure = js_mallocz(ctx, sizeof(struct fetch_closure))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  if(!(client_closure = client_closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   http_handler = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, closure, fetch_closure_free);
@@ -60,7 +67,12 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   JS_SetPropertyStr(ctx, argv[1], "onError", error_handler);
   JS_SetPropertyStr(ctx, argv[1], "block", JS_FALSE);
 
-  return minnet_client(ctx, this_val, argc, argv);
+  ret = minnet_client_closure(ctx, this_val, argc, argv, 0, client_closure);
+
+  http_closure->client = client_closure->client;
+  error_closure->client = client_closure->client;
+
+  return ret;
 }
 
 #else
