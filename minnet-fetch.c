@@ -37,11 +37,10 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
       break;
     }
     case ON_ERROR: {
+      js_promise_reject(ctx, &client->promise, argv[1]);
       break;
     }
   }
-
-  js_promise_resolve(ctx, &client->promise, argv[1]);
 
   return JS_UNDEFINED;
 }
@@ -51,8 +50,6 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   JSValue ret, http_handler, error_handler;
   struct fetch_closure* closure;
 
-  ret = minnet_client(ctx, this_val, argc, argv);
-
   if(!(closure = js_mallocz(ctx, sizeof(struct fetch_closure))))
     return JS_ThrowOutOfMemory(ctx);
 
@@ -60,7 +57,10 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   error_handler = JS_NewCClosure(ctx, &error_handler, 2, ON_ERROR, closure, fetch_closure_free);
 
   JS_SetPropertyStr(ctx, argv[1], "onHttp", http_handler);
+  JS_SetPropertyStr(ctx, argv[1], "onError", error_handler);
   JS_SetPropertyStr(ctx, argv[1], "block", JS_FALSE);
+
+  return minnet_client(ctx, this_val, argc, argv);
 }
 
 #else
