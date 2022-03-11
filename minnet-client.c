@@ -27,11 +27,16 @@ static const struct lws_protocols client_protocols[] = {
 void
 client_closure_free(void* ptr) {
   struct client_closure* closure = ptr;
-  JSContext* ctx = closure->client->context.js;
 
-  client_free(closure->client);
+  if(closure->client) {
+    JSContext* ctx = closure->client->context.js;
 
-  js_free(ctx, closure);
+    printf("%s client=%p\n", __func__, closure->client);
+
+    client_free(closure->client);
+
+    js_free(ctx, closure);
+  }
 }
 
 struct client_closure*
@@ -235,13 +240,13 @@ fail:
 
 JSValue
 minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  MinnetClient* client = 0;
+  struct client_closure* closure;
   JSValue func, ret;
 
-  if(!(client = js_mallocz(ctx, sizeof(MinnetClient))))
+  if(!(closure = client_closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  func = JS_NewCClosure(ctx, &minnet_client_closure, 1, 0, client, client_free);
+  func = JS_NewCClosure(ctx, &minnet_client_closure, 1, 0, closure, client_closure_free);
 
   ret = JS_Call(ctx, func, this_val, argc, argv);
   JS_FreeValue(ctx, func);

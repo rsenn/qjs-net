@@ -51,29 +51,29 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret, http_handler, error_handler;
-  struct client_closure* client_closure;
-  struct fetch_closure *http_closure, *error_closure;
+  struct client_closure* cc;
+  struct fetch_closure* fc[2];
 
-  if(!(http_closure = js_mallocz(ctx, sizeof(struct fetch_closure))))
+  if(!(fc[0] = js_mallocz(ctx, sizeof(struct fetch_closure))))
     return JS_ThrowOutOfMemory(ctx);
 
-  if(!(error_closure = js_mallocz(ctx, sizeof(struct fetch_closure))))
+  if(!(fc[1] = js_mallocz(ctx, sizeof(struct fetch_closure))))
     return JS_ThrowOutOfMemory(ctx);
 
-  if(!(client_closure = client_closure_new(ctx)))
+  if(!(cc = client_closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  http_handler = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, http_closure, fetch_closure_free);
-  error_handler = JS_NewCClosure(ctx, &error_handler, 2, ON_ERROR, error_closure, fetch_closure_free);
+  http_handler = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, fc[0], fetch_closure_free);
+  error_handler = JS_NewCClosure(ctx, &error_handler, 2, ON_ERROR, fc[1], fetch_closure_free);
 
   JS_SetPropertyStr(ctx, argv[1], "onHttp", http_handler);
   JS_SetPropertyStr(ctx, argv[1], "onError", error_handler);
   JS_SetPropertyStr(ctx, argv[1], "block", JS_FALSE);
 
-  ret = minnet_client_closure(ctx, this_val, argc, argv, 0, client_closure);
+  ret = minnet_client_closure(ctx, this_val, argc, argv, 0, cc);
 
-  http_closure->client = client_closure->client;
-  error_closure->client = client_closure->client;
+  fc[0]->client = cc->client;
+  fc[1]->client = cc->client;
 
   return ret;
 }
