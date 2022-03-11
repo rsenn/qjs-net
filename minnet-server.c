@@ -58,7 +58,7 @@ static const struct lws_http_mount mount = {
 };
 
 JSValue
-minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   int argind = 0, a = 0;
   BOOL is_tls = FALSE;
   MinnetServer* server;

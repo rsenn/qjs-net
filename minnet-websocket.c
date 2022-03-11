@@ -124,7 +124,7 @@ minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
 }
 
 static JSValue
-minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   int64_t m, len;
   MinnetSession* sess;
@@ -167,7 +167,7 @@ fail:
 }
 
 static JSValue
-minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic) {
+minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
 
@@ -227,7 +227,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst*
 }
 
 static JSValue
-minnet_ws_ping(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_ws_ping(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   uint8_t* data;
   size_t len;
@@ -253,7 +253,7 @@ minnet_ws_ping(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
 }
 
 static JSValue
-minnet_ws_pong(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_ws_pong(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   uint8_t* data;
   size_t len;
@@ -279,7 +279,7 @@ minnet_ws_pong(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* ar
 }
 
 static JSValue
-minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   const char* reason = 0;
   size_t rlen = 0;

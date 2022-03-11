@@ -14,19 +14,41 @@ struct fetch_closure {
 static void
 fetch_closure_free(void* ptr) {
   struct fetch_closure* closure = ptr;
-  JSContext* ctx = ptr->client.context.js;
+  JSContext* ctx = closure->client->context.js;
 
-  client_free(ptr->client);
+  client_free(closure->client);
 
   js_free(ctx, closure);
 }
-}
+
+enum {
+  ON_HTTP = 0,
+  ON_ERROR = 1,
+};
+
 static JSValue
-fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {}
+fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+  struct fetch_closure* closure = opaque;
+  MinnetClient* client = closure->client;
+
+  switch(magic) {
+    case ON_HTTP: {
+      js_promise_resolve(ctx, &client->promise, argv[1]);
+      break;
+    }
+    case ON_ERROR: {
+      break;
+    }
+  }
+
+  js_promise_resolve(ctx, &client->promise, argv[1]);
+
+  return JS_UNDEFINED;
+}
 
 JSValue
-minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-  JSValue ret, handler;
+minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  JSValue ret, http_handler, error_handler;
   struct fetch_closure* closure;
 
   ret = minnet_client(ctx, this_val, argc, argv);
@@ -34,9 +56,11 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv
   if(!(closure = js_mallocz(ctx, sizeof(struct fetch_closure))))
     return JS_ThrowOutOfMemory(ctx);
 
-  handler = JS_NewCClosure(ctx, &fetch_handler, 1, 0, closure, fetch_closure_free);
+  http_handler = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, closure, fetch_closure_free);
+  error_handler = JS_NewCClosure(ctx, &error_handler, 2, ON_ERROR, closure, fetch_closure_free);
 
-  JS_SetPropertyStr(ctx, argv[1], "onHttp", handler);
+  JS_SetPropertyStr(ctx, argv[1], "onHttp", http_handler);
+  JS_SetPropertyStr(ctx, argv[1], "block", JS_FALSE);
 }
 
 #else
@@ -155,7 +179,7 @@ handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socket
 }
 
 JSValue
-minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   CURL* curl = 0;
   CURLM* multi = 0;
   CURLcode curlRes;
