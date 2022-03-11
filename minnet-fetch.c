@@ -72,6 +72,8 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, cc);
 
+  printf("%s client=%p\n", __func__, cc->client);
+
   fc[0]->client = cc->client;
   fc[1]->client = cc->client;
 
