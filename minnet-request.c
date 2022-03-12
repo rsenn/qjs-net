@@ -213,10 +213,10 @@ JSValue
 minnet_request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
   MinnetRequest* req;
 
-  if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0])))
-    req = request_dup(req);
-  else
-    req = request_from(ctx, argc, argv);
+  /* if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0])))
+     req = request_dup(req);
+   else*/
+  req = request_from(ctx, argc, argv);
 
   return minnet_request_wrap(ctx, req);
 }
@@ -380,7 +380,14 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
       break;
     }
     case REQUEST_HEADERS: {
-      ret = JS_ThrowReferenceError(ctx, "Cannot set headers");
+
+      if(JS_IsObject(value)) {
+        headers_fromobj(&req->headers, value, ctx);
+      } else {
+        const char* str = JS_ToCString(ctx, value);
+        ret = JS_ThrowReferenceError(ctx, "Cannot set headers to '%s'", str);
+        JS_FreeCString(ctx, str);
+      }
       break;
     }
   }
@@ -407,8 +414,8 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, 0, REQUEST_HEADERS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, minnet_request_set, REQUEST_HEADERS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("arrayBuffer", minnet_request_get, 0, REQUEST_ARRAYBUFFER, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("text", minnet_request_get, 0, REQUEST_TEXT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, 0),

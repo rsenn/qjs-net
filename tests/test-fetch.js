@@ -17,11 +17,7 @@ function WriteFile(name, data) {
 function FetchNext(array) {
   return new Promise((resolve, reject) => {
     let url = array.shift();
-    let request = new Request(url);
-    console.log(`fetching \x1b[1;33m${url}\x1b[0m`);
-    console.log(console.config({ compact: 1 }), request);
-    let promise = fetch(request, {
-      headers: {
+    let request = new Request(url, {headers: {
         accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
         'accept-language': 'en-US,en;q=0.9',
         pragma: 'no-cache',
@@ -37,7 +33,11 @@ function FetchNext(array) {
         'sec-fetch-user': '?1',
         'upgrade-insecure-requests': '1',
         cookie: 'sid=deb14330f89995598b4cd37ecd8f0c3d; language2=en; mp_session=ed5700f25fac3c643b872191; OptanonConsent=isIABGlobal=false&datestamp=Mon+Feb+14+2022+09%3A15%3A59+GMT%2B0100+(Central+European+Standard+Time)&version=6.20.0&hosts=&consentId=16f6b226-a0fd-429d-ba34-0bdad57d38f1&interactionCount=1&landingPath=https%3A%2F%2Fwww.discogs.com%2Fsell%2Fundefined&groups=C0001%3A1%2CC0004%3A1%2CC0003%3A1%2CC0002%3A1%2CSTACK8%3A0; currency=USD; ck_username=diskosenn; ppc_onboard_prompt=seen; session="5V0o/D1Lm2v3OYz32dQNvkTeAkE=?_expires=MTY2MjM3NDY4MQ==&auth_token=IktCZ0tWaWdxWkp3cWdubzZkY0RoMXpEb09EIg==&created_at=IjIwMjItMDMtMDlUMTA6NDQ6NDEuMjc3MDkxIg==&idp%3Auser_id=ODM2OTAyMg=="; __cf_bm=wo1vbcsHdRLdP1d.0TGEZ4nNZ4CrE_3K2j6Emuboaa8-1647067526-0-AVL1/sHkoRhF7/QIXuMC5nsTWQGo9HeFvV+unN2AzKdpRYx75fgQcO+o/8mqWVuP+CFBzCoVX+iGaQW2z3edfNs='
-      }
+      }});
+    console.log(`fetching \x1b[1;33m${url}\x1b[0m`);
+    console.log(console.config({ compact: 1 }), request);
+    let promise = fetch(request, {
+      
     });
     promise
       .then(response => {
