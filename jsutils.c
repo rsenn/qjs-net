@@ -195,6 +195,20 @@ js_is_iterator(JSContext* ctx, JSValueConst obj) {
   return FALSE;
 }
 
+BOOL
+js_is_promise(JSContext* ctx, JSValueConst obj) {
+  if(JS_IsObject(obj)) {
+
+    JSObject* obj = JS_VALUE_GET_OBJ(obj);
+
+    return obj->clas return JS_VALUE_GET_ JSValue next = JS_GetPropertyStr(ctx, obj, "next");
+
+    if(JS_IsFunction(ctx, next))
+      return TRUE;
+  }
+  return FALSE;
+}
+
 JSAtom
 js_symbol_static_atom(JSContext* ctx, const char* name) {
   JSValue sym = js_symbol_static_value(ctx, name);
@@ -310,4 +324,25 @@ js_promise_pending(ResolveFunctions const* funcs) {
 BOOL
 js_promise_done(ResolveFunctions const* funcs) {
   return js_resolve_functions_is_null(funcs);
+}
+
+JSValue
+js_global_get(JSContext* ctx, const char* prop) {
+  JSValue global_obj, ret;
+  global_obj = JS_GetGlobalObject(ctx);
+  ret = JS_GetPropertyStr(ctx, global_obj, prop);
+  JS_FreeValue(ctx, global_obj);
+  return ret;
+}
+
+BOOL
+js_is_promise(JSContext* ctx, JSValueConst value) {
+  JSValue ctor;
+  BOOL ret;
+
+  ctor = js_global_get(ctx, "Promise");
+  ret = JS_IsInstanceOf(ctx, value, ctor);
+
+  JS_FreeValue(ctx, ctor);
+  return ret;
 }
