@@ -313,13 +313,16 @@ scan_backwards(uint8_t* ptr, uint8_t ch) {
 static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetClient* client = lws_client(wsi);
-  struct wsi_opaque_user_data* opaque = client->context.js ? lws_opaque(wsi, client->context.js) : 0;
+  struct wsi_opaque_user_data* opaque = 0;
 
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &client->cb.fd, in);
 
   if(lws_is_http_callback(reason))
     return http_client_callback(wsi, reason, user, in, len);
+
+  if(client->context.js)
+    opaque = lws_opaque(wsi, client->context.js);
 
   lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i\n",
             22 + (reason * 2),
