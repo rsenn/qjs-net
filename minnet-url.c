@@ -379,7 +379,7 @@ minnet_url_wrap(JSContext* ctx, MinnetURL* url) {
 }
 
 MinnetURL*
-url_create(JSContext* ctx) {
+url_new(JSContext* ctx) {
 
   MinnetURL* url;
 
@@ -395,7 +395,7 @@ minnet_url_new(JSContext* ctx, MinnetURL u) {
 
   MinnetURL* url;
 
-  if(!(url = url_create(ctx)))
+  if(!(url = url_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   url_copy(url, &u, ctx);
@@ -528,7 +528,7 @@ JSValue
 minnet_url_from(JSContext* ctx, JSValueConst value) {
   MinnetURL* url;
 
-  if(!(url = url_create(ctx)))
+  if(!(url = url_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   url_from(url, value, ctx);

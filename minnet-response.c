@@ -222,7 +222,7 @@ minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   clone->read_only = resp->read_only;
   clone->status = resp->status;
   clone->read_only = resp->read_only;
-  clone->url = url_dup(resp->url, ctx);
+  clone->url = url_clone(resp->url, ctx);
   clone->type = js_strdup(ctx, resp->type);
 
   buffer_clone(&clone->headers, &resp->headers, ctx);

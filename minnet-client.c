@@ -164,7 +164,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
           argind++;
         } else if((req = minnet_request_data(argv[argind]))) {
           client->request = request_dup(req);
-          client->url = url_dup(req->url, ctx);
+          client->url = url_clone(req->url, ctx);
           client->headers = JS_GetPropertyStr(ctx, argv[argind], "headers");
           argind++;
         }*/

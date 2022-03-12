@@ -109,7 +109,7 @@ request_fromobj(JSContext* ctx, JSValueConst options) {
 
   JS_FreeValue(ctx, value);
 
-  request_init(req, /*path,*/ url_new(url, ctx), method_number(method));
+  request_init(req, /*path,*/ url_create(url, ctx), method_number(method));
 
   JS_FreeCString(ctx, url);
   JS_FreeCString(ctx, path);
@@ -188,7 +188,7 @@ request_from(JSContext* ctx, JSValueConst value) {
     req = request_dup(req);
   else {
     /* if(JS_IsObject(value) && (req = minnet_request_data(value)))
-      url = url_dup(req->url, ctx);
+      url = url_clone(req->url, ctx);
     else
     */
     url_from(&url, value, ctx);

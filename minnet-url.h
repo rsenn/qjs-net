@@ -46,7 +46,7 @@ void url_dump(const char*, MinnetURL const*);
 JSValue query_object(const char*, JSContext*);
 char* query_from(JSValueConst, JSContext*);
 JSValue minnet_url_wrap(JSContext*, MinnetURL*);
-MinnetURL* url_create(JSContext*);
+MinnetURL* url_new(JSContext*);
 JSValue minnet_url_new(JSContext*, MinnetURL);
 JSValue minnet_url_method(JSContext*, JSValueConst, int, JSValueConst argv[], int magic);
 JSValue minnet_url_from(JSContext*, JSValueConst);
@@ -69,14 +69,20 @@ url_protocol(const MinnetURL* url) {
 }
 
 static inline MinnetURL
-url_new(const char* s, JSContext* ctx) {
+url_create(const char* s, JSContext* ctx) {
   MinnetURL url = {0, 0, 0, 0};
   url_parse(&url, s, ctx);
   return url;
 }
 
+static inline MinnetURL*
+url_clone(MinnetURL* url) {
+  ++url->ref_count;
+  return url;
+}
+
 static inline MinnetURL
-url_dup(MinnetURL url, JSContext* ctx) {
+url_clone(MinnetURL url, JSContext* ctx) {
   MinnetURL ret = {url.protocol, url.host ? js_strdup(ctx, url.host) : 0, url.path ? js_strdup(ctx, url.path) : 0, url.port};
   return ret;
 }
