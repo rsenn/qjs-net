@@ -115,7 +115,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if((client->response->status_text = js_malloc(ctx, hdrlen + 1))) {
           char buf[((hdrlen + 1) + 7) >> 3];
 
-          buf[lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_HTTP)] = '\0';
+          hdrlen = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_HTTP);
+          buf[hdrlen] = '\0';
         }
       }
 
