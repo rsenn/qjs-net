@@ -11,7 +11,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   //
   MinnetClient* client = lws_client(wsi);
   MinnetSession* session = &client->session;
-  struct wsi_opaque_user_data* opaque = /*client->context.js ? lws_opaque(wsi, client->context.js) : */ lws_get_opaque_user_data(wsi);
+  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, client->context.js);
 
   if(!opaque->sess && session)
     opaque->sess = session;

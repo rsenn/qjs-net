@@ -61,6 +61,8 @@ lws_opaque(struct lws* wsi, JSContext* ctx) {
   if((opaque = lws_get_opaque_user_data(wsi)))
     return opaque;
 
+  assert(ctx);
+
   opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
   opaque->serial = ++ws_serial;
   opaque->status = CONNECTING;
