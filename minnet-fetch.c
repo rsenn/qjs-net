@@ -62,7 +62,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     }
     case ON_FD: {
 
-      JSValue os, set_write, set_read;
+      JSValue os, tmp, set_write, set_read, args[2] = {argv[0], JS_NULL};
 
       os = js_global_get(ctx, "os");
 
@@ -71,13 +71,16 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
       set_read = JS_GetPropertyStr(ctx, os, "setReadHandler");
       set_write = JS_GetPropertyStr(ctx, os, "setWriteHandler");
-      JS_FreeValue(ctx, os);
 
-      os = JS_Call(ctx, set_read, JS_NULL, 1, &argv[1]);
-      JS_FreeValue(ctx, os);
-      os = JS_Call(ctx, set_write, JS_NULL, 1, &argv[2]);
-      JS_FreeValue(ctx, os);
+      args[1] = argv[1];
 
+      tmp = JS_Call(ctx, set_read, os, 2, args);
+      JS_FreeValue(ctx, tmp);
+      args[1] = argv[2];
+      tmp = JS_Call(ctx, set_write, os, 2, args);
+      JS_FreeValue(ctx, tmp);
+
+      JS_FreeValue(ctx, os);
       JS_FreeValue(ctx, set_write);
       JS_FreeValue(ctx, set_read);
 
