@@ -27,12 +27,12 @@ typedef struct http_request {
 } MinnetRequest;
 
 char* request_dump(struct http_request const*, JSContext* ctx);
-void request_init(struct http_request*, const char* path, MinnetURL url, MinnetHttpMethod);
+void request_init(struct http_request*, MinnetURL url, MinnetHttpMethod);
 struct http_request* request_new(JSContext*, const char* path, MinnetURL url, MinnetHttpMethod);
 struct http_request* request_from(JSContext*, JSValue options);
 void request_zero(struct http_request*);
 JSValue minnet_request_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
-JSValue minnet_request_new(JSContext*, const char* path, MinnetURL url, enum http_method);
+JSValue minnet_request_new(JSContext*, MinnetURL url, enum http_method);
 JSValue minnet_request_wrap(JSContext*, struct http_request* req);
 
 extern THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;

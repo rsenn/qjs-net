@@ -2,6 +2,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "minnet-request.h"
+#include "minnet-url.h"
 #include "minnet-stream.h"
 #include "jsutils.h"
 #include <ctype.h>
@@ -58,7 +59,7 @@ request_dump(struct http_request const* req, JSContext* ctx) {
 }
 
 void
-request_init(struct http_request* req, const char* path, MinnetURL url, enum http_method method) {
+request_init(struct http_request* req, MinnetURL url, enum http_method method) {
   memset(req, 0, sizeof(*req));
 
   req->ref_count = 0;
@@ -75,7 +76,7 @@ request_new(JSContext* ctx, const char* path, MinnetURL url, MinnetHttpMethod me
   MinnetRequest* req;
 
   if((req = js_mallocz(ctx, sizeof(MinnetRequest))))
-    request_init(req, path, url, method);
+    request_init(req, url, method);
 
   return req;
 }
@@ -102,7 +103,7 @@ request_from(JSContext* ctx, JSValueConst options) {
 
   JS_FreeValue(ctx, value);
 
-  request_init(req, path, url_new(url, ctx), method_number(method));
+  request_init(req, /*path,*/ url_new(url, ctx), method_number(method));
 
   JS_FreeCString(ctx, url);
   JS_FreeCString(ctx, path);
@@ -141,6 +142,13 @@ header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
     return (const char*)x + namelen;
   }
   return 0;
+}
+
+JSValue
+minnet_request_from(JSContext* ctx, JSValueConst value) {
+  MinnetURL* url;
+
+  if((url = minnet_url_data(value))) {}
 }
 
 JSValue
@@ -189,10 +197,10 @@ fail:
 }
 
 JSValue
-minnet_request_new(JSContext* ctx, const char* path, MinnetURL url, enum http_method method) {
+minnet_request_new(JSContext* ctx, MinnetURL url, enum http_method method) {
   struct http_request* req;
 
-  if(!(req = request_new(ctx, path, url, method)))
+  if(!(req = request_new(ctx, 0, url, method)))
     return JS_ThrowOutOfMemory(ctx);
 
   return minnet_request_wrap(ctx, req);
