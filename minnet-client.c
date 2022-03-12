@@ -205,17 +205,20 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onFd", client->on.fd)
   GETCBPROP(options, "onHttp", client->on.http)
 
-  JSValue opt_headers = JS_GetPropertyStr(ctx, options, "headers");
-  if(!JS_IsUndefined(opt_headers))
-    client->headers = JS_DupValue(ctx, opt_headers);
+  value = JS_GetPropertyStr(ctx, options, "headers");
+  if(!JS_IsUndefined(value))
+    client->headers = JS_DupValue(ctx, value);
+  JS_FreeValue(ctx, value);
 
-  JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
-  if(!JS_IsUndefined(opt_binary))
-    opaque->binary = JS_ToBool(ctx, opt_binary);
+  value = JS_GetPropertyStr(ctx, options, "binary");
+  if(!JS_IsUndefined(value))
+    opaque->binary = JS_ToBool(ctx, value);
+  JS_FreeValue(ctx, value);
 
-  JSValue opt_block = JS_GetPropertyStr(ctx, options, "block");
-  if(!JS_IsUndefined(opt_block))
-    block = JS_ToBool(ctx, opt_block);
+  value = JS_GetPropertyStr(ctx, options, "block");
+  if(!JS_IsUndefined(value))
+    block = JS_ToBool(ctx, value);
+  JS_FreeValue(ctx, value);
 
   url_info(&client->request->url, &client->connect_info);
   client->connect_info.pwsi = &wsi;
