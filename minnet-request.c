@@ -222,7 +222,7 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   MinnetRequest* req;
   BOOL got_url = FALSE;
 
-  if(!(req = js_mallocz(ctx, sizeof(MinnetRequest))))
+  if(!(req = request_alloc(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   /* using new_target to get the prototype is necessary when the
@@ -235,8 +235,6 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   JS_FreeValue(ctx, proto);
   if(JS_IsException(obj))
     goto fail;
-
-  request_zero(req);
 
   JS_SetOpaque(obj, req);
 
