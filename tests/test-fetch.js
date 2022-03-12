@@ -11,12 +11,18 @@ function FetchNext(array) {
 
     promise
       .then(response => {
-        let buf = response.arrayBuffer();
-        let text = response.text();
-        console.log('response', { buf, text });
+        let prom = response.arrayBuffer();
 
-        if(array.length) FetchNext(array);
-        else resolve();
+        prom.then(buf => {
+          let prom = response.text();
+
+          prom.then(text => {
+            console.log('response', { buf, text });
+
+            if(array.length) FetchNext(array);
+            else resolve();
+          });
+        });
       })
       .catch(error => reject(error));
   });
