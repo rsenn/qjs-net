@@ -257,23 +257,23 @@ fail:
 JSValue
 minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct client_closure* closure;
-  JSValue func[2], ret;
+  JSValue func[2], ret, tmp;
 
   if(!(closure = client_closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  /*  func = JS_NewCClosure(ctx, &minnet_client_closure, 1, 0, closure, client_closure_free);
-
-    ret = JS_Call(ctx, func, this_val, argc, argv);
-    JS_FreeValue(ctx, func);
-  */
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
 
   func[0] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, client_closure_dup(closure), client_closure_free);
   func[1] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_REJECT, client_closure_dup(closure), client_closure_free);
 
-  ret = js_invoke(ctx, ret, "then", 1, func[0]);
-  ret = js_invoke(ctx, ret, "catch", 1, func[1]);
+  tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
+  JS_FreeValue(ctx, ret);
+  ret = tmp;
+
+  tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
+  JS_FreeValue(ctx, ret);
+  ret = tmp;
 
   JS_FreeValue(ctx, func[0]);
   JS_FreeValue(ctx, func[1]);
