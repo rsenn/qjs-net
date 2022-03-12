@@ -110,10 +110,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       lwsl_user("http-established #1 " FGC(171, "%-38s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
 
       {
-        size_t hdrlen = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP);
-
+        size_t i, hdrlen = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP);
         char buf[((hdrlen + 1) + 7) & ~7];
-        size_t i;
         lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_HTTP);
         buf[hdrlen] = '\0';
 
