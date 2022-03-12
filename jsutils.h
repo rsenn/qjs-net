@@ -44,7 +44,6 @@ void js_buffer_dump(const JSBuffer*, DynBuf*);
 void js_buffer_free(JSBuffer*, JSContext*);
 BOOL js_is_iterable(JSContext*, JSValue);
 BOOL js_is_iterator(JSContext*, JSValue);
-BOOL js_is_promise(JSContext*, JSValue);
 JSAtom js_symbol_static_atom(JSContext*, const char*);
 JSValue js_symbol_static_value(JSContext*, const char*);
 JSValue js_symbol_ctor(JSContext*);
