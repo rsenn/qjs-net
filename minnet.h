@@ -127,7 +127,7 @@ typedef struct session_data {
   struct proxy_connection* proxy;
   JSValue generator, next;
   int serial;
-  BOOL h2 : 1;
+  BOOL h2;
   int64_t written;
   struct server_context* server;
   struct client_context* client;

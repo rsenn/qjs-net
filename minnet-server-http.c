@@ -361,17 +361,15 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   MinnetWebsocket* ws = opaque->ws;
   size_t url_len = 0;
 
-  /* if(!ctx && session->server)
-     ctx = session->server->context.js;*/
+  if(LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
+    if(session && session->serial != opaque->serial) {
+      session->serial = opaque->serial;
+      session->h2 = is_h2(wsi);
+    }
+  }
 
   if(opaque) {
-    /*    if(session) {
-          if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION || reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
-            session->serial = opaque->serial;
-            session->h2 = is_h2(wsi);
-          }
-        }
-    */
+
     if(opaque->req) {
       url = opaque->req->url;
       method = opaque->req->method;
