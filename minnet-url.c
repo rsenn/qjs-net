@@ -487,22 +487,26 @@ minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
 }
 
 JSValue
-minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+minnet_url_from(JSContext* ctx, JSValueConst value) {
   MinnetURL url = {0};
 
-  if(JS_IsObject(argv[0])) {
+  if(JS_IsObject(value)) {
     MinnetRequest* req;
     MinnetResponse* resp;
 
-    if((req = minnet_request_data(argv[0])))
+    if((req = minnet_request_data(value)))
       url = url_dup(req->url, ctx);
-    else if((resp = minnet_response_data(argv[0])))
+    else if((resp = minnet_response_data(value)))
       url = url_dup(resp->url, ctx);
     else
-      url_from(&url, argv[0], ctx);
+      url_from(&url, value, ctx);
+  } else if(JS_IsString(value)) {
+    const char* str = JS_ToCString(ctx, value);
+    url_parse(&url, str, ctx);
+    JS_FreeCString(ctx, str);
   }
 
-  return minnet_url_new(ctx, url);
+  return minnet_url_wrap(ctx, url);
 }
 
 JSValue

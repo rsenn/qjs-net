@@ -35,15 +35,15 @@ void url_free_rt(MinnetURL*, JSRuntime*);
 void url_info(const MinnetURL*, struct lws_client_connect_info*);
 char* url_location(const MinnetURL*, JSContext*);
 const char* url_query(const MinnetURL*);
-void url_from(MinnetURL*, JSValue, JSContext*);
+void url_from(MinnetURL*, JSValueConst, JSContext*);
 void url_dump(const char*, MinnetURL const*);
 JSValue query_object(const char*, JSContext*);
-char* query_from(JSValue, JSContext*);
+char* query_from(JSValueConst, JSContext*);
 JSValue minnet_url_wrap(JSContext*, MinnetURL);
 JSValue minnet_url_new(JSContext*, MinnetURL);
-JSValue minnet_url_method(JSContext*, JSValue, int, JSValue argv[], int magic);
-JSValue minnet_url_from(JSContext*, JSValue, int, JSValue argv[]);
-JSValue minnet_url_constructor(JSContext*, JSValue, int, JSValue argv[]);
+JSValue minnet_url_method(JSContext*, JSValueConst, int, JSValueConst argv[], int magic);
+JSValue minnet_url_from(JSContext*, JSValueConst);
+JSValue minnet_url_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
 int minnet_url_init(JSContext*, JSModuleDef*);
 
 static inline const char*
