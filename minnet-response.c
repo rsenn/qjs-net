@@ -8,7 +8,7 @@ THREAD_LOCAL JSClassID minnet_response_class_id;
 THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
 
 enum { RESPONSE_HEADER };
-enum { RESPONSE_OK, RESPONSE_URL, RESPONSE_STATUS, RESPONSE_TYPE, RESPONSE_OFFSET, RESPONSE_HEADERS };
+enum { RESPONSE_OK, RESPONSE_URL, RESPONSE_STATUS, RESPONSE_BODYUSED, RESPONSE_TYPE, RESPONSE_OFFSET, RESPONSE_HEADERS };
 
 /*struct http_header*
 header_new(JSContext* ctx, const char* name, const char* value) {
@@ -290,6 +290,10 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = headers_object(ctx, resp->headers.start, resp->headers.end);
       break;
     }
+    case RESPONSE_BODYUSED: {
+      ret = JS_NewBool(ctx, buffer_SIZE(&resp->body) > 0);
+      break;
+    }
   }
 
   return ret;
@@ -416,14 +420,12 @@ JSClassDef minnet_response_class = {
 };
 
 const JSCFunctionListEntry minnet_response_proto_funcs[] = {
-    /*JS_CFUNC_FLAGS_DEF("arrayBuffer", 0, minnet_response_buffer, JS_PROP_ENUMERABLE),
-        JS_CFUNC_FLAGS_DEF("json", 0, minnet_response_json, JS_PROP_ENUMERABLE),
-        JS_CFUNC_FLAGS_DEF("text", 0, minnet_response_text, JS_PROP_ENUMERABLE),*/
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_response_method, RESPONSE_ARRAYBUFFER),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
     JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
     // JS_CFUNC_DEF("header", 2, minnet_response_header),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("bodyUsed", minnet_response_get, 0, RESPONSE_BODYUSED, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("ok", minnet_response_get, minnet_response_set, RESPONSE_OK, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE, JS_PROP_ENUMERABLE),
