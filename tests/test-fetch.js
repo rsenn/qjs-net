@@ -24,7 +24,11 @@ function FetchNext(array) {
           });
         });
       })
-      .catch(error => reject(error));
+      .catch(error => {
+            console.log('error',error);
+
+        reject(error);
+      });
   });
 }
 
