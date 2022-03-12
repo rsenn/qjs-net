@@ -149,7 +149,7 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   return ret;
 }
 
-static JSValue
+/*static JSValue
 minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
   if((res = minnet_response_data2(ctx, this_val))) {
@@ -173,7 +173,7 @@ minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   if((res = minnet_response_data2(ctx, this_val)))
     return JS_NewStringLen(ctx, (char*)block_BEGIN(&res->body), buffer_HEAD(&res->body));
   return JS_EXCEPTION;
-}
+}*/
 
 static JSValue
 minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
@@ -389,7 +389,7 @@ JSClassDef minnet_response_class = {
 };
 
 const JSCFunctionListEntry minnet_response_proto_funcs[] = {
-    /*    JS_CFUNC_FLAGS_DEF("arrayBuffer", 0, minnet_response_buffer, JS_PROP_ENUMERABLE),
+    /*JS_CFUNC_FLAGS_DEF("arrayBuffer", 0, minnet_response_buffer, JS_PROP_ENUMERABLE),
         JS_CFUNC_FLAGS_DEF("json", 0, minnet_response_json, JS_PROP_ENUMERABLE),
         JS_CFUNC_FLAGS_DEF("text", 0, minnet_response_text, JS_PROP_ENUMERABLE),*/
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_response_method, RESPONSE_ARRAYBUFFER),
