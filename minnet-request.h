@@ -31,6 +31,7 @@ void request_init(struct http_request*, MinnetURL url, MinnetHttpMethod);
 struct http_request* request_new(JSContext*, const char* path, MinnetURL url, MinnetHttpMethod);
 struct http_request* request_from(JSContext*, JSValue options);
 void request_zero(struct http_request*);
+struct http_request* request_dup(struct http_request* req);
 JSValue minnet_request_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
 JSValue minnet_request_new(JSContext*, MinnetURL url, enum http_method);
 JSValue minnet_request_wrap(JSContext*, struct http_request* req);

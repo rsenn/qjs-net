@@ -82,6 +82,12 @@ request_new(JSContext* ctx, const char* path, MinnetURL url, MinnetHttpMethod me
 }
 
 struct http_request*
+request_dup(struct http_request* req) {
+  ++req->ref_count;
+  return req;
+}
+
+struct http_request*
 request_from(JSContext* ctx, JSValueConst options) {
   MinnetRequest* req;
   JSValue value;
@@ -147,8 +153,14 @@ header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
 JSValue
 minnet_request_from(JSContext* ctx, JSValueConst value) {
   MinnetURL* url;
+  MinnetRequest* req;
 
-  if((url = minnet_url_data(value))) {}
+  if((req = minnet_request_data(value))) {
+
+  } else if((url = minnet_url_data(value))) {
+  }
+
+  request_new
 }
 
 JSValue
@@ -326,11 +338,14 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
 
 static void
 minnet_request_finalizer(JSRuntime* rt, JSValue val) {
-  MinnetRequest* req = JS_GetOpaque(val, minnet_request_class_id);
-  if(req && --req->ref_count == 0) {
-    url_free_rt(&req->url, rt);
+  MinnetRequest* req;
 
-    js_free_rt(rt, req);
+  if((req = JS_GetOpaque(val, minnet_request_class_id)) {
+    if(--req->ref_count == 0) {
+      url_free_rt(&req->url, rt);
+
+      js_free_rt(rt, req);
+    }
   }
 }
 
