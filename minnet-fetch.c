@@ -50,9 +50,12 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  JSValue ret, http_handler, error_handler;
+  JSValue ret, handlers[2], args[2];
   struct client_closure* cc;
   struct fetch_closure* fc[2];
+
+  if(argc >= 2 && !JS_IsObject(argv[1]))
+    return JS_ThrowTypeError(ctx, "argument 2 must be an object");
 
   if(!(fc[0] = js_mallocz(ctx, sizeof(struct fetch_closure))))
     return JS_ThrowOutOfMemory(ctx);
@@ -63,14 +66,19 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   if(!(cc = client_closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  http_handler = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, fc[0], fetch_closure_free);
-  error_handler = JS_NewCClosure(ctx, &error_handler, 2, ON_ERROR, fc[1], fetch_closure_free);
+  args[0] = argv[0];
+  args[1] = argc <= 1 ? JS_NewObject(ctx) : JS_DupValue(ctx, argv[1]);
 
-  JS_SetPropertyStr(ctx, argv[1], "onHttp", http_handler);
-  JS_SetPropertyStr(ctx, argv[1], "onError", error_handler);
-  JS_SetPropertyStr(ctx, argv[1], "block", JS_FALSE);
+  handlers[0] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, fc[0], fetch_closure_free);
+  handlers[1] = JS_NewCClosure(ctx, &error_handler, 2, ON_ERROR, fc[1], fetch_closure_free);
 
-  ret = minnet_client_closure(ctx, this_val, argc, argv, 0, cc);
+  JS_SetPropertyStr(ctx, options, "onHttp", handlers[0]);
+  JS_SetPropertyStr(ctx, options, "onError", handlers[1]);
+  JS_SetPropertyStr(ctx, options, "block", JS_FALSE);
+
+  ret = minnet_client_closure(ctx, this_val, 2, args, 0, cc);
+
+  JS_FreeValue(ctx, args[1]);
 
   printf("%s client=%p\n", __func__, cc->client);
 

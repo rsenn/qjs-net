@@ -19,6 +19,8 @@ export function spawn(script, ...args) {
 export function wait4(pid, status, options = 0) {
   let [ret, st] = waitpid(pid, options);
 
-  ({ array: st => status.splice(0, status.length, st), object: st => (status.status = st), function: st => status(st) }[Array.isArray(status) ? 'array' : typeof status](st));
+  ({ array: st => status.splice(0, status.length, st), object: st => (status.status = st), function: st => status(st) }[
+    Array.isArray(status) ? 'array' : typeof status
+  ](st));
   return ret;
 }

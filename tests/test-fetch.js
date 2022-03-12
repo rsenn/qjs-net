@@ -5,7 +5,11 @@ function FetchNext(array) {
   return new Promise((resolve, reject) => {
     let url = array.shift();
     console.log('fetching', url);
-    fetch(url)
+    let promise = fetch(url, {});
+
+    console.log('promise', promise);
+
+    promise
       .then(response => {
         console.log('response', response);
 
