@@ -13,8 +13,15 @@ function FetchNext(array) {
       .then(response => {
         console.log('response', response);
 
+        response.arrayBuffer().then(buf => {
+
+        console.log('buf', buf);
+
+
         if(array.length) FetchNext(array);
         else resolve();
+
+         });
       })
       .catch(error => reject(error));
   });

@@ -271,7 +271,7 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
   JSValue ret = JS_UNDEFINED;
   const char* str;
   size_t len;
-  if(!(req = JS_GetOpaque2(ctx, this_val, minnet_request_class_id)))
+  if(!(req = minnet_request_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   if(req->read_only)
