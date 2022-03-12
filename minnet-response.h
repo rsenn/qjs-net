@@ -23,6 +23,7 @@ typedef struct http_response {
   MinnetURL url;
   char* type;
   int status;
+  char* status_text;
   BOOL ok;
   MinnetBuffer headers, body;
 } MinnetResponse;
@@ -30,7 +31,7 @@ typedef struct http_response {
 void response_format(MinnetResponse const*, char*, size_t);
 char* response_dump(MinnetResponse const*);
 void response_zero(MinnetResponse*);
-void response_init(MinnetResponse*, MinnetURL, int32_t, BOOL ok, char* type);
+void response_init(MinnetResponse*, MinnetURL, int status, char* status_text, BOOL ok, char* type);
 MinnetResponse* response_dup(MinnetResponse*);
 ssize_t response_write(MinnetResponse*, const void*, size_t, JSContext* ctx);
 void response_clear(MinnetResponse*, JSContext*);
@@ -38,7 +39,7 @@ void response_clear_rt(MinnetResponse*, JSRuntime*);
 void response_free(MinnetResponse*, JSContext*);
 void response_free_rt(MinnetResponse*, JSRuntime*);
 MinnetResponse* response_new(JSContext*);
-JSValue minnet_response_new(JSContext*, MinnetURL, int32_t, BOOL ok, const char* type);
+JSValue minnet_response_new(JSContext*, MinnetURL, int status, char* status_text, BOOL ok, const char* type);
 JSValue minnet_response_wrap(JSContext*, MinnetResponse*);
 JSValue minnet_response_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
 void minnet_response_finalizer(JSRuntime*, JSValueConst);

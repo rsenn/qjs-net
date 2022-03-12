@@ -93,7 +93,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         if(!JS_IsObject(session->req_obj))
           session->req_obj = minnet_request_wrap(ctx, opaque->req);
 
-        session->resp_obj = minnet_response_new(ctx, opaque->req->url, status, TRUE, "text/html");
+        session->resp_obj = minnet_response_new(ctx, opaque->req->url, status, 0, TRUE, "text/html");
 
         /*  session->ws_obj = minnet_ws_wrap(ctx, wsi);
           opaque->ws = minnet_ws_data2(ctx, session->ws_obj);*/

@@ -8,7 +8,7 @@ THREAD_LOCAL JSClassID minnet_response_class_id;
 THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
 
 enum { RESPONSE_HEADER };
-enum { RESPONSE_OK, RESPONSE_URL, RESPONSE_STATUS, RESPONSE_BODYUSED, RESPONSE_TYPE, RESPONSE_OFFSET, RESPONSE_HEADERS };
+enum { RESPONSE_OK, RESPONSE_URL, RESPONSE_STATUS, RESPONSE_STATUSTEXT, RESPONSE_REDIRECTED, RESPONSE_BODYUSED, RESPONSE_TYPE, RESPONSE_OFFSET, RESPONSE_HEADERS };
 
 /*struct http_header*
 header_new(JSContext* ctx, const char* name, const char* value) {
@@ -49,10 +49,11 @@ response_zero(MinnetResponse* resp) {
 }
 
 void
-response_init(MinnetResponse* resp, MinnetURL url, int32_t status, BOOL ok, char* type) {
+response_init(MinnetResponse* resp, MinnetURL url, int32_t status, char* status_text, BOOL ok, char* type) {
   memset(resp, 0, sizeof(MinnetResponse));
 
   resp->status = status;
+  resp->status_text = status_text;
   resp->ok = ok;
   resp->url = url;
   resp->type = type;
@@ -122,11 +123,11 @@ response_new(JSContext* ctx) {
 }
 
 JSValue
-minnet_response_new(JSContext* ctx, MinnetURL url, int32_t status, BOOL ok, const char* type) {
+minnet_response_new(JSContext* ctx, MinnetURL url, int status, char* status_text, BOOL ok, const char* type) {
   MinnetResponse* resp;
 
   if((resp = response_new(ctx))) {
-    response_init(resp, url, status, ok, type ? js_strdup(ctx, type) : 0);
+    response_init(resp, url, status, status_text, ok, type ? js_strdup(ctx, type) : 0);
 
     return minnet_response_wrap(ctx, resp);
   }
@@ -270,6 +271,10 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_NewInt32(ctx, resp->status);
       break;
     }
+    case RESPONSE_STATUSTEXT: {
+      ret = resp->status_text ? JS_NewString(ctx, resp->status_text) : JS_NULL;
+      break;
+    }
     case RESPONSE_OK: {
       ret = JS_NewBool(ctx, resp->ok);
       break;
@@ -282,10 +287,10 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = resp->type ? JS_NewString(ctx, resp->type) : JS_NULL;
       break;
     }
-    case RESPONSE_OFFSET: {
-      ret = JS_NewInt64(ctx, buffer_HEAD(&resp->body));
-      break;
-    }
+      /* case RESPONSE_OFFSET: {
+         ret = JS_NewInt64(ctx, buffer_HEAD(&resp->body));
+         break;
+       }*/
     case RESPONSE_HEADERS: {
       ret = headers_object(ctx, resp->headers.start, resp->headers.end);
       break;
@@ -333,12 +338,12 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       resp->type = js_strdup(ctx, str);
       break;
     }
-    case RESPONSE_OFFSET: {
-      uint64_t o;
-      if(!JS_ToIndex(ctx, &o, value))
-        resp->body.write = resp->body.start + o;
-      break;
-    }
+      /* case RESPONSE_OFFSET: {
+         uint64_t o;
+         if(!JS_ToIndex(ctx, &o, value))
+           resp->body.write = resp->body.start + o;
+         break;
+       }*/
     case RESPONSE_BODYUSED: {
       break;
     }
@@ -426,13 +431,14 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_response_method, RESPONSE_ARRAYBUFFER),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
     JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
-    // JS_CFUNC_DEF("header", 2, minnet_response_header),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("statusText", minnet_response_get, minnet_response_set, RESPONSE_STATUSTEXT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("bodyUsed", minnet_response_get, 0, RESPONSE_BODYUSED, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("ok", minnet_response_get, minnet_response_set, RESPONSE_OK, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("redirected", minnet_response_get, minnet_response_set, RESPONSE_REDIRECTED, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_DEF("offset", minnet_response_get, minnet_response_set, RESPONSE_OFFSET),
+    //  JS_CGETSET_MAGIC_DEF("offset", minnet_response_get, minnet_response_set, RESPONSE_OFFSET),
     JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, 0, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),
 };

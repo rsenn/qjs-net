@@ -507,7 +507,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       args[0] = session->req_obj = minnet_request_wrap(ctx, opaque->req);
 
       if(!JS_IsObject(args[1]))
-        args[1] = minnet_response_new(ctx, url, method == METHOD_POST ? 201 : 200, TRUE, "text/html");
+        args[1] = minnet_response_new(ctx, url, method == METHOD_POST ? 201 : 200, 0, TRUE, "text/html");
 
       MinnetRequest* req = opaque->req;
       MinnetResponse* resp = minnet_response_data2(ctx, args[1]);
