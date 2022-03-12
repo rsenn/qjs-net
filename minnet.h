@@ -101,6 +101,13 @@ typedef struct ws_callback {
   const char* name;
 } MinnetCallback;
 
+static inline void callback_zero(MinnetCallback*cb) {
+  cb->ctx=0;
+  cb->this_obj = JS_UNDEFINED;
+  cb->func_obj = JS_NULL;
+  cb->name = 0;
+}
+
 struct proxy_connection;
 struct http_mount;
 struct server_context;
@@ -129,6 +136,16 @@ typedef struct session_data {
 typedef struct callbacks {
   MinnetCallback message, connect, close, pong, fd, http;
 } MinnetCallbacks;
+
+static inline void callbacks_zero(MinnetCallbacks* cbs) {
+  callback_zero(&cbs->message);
+  callback_zero(&cbs->connect);
+  callback_zero(&cbs->close);
+  callback_zero(&cbs->pong);
+  callback_zero(&cbs->fd);
+  callback_zero(&cbs->http);
+
+}
 
 typedef struct context {
   int ref_count;

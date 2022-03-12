@@ -14,7 +14,7 @@ typedef struct client_context {
     int ref_count;
     MinnetContext context;
   };
-  MinnetCallbacks cb;
+  MinnetCallbacks on;
   JSValue headers, body, next;
   // MinnetURL url;
   MinnetSession session;

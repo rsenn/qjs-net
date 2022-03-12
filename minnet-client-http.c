@@ -18,7 +18,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     opaque->sess = session;
 
   if(lws_is_poll_callback(reason))
-    return fd_callback(wsi, reason, &client->cb.fd, in);
+    return fd_callback(wsi, reason, &client->on.fd, in);
 
   lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
@@ -85,9 +85,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP: {
       if(opaque->status < CLOSED) {
         opaque->status = CLOSED;
-        if((client->cb.close.ctx = ctx)) {
+        if((client->on.close.ctx = ctx)) {
           JSValueConst cb_argv[] = {JS_DupValue(ctx, session->ws_obj), JS_NewInt32(ctx, opaque->error)};
-          client_exception(client, minnet_emit(&client->cb.close, countof(cb_argv), cb_argv));
+          client_exception(client, minnet_emit(&client->on.close, countof(cb_argv), cb_argv));
           JS_FreeValue(ctx, cb_argv[0]);
           JS_FreeValue(ctx, cb_argv[1]);
         }
@@ -194,10 +194,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetResponse* resp = client->response;
       headers_get(ctx, &resp->headers, wsi);
 
-      if((client->cb.http.ctx = ctx)) {
+      if((client->on.http.ctx = ctx)) {
         int32_t result = -1;
         JSValue ret;
-        ret = minnet_emit(&client->cb.http, 2, &session->req_obj);
+        ret = minnet_emit(&client->on.http, 2, &session->req_obj);
 
         /*MinnetWebsocket* ws = minnet_ws_data2(ctx, session->ws_obj);
         JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);*/
