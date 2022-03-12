@@ -112,7 +112,7 @@ minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
 JSValue
 minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  struct lws_context* lws = 0;
+  // gstruct lws_context* lws = 0;
   int argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
   // MinnetWebsocket* ws;
@@ -154,8 +154,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   session = &client->session;
 
   session->req_obj = minnet_request_from(ctx, argv[0]);
+  client->request = minnet_request_data(session->req_obj);
 
-  client->request = minnet_request_data(session->req_obj); // request_from(ctx, argv[0]);
+  client->request = request_from(ctx, argv[0]);
 
   if(argc >= 2) {
     //    MinnetRequest* req;
@@ -198,10 +199,10 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onFd", client->cb.fd)
   GETCBPROP(options, "onHttp", client->cb.http)
 
-  if(!lws) {
+  if(!client->context.lws) {
     sslcert_client(ctx, info, options);
 
-    if(!(lws = lws_create_context(info))) {
+    if(!(client->context.lws = lws_create_context(info))) {
       lwsl_err("minnet-client: libwebsockets init failed\n");
       return JS_ThrowInternalError(ctx, "minnet-client: libwebsockets init failed");
     }
@@ -226,7 +227,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   url_info(&client->request->url, conn);
   conn->pwsi = &wsi;
-  conn->context = lws;
+  conn->context = client->context.lws;
 
 #ifdef DEBUG_OUTPUT
   fprintf(stderr, "METHOD: %s\n", method_str);
