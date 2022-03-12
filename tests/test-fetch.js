@@ -28,22 +28,28 @@ function main(...args) {
     console.log('LWS', logLevels[level].padEnd(10), msg);
   });
 
-  import('console').then(({Console}) => {
-     console.log('Console',Console);
-  globalThis.console = new Console({ inspectOptions: {} });
-
-  
-    let promise =FetchNext(args);
-    console.log('promise', promise);
-
-    promise.then(() => {
-      console.log('SUCCEEDED');
+  import('console')
+    .then(({ Console }) => {
+      console.log('Console', Console);
+      globalThis.console = new Console({ inspectOptions: {} });
+      run();
     })
     .catch(() => {
-      console.log('FAILED');
+      run();
     });
-  }).catch(() => {});
 
+  function run() {
+    let promise = FetchNext(args);
+    console.log('promise', promise);
+
+    promise
+      .then(() => {
+        console.log('SUCCEEDED');
+      })
+      .catch(() => {
+        console.log('FAILED');
+      });
+  }
 }
 
 try {
