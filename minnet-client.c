@@ -448,10 +448,6 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
           if(reason != LWS_CALLBACK_RAW_CONNECTED) {
             client->session.req_obj = minnet_request_wrap(ctx, client->request);
-
-            /* sess->resp_obj = minnet_response_new(ctx, client->request->url, status, TRUE, "text/html");
-
-            client->response = minnet_response_data(sess->resp_obj);*/
           }
           // lwsl_user("client   " FGC(171, "%-38s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
 

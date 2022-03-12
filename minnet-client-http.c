@@ -9,7 +9,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   if(reason == LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS)
     return 0;
   //
-  MinnetClient* client = /*session && session->client ? session->client :*/ lws_client(wsi);
+  MinnetClient* client = lws_client(wsi);
   MinnetSession* session = &client->session;
   JSContext* ctx = client->context.js;
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
@@ -108,11 +108,6 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       status = lws_http_client_http_response(wsi);
 
       lwsl_user("http-established #1 " FGC(171, "%-38s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
-      // session->req_obj = minnet_request_wrap(ctx, client->request);
-
-      // session->resp_obj = minnet_response_new(ctx, url_clone(client->request->url, ctx), status, TRUE, "text/html");
-
-      //  client->response = minnet_response_data(session->resp_obj);
 
       if(method_number(client->connect_info.method) == METHOD_POST) {
         lws_client_http_body_pending(wsi, 1);
@@ -208,8 +203,6 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         JSValue ret;
         ret = minnet_emit(&client->on.http, 2, &session->req_obj);
 
-        /*MinnetWebsocket* ws = minnet_ws_data2(ctx, session->ws_obj);
-        JSValue msg = ws->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);*/
         if(!client_exception(client, ret)) {
           if(JS_IsNumber(ret))
             JS_ToInt32(ctx, &result, ret);
