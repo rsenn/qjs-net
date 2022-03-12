@@ -62,7 +62,7 @@ void
 request_init(MinnetRequest* req, MinnetURL url, enum http_method method) {
   memset(req, 0, sizeof(*req));
 
-  req->ref_count = 0;
+  req->ref_count = 1;
 
   /*if(path)
     pstrcpy(req->path, sizeof(req->path), path);*/
@@ -268,8 +268,6 @@ minnet_request_wrap(JSContext* ctx, MinnetRequest* req) {
 
   JS_SetOpaque(ret, req);
 
-  ++req->ref_count;
-
   return ret;
 }
 
@@ -381,13 +379,8 @@ static void
 minnet_request_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRequest* req;
 
-  if((req = minnet_request_data(val))) {
-    if(--req->ref_count == 0) {
-      url_free_rt(&req->url, rt);
-
-      js_free_rt(rt, req);
-    }
-  }
+  if((req = minnet_request_data(val)))
+    request_free_rt(req, rt);
 }
 
 JSClassDef minnet_request_class = {

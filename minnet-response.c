@@ -60,16 +60,38 @@ response_init(struct http_response* res, MinnetURL url, int32_t status, BOOL ok,
   res->body = BUFFER_0();
 }
 
+MinnetResponse*
+response_dup(MinnetResponse* resp) {
+  ++resp->ref_count;
+  return resp;
+}
+
 ssize_t
 response_write(struct http_response* res, const void* x, size_t n, JSContext* ctx) {
   return buffer_append(&res->body, x, n, ctx);
 }
 
 void
-response_free(JSRuntime* rt, struct http_response* res) {
+response_free(struct http_response* res, JSContext* ctx) {
+  url_free(&res->url, ctx);
+  if(res->type) {
+    js_free(ctx, (void*)res->type);
+    res->type = 0;
+  }
+
+  buffer_free(&res->headers, JS_GetRuntime(ctx));
+  buffer_free(&res->body, JS_GetRuntime(ctx));
+
+  js_free(ctx, res);
+}
+
+void
+response_free_rt(JSRuntime* rt, struct http_response* res) {
   url_free_rt(&res->url, rt);
-  js_free_rt(rt, (void*)res->type);
-  res->type = 0;
+  if(res->type) {
+    js_free_rt(rt, (void*)res->type);
+    res->type = 0;
+  }
 
   buffer_free(&res->headers, rt);
   buffer_free(&res->body, rt);
