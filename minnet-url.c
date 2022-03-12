@@ -255,6 +255,13 @@ url_from(MinnetURL* url, JSValueConst obj, JSContext* ctx) {
   JS_FreeValue(ctx, value);
 
   url_init(url, protocol, host, port, path, ctx);
+
+  if(protocol)
+    JS_FreeCString(ctx, protocol);
+  if(host)
+    JS_FreeCString(ctx, host);
+  if(path)
+    JS_FreeCString(ctx, path);
 }
 
 void
@@ -334,7 +341,7 @@ THREAD_LOCAL JSClassID minnet_url_class_id;
 enum { URL_PROTOCOL, URL_HOST, URL_PORT, URL_PATH, URL_TLS };
 
 JSValue
-minnet_url_new(JSContext* ctx, MinnetURL u) {
+minnet_url_wrap(JSContext* ctx, MinnetURL u) {
   MinnetURL* url;
   JSValue url_obj = JS_NewObjectProtoClass(ctx, minnet_url_proto, minnet_url_class_id);
 
@@ -346,11 +353,16 @@ minnet_url_new(JSContext* ctx, MinnetURL u) {
     return JS_EXCEPTION;
   }
 
-  *url = url_dup(u, ctx);
+  *url = u;
 
   JS_SetOpaque(url_obj, url);
 
   return url_obj;
+}
+
+JSValue
+minnet_url_new(JSContext* ctx, MinnetURL u) {
+  return minnet_url_wrap(ctx, url_dup(u, ctx));
 }
 
 static JSValue
