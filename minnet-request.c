@@ -188,6 +188,7 @@ JSValue
 minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetRequest* req;
+  BOOL got_url = FALSE;
 
   if(!(req = js_mallocz(ctx, sizeof(MinnetRequest))))
     return JS_ThrowOutOfMemory(ctx);
@@ -207,18 +208,18 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
 
   JS_SetOpaque(obj, req);
 
-  if(argc >= 1) {
-    if(JS_IsString(argv[0])) {
-      const char* str = JS_ToCString(ctx, argv[0]);
-      req->url = url_new(str, ctx);
-      JS_FreeCString(ctx, str);
+  while(argc > 0) {
+
+    if(!got_url) {
+      req->url = url_from(ctx, argv[0]);
+      got_url = TRUE;
+    } else if(JS_IsObject(argv[0])) {
+      js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);
     }
+
     argc--;
     argv++;
   }
-
-  if(argc >= 1 && JS_IsObject(argv[0]))
-    js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);
 
   req->read_only = TRUE;
   return obj;
