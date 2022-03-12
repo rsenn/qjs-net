@@ -112,17 +112,12 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       {
         size_t hdrlen = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP);
 
-        if((client->response->status_text = js_malloc(ctx, hdrlen + 1))) {
-          char buf[((hdrlen + 1) + 7) >> 3];
-          size_t i;
-          char* p = lws_hdr_simple_ptr(wsi, WSI_TOKEN_HTTP);
+        char buf[((hdrlen + 1) + 7) & ~7];
+        size_t i;
+        lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_HTTP);
+        buf[hdrlen] = '\0';
 
-          for(i = 4; i < hdrlen; i++) { buf[i - 4] = p[i]; }
-
-          //          strncpy(buf, lws_hdr_simple_ptr(wsi, WSI_TOKEN_HTTP), hdrlen);
-          // lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_HTTP);
-          buf[hdrlen] = '\0';
-        }
+        client->response->status_text = js_strdup(ctx, buf);
       }
 
       //     client->response->status_text = js_strndup(ctx, lws_hdr_simple_ptr(wsi, WSI_TOKEN_HTTP), hdrlen);
