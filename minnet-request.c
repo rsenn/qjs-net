@@ -42,7 +42,7 @@ method_number(const char* name) {
 }
 
 void
-request_format(struct http_request const* req, char* buf, size_t len, JSContext* ctx) {
+request_format(MinnetRequest const* req, char* buf, size_t len, JSContext* ctx) {
   char* headers = buffer_escaped(&req->headers, ctx);
   char* url = url_format(&req->url, ctx);
   snprintf(buf, len, FGC(196, "MinnetRequest") " { method: '%s', url: '%s', headers: '%s' }", method_name(req->method), url, headers);
@@ -52,14 +52,14 @@ request_format(struct http_request const* req, char* buf, size_t len, JSContext*
 }
 
 char*
-request_dump(struct http_request const* req, JSContext* ctx) {
+request_dump(MinnetRequest const* req, JSContext* ctx) {
   static char buf[2048];
   request_format(req, buf, sizeof(buf), ctx);
   return buf;
 }
 
 void
-request_init(struct http_request* req, MinnetURL url, enum http_method method) {
+request_init(MinnetRequest* req, MinnetURL url, enum http_method method) {
   memset(req, 0, sizeof(*req));
 
   req->ref_count = 0;
@@ -71,7 +71,7 @@ request_init(struct http_request* req, MinnetURL url, enum http_method method) {
   req->method = method;
 }
 
-struct http_request*
+MinnetRequest*
 request_new(JSContext* ctx, const char* path, MinnetURL url, MinnetHttpMethod method) {
   MinnetRequest* req;
 
@@ -81,13 +81,13 @@ request_new(JSContext* ctx, const char* path, MinnetURL url, MinnetHttpMethod me
   return req;
 }
 
-struct http_request*
-request_dup(struct http_request* req) {
+MinnetRequest*
+request_dup(MinnetRequest* req) {
   ++req->ref_count;
   return req;
 }
 
-struct http_request*
+MinnetRequest*
 request_from(JSContext* ctx, JSValueConst options) {
   MinnetRequest* req;
   JSValue value;
@@ -119,7 +119,7 @@ request_from(JSContext* ctx, JSValueConst options) {
 }
 
 void
-request_zero(struct http_request* req) {
+request_zero(MinnetRequest* req) {
   memset(req, 0, sizeof(MinnetRequest));
   req->headers = BUFFER_0();
   req->body = BUFFER_0();
@@ -215,7 +215,7 @@ fail:
 
 JSValue
 minnet_request_new(JSContext* ctx, MinnetURL url, enum http_method method) {
-  struct http_request* req;
+  MinnetRequest* req;
 
   if(!(req = request_new(ctx, 0, url, method)))
     return JS_ThrowOutOfMemory(ctx);
@@ -224,7 +224,7 @@ minnet_request_new(JSContext* ctx, MinnetURL url, enum http_method method) {
 }
 
 JSValue
-minnet_request_wrap(JSContext* ctx, struct http_request* req) {
+minnet_request_wrap(JSContext* ctx, MinnetRequest* req) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_request_proto, minnet_request_class_id);
 
   if(JS_IsException(ret))
