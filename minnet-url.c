@@ -257,7 +257,7 @@ url_from(MinnetURL* url, JSValueConst obj, JSContext* ctx) {
 
 void
 url_dump(const char* n, MinnetURL const* url) {
-  fprintf(stderr, "%s\t{ protocol = %s, host = %s, port = %u, path = %s }\n", n, url->protocol, url->host, url->port, url->path);
+  fprintf(stderr, "%s{ protocol = %s, host = %s, port = %u, path = %s }\n", n, url->protocol, url->host, url->port, url->path);
   fflush(stderr);
 }
 

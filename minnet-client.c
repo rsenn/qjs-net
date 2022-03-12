@@ -224,7 +224,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!block)
     ret = js_promise_create(ctx, &client->promise);
 
-  url_dump("url", &client->url);
+  // url_dump("url = ", &client->url);
 
   errno = 0;
 

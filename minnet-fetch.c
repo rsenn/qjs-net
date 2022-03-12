@@ -60,9 +60,11 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     }
     case ON_CLOSE:
     case ON_ERROR: {
-      JSValue err;
-      err = JS_NewError(ctx);
-      JS_SetPropertyStr(ctx, err, "message", JS_DupValue(ctx, argv[1]));
+      const char* str = JS_ToCString(ctx, argv[1]);
+      JSValue err = js_error_new(ctx, "%s: %s", magic == ON_CLOSE ? "onClose" : "onError", str);
+      JS_FreeCString(ctx, str);
+
+      //  JS_SetPropertyStr(ctx, err, "message", JS_DupValue(ctx, argv[1]));
       if(js_promise_pending(&client->promise))
         js_promise_reject(ctx, &client->promise, err);
       JS_FreeValue(ctx, err);
@@ -132,7 +134,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   JS_FreeValue(ctx, args[1]);
 
-  printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->client);
+  // printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->client);
 
   fc->client = client_dup(cc->client);
 
