@@ -113,8 +113,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         size_t hdrlen = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP);
 
         if((client->response->status_text = js_malloc(ctx, hdrlen + 1))) {
-          memcpy(client->response->status_text, lws_hdr_simple_ptr(wsi, WSI_TOKEN_HTTP), hdrlen);
-
+          lws_hdr_copy(wsi, client->response->status_text, hdrlen + 1, WSI_TOKEN_HTTP);
           client->response->status_text[hdrlen] = '\0';
         }
       }
