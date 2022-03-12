@@ -62,12 +62,24 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     }
     case ON_FD: {
 
-      JSValue os;
+      JSValue os, set_write, set_read;
 
       os = js_global_get(ctx, "os");
 
       if(!JS_IsObject(os))
         return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
+
+      set_read = JS_GetPropertyStr(ctx, os, "setReadHandler");
+      set_write = JS_GetPropertyStr(ctx, os, "setWriteHandler");
+      JS_FreeValue(ctx, os);
+
+      os = JS_Call(ctx, set_read, JS_NULL, 1, &argv[1]);
+      JS_FreeValue(ctx, os);
+      os = JS_Call(ctx, set_write, JS_NULL, 1, &argv[2]);
+      JS_FreeValue(ctx, os);
+
+      JS_FreeValue(ctx, set_write);
+      JS_FreeValue(ctx, set_read);
 
       break;
     }
