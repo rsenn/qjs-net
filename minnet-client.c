@@ -123,14 +123,11 @@ minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
 JSValue
 minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  // gstruct lws_context* lws = 0;
   int argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
-  // MinnetWebsocket* ws;
   MinnetClient* client = 0;
   MinnetSession* session = 0;
   struct lws_context_creation_info* info;
-  struct lws_client_connect_info* conn;
   JSValue options = argv[0];
   struct lws *wsi = 0, *wsi2;
   const char *tmp = 0, *str;
@@ -150,7 +147,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   *client = (MinnetClient){.context = (MinnetContext){.ref_count = 1}, .headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
   info = &client->context.info;
-  conn = &client->connect_info;
+  // conn = &client->connect_info;
 
   client->context.js = ctx;
   client->context.error = JS_NULL;
@@ -225,9 +222,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsUndefined(opt_block))
     block = JS_ToBool(ctx, opt_block);
 
-  url_info(&client->request->url, conn);
-  conn->pwsi = &wsi;
-  conn->context = client->context.lws;
+  url_info(&client->request->url, &client->connect_info);
+  client->connect_info.pwsi = &wsi;
+  client->connect_info.context = client->context.lws;
 
 #ifdef DEBUG_OUTPUT
   fprintf(stderr, "METHOD: %s\n", method_str);
@@ -237,7 +234,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   switch(protocol_number(client->request->url.protocol)) {
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
-      conn->method = method_str;
+      client->connect_info.method = method_str;
       break;
     }
   }
@@ -246,7 +243,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     ret = js_promise_create(ctx, &client->promise);
 
   errno = 0;
-  wsi2 = lws_client_connect_via_info(conn);
+  wsi2 = lws_client_connect_via_info(&client->connect_info);
 
   /*fprintf(stderr, "wsi2 = %p, wsi = %p\n", wsi2, wsi);*/
 
