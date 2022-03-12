@@ -203,9 +203,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     block = JS_ToBool(ctx, opt_block);
 
   // url = url_format(&client->url, ctx);
-  client->request = request_new(ctx, url_location(&client->url, ctx), client->url, method_number(method_str));
-  client->headers = JS_GetPropertyStr(ctx, options, "headers");
-  client->body = JS_GetPropertyStr(ctx, options, "body");
+  if(!client->request) {
+    client->request = request_new(ctx, url_location(&client->url, ctx), client->url, method_number(method_str));
+    client->headers = JS_GetPropertyStr(ctx, options, "headers");
+    client->body = JS_GetPropertyStr(ctx, options, "body");
+  }
 
   // headers_from(&client->request->headers, wsi, client->headers, ctx);
 
