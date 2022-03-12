@@ -74,10 +74,7 @@ export function DefaultConstructor(mapper, fn = (...args) => new Object(...args)
 DefaultConstructor.prototype = function() {};
 DefaultConstructor.prototype.constructor = DefaultConstructor;
 
-export function EventLogger(
-  instance = {},
-  callback = (name, event, thisObj) => console.log('EventLogger', { name, event, thisObj })
-) {
+export function EventLogger(instance = {}, callback = (name, event, thisObj) => console.log('EventLogger', { name, event, thisObj })) {
   function WrapEvent(handler, name) {
     return function(e) {
       return callback(name, e, this);
@@ -174,8 +171,7 @@ export function RPCApi(c) {
   return api;
 }
 
-for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get'])
-  RPCApi.prototype[cmd] = MakeCommandFunction(cmd, o => o.connection);
+for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get']) RPCApi.prototype[cmd] = MakeCommandFunction(cmd, o => o.connection);
 
 export function RPCProxy(c) {
   let obj = define(new.target ? this : new RPCProxy(c), { connection: c });
@@ -335,10 +331,8 @@ export class Connection extends MessageTransceiver {
   sendCommand(command, params = {}) {
     let message = { command, ...params };
     this.log('Connection.sendCommand', { command, params, message });
-    if(typeof params == 'object' && params != null && typeof params.seq != 'number')
-      params.seq = this.seq = (this.seq | 0) + 1;
-    if(this.messages && this.messages.requests)
-      if(typeof params.seq == 'number') this.messages.requests[params.seq] = message;
+    if(typeof params == 'object' && params != null && typeof params.seq != 'number') params.seq = this.seq = (this.seq | 0) + 1;
+    if(this.messages && this.messages.requests) if (typeof params.seq == 'number') this.messages.requests[params.seq] = message;
     if(this.messages && this.messages.requests) this.messages.requests[params.seq] = message;
     this.sendMessage(message);
   }
@@ -436,17 +430,13 @@ function RPCServerEndpoint(classes = {}) {
     call: objectCommand(({ obj, method, args = [] }, respond) => {
       if(method in obj && typeof obj[method] == 'function') {
         const result = obj[method](...args);
-        if(isThenable(result))
-          return result.then(result => respond(true, result)).catch(error => respond(false, error));
+        if(isThenable(result)) return result.then(result => respond(true, result)).catch(error => respond(false, error));
         return respond(true, result);
       }
       return respond(false, `No such method on object #${id}: ${method}`);
     }),
     keys: objectCommand(({ obj, enumerable = true }, respond) => {
-      return respond(
-        true,
-        GetProperties(obj, enumerable ? obj => Object.keys(obj) : obj => Object.getOwnPropertyNames(obj))
-      );
+      return respond(true, GetProperties(obj, enumerable ? obj => Object.keys(obj) : obj => Object.getOwnPropertyNames(obj)));
     }),
     names: objectCommand(({ obj, enumerable = true }, respond) => {
       return respond(
@@ -763,11 +753,7 @@ export function parseURL(url_or_port) {
   );
 }
 
-export function GetProperties(
-  obj,
-  method = obj => Object.getOwnPropertyNames(obj),
-  pred = (obj, depth) => obj !== Object.prototype
-) {
+export function GetProperties(obj, method = obj => Object.getOwnPropertyNames(obj), pred = (obj, depth) => obj !== Object.prototype) {
   let set = new Set();
   let depth = 0;
   do {
@@ -865,8 +851,7 @@ export function MakeListCommand(pred = v => typeof v != 'function', defaults = {
       if(pred(value)) {
         if(valueDescriptor) {
           value = SerializeValue(value, source);
-          for(let flag of ['enumerable', 'writable', 'configurable'])
-            if(desc[flag] !== undefined) if (desc[flag] != defaults[flag]) value[flag] = desc[flag];
+          for(let flag of ['enumerable', 'writable', 'configurable']) if(desc[flag] !== undefined) if (desc[flag] != defaults[flag]) value[flag] = desc[flag];
         } else if(typeof value == 'function') {
           value = value + '';
         }
@@ -916,8 +901,7 @@ function ForwardObject(e, thisObj) {
 function MakeCommandFunction(cmd, getConnection, thisObj, t) {
   const pfx = [`RESPONSE to`, typeof cmd == 'symbol' ? cmd : `"${cmd}"`];
   t ??= { methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
-  if(typeof getConnection != 'function')
-    getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
+  if(typeof getConnection != 'function') getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
   //console.log("MakeCommandFunction",{cmd,getConnection,thisObj});
   return function(params = {}) {
     thisObj = thisObj || this;

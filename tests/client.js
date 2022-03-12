@@ -45,10 +45,7 @@ export default function Client(url, options, debug) {
       setWriteHandler(fd, wr);
     },
     onMessage(ws, msg) {
-      onMessage
-        ? onMessage(ws, msg)
-        : (console.log('onMessage', console.config({ maxStringLen: 100 }), { ws, msg }),
-          puts(escape(abbreviate(msg)) + '\n'));
+      onMessage ? onMessage(ws, msg) : (console.log('onMessage', console.config({ maxStringLen: 100 }), { ws, msg }), puts(escape(abbreviate(msg)) + '\n'));
     }
   });
 }

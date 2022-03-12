@@ -10,12 +10,13 @@ function FetchNext(array) {
     let promise = fetch(request, {});
     promise
       .then(response => {
-        console.log('response', response);
+        console.log(response);
         let prom = response.arrayBuffer();
         prom.then(buf => {
           let prom = response.text();
           prom.then(text => {
-            console.log('response', { buf, text });
+            console.log('arrayBuffer()', console.config({ compact: false }), buf);
+            //console.log('text()', text);
             if(array.length) FetchNext(array);
             else resolve();
           });
@@ -31,27 +32,19 @@ function FetchNext(array) {
 function main(...args) {
   if(args.length == 0)
     //args = ['http://www.w3.org/Home.html'];
-    args =
-      'Assis,Autoren,Backgrounds,Beklagenswert,BewegungMaterie,BodyMassIndex,BriefBenz,CERN_Auffassungen,DeadEndBigBang,Elementarteilchen,GOMAntwort,GOMProjekt,Glaube,Gravitation,Hintergruende,Hix,Jooss,Kapillare,Krueger,LetterBenz,MasseEnergieFehler1,Materie,Materiedefinition,NeuesCERN,Neutrinos,Nobelpreis,PM_Urknall,PhysikFehler,Physik_heute,PhysikerPhysik,PistorPohl,SackgasseUrknall,Tegmark,TheoriePraxis,Urknall,Urknallbeschreibung,WasIstLos,Weltraumteleskop,WhatIsGoing,WikipediaPhysik_Einleitung'
-        .split(',')
-        .map(n => `http://hauptplatz.unipohl.de/Wissenschaft/${n}.htm`);
-  let logfile = std.open('test-fetch.log', 'w+');
+    args = 'Assis,Autoren,Backgrounds,Beklagenswert,BewegungMaterie,BodyMassIndex,BriefBenz,CERN_Auffassungen,DeadEndBigBang,Elementarteilchen,GOMAntwort,GOMProjekt,Glaube,Gravitation,Hintergruende,Hix,Jooss,Kapillare,Krueger,LetterBenz,MasseEnergieFehler1,Materie,Materiedefinition,NeuesCERN,Neutrinos,Nobelpreis,PM_Urknall,PhysikFehler,Physik_heute,PhysikerPhysik,PistorPohl,SackgasseUrknall,Tegmark,TheoriePraxis,Urknall,Urknallbeschreibung,WasIstLos,Weltraumteleskop,WhatIsGoing,WikipediaPhysik_Einleitung'.split(',').map(n => `http://hauptplatz.unipohl.de/Wissenschaft/${n}.htm`);
+
+  let log = std.open('test-fetch.log', 'w+');
 
   setLog(-1, (level, msg) => {
-    logfile.puts(logLevels[level].padEnd(10) + msg + '\n');
-    logfile.flush();
+    log.puts(logLevels[level].padEnd(10) + msg + '\n');
+    log.flush();
   });
+
   import('console')
-    .then(({ Console }) => {
-      console.log('Console', Console);
-      globalThis.console = new Console({
-        inspectOptions: { compact: 0, depth: 2, maxArrayLength: 10, maxStringLength: 30, reparseable: false }
-      });
-      run();
-    })
-    .catch(() => {
-      run();
-    });
+    .then(({ Console }) => ((globalThis.console = new Console({ inspectOptions: { compact: 1, depth: 2, maxArrayLength: 10, maxStringLength: 30, reparseable: false } })), run()))
+    .catch(run);
+
   function run() {
     let promise = FetchNext(args);
     console.log('promise', promise);

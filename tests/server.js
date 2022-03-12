@@ -38,24 +38,7 @@ const MimeTypes = [
 
 export function MakeCert(sslCert, sslPrivateKey) {
   let stderr = open('/dev/null', O_RDWR);
-  let ret = exec(
-    [
-      'openssl',
-      'req',
-      '-x509',
-      '-out',
-      sslCert,
-      '-keyout',
-      sslPrivateKey,
-      '-newkey',
-      'rsa:2048',
-      '-nodes',
-      '-sha256',
-      '-subj',
-      '/CN=localhost'
-    ],
-    { stderr }
-  );
+  let ret = exec(['openssl', 'req', '-x509', '-out', sslCert, '-keyout', sslPrivateKey, '-newkey', 'rsa:2048', '-nodes', '-sha256', '-subj', '/CN=localhost'], { stderr });
   close(stderr);
   return ret;
 }

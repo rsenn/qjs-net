@@ -110,11 +110,7 @@ function main(...args) {
   let uri = new URL(url);
   console.log('main', { url, uri });
 
-  let cli = (globalThis.sock = new rpc.Socket(
-    uri,
-    rpc[`RPC${server ? 'Server' : 'Client'}Connection`],
-    +params.verbose
-  ));
+  let cli = (globalThis.sock = new rpc.Socket(uri, rpc[`RPC${server ? 'Server' : 'Client'}Connection`], +params.verbose));
 
   cli.register({ Socket, Worker: os.Worker, Repeater, REPL, EventEmitter });
 
@@ -185,13 +181,7 @@ function main(...args) {
 
           resp.type = 'application/json';
 
-          let {
-            dir = 'tmp',
-            filter = '.(brd|sch|G[A-Z][A-Z])$',
-            verbose = false,
-            objects = false,
-            key = 'mtime'
-          } = data;
+          let { dir = 'tmp', filter = '.(brd|sch|G[A-Z][A-Z])$', verbose = false, objects = false, key = 'mtime' } = data;
           let absdir = path.realpath(dir);
           let components = absdir.split(path.sep);
 

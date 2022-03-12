@@ -23,8 +23,7 @@ export const Levels = (() => {
   }, {});
 })();
 
-export const DefaultLevels =
-  LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
+export const DefaultLevels = LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
 
 export const Init = (name, mask = LLL_USER | ((LLL_CLIENT << 1) - 1)) =>
   setLog(mask, (level, msg) => {
