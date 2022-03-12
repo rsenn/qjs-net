@@ -237,8 +237,8 @@ js_resolve_functions_is_null(ResolveFunctions const* funcs) {
   return JS_IsNull(funcs->array[0]) && JS_IsNull(funcs->array[1]);
 }
 
-static void
-js_resolve_functions_free(JSContext* ctx, ResolveFunctions* funcs) {
+  void
+js_promise_free(JSContext* ctx, ResolveFunctions* funcs) {
   JS_FreeValue(ctx, funcs->array[0]);
   JS_FreeValue(ctx, funcs->array[1]);
   js_resolve_functions_zero(funcs);
@@ -249,7 +249,7 @@ js_resolve_functions_call(JSContext* ctx, ResolveFunctions* funcs, int index, JS
   JSValue ret = JS_UNDEFINED;
   assert(!JS_IsNull(funcs->array[index]));
   ret = JS_Call(ctx, funcs->array[index], JS_UNDEFINED, 1, &arg);
-  js_resolve_functions_free(ctx, funcs);
+  js_promise_free(ctx, funcs);
   return ret;
 }
 

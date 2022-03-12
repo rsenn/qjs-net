@@ -60,7 +60,7 @@ request_dump(MinnetRequest const* req, JSContext* ctx) {
 
 void
 request_init(MinnetRequest* req, MinnetURL url, enum http_method method) {
-  memset(req, 0, sizeof(*req));
+  memset(req, 0, sizeof(MinnetRequest));
 
   req->ref_count = 1;
 
@@ -184,13 +184,17 @@ request_from(JSContext* ctx, JSValueConst value) {
   MinnetRequest* req = 0;
   MinnetURL url = {0, 0, 0, 0};
 
-  if(JS_IsObject(value) && (req = minnet_request_data(value)))
+ if(JS_IsObject(value) && (req = minnet_request_data(value)))
+    req = request_dup(req);
+  else {
+  /* if(JS_IsObject(value) && (req = minnet_request_data(value)))
     url = url_dup(req->url, ctx);
   else
-    url = url_from(ctx, value);
+  */  url = url_from(ctx, value);
 
   if(url_valid(&url))
     req = request_new(ctx, url.path, url, METHOD_GET);
+}
 
   return req;
 }

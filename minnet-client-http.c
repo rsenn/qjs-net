@@ -26,7 +26,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
     case LWS_CALLBACK_WSI_CREATE:
-    case LWS_CALLBACK_CONNECTING:
+    case LWS_CALLBACK_CONNECTING: {
+      break;
+    }
     case LWS_CALLBACK_PROTOCOL_INIT: {
       return 0;
     }
