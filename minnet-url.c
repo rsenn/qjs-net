@@ -264,21 +264,23 @@ url_fromobj(MinnetURL* url, JSValueConst obj, JSContext* ctx) {
     JS_FreeCString(ctx, path);
 }
 
-MinnetURL
-url_from(JSContext* ctx, JSValueConst value) {
-  MinnetURL url = {0}, *other;
+BOOL
+url_from(MinnetURL* url, JSValueConst value, JSContext* ctx) {
+  MinnetURL* other;
 
   if((other = minnet_url_data(value))) {
-    url = url_dup(*other, ctx);
+    url_copy(url, other, ctx);
   } else if(JS_IsObject(value)) {
-    url_fromobj(&url, value, ctx);
+    url_fromobj(url, value, ctx);
   } else if(JS_IsString(value)) {
     const char* str = JS_ToCString(ctx, value);
-    url_parse(&url, str, ctx);
+    url_parse(url, str, ctx);
     JS_FreeCString(ctx, str);
+  } else {
+    return FALSE;
   }
 
-  return url;
+  return TRUE;
 }
 
 void
@@ -377,7 +379,7 @@ minnet_url_wrap(JSContext* ctx, MinnetURL* url) {
 }
 
 MinnetURL*
-url_new(JSContext* ctx) {
+url_create(JSContext* ctx) {
 
   MinnetURL* url;
 
@@ -393,7 +395,7 @@ minnet_url_new(JSContext* ctx, MinnetURL u) {
 
   MinnetURL* url;
 
-  if(!(url = url_new(ctx)))
+  if(!(url = url_create(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   url_copy(url, &u, ctx);
@@ -524,9 +526,14 @@ minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
 
 JSValue
 minnet_url_from(JSContext* ctx, JSValueConst value) {
-  MinnetURL url = url_from(ctx, value);
+  MinnetURL* url;
 
-  if(!url_valid(&url))
+  if(!(url = url_create(ctx)))
+    return JS_ThrowOutOfMemory(ctx);
+
+  url_from(url, value, ctx);
+
+  if(!url_valid(url))
     return JS_ThrowTypeError(ctx, "Not a valid URL");
 
   return minnet_url_wrap(ctx, url);

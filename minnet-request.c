@@ -184,17 +184,18 @@ request_from(JSContext* ctx, JSValueConst value) {
   MinnetRequest* req = 0;
   MinnetURL url = {0, 0, 0, 0};
 
- if(JS_IsObject(value) && (req = minnet_request_data(value)))
+  if(JS_IsObject(value) && (req = minnet_request_data(value)))
     req = request_dup(req);
   else {
-  /* if(JS_IsObject(value) && (req = minnet_request_data(value)))
-    url = url_dup(req->url, ctx);
-  else
-  */  url = url_from(ctx, value);
+    /* if(JS_IsObject(value) && (req = minnet_request_data(value)))
+      url = url_dup(req->url, ctx);
+    else
+    */
+    url_from(&url, value, ctx);
 
-  if(url_valid(&url))
-    req = request_new(ctx, url.path, url, METHOD_GET);
-}
+    if(url_valid(&url))
+      req = request_new(ctx, url.path, url, METHOD_GET);
+  }
 
   return req;
 }
@@ -238,8 +239,8 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   while(argc > 0) {
 
     if(!got_url) {
-      req->url = url_from(ctx, argv[0]);
-      got_url = TRUE;
+      got_url = url_from(&req->url, argv[0], ctx);
+
     } else if(JS_IsObject(argv[0])) {
       js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);
     }
