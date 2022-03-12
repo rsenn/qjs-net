@@ -195,20 +195,6 @@ js_is_iterator(JSContext* ctx, JSValueConst obj) {
   return FALSE;
 }
 
-BOOL
-js_is_promise(JSContext* ctx, JSValueConst obj) {
-  if(JS_IsObject(obj)) {
-
-    JSObject* obj = JS_VALUE_GET_OBJ(obj);
-
-    return obj->clas return JS_VALUE_GET_ JSValue next = JS_GetPropertyStr(ctx, obj, "next");
-
-    if(JS_IsFunction(ctx, next))
-      return TRUE;
-  }
-  return FALSE;
-}
-
 JSAtom
 js_symbol_static_atom(JSContext* ctx, const char* name) {
   JSValue sym = js_symbol_static_value(ctx, name);
