@@ -31,25 +31,25 @@ header_free(JSRuntime* rt, struct http_header* hdr) {
 }*/
 
 void
-response_format(struct http_response const* res, char* buf, size_t len) {
+response_format(MinnetResponse const* res, char* buf, size_t len) {
   snprintf(buf, len, FGC(226, "MinnetResponse") " { url: '%s', status: %d, ok: %s, type: '%s' }", res->url, res->status, res->ok ? "true" : "false", res->type);
 }
 
 char*
-response_dump(struct http_response const* res) {
+response_dump(MinnetResponse const* res) {
   static char buf[1024];
   response_format(res, buf, sizeof(buf));
   return buf;
 }
 
 void
-response_zero(struct http_response* res) {
+response_zero(MinnetResponse* res) {
   memset(res, 0, sizeof(MinnetResponse));
   res->body = BUFFER_0();
 }
 
 void
-response_init(struct http_response* res, MinnetURL url, int32_t status, BOOL ok, char* type) {
+response_init(MinnetResponse* res, MinnetURL url, int32_t status, BOOL ok, char* type) {
   memset(res, 0, sizeof(MinnetResponse));
 
   res->status = status;
@@ -67,12 +67,11 @@ response_dup(MinnetResponse* resp) {
 }
 
 ssize_t
-response_write(struct http_response* res, const void* x, size_t n, JSContext* ctx) {
+response_write(MinnetResponse* res, const void* x, size_t n, JSContext* ctx) {
   return buffer_append(&res->body, x, n, ctx);
 }
-
 void
-response_free(struct http_response* res, JSContext* ctx) {
+response_clear(MinnetResponse* res, JSContext* ctx) {
   url_free(&res->url, ctx);
   if(res->type) {
     js_free(ctx, (void*)res->type);
@@ -81,12 +80,10 @@ response_free(struct http_response* res, JSContext* ctx) {
 
   buffer_free(&res->headers, JS_GetRuntime(ctx));
   buffer_free(&res->body, JS_GetRuntime(ctx));
-
-  js_free(ctx, res);
 }
 
 void
-response_free_rt(JSRuntime* rt, struct http_response* res) {
+response_clear_rt(JSRuntime* rt, MinnetResponse* res) {
   url_free_rt(&res->url, rt);
   if(res->type) {
     js_free_rt(rt, (void*)res->type);
@@ -95,11 +92,26 @@ response_free_rt(JSRuntime* rt, struct http_response* res) {
 
   buffer_free(&res->headers, rt);
   buffer_free(&res->body, rt);
-
-  js_free_rt(rt, res);
 }
 
-struct http_response*
+void
+response_free(MinnetResponse* res, JSContext* ctx) {
+
+  if(--res->ref_count == 0) {
+    response_clear(res, ctx);
+    js_free(ctx, res);
+  }
+}
+
+void
+response_free_rt(JSRuntime* rt, MinnetResponse* res) {
+  if(--res->ref_count == 0) {
+    response_clear_rt(rt, res);
+    js_free_rt(rt, res);
+  }
+}
+
+MinnetResponse*
 response_new(JSContext* ctx) {
   MinnetResponse* res;
 
@@ -123,7 +135,7 @@ minnet_response_new(JSContext* ctx, MinnetURL url, int32_t status, BOOL ok, cons
 }
 
 JSValue
-minnet_response_wrap(JSContext* ctx, struct http_response* res) {
+minnet_response_wrap(JSContext* ctx, MinnetResponse* res) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_response_proto, minnet_response_class_id);
 
   if(JS_IsException(ret))
