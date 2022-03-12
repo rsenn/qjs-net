@@ -1,17 +1,20 @@
 import { exit, puts, open } from 'std';
-import { fetch, setLog, logLevels, LLL_INFO, LLL_USER } from 'net';
+import { fetch, Request, Response ,setLog, logLevels, LLL_INFO, LLL_USER } from 'net';
 
 function FetchNext(array) {
   return new Promise((resolve, reject) => {
     let url = array.shift();
-    console.log(`fetching \x1b[1;33m${url}\x1b[0m`);
-    let promise = fetch(url, {});
+    let request = new Request(url);
 
-    console.log('FetchNext', promise);
+    console.log(`fetching \x1b[1;33m${url}\x1b[0m`, request);
+    let promise = fetch(request, {});
+
+//    console.log('FetchNext', promise);
 
     promise
       .then(response => {
-        let prom = response.arrayBuffer();
+                 console.log('response', response);
+   let prom = response.arrayBuffer();
 
         prom.then(buf => {
           let prom = response.text();

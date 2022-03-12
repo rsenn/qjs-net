@@ -58,6 +58,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
         js_promise_resolve(ctx, &client->promise, argv[1]);
       break;
     }
+
     case ON_CLOSE:
     case ON_ERROR: {
       const char* str = JS_ToCString(ctx, argv[1]);
@@ -70,30 +71,23 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
       JS_FreeValue(ctx, err);
       break;
     }
+
     case ON_FD: {
-
       JSValue os, tmp, set_write, set_read, args[2] = {argv[0], JS_NULL};
-
       os = js_global_get(ctx, "os");
-
       if(!JS_IsObject(os))
         return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
-
       set_read = JS_GetPropertyStr(ctx, os, "setReadHandler");
       set_write = JS_GetPropertyStr(ctx, os, "setWriteHandler");
-
       args[1] = argv[1];
-
       tmp = JS_Call(ctx, set_read, os, 2, args);
       JS_FreeValue(ctx, tmp);
       args[1] = argv[2];
       tmp = JS_Call(ctx, set_write, os, 2, args);
       JS_FreeValue(ctx, tmp);
-
       JS_FreeValue(ctx, os);
       JS_FreeValue(ctx, set_write);
       JS_FreeValue(ctx, set_read);
-
       break;
     }
   }
