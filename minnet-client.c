@@ -253,7 +253,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-  client_free(client);
+  // client_free(client);
 
   // minnet_client = NULL;
 fail:
@@ -269,6 +269,8 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     return JS_ThrowOutOfMemory(ctx);
 
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
+
+  // closure->client->context.ref_count += 2;
 
   func[0] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, client_closure_dup(closure), client_closure_free);
   func[1] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_REJECT, client_closure_dup(closure), client_closure_free);

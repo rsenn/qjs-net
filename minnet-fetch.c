@@ -31,7 +31,7 @@ fetch_closure_free(void* ptr) {
     if(closure->client) {
       JSContext* ctx = closure->client->context.js;
 
-      client_free(closure->client);
+      // client_free(closure->client);
 
       js_free(ctx, closure);
     }
