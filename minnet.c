@@ -272,24 +272,26 @@ headers_fromobj(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
     return 0;
 
   for(i = 0; i < tab_len; i++) {
-    JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);
-    size_t len;
-    char* prop;
-    const char* str;
+    JSValue jsval = JS_GetProperty(ctx, obj, tab[i].atom);
+    size_t value_len, prop_len;
+    const char *value, *prop;
     int ret;
 
-    str = JS_ToCStringLen(ctx, &len, value);
-    JS_FreeValue(ctx, value);
+    value = JS_ToCStringLen(ctx, &value_len, jsval);
+    JS_FreeValue(ctx, jsval);
 
     prop = JS_AtomToCString(ctx, tab[i].atom);
+    prop_len = strlen(prop);
 
-    buffer_append(buffer, prop, strlen(prop), ctx);
-    buffer_append(buffer, ": ", 2, ctx);
-    buffer_append(buffer, str, len, ctx);
-    buffer_append(buffer, "\r\n", 2, ctx);
+    buffer_grow(buffer, prop_len + 2 + value_len + 2, ctx);
+
+    buffer_write(buffer, prop, prop_len);
+    buffer_write(buffer, ": ", 2);
+    buffer_write(buffer, value, value_len);
+    buffer_write(buffer, "\r\n", 2);
 
     JS_FreeCString(ctx, prop);
-    JS_FreeCString(ctx, str);
+    JS_FreeCString(ctx, value);
   }
 
   js_free(ctx, tab);

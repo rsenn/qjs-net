@@ -337,3 +337,9 @@ buffer_move(MinnetBuffer* buf) {
   memset(buf, 0, sizeof(MinnetBuffer));
   return ret;
 }
+
+uint8_t*
+buffer_grow(MinnetBuffer* buf, size_t size, JSContext* ctx) {
+  size += buffer_SIZE(buf);
+  return buffer_realloc(buf, size, ctx);
+}

@@ -93,6 +93,7 @@ BOOL buffer_clone(MinnetBuffer*, const MinnetBuffer*, JSContext*);
 uint8_t* buffer_skip(MinnetBuffer*, size_t);
 BOOL buffer_putchar(MinnetBuffer*, char);
 MinnetBuffer buffer_move(MinnetBuffer*);
+uint8_t* buffer_grow(MinnetBuffer* buf, size_t size, JSContext* ctx);
 
 static inline void
 buffer_reset(MinnetBuffer* buf) {
@@ -100,9 +101,9 @@ buffer_reset(MinnetBuffer* buf) {
   buf->write = buf->start;
 }
 
-static inline uint8_t*
+/*static inline uint8_t*
 buffer_grow(MinnetBuffer* buf, size_t size, JSContext* ctx) {
   return block_grow(&buf->block, size, ctx);
-}
+}*/
 
 #endif /* MINNET_BUFFER_H */

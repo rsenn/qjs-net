@@ -205,11 +205,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onFd", client->on.fd)
   GETCBPROP(options, "onHttp", client->on.http)
 
-  value = JS_GetPropertyStr(ctx, options, "headers");
-  if(!JS_IsUndefined(value))
-    client->headers = JS_DupValue(ctx, value);
-  JS_FreeValue(ctx, value);
-
   value = JS_GetPropertyStr(ctx, options, "binary");
   if(!JS_IsUndefined(value))
     opaque->binary = JS_ToBool(ctx, value);
@@ -219,6 +214,15 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsUndefined(value))
     block = JS_ToBool(ctx, value);
   JS_FreeValue(ctx, value);
+
+  value = JS_GetPropertyStr(ctx, options, "headers");
+  if(!JS_IsUndefined(value))
+    client->headers = JS_DupValue(ctx, value);
+  JS_FreeValue(ctx, value);
+
+  if(JS_IsObject(client->headers)) {
+    headers_fromobj(&client->request->headers, client->headers, ctx);
+  }
 
   url_info(&client->request->url, &client->connect_info);
   client->connect_info.pwsi = &wsi;
