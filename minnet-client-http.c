@@ -5,19 +5,21 @@
 
 int
 http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  //  MinnetHttpMethod method = -1;
+
   if(reason == LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS)
     return 0;
-  //
+
   MinnetClient* client = lws_client(wsi);
   MinnetSession* session = &client->session;
-  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, client->context.js);
-
-  if(!opaque->sess && session)
-    opaque->sess = session;
+  struct wsi_opaque_user_data* opaque;
 
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &client->on.fd, in);
+
+  if((opaque = lws_opaque(wsi, client->context.js))) {
+    if(!opaque->sess && session)
+      opaque->sess = session;
+  }
 
   lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
