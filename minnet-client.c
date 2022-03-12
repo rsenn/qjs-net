@@ -128,7 +128,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(ptr)
     ((struct client_closure*)ptr)->client = client;
 
-  *client = (MinnetClient){.ref_count = 1, .headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
+  *client = (MinnetClient){.context = (MinnetContext){.ref_count = 1}, .headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
   info = &client->context.info;
   conn = &client->connect_info;
 
