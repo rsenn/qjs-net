@@ -23,7 +23,50 @@ function FetchNext(array) {
 }
 
 function main(...args) {
-  if(args.length == 0) args = ['http://www.w3.org/'];
+  if(args.length == 0)
+    //args = ['http://www.w3.org/Home.html'];
+    args = [
+      'Jooss',
+      'Assis',
+      'Autoren',
+      'NeuesCERN',
+      'WasIstLos',
+      'WhatIsGoing',
+      'PM_Urknall',
+      'PhysikerPhysik',
+      'Materiedefinition',
+      'BewegungMaterie',
+      'Krueger',
+      'Elementarteilchen',
+      'MasseEnergieFehler1',
+      'Physik_heute',
+      'Materie',
+      'Gravitation',
+      'WikipediaPhysik_Einleitung',
+      'Tegmark',
+      'CERN_Auffassungen',
+      'PhysikFehler',
+      'Nobelpreis',
+      'PistorPohl',
+      'Weltraumteleskop',
+      'Kapillare',
+      'TheoriePraxis',
+      'SackgasseUrknall',
+      'DeadEndBigBang',
+      'BriefBenz',
+      'LetterBenz',
+      'Beklagenswert',
+      'Urknall',
+      'Hintergruende',
+      'Backgrounds',
+      'Urknallbeschreibung',
+      'Glaube',
+      'Hix',
+      'Neutrinos',
+      'GOMProjekt',
+      'GOMAntwort',
+      'BodyMassIndex'
+    ].map(n => `http://hauptplatz.unipohl.de/Wissenschaft/${n}.htm`);
 
   let logfile = std.open('test-fetch.log', 'w+');
 
@@ -37,7 +80,7 @@ function main(...args) {
     .then(({ Console }) => {
       console.log('Console', Console);
       globalThis.console = new Console({
-        inspectOptions: { compact: 0, depth: 0, maxArrayLength: 10, maxStringLength: 30 }
+        inspectOptions: { compact: 0, depth: 0, maxArrayLength: 10, maxStringLength: 30, reparseable: true }
       });
       run();
     })
