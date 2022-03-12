@@ -16,7 +16,7 @@ typedef struct client_context {
   };
   MinnetCallbacks cb;
   JSValue headers, body, next;
- // MinnetURL url;
+  // MinnetURL url;
   MinnetSession session;
   struct http_request* request;
   struct http_response* response;
@@ -28,6 +28,7 @@ struct client_closure* client_closure_new(JSContext*);
 struct client_closure* client_closure_dup(struct client_closure*);
 void client_free(MinnetClient*);
 MinnetClient* client_dup(MinnetClient*);
+void client_zero(MinnetClient* client);
 JSValue minnet_client_closure(JSContext*, JSValue, int, JSValue argv[], int magic, void* ptr);
 JSValue minnet_client(JSContext*, JSValue, int, JSValue argv[]);
 uint8_t* scan_backwards(uint8_t*, uint8_t);

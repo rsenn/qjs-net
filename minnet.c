@@ -96,13 +96,7 @@ context_clear(MinnetContext* context) {
   JSContext* ctx = context->js;
 
   lws_context_destroy(context->lws);
-  /*
-    if(context->info.ssl_cert_filepath)
-      JS_FreeCString(ctx, context->info.ssl_cert_filepath);
-    if(context->info.ssl_private_key_filepath)
-      JS_FreeCString(ctx, context->info.ssl_private_key_filepath);
-    if(context->info.ssl_ca_filepath)
-      JS_FreeCString(ctx, context->info.ssl_ca_filepath);*/
+
   js_buffer_free(&context->crt, ctx);
   js_buffer_free(&context->key, ctx);
   js_buffer_free(&context->ca, ctx);
@@ -267,6 +261,39 @@ headers_add(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* 
 
   js_free(ctx, tab);
   return 0;
+}
+
+int
+headers_fromobj(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
+  JSPropertyEnum* tab;
+  uint32_t tab_len, i;
+
+  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
+    return 0;
+
+  for(i = 0; i < tab_len; i++) {
+    JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);
+    size_t len;
+    char* prop;
+    const char* str;
+    int ret;
+
+    str = JS_ToCStringLen(ctx, &len, value);
+    JS_FreeValue(ctx, value);
+
+    prop = JS_AtomToCString(ctx, tab[i].atom);
+
+    buffer_append(buffer, prop, strlen(prop), ctx);
+    buffer_append(buffer, ": ", 2, ctx);
+    buffer_append(buffer, str, len, ctx);
+    buffer_append(buffer, "\r\n", 2, ctx);
+
+    JS_FreeCString(ctx, prop);
+    JS_FreeCString(ctx, str);
+  }
+
+  js_free(ctx, tab);
+  return i;
 }
 
 ssize_t

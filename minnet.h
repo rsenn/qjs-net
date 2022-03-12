@@ -154,6 +154,7 @@ char* headers_atom(JSAtom, JSContext* ctx);
 int headers_add(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);
 ssize_t headers_set(JSContext*, MinnetBuffer*, const char* name, const char* value);
 int headers_get(JSContext*, MinnetBuffer*, struct lws* wsi);
+int headers_fromobj(MinnetBuffer*, JSValueConst, JSContext*);
 int fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
 int fd_callback(struct lws*, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args);
 int minnet_lws_unhandled(const char* handler, int);

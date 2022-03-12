@@ -96,6 +96,16 @@ client_free(MinnetClient* client) {
   }
 }
 
+void
+client_zero(MinnetClient* client) {
+  memset(client, 0, sizeof(MinnetClient));
+  client->headers = JS_NULL;
+  client->body = JS_NULL;
+  client->next = JS_NULL;
+  session_zero(&client->session);
+  js_promise_zero(&client->promise);
+}
+
 MinnetClient*
 client_dup(MinnetClient* client) {
   ++client->ref_count;
@@ -129,8 +139,10 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   SETLOG(LLL_INFO)
 
-  if(!(client = js_mallocz(ctx, sizeof(MinnetClient))))
+  if(!(client = js_malloc(ctx, sizeof(MinnetClient))))
     return JS_ThrowOutOfMemory(ctx);
+
+  client_zero(client);
 
   if(ptr)
     ((struct client_closure*)ptr)->client = client;
@@ -202,7 +214,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   JSValue opt_headers = JS_GetPropertyStr(ctx, options, "headers");
   if(!JS_IsUndefined(opt_headers))
-    client->headers =  JS_DupValue(ctx, opt_headers);
+    client->headers = JS_DupValue(ctx, opt_headers);
 
   JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
   if(!JS_IsUndefined(opt_binary))
