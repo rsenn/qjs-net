@@ -80,7 +80,7 @@ function main(...args) {
     .then(({ Console }) => {
       console.log('Console', Console);
       globalThis.console = new Console({
-        inspectOptions: { compact: 0, depth: 0, maxArrayLength: 10, maxStringLength: 30, reparseable: true }
+        inspectOptions: { compact: 0, depth: 0, maxArrayLength: 10, maxStringLength: 30, reparseable: false }
       });
       run();
     })

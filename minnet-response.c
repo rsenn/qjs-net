@@ -111,6 +111,35 @@ minnet_response_wrap(JSContext* ctx, struct http_response* res) {
   return ret;
 }
 
+enum {
+  RESPONSE_ARRAYBUFFER = 0,
+  RESPONSE_TEXT,
+  RESPONSE_JSON,
+};
+
+static JSValue
+minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  JSValue ret = JS_UNDEFINED;
+  MinnetResponse* res;
+
+  if(!(res = minnet_response_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case RESPONSE_ARRAYBUFFER: {
+      break;
+    }
+    case RESPONSE_TEXT: {
+      break;
+    }
+    case RESPONSE_JSON: {
+      break;
+    }
+  }
+
+  return ret;
+}
+
 static JSValue
 minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
@@ -355,10 +384,12 @@ JSClassDef minnet_response_class = {
 };
 
 const JSCFunctionListEntry minnet_response_proto_funcs[] = {
-    JS_CFUNC_FLAGS_DEF("arrayBuffer", 0, minnet_response_buffer, JS_PROP_ENUMERABLE),
-    JS_CFUNC_FLAGS_DEF("json", 0, minnet_response_json, JS_PROP_ENUMERABLE),
-    JS_CFUNC_FLAGS_DEF("text", 0, minnet_response_text, JS_PROP_ENUMERABLE),
-    JS_CFUNC_DEF("clone", 0, minnet_response_clone),
+    /*    JS_CFUNC_FLAGS_DEF("arrayBuffer", 0, minnet_response_buffer, JS_PROP_ENUMERABLE),
+        JS_CFUNC_FLAGS_DEF("json", 0, minnet_response_json, JS_PROP_ENUMERABLE),
+        JS_CFUNC_FLAGS_DEF("text", 0, minnet_response_text, JS_PROP_ENUMERABLE),*/
+    JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_response_method, RESPONSE_ARRAYBUFFER),
+    JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
+    JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
     // JS_CFUNC_DEF("header", 2, minnet_response_header),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("ok", minnet_response_get, minnet_response_set, RESPONSE_OK, JS_PROP_ENUMERABLE),
