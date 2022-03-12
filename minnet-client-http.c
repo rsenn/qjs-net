@@ -24,8 +24,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {
-      client->response = response_new(ctx);
-      url_copy(&client->response->url, &client->request->url, ctx);
+      /*      client->response = response_new(ctx);
+            url_copy(&client->response->url, &client->request->url, ctx);*/
       return 0;
     }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
