@@ -23,7 +23,7 @@ typedef struct http_request {
   enum http_method method;
   MinnetURL url;
   MinnetBuffer headers, body;
-  char path[256];
+  // char path[256];
 } MinnetRequest;
 
 char* request_dump(struct http_request const*, JSContext* ctx);

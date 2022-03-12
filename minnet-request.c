@@ -43,10 +43,11 @@ method_number(const char* name) {
 void
 request_format(struct http_request const* req, char* buf, size_t len, JSContext* ctx) {
   char* headers = buffer_escaped(&req->headers, ctx);
-
-  snprintf(buf, len, FGC(196, "MinnetRequest") " { method: '%s', url: '%s', path: '%s', headers: '%s' }", method_name(req->method), req->url, req->path, headers);
+  char* url = url_format(&req->url, ctx);
+  snprintf(buf, len, FGC(196, "MinnetRequest") " { method: '%s', url: '%s', headers: '%s' }", method_name(req->method), url, headers);
 
   js_free(ctx, headers);
+  js_free(ctx, url);
 }
 
 char*
@@ -62,8 +63,8 @@ request_init(struct http_request* req, const char* path, MinnetURL url, enum htt
 
   req->ref_count = 0;
 
-  if(path)
-    pstrcpy(req->path, sizeof(req->path), path);
+  /*if(path)
+    pstrcpy(req->path, sizeof(req->path), path);*/
 
   req->url = url;
   req->method = method;
@@ -233,7 +234,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_PATH: {
-      ret = req->path[0] ? JS_NewString(ctx, req->path) : JS_NULL;
+      ret = req->url.path ? JS_NewString(ctx, req->url.path) : JS_NULL;
       break;
     }
     case REQUEST_HEADERS: {
@@ -297,7 +298,11 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
       break;
     }
     case REQUEST_PATH: {
-      pstrcpy(req->path, sizeof(req->path), str);
+      if(req->url.path) {
+        js_free(ctx, req->url.path);
+        req->url.path = 0;
+      }
+      req->url.path = js_strdup(ctx, str);
       break;
     }
     case REQUEST_HEADERS: {
@@ -330,7 +335,7 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, 0, REQUEST_PATH, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, 0, REQUEST_HEADERS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("arrayBuffer", minnet_request_get, 0, REQUEST_ARRAYBUFFER, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("text", minnet_request_get, 0, REQUEST_TEXT, 0),

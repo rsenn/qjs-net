@@ -479,10 +479,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!opaque->req->headers.write) {
         int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
       }
-
-      if(!opaque->req->path[0])
-        pstrcpy(opaque->req->path, sizeof(opaque->req->path), path);
-
+      /*
+            if(!opaque->req->path[0])
+              pstrcpy(opaque->req->path, sizeof(opaque->req->path), path);
+      */
       session->mount = mount_find(server->context.info.mounts, path, 0);
       if(url.path && !session->mount)
         if(!(session->mount = mount_find(server->context.info.mounts, url.path, mountpoint_len)))

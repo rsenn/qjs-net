@@ -152,12 +152,10 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 static JSValue
 minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
-
   if((res = minnet_response_data2(ctx, this_val))) {
-    JSValue val = JS_NewArrayBuffer /*Copy*/ (ctx, block_BEGIN(&res->body), block_SIZE(&res->body), 0, 0, 0);
+    JSValue val = JS_NewArrayBuffer(ctx, block_BEGIN(&res->body), block_SIZE(&res->body), 0, 0, 0);
     return val;
   }
-
   return JS_EXCEPTION;
 }
 
@@ -166,7 +164,6 @@ minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   MinnetResponse* res;
   if((res = minnet_response_data2(ctx, this_val)))
     return JS_ParseJSON(ctx, block_BEGIN(&res->body), buffer_HEAD(&res->body), res->url.path);
-
   return JS_EXCEPTION;
 }
 
@@ -175,7 +172,6 @@ minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   MinnetResponse* res;
   if((res = minnet_response_data2(ctx, this_val)))
     return JS_NewStringLen(ctx, (char*)block_BEGIN(&res->body), buffer_HEAD(&res->body));
-
   return JS_EXCEPTION;
 }
 
@@ -401,7 +397,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
     // JS_CFUNC_DEF("header", 2, minnet_response_header),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("ok", minnet_response_get, minnet_response_set, RESPONSE_OK, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("ok", minnet_response_get, minnet_response_set, RESPONSE_OK, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_DEF("offset", minnet_response_get, minnet_response_set, RESPONSE_OFFSET),

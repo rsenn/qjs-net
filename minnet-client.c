@@ -158,6 +158,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       client->request = req;
       client->url = url_dup(req->url, ctx);
       client->headers = JS_GetPropertyStr(ctx, argv[argind], "headers");
+      argind++;
     }
   }
 

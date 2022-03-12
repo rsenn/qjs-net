@@ -93,7 +93,7 @@ function main(...args) {
     .then(({ Console }) => {
       console.log('Console', Console);
       globalThis.console = new Console({
-        inspectOptions: { compact: 0, depth: 0, maxArrayLength: 10, maxStringLength: 30, reparseable: false }
+        inspectOptions: { compact: 0, depth: 2, maxArrayLength: 10, maxStringLength: 30, reparseable: false }
       });
       run();
     })
