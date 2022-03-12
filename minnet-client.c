@@ -153,7 +153,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   session_zero(&client->session);
 
-  client->request = request_from(ctx, argv[0]);
+  client->request = request_from(ctx, argc, argv);
 
   if(argc >= 2) {
 
