@@ -213,17 +213,27 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
   // url_from(&client->url, options, ctx);
 
+  if(!block)
+    ret = js_promise_create(ctx, &client->promise);
   url_dump("url", &client->url);
 
   errno = 0;
 
   wsi2 = lws_client_connect_via_info(conn);
 
-  fprintf(stderr, "wsi2 = %p, wsi = %p\n", wsi2, wsi);
+  /*  fprintf(stderr, "wsi2 = %p, wsi = %p\n", wsi2, wsi);*/
 
   if(!wsi) {
-    ret = JS_ThrowInternalError(ctx, "No websocket!");
-    goto fail;
+    if(!block) {
+      JSValue err;
+      char buf[1024];
+      snprintf(buf, sizeof(buf), "Connection failed: %s", strerror(errno));
+      err = JS_NewError(ctx);
+      JS_SetPropertyStr(ctx, err, "message", JS_NewString(ctx, buf)) js_promise_reject(ctx, &client->promise, err);
+    } else {
+      ret = JS_ThrowInternalError(ctx, "Connection failed: %s", strerror(errno));
+      goto fail;
+    }
   }
 
   // minnet_exception = FALSE;
@@ -237,10 +247,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(JS_IsBool(opt_block))
     block = JS_ToBool(ctx, opt_block);
 
-  if(!block) {
-    ret = js_promise_create(ctx, &client->promise);
+  if(!block)
     return ret;
-  }
 
   for(;;) {
     if(status != opaque->status) {

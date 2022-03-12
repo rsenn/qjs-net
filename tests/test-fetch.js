@@ -4,7 +4,7 @@ import { fetch, setLog, logLevels, LLL_INFO, LLL_USER } from 'net';
 function FetchNext(array) {
   return new Promise((resolve, reject) => {
     let url = array.shift();
-    console.log('fetching', url);
+    console.log(`fetching \x1b[1;33m${url}\x1b[0m`);
     let promise = fetch(url, {});
 
     console.log('FetchNext', promise);
