@@ -151,15 +151,18 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   if(argc >= 2) {
     MinnetRequest* req;
-    if(JS_IsString(argv[argind])) {
-      tmp = JS_ToCString(ctx, argv[argind]);
+
+    if((req = request_from(ctx, argv[argind])))
       argind++;
-    } else if((req = minnet_request_data(argv[argind]))) {
-      client->request = request_dup(req);
-      client->url = url_dup(req->url, ctx);
-      client->headers = JS_GetPropertyStr(ctx, argv[argind], "headers");
-      argind++;
-    }
+    /*    if(JS_IsString(argv[argind])) {
+          tmp = JS_ToCString(ctx, argv[argind]);
+          argind++;
+        } else if((req = minnet_request_data(argv[argind]))) {
+          client->request = request_dup(req);
+          client->url = url_dup(req->url, ctx);
+          client->headers = JS_GetPropertyStr(ctx, argv[argind], "headers");
+          argind++;
+        }*/
   }
 
   options = argv[argind];
