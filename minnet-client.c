@@ -153,8 +153,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   session_zero(&client->session);
   session = &client->session;
 
-  session->req_obj = minnet_request_from(ctx, argv[0]);
-  client->request = minnet_request_data(session->req_obj);
+  /*session->req_obj = minnet_request_from(ctx, argv[0]);
+  client->request = minnet_request_data(session->req_obj);*/
 
   client->request = request_from(ctx, argv[0]);
 
