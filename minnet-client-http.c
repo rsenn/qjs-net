@@ -24,8 +24,12 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {
+      if(js_is_nullish(session->req_obj))
+        session->req_obj = minnet_request_wrap(ctx, client->request);
+      if(js_is_nullish(session->resp_obj))
+        session->resp_obj = minnet_response_wrap(ctx, client->response);
       /*      client->response = response_new(ctx);
-            url_copy(&client->response->url, &client->request->url, ctx);*/
+                 url_copy(&client->response->url, &client->request->url, ctx);*/
       return 0;
     }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
@@ -107,7 +111,6 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       lwsl_user("http-established #1 " FGC(171, "%-38s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
       // session->req_obj = minnet_request_wrap(ctx, client->request);
 
-      session->resp_obj = minnet_response_wrap(ctx, client->response);
       // session->resp_obj = minnet_response_new(ctx, url_clone(client->request->url, ctx), status, TRUE, "text/html");
 
       //  client->response = minnet_response_data(session->resp_obj);
