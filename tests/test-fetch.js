@@ -1,22 +1,37 @@
 import { exit, puts, open } from 'std';
 import { fetch, Request, Response, setLog, logLevels, LLL_INFO, LLL_USER } from 'net';
 
+function WriteFile(name, data) {
+  let f;
+
+  if((f = std.open(name, 'w+', 0o644))) {
+    let r = f.write(data, 0, data.byteLength);
+    f.close();
+    return r;
+  }
+  throw new Error(`Couldn't write to '${name}': ${f}`);
+}
+
 function FetchNext(array) {
   return new Promise((resolve, reject) => {
     let url = array.shift();
     let request = new Request(url);
     console.log(`fetching \x1b[1;33m${url}\x1b[0m`);
-    console.log(request);
+    console.log(console.config({ compact: 1 }), request);
     let promise = fetch(request, {});
     promise
       .then(response => {
-        console.log(response);
+        console.log(console.config({ compact: 0 }), response);
         let prom = response.arrayBuffer();
         prom.then(buf => {
           let prom = response.text();
           prom.then(text => {
             console.log('arrayBuffer()', console.config({ compact: 2 }), buf);
-            //console.log('text()', text);
+
+            let filename = response.url.path.replace(/.*\//g, '');
+            console.log('filename', filename);
+            WriteFile(filename, buf);
+
             array.length ? FetchNext(array) : resolve();
           });
         });
@@ -38,7 +53,7 @@ function main(...args) {
   });
 
   import('console')
-    .then(({ Console }) => ((globalThis.console = new Console({ inspectOptions: { compact: 1, depth: 2, maxArrayLength: 10, maxStringLength: 30, reparseable: false } })), run()))
+    .then(({ Console }) => ((globalThis.console = new Console({ inspectOptions: { compact: 1, depth: 2, maxArrayLength: 10, maxStringLength: Infinity, reparseable: false } })), run()))
     .catch(run);
 
   function run() {
