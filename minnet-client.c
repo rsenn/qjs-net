@@ -112,7 +112,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   struct lws_context_creation_info* info;
   struct lws_client_connect_info* conn;
   JSValue options = argv[0];
-  struct lws* wsi = 0;
+  struct lws *wsi = 0, *wsi2;
   const char *tmp = 0, *str;
   BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
@@ -205,9 +205,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
   // url_from(&client->url, options, ctx);
 
-  lws_client_connect_via_info(conn);
-
   errno = 0;
+
+  wsi2 = lws_client_connect_via_info(conn);
+
+  fprintf(stderr, "wsi2 = %p, wsi = %p\n", wsi2, wsi);
 
   if(!wsi) {
     ret = JS_ThrowInternalError(ctx, "No websocket!");

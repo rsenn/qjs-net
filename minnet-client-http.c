@@ -4,7 +4,7 @@
 #include "jsutils.h"
 
 int
-http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+http_client_callback(struct lws* wsi, int reason, void* user, void* in, size_t len) {
   //  MinnetHttpMethod method = -1;
   if(reason == LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS)
     return 0;
@@ -23,11 +23,13 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
 
   switch(reason) {
+    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
+      break;
+    }
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {
       break;
     }
     case LWS_CALLBACK_WSI_CREATE:
-    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
     case LWS_CALLBACK_CONNECTING:
     case LWS_CALLBACK_PROTOCOL_INIT: {
       break;
