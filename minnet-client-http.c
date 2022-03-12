@@ -4,7 +4,7 @@
 #include "jsutils.h"
 
 int
-http_client_callback(struct lws* wsi, int reason, void* user, void* in, size_t len) {
+http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   //  MinnetHttpMethod method = -1;
   if(reason == LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS)
     return 0;
