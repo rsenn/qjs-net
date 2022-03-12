@@ -34,6 +34,8 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   struct fetch_closure* closure = opaque;
   MinnetClient* client = closure->client;
 
+  printf("%s magic=%d client=%p\n", __func__, magic, client);
+
   switch(magic) {
     case ON_HTTP: {
       js_promise_resolve(ctx, &client->promise, argv[1]);

@@ -1,5 +1,5 @@
 import { exit, puts } from 'std';
-import { fetch } from 'net';
+import { fetch, setLog, logLevels, LLL_INFO, LLL_USER } from 'net';
 
 function FetchNext(array) {
   return new Promise((resolve, reject) => {
@@ -7,7 +7,7 @@ function FetchNext(array) {
     console.log('fetching', url);
     let promise = fetch(url, {});
 
-    console.log('promise', promise);
+    console.log('FetchNext', promise);
 
     promise
       .then(response => {
@@ -23,7 +23,20 @@ function FetchNext(array) {
 function main(...args) {
   if(args.length == 0) args = ['https://www.w3.org/'];
 
-  FetchNext(args);
+  setLog(-1, (level, msg) => {
+    //if(level < LLL_INFO || level == LLL_USER)
+    console.log('LWS', logLevels[level].padEnd(10), msg);
+  });
+
+    let promise =FetchNext(args);
+    console.log('promise', promise);
+
+    promise.then(() => {
+      console.log('SUCCEEDED');
+    })
+    .catch(() => {
+      console.log('FAILED');
+    });
 }
 
 try {
