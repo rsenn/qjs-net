@@ -1,4 +1,6 @@
 #include "minnet-url.h"
+#include "minnet-request.h"
+#include "minnet-response.h"
 #include <quickjs.h>
 #include <cutils.h>
 #include <assert.h>
@@ -476,8 +478,17 @@ JSValue
 minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetURL url = {0};
 
-  if(JS_IsObject(argv[0]))
-    url_from(&url, argv[0], ctx);
+  if(JS_IsObject(argv[0])) {
+    MinnetRequest* req;
+    MinnetResponse* resp;
+
+    if((req = minnet_request_data(argv[0])))
+      url = url_dup(req->url, ctx);
+    else if((resp = minnet_response_data(argv[0])))
+      url = url_dup(resp->url, ctx);
+    else
+      url_from(&url, argv[0], ctx);
+  }
 
   return minnet_url_new(ctx, url);
 }
