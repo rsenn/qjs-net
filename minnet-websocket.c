@@ -71,6 +71,23 @@ ws_from_wsi2(struct lws* wsi, JSContext* ctx) {
   return minnet_ws_data(ws_obj);
 }
 
+struct wsi_opaque_user_data*
+lws_opaque(struct lws* wsi, JSContext* ctx) {
+  struct wsi_opaque_user_data* opaque;
+
+  if((opaque = lws_get_opaque_user_data(wsi)))
+    return opaque;
+
+  assert(ctx);
+
+  opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
+  opaque->serial = ++ws_serial;
+  opaque->status = CONNECTING;
+
+  lws_set_opaque_user_data(wsi, opaque);
+  return opaque;
+}
+
 JSValue
 minnet_ws_object(JSContext* ctx, struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;

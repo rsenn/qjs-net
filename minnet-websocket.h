@@ -31,6 +31,7 @@ extern int64_t ws_serial;
 
 MinnetWebsocket* ws_new(struct lws*, JSContext*);
 MinnetWebsocket* ws_from_wsi2(struct lws*, JSContext*);
+struct wsi_opaque_user_data* lws_opaque(struct lws* wsi, JSContext* ctx);
 JSValue minnet_ws_object(JSContext*, struct lws*);
 JSValue minnet_ws_wrap(JSContext*, struct lws*);
 JSValue minnet_ws_constructor(JSContext*, JSValue, int, JSValue[]);
@@ -53,23 +54,6 @@ struct wsi_opaque_user_data {
   int error;
   BOOL binary;
 };
-
-static inline struct wsi_opaque_user_data*
-lws_opaque(struct lws* wsi, JSContext* ctx) {
-  struct wsi_opaque_user_data* opaque;
-
-  if((opaque = lws_get_opaque_user_data(wsi)))
-    return opaque;
-
-  assert(ctx);
-
-  opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
-  opaque->serial = ++ws_serial;
-  opaque->status = CONNECTING;
-
-  lws_set_opaque_user_data(wsi, opaque);
-  return opaque;
-}
 
 static inline struct session_data*
 lws_session(struct lws* wsi) {
