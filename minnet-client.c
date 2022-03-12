@@ -133,7 +133,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   struct wsi_opaque_user_data* opaque = 0;
   char* method_str = 0;
 
-  SETLOG(LLL_INFO)
+  // SETLOG(LLL_INFO)
 
   if(!(client = js_malloc(ctx, sizeof(MinnetClient))))
     return JS_ThrowOutOfMemory(ctx);
