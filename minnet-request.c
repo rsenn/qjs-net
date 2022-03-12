@@ -153,14 +153,19 @@ header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
 JSValue
 minnet_request_from(JSContext* ctx, JSValueConst value) {
   MinnetURL* url;
-  MinnetRequest* req;
+  MinnetRequest* req = 0;
+  JSValue ret = JS_NULL;
 
   if((req = minnet_request_data(value))) {
-
+    req = request_dup(req);
   } else if((url = minnet_url_data(value))) {
+    req = request_new(ctx, url->path, url_dup(*url, ctx), METHOD_GET);
   }
 
-  request_new
+  if(req)
+    ret = minnet_request_wrap(ctx, req);
+
+  return ret;
 }
 
 JSValue
@@ -340,7 +345,7 @@ static void
 minnet_request_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRequest* req;
 
-  if((req = JS_GetOpaque(val, minnet_request_class_id)) {
+  if((req = minnet_request_data(val))) {
     if(--req->ref_count == 0) {
       url_free_rt(&req->url, rt);
 
