@@ -185,9 +185,10 @@ request_from(JSContext* ctx, JSValueConst value) {
   MinnetURL url = {0, 0, 0, 0};
 
   if(JS_IsObject(value) && (req = minnet_request_data(value)))
-    return request_dup(req);
+    url = url_dup(req->url, ctx);
+  else
+    url = url_from(ctx, value);
 
-  url = url_from(ctx, value);
   if(url_valid(&url))
     req = request_new(ctx, url.path, url, METHOD_GET);
 
