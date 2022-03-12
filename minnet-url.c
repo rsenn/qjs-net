@@ -513,6 +513,9 @@ JSValue
 minnet_url_from(JSContext* ctx, JSValueConst value) {
   MinnetURL url = url_from(ctx, value);
 
+  if(!url_valid(&url))
+    return JS_ThrowTypeError(ctx, "Not a valid URL");
+
   return minnet_url_wrap(ctx, url);
 }
 

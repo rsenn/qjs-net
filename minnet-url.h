@@ -42,6 +42,7 @@ char* query_from(JSValueConst, JSContext*);
 JSValue minnet_url_wrap(JSContext*, MinnetURL);
 JSValue minnet_url_new(JSContext*, MinnetURL);
 JSValue minnet_url_method(JSContext*, JSValueConst, int, JSValueConst argv[], int magic);
+MinnetURL url_from(JSContext*, JSValueConst);
 JSValue minnet_url_from(JSContext*, JSValueConst);
 JSValue minnet_url_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
 int minnet_url_init(JSContext*, JSModuleDef*);
@@ -49,6 +50,11 @@ int minnet_url_init(JSContext*, JSModuleDef*);
 static inline const char*
 url_path(const MinnetURL* url) {
   return url->path;
+}
+
+static inline BOOL
+url_valid(const MinnetURL* url) {
+  return url->host && url->path;
 }
 
 static inline MinnetProtocol
