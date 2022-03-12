@@ -101,8 +101,9 @@ typedef struct ws_callback {
   const char* name;
 } MinnetCallback;
 
-static inline void callback_zero(MinnetCallback*cb) {
-  cb->ctx=0;
+static inline void
+callback_zero(MinnetCallback* cb) {
+  cb->ctx = 0;
   cb->this_obj = JS_UNDEFINED;
   cb->func_obj = JS_NULL;
   cb->name = 0;
@@ -137,14 +138,14 @@ typedef struct callbacks {
   MinnetCallback message, connect, close, pong, fd, http;
 } MinnetCallbacks;
 
-static inline void callbacks_zero(MinnetCallbacks* cbs) {
+static inline void
+callbacks_zero(MinnetCallbacks* cbs) {
   callback_zero(&cbs->message);
   callback_zero(&cbs->connect);
   callback_zero(&cbs->close);
   callback_zero(&cbs->pong);
   callback_zero(&cbs->fd);
   callback_zero(&cbs->http);
-
 }
 
 typedef struct context {
@@ -162,6 +163,7 @@ extern THREAD_LOCAL JSContext* minnet_log_ctx;
 extern THREAD_LOCAL BOOL minnet_exception;
 
 void session_zero(MinnetSession*);
+void session_clear(MinnetSession* session, JSContext* ctx);
 int socket_geterror(int fd);
 BOOL context_exception(MinnetContext* context, JSValue retval);
 void context_clear(MinnetContext*);

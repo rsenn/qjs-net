@@ -76,6 +76,18 @@ session_zero(MinnetSession* session) {
   session->next = JS_NULL;
 }
 
+void
+session_clear(MinnetSession* session, JSContext* ctx) {
+
+  JS_FreeValue(ctx, session->ws_obj);
+  JS_FreeValue(ctx, session->req_obj);
+  JS_FreeValue(ctx, session->resp_obj);
+  JS_FreeValue(ctx, session->generator);
+  JS_FreeValue(ctx, session->next);
+
+  buffer_free(&session->buffer, JS_GetRuntime(ctx));
+}
+
 BOOL
 context_exception(MinnetContext* context, JSValue retval) {
   if(JS_IsException(retval)) {
