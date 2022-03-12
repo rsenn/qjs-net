@@ -11,14 +11,12 @@ function FetchNext(array) {
 
     promise
       .then(response => {
-        console.log('response', response);
+        let buf = response.arrayBuffer();
+        let text = response.text();
+        console.log('response', { buf, text });
 
-        response.arrayBuffer().then(buf => {
-          console.log('buf', buf);
-
-          if(array.length) FetchNext(array);
-          else resolve();
-        });
+        if(array.length) FetchNext(array);
+        else resolve();
       })
       .catch(error => reject(error));
   });
@@ -38,7 +36,9 @@ function main(...args) {
   import('console')
     .then(({ Console }) => {
       console.log('Console', Console);
-      globalThis.console = new Console({ inspectOptions: { compact: 0, depth: 0 } });
+      globalThis.console = new Console({
+        inspectOptions: { compact: 0, depth: 0, maxArrayLength: 10, maxStringLength: 30 }
+      });
       run();
     })
     .catch(() => {
@@ -53,8 +53,8 @@ function main(...args) {
       .then(() => {
         console.log('SUCCEEDED');
       })
-      .catch(() => {
-        console.log('FAILED');
+      .catch(err => {
+        console.log('FAILED', err);
       });
   }
 }
