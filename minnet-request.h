@@ -26,17 +26,19 @@ typedef struct http_request {
   // char path[256];
 } MinnetRequest;
 
-void request_format(MinnetRequest const*, char*, size_t, JSContext* ctx);
-char* request_dump(MinnetRequest const*, JSContext*);
-void request_init(MinnetRequest*, MinnetURL, enum http_method);
+void           request_format(MinnetRequest const*, char*, size_t, JSContext* ctx);
+char*          request_dump(MinnetRequest const*, JSContext*);
+void           request_init(MinnetRequest*, MinnetURL, enum http_method);
 MinnetRequest* request_new(JSContext*, const char*, MinnetURL, MinnetHttpMethod method);
 MinnetRequest* request_dup(MinnetRequest*);
 MinnetRequest* request_fromobj(JSContext*, JSValueConst);
-void request_zero(MinnetRequest*);
-JSValue minnet_request_from(JSContext*, JSValueConst);
-JSValue minnet_request_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
-JSValue minnet_request_new(JSContext*, MinnetURL, enum http_method);
-JSValue minnet_request_wrap(JSContext*, MinnetRequest*);
+void           request_zero(MinnetRequest*);
+MinnetRequest* request_from(JSContext*, JSValueConst);
+JSValue        minnet_request_from(JSContext*, JSValueConst);
+JSValue        minnet_request_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
+JSValue        minnet_request_new(JSContext*, MinnetURL, enum http_method);
+JSValue        minnet_request_wrap(JSContext*, MinnetRequest*);
+
 
 extern THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;
 extern THREAD_LOCAL JSClassID minnet_request_class_id;

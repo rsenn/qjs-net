@@ -177,7 +177,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     url_parse(&client->url, tmp, ctx);
     JS_FreeCString(ctx, tmp);
   } else if(!client->request) {
-    url_from(&client->url, options, ctx);
+    url_fromobj(&client->url, options, ctx);
   }
 
   GETCBPROP(options, "onPong", client->cb.pong)
@@ -229,7 +229,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       break;
     }
   }
-  // url_from(&client->url, options, ctx);
+  // url_fromobj(&client->url, options, ctx);
 
   if(!block)
     ret = js_promise_create(ctx, &client->promise);

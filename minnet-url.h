@@ -35,7 +35,7 @@ void url_free_rt(MinnetURL*, JSRuntime*);
 void url_info(const MinnetURL*, struct lws_client_connect_info*);
 char* url_location(const MinnetURL*, JSContext*);
 const char* url_query(const MinnetURL*);
-void url_from(MinnetURL*, JSValueConst, JSContext*);
+void url_fromobj(MinnetURL*, JSValueConst, JSContext*);
 void url_dump(const char*, MinnetURL const*);
 JSValue query_object(const char*, JSContext*);
 char* query_from(JSValueConst, JSContext*);

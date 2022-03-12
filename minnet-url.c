@@ -234,7 +234,7 @@ url_query(const MinnetURL* url) {
 }
 
 void
-url_from(MinnetURL* url, JSValueConst obj, JSContext* ctx) {
+url_fromobj(MinnetURL* url, JSValueConst obj, JSContext* ctx) {
   JSValue value;
   const char *protocol, *host, *path;
   int32_t port = -1;
@@ -486,10 +486,9 @@ minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
   return ret;
 }
 
-JSValue
-minnet_url_from(JSContext* ctx, JSValueConst value) {
+MinnetURL
+url_from(JSContext* ctx, JSValueConst value) {
   MinnetURL url = {0};
-  JSValue ret = JS_UNDEFINED;
 
   if(JS_IsObject(value)) {
     /*   MinnetRequest* req;
@@ -500,16 +499,21 @@ minnet_url_from(JSContext* ctx, JSValueConst value) {
        else if((resp = minnet_response_data(value)))
          url = url_dup(resp->url, ctx);
        else*/
-    url_from(&url, value, ctx);
-    ret = minnet_url_wrap(ctx, url);
+    url_fromobj(&url, value, ctx);
   } else if(JS_IsString(value)) {
     const char* str = JS_ToCString(ctx, value);
     url_parse(&url, str, ctx);
     JS_FreeCString(ctx, str);
-    ret = minnet_url_wrap(ctx, url);
   }
 
-  return ret;
+  return url;
+}
+
+JSValue
+minnet_url_from(JSContext* ctx, JSValueConst value) {
+  MinnetURL url = url_from(ctx, value);
+
+  return minnet_url_wrap(ctx, url);
 }
 
 JSValue
