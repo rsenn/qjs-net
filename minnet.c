@@ -66,6 +66,16 @@ socket_geterror(int fd) {
   return -1;
 }
 
+void
+session_zero(MinnetSession* session) {
+  memset(session, 0, sizeof(MinnetSession));
+  session->ws_obj = JS_NULL;
+  session->req_obj = JS_NULL;
+  session->resp_obj = JS_NULL;
+  session->generator = JS_NULL;
+  session->next = JS_NULL;
+}
+
 BOOL
 context_exception(MinnetContext* context, JSValue retval) {
   if(JS_IsException(retval)) {
