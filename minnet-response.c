@@ -339,6 +339,9 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
         resp->body.write = resp->body.start + o;
       break;
     }
+    case RESPONSE_BODYUSED: {
+      break;
+    }
   }
   JS_FreeCString(ctx, str);
   return ret;
