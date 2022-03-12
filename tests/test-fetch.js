@@ -14,14 +14,11 @@ function FetchNext(array) {
         console.log('response', response);
 
         response.arrayBuffer().then(buf => {
+          console.log('buf', buf);
 
-        console.log('buf', buf);
-
-
-        if(array.length) FetchNext(array);
-        else resolve();
-
-         });
+          if(array.length) FetchNext(array);
+          else resolve();
+        });
       })
       .catch(error => reject(error));
   });
@@ -30,20 +27,18 @@ function FetchNext(array) {
 function main(...args) {
   if(args.length == 0) args = ['http://www.w3.org/'];
 
-let logfile = std.open('test-fetch.log', 'w+');
-
+  let logfile = std.open('test-fetch.log', 'w+');
 
   setLog(-1, (level, msg) => {
     //if(level < LLL_INFO || level == LLL_USER)
-    logfile.puts(logLevels[level].padEnd(10)+msg+'\n');
-  logfile.flush();
+    logfile.puts(logLevels[level].padEnd(10) + msg + '\n');
+    logfile.flush();
   });
-
 
   import('console')
     .then(({ Console }) => {
       console.log('Console', Console);
-      globalThis.console = new Console({ inspectOptions: { compact: 0, depth: 0} });
+      globalThis.console = new Console({ inspectOptions: { compact: 0, depth: 0 } });
       run();
     })
     .catch(() => {
