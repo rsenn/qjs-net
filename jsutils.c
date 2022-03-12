@@ -237,7 +237,7 @@ js_resolve_functions_is_null(ResolveFunctions const* funcs) {
   return JS_IsNull(funcs->array[0]) && JS_IsNull(funcs->array[1]);
 }
 
-  void
+void
 js_promise_free(JSContext* ctx, ResolveFunctions* funcs) {
   JS_FreeValue(ctx, funcs->array[0]);
   JS_FreeValue(ctx, funcs->array[1]);

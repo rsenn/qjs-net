@@ -87,17 +87,17 @@ client_free(MinnetClient* client) {
   if(--client->ref_count == 0) {
     context_clear(&client->context);
 
-JS_FreeValue(ctx, client->headers);
-JS_FreeValue(ctx, client->body);
-JS_FreeValue(ctx, client->next);
+    JS_FreeValue(ctx, client->headers);
+    JS_FreeValue(ctx, client->body);
+    JS_FreeValue(ctx, client->next);
 
-session_clear(&client->session);
+    session_clear(&client->session);
 
     if(client->connect_info.method)
       js_free(ctx, client->connect_info.method);
 
-js_promise_free(ctx, &client->promise);
- 
+    js_promise_free(ctx, &client->promise);
+
     js_free(ctx, client);
   }
 }
@@ -228,7 +228,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   if(JS_IsObject(client->headers)) {
     headers_fromobj(&client->request->headers, client->headers, ctx);
-
   }
 
   url_info(&client->request->url, &client->connect_info);

@@ -57,7 +57,7 @@ JSValue js_promise_reject(JSContext*, ResolveFunctions*, JSValueConst);
 void js_promise_zero(ResolveFunctions*);
 BOOL js_promise_pending(ResolveFunctions const*);
 BOOL js_promise_done(ResolveFunctions const*);
-void     js_promise_free(JSContext*, ResolveFunctions*);
+void js_promise_free(JSContext*, ResolveFunctions*);
 JSValue js_global_get(JSContext*, const char*);
 BOOL js_is_promise(JSContext*, JSValueConst);
 JSValue js_error_new(JSContext*, const char*, ...);
