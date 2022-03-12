@@ -156,14 +156,18 @@ minnet_request_from(JSContext* ctx, JSValueConst value) {
   MinnetRequest* req = 0;
   JSValue ret = JS_NULL;
 
-  if((req = minnet_request_data(value))) {
-    req = request_dup(req);
-  } else if((url = minnet_url_data(value))) {
+  if(JS_IsString(value)) {
     req = request_new(ctx, url->path, url_dup(*url, ctx), METHOD_GET);
-  }
+  } else if(JS_IsObject(value)) {
+    if((req = minnet_request_data(value))) {
+      req = request_dup(req);
+    } else if((url = minnet_url_data(value))) {
+      req = request_new(ctx, url->path, url_dup(*url, ctx), METHOD_GET);
+    }
 
-  if(req)
-    ret = minnet_request_wrap(ctx, req);
+    if(req)
+      ret = minnet_request_wrap(ctx, req);
+  }
 
   return ret;
 }

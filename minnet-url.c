@@ -489,6 +489,7 @@ minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
 JSValue
 minnet_url_from(JSContext* ctx, JSValueConst value) {
   MinnetURL url = {0};
+  JSValue ret = JS_UNDEFINED;
 
   if(JS_IsObject(value)) {
     /*   MinnetRequest* req;
@@ -500,13 +501,15 @@ minnet_url_from(JSContext* ctx, JSValueConst value) {
          url = url_dup(resp->url, ctx);
        else*/
     url_from(&url, value, ctx);
+    ret = minnet_url_wrap(ctx, url);
   } else if(JS_IsString(value)) {
     const char* str = JS_ToCString(ctx, value);
     url_parse(&url, str, ctx);
     JS_FreeCString(ctx, str);
+    ret = minnet_url_wrap(ctx, url);
   }
 
-  return minnet_url_wrap(ctx, url);
+  return ret;
 }
 
 JSValue
