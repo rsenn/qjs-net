@@ -111,14 +111,15 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       {
         size_t i, hdrlen = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP);
-        char buf[((hdrlen + 1) + 7) & ~7];
+        char buf[(((hdrlen + 1) + 7) >> 3) << 3];
         lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_HTTP);
         buf[hdrlen] = '\0';
 
-        client->response->status_text = js_strdup(ctx, buf);
-      }
+        if(buf[(i = byte_chr(buf, hdrlen, ' '))])
+          i += 1;
 
-      //     client->response->status_text = js_strndup(ctx, lws_hdr_simple_ptr(wsi, WSI_TOKEN_HTTP), hdrlen);
+        client->response->status_text = js_strdup(ctx, &buf[i]);
+      }
 
       if(method_number(client->connect_info.method) == METHOD_POST) {
         lws_client_http_body_pending(wsi, 1);
