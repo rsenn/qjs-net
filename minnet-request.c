@@ -153,25 +153,15 @@ header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
 MinnetRequest*
 request_from(JSContext* ctx, JSValueConst value) {
   MinnetRequest* req = 0;
-  MinnetURL* url = 0;
+  MinnetURL url = {0, 0, 0, 0};
 
   if(JS_IsObject(value) && (req = minnet_request_data(value)))
     return request_dup(req);
 
-  /*
-    if(JS_IsObject(value) && (url = minnet_url_data(value))) {
-      req = request_new(ctx, url->path, url_dup(*url, ctx), METHOD_GET);
-    }
+  url = url_from(ctx, value);
+  if(url_valid(&url))
+    req = request_new(ctx, 0, url, METHOD_GET);
 
-    if(req) {
-      ret = minnet_request_wrap(ctx, req);
-    } else {
-      JSValue tmp;
-      tmp = minnet_url_from(ctx, value);
-      if(!JS_IsUndefined(tmp))
-        ret = tmp;
-    }
-  */
   return req;
 }
 
