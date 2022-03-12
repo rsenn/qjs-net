@@ -92,6 +92,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   JS_SetPropertyStr(ctx, args[1], "onHttp", handlers[0]);
   JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);
+  JS_SetPropertyStr(ctx, args[1], "onFd", handlers[2]);
   JS_SetPropertyStr(ctx, args[1], "block", JS_FALSE);
 
   ret = minnet_client_closure(ctx, this_val, 2, args, 0, cc);
