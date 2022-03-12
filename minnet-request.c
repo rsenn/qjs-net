@@ -162,9 +162,9 @@ minnet_request_from(JSContext* ctx, JSValueConst value) {
     req = request_new(ctx, url->path, url_dup(*url, ctx), METHOD_GET);
   }
 
-  if(req)
+  if(req) {
     ret = minnet_request_wrap(ctx, req);
-  else {
+  } else {
     JSValue tmp;
     tmp = minnet_url_from(ctx, value);
     if(!JS_IsUndefined(tmp))
