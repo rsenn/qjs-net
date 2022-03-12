@@ -115,10 +115,28 @@ static JSValue
 minnet_response_buffer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
 
-  if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id))) {
+  if((res = minnet_response_data2(ctx, this_val))) {
     JSValue val = JS_NewArrayBuffer /*Copy*/ (ctx, block_BEGIN(&res->body), block_SIZE(&res->body), 0, 0, 0);
     return val;
   }
+
+  return JS_EXCEPTION;
+}
+
+static JSValue
+minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  MinnetResponse* res;
+  if((res = minnet_response_data2(ctx, this_val)))
+    return JS_ParseJSON(ctx, block_BEGIN(&res->body), buffer_HEAD(&res->body), res->url.path);
+
+  return JS_EXCEPTION;
+}
+
+static JSValue
+minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  MinnetResponse* res;
+  if((res = minnet_response_data2(ctx, this_val)))
+    return JS_NewStringLen(ctx, (char*)block_BEGIN(&res->body), buffer_HEAD(&res->body));
 
   return JS_EXCEPTION;
 }
@@ -145,24 +163,6 @@ minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return minnet_response_wrap(ctx, clone);
 }
 
-static JSValue
-minnet_response_json(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  MinnetResponse* res;
-  if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
-    return JS_ParseJSON(ctx, block_BEGIN(&res->body), buffer_HEAD(&res->body), res->url.path);
-
-  return JS_EXCEPTION;
-}
-
-static JSValue
-minnet_response_text(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  MinnetResponse* res;
-  if((res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
-    return JS_NewStringLen(ctx, (char*)block_BEGIN(&res->body), buffer_HEAD(&res->body));
-
-  return JS_EXCEPTION;
-}
-
 /*static JSValue
 minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse* res;
@@ -170,7 +170,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   const char *name, *value;
   JSValue ret = JS_FALSE;
 
-  if(!(res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
+  if(!(res = minnet_response_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   name = JS_ToCString(ctx, argv[0]);
@@ -194,7 +194,7 @@ static JSValue
 minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetResponse* res;
   JSValue ret = JS_UNDEFINED;
-  if(!(res = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
+  if(!(res = minnet_response_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   switch(magic) {
@@ -233,7 +233,7 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
   JSValue ret = JS_UNDEFINED;
   const char* str;
   size_t len;
-  if(!(resp = JS_GetOpaque2(ctx, this_val, minnet_response_class_id)))
+  if(!(resp = minnet_response_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   if(resp->read_only)
@@ -336,8 +336,8 @@ fail:
 
 void
 minnet_response_finalizer(JSRuntime* rt, JSValue val) {
-  MinnetResponse* res = JS_GetOpaque(val, minnet_response_class_id);
-  if(res) {
+  MinnetResponse* res;
+  if((res = minnet_response_data(val))) {
     buffer_free(&res->headers, rt);
     buffer_free(&res->body, rt);
 
@@ -355,9 +355,9 @@ JSClassDef minnet_response_class = {
 };
 
 const JSCFunctionListEntry minnet_response_proto_funcs[] = {
-    JS_CFUNC_DEF("arrayBuffer", 0, minnet_response_buffer),
-    JS_CFUNC_DEF("json", 0, minnet_response_json),
-    JS_CFUNC_DEF("text", 0, minnet_response_text),
+    JS_CFUNC_FLAGS_DEF("arrayBuffer", 0, minnet_response_buffer, JS_PROP_ENUMERABLE),
+    JS_CFUNC_FLAGS_DEF("json", 0, minnet_response_json, JS_PROP_ENUMERABLE),
+    JS_CFUNC_FLAGS_DEF("text", 0, minnet_response_text, JS_PROP_ENUMERABLE),
     JS_CFUNC_DEF("clone", 0, minnet_response_clone),
     // JS_CFUNC_DEF("header", 2, minnet_response_header),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),

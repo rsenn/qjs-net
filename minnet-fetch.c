@@ -50,7 +50,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   struct fetch_closure* closure = opaque;
   MinnetClient* client = closure->client;
 
-  printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
+  // printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
 
   switch(magic) {
     case ON_HTTP: {

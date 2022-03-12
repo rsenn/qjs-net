@@ -36,7 +36,7 @@ let logfile = std.open('test-fetch.log', 'w+');
   import('console')
     .then(({ Console }) => {
       console.log('Console', Console);
-      globalThis.console = new Console({ inspectOptions: {} });
+      globalThis.console = new Console({ inspectOptions: { compact: 0, depth: 0} });
       run();
     })
     .catch(() => {
