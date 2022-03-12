@@ -28,6 +28,11 @@ function main(...args) {
     console.log('LWS', logLevels[level].padEnd(10), msg);
   });
 
+  import('console').then(({Console}) => {
+     console.log('Console',Console);
+  globalThis.console = new Console({ inspectOptions: {} });
+
+  
     let promise =FetchNext(args);
     console.log('promise', promise);
 
@@ -37,6 +42,8 @@ function main(...args) {
     .catch(() => {
       console.log('FAILED');
     });
+  }).catch(() => {});
+
 }
 
 try {

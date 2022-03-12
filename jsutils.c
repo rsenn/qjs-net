@@ -3,7 +3,7 @@
 #include <assert.h>
 
 JSValue
-vector2array(JSContext* ctx, int argc, JSValue argv[]) {
+vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
   int i;
   JSValue ret = JS_NewArray(ctx);
   for(i = 0; i < argc; i++) JS_SetPropertyUint32(ctx, ret, i, argv[i]);
@@ -310,15 +310,6 @@ js_promise_pending(ResolveFunctions const* funcs) {
 BOOL
 js_promise_done(ResolveFunctions const* funcs) {
   return js_resolve_functions_is_null(funcs);
-}
-
-JSValue
-js_global_get(JSContext* ctx, const char* prop) {
-  JSValue global_obj, ret;
-  global_obj = JS_GetGlobalObject(ctx);
-  ret = JS_GetPropertyStr(ctx, global_obj, prop);
-  JS_FreeValue(ctx, global_obj);
-  return ret;
 }
 
 BOOL

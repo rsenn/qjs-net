@@ -28,37 +28,37 @@ typedef union resolve_functions {
   };
 } ResolveFunctions;
 
-JSValue vector2array(JSContext*, int, JSValue);
-void js_console_log(JSContext*, JSValue*, JSValue*);
-JSValue js_function_bound(JSContext*, JSValue, int, JSValue argv[], int magic, JSValue* func_data);
-JSValue js_function_bind(JSContext*, JSValue, int, JSValue argv[]);
-JSValue js_function_bind_1(JSContext*, JSValue, JSValue);
-JSValue js_iterator_next(JSContext*, JSValue, JSValue*, BOOL* done_p, int argc, JSValue argv[]);
-int js_copy_properties(JSContext*, JSValue, JSValue, int flags);
-JSBuffer js_buffer_from(JSContext*, JSValue);
+JSValue vector2array(JSContext*, int, JSValueConst[]);
+void js_console_log(JSContext*, JSValueConst*, JSValueConst*);
+JSValue js_function_bound(JSContext*, JSValueConst, int, JSValueConst argv[], int magic, JSValueConst* func_data);
+JSValue js_function_bind(JSContext*, JSValueConst, int, JSValueConst argv[]);
+JSValue js_function_bind_1(JSContext*, JSValueConst, JSValueConst);
+JSValue js_iterator_next(JSContext*, JSValueConst, JSValueConst*, BOOL* done_p, int argc, JSValueConst argv[]);
+int js_copy_properties(JSContext*, JSValueConst, JSValueConst, int flags);
+JSBuffer js_buffer_from(JSContext*, JSValueConst);
 void js_buffer_to(JSBuffer, void**, size_t*);
 void js_buffer_to3(JSBuffer, const char**, void**, size_t* plen);
 BOOL js_buffer_valid(const JSBuffer*);
 JSBuffer js_buffer_clone(const JSBuffer*, JSContext*);
 void js_buffer_dump(const JSBuffer*, DynBuf*);
 void js_buffer_free(JSBuffer*, JSContext*);
-BOOL js_is_iterable(JSContext*, JSValue);
-BOOL js_is_iterator(JSContext*, JSValue);
+BOOL js_is_iterable(JSContext*, JSValueConst);
+BOOL js_is_iterator(JSContext*, JSValueConst);
 JSAtom js_symbol_static_atom(JSContext*, const char*);
 JSValue js_symbol_static_value(JSContext*, const char*);
 JSValue js_symbol_ctor(JSContext*);
 JSValue js_global_get(JSContext*, const char*);
-char* js_tostringlen(JSContext*, size_t*, JSValue);
-char* js_tostring(JSContext*, JSValue);
-JSValue js_invoke(JSContext*, JSValue, const char*, int argc, JSValue argv[]);
+char* js_tostringlen(JSContext*, size_t*, JSValueConst);
+char* js_tostring(JSContext*, JSValueConst);
+JSValue js_invoke(JSContext*, JSValueConst, const char*, int argc, JSValueConst argv[]);
 JSValue js_promise_create(JSContext*, ResolveFunctions*);
-JSValue js_promise_resolve(JSContext*, ResolveFunctions*, JSValue);
-JSValue js_promise_reject(JSContext*, ResolveFunctions*, JSValue);
+JSValue js_promise_resolve(JSContext*, ResolveFunctions*, JSValueConst);
+JSValue js_promise_reject(JSContext*, ResolveFunctions*, JSValueConst);
 void js_promise_zero(ResolveFunctions*);
 BOOL js_promise_pending(ResolveFunctions const*);
 BOOL js_promise_done(ResolveFunctions const*);
 JSValue js_global_get(JSContext*, const char*);
-BOOL js_is_promise(JSContext*, JSValue);
+BOOL js_is_promise(JSContext*, JSValueConst);
 
 static inline void
 js_dump_string(const char* str, size_t len, size_t maxlen) {
