@@ -36,6 +36,7 @@ void url_info(const MinnetURL*, struct lws_client_connect_info*);
 char* url_location(const MinnetURL*, JSContext*);
 const char* url_query(const MinnetURL*);
 void url_from(MinnetURL*, JSValue, JSContext*);
+void url_dump(const char* n, MinnetURL const* url);
 JSValue query_object(const char*, JSContext*);
 char* query_from(JSValue, JSContext*);
 JSValue minnet_url_new(JSContext*, MinnetURL);
@@ -63,7 +64,7 @@ url_new(const char* s, JSContext* ctx) {
 
 static inline MinnetURL
 url_dup(MinnetURL url, JSContext* ctx) {
-  MinnetURL ret = {url.protocol, js_strdup(ctx, url.host), js_strdup(ctx, url.path), url.port};
+  MinnetURL ret = {url.protocol, url.host ? js_strdup(ctx, url.host) : 0, url.path ? js_strdup(ctx, url.path) : 0, url.port};
   return ret;
 }
 

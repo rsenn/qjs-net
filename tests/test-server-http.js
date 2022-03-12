@@ -33,7 +33,7 @@ function TestClient(url) {
 }
 
 function main(...args) {
-  let pid = spawn('server.js', 'localhost', 30000);
+  let pid = spawn('server.js', ['localhost', 30000], scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log'));
   let status = [];
 
   sleep(50);

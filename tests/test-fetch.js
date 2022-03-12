@@ -1,4 +1,4 @@
-import { exit, puts } from 'std';
+import { exit, puts, open } from 'std';
 import { fetch, setLog, logLevels, LLL_INFO, LLL_USER } from 'net';
 
 function FetchNext(array) {
@@ -21,12 +21,17 @@ function FetchNext(array) {
 }
 
 function main(...args) {
-  if(args.length == 0) args = ['https://www.w3.org/'];
+  if(args.length == 0) args = ['http://www.w3.org/'];
+
+let logfile = std.open('test-fetch.log', 'w+');
+
 
   setLog(-1, (level, msg) => {
     //if(level < LLL_INFO || level == LLL_USER)
-    console.log('LWS', logLevels[level].padEnd(10), msg);
+    logfile.puts(logLevels[level].padEnd(10)+msg+'\n');
+  logfile.flush();
   });
+
 
   import('console')
     .then(({ Console }) => {

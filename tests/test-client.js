@@ -1,5 +1,5 @@
 import { exit, puts } from 'std';
-import { URL } from 'net';
+import { URL, LLL_INFO, LLL_USER } from 'net';
 import Client from './client.js';
 import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker, ttySetRaw } from 'os';
 import { in as stdin, out as stdout, err as stderr } from 'std';
@@ -9,7 +9,7 @@ function main(...args) {
   const debug = args.indexOf('-x') != -1;
   args = args.filter(arg => !/^-[x]/.test(arg));
 
-  if(args.length == 0) args.push('https://localhost/debugger.html');
+  if(args.length == 0) args.push('https://localhost:9000/debugger.html');
 
   for(let arg of args) {
     Client(
@@ -72,7 +72,7 @@ function main(...args) {
           console.log(`Headers:`, resp.headers);
         }
       },
-      debug
+      debug ? LLL_INFO - 1 : LLL_USER
     );
   }
 }

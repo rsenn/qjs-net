@@ -255,6 +255,12 @@ url_from(MinnetURL* url, JSValueConst obj, JSContext* ctx) {
   url_init(url, protocol, host, port, path, ctx);
 }
 
+void
+url_dump(const char* n, MinnetURL const* url) {
+  fprintf(stderr, "%s\t{ protocol = %s, host = %s, port = %u, path = %s }\n", n, url->protocol, url->host, url->port, url->path);
+  fflush(stderr);
+}
+
 JSValue
 query_object(const char* q, JSContext* ctx) {
   const char* p;

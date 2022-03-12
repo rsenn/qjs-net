@@ -8,9 +8,10 @@ export const thisdir = () => {
   return '.';
 };
 
-export function spawn(script, ...args) {
+export function spawn(script, args = [], log = 'child.log') {
   let argv = [getexe(), thisdir() + '/' + script].concat(args);
-  let fd = open('child.log', O_WRONLY | O_CREAT | O_TRUNC, 0o644);
+  let fd = open(log, O_WRONLY | O_CREAT | O_TRUNC, 0o644);
+  console.log('opened', log, fd);
   let pid = exec(argv, { block: false, usePath: false, file: argv[0], stdin: fd, stdout: fd, stderr: fd });
   close(fd);
   return pid;

@@ -34,8 +34,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   switch(reason) {
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
-
-      // opaque->ws = minnet_ws_data2(ctx, session->ws_obj);
+      opaque->ws = ws_new(wsi, ctx);
       break;
     }
 

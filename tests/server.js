@@ -181,7 +181,7 @@ export class MinnetServer {
         setWriteHandler(fd, wr);
       },
       onMessage: (ws, msg) => {
-        //log('onMessage', { ws, msg });
+        log('onMessage', { ws, msg });
         w.postMessage({ type: 'message', id: this.id(ws), msg });
       },
       ...options
@@ -341,6 +341,7 @@ if(w) {
           setWriteHandler(fd, wr);
         },
         onMessage: (ws, msg) => {
+          console.log('onMessage', typeof ws, { ws, msg });
           ws.send('ECHO: ' + msg);
           //ws.send(JSON.stringify({ type: 'message', msg }));
         }

@@ -84,14 +84,16 @@ void
 client_free(MinnetClient* client) {
   JSContext* ctx = client->context.js;
 
-  context_clear(&client->context);
+  if(--client->context.ref_count == 0) {
+    context_clear(&client->context);
 
-  if(client->connect_info.method)
-    js_free(ctx, client->connect_info.method);
+    if(client->connect_info.method)
+      js_free(ctx, client->connect_info.method);
 
-  url_free(&client->url, ctx);
+    url_free(&client->url, ctx);
 
-  js_free(ctx, client);
+    js_free(ctx, client);
+  }
 }
 
 enum {
@@ -126,7 +128,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(ptr)
     ((struct client_closure*)ptr)->client = client;
 
-  *client = (MinnetClient){.headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
+  *client = (MinnetClient){.ref_count = 1, .headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
   info = &client->context.info;
   conn = &client->connect_info;
 
@@ -204,6 +206,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
   // url_from(&client->url, options, ctx);
+
+  url_dump("url", &client->url);
 
   errno = 0;
 

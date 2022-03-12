@@ -128,6 +128,7 @@ typedef struct callbacks {
 } MinnetCallbacks;
 
 typedef struct context {
+  int ref_count;
   JSContext* js;
   struct lws_context* lws;
   struct lws_context_creation_info info;
