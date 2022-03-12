@@ -28,7 +28,7 @@ typedef struct http_request {
 void request_format(MinnetRequest const*, char*, size_t, JSContext* ctx);
 char* request_dump(MinnetRequest const*, JSContext*);
 void request_init(MinnetRequest*, MinnetURL, enum http_method);
-MinnetRequest* request_new(JSContext*, const char*, MinnetURL, MinnetHttpMethod method);
+MinnetRequest* request_new(JSContext*, MinnetURL, MinnetHttpMethod method);
 MinnetRequest* request_dup(MinnetRequest*);
 MinnetRequest* request_fromobj(JSContext*, JSValueConst);
 void request_zero(MinnetRequest*);

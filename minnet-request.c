@@ -62,20 +62,24 @@ void
 request_init(MinnetRequest* req, MinnetURL url, enum http_method method) {
   memset(req, 0, sizeof(MinnetRequest));
 
-  req->ref_count = 1;
-
-  /*if(path)
-    pstrcpy(req->path, sizeof(req->path), path);*/
-
   req->url = url;
   req->method = method;
 }
 
 MinnetRequest*
-request_new(JSContext* ctx, const char* path, MinnetURL url, MinnetHttpMethod method) {
+request_alloc(JSContext* ctx) {
+  MinnetRequest* ret;
+
+  ret = js_mallocz(ctx, sizeof(MinnetRequest));
+  ret->ref_count = 1;
+  return ret;
+}
+
+MinnetRequest*
+request_new(JSContext* ctx, MinnetURL url, MinnetHttpMethod method) {
   MinnetRequest* req;
 
-  if((req = js_mallocz(ctx, sizeof(MinnetRequest))))
+  if((req = request_alloc(ctx)))
     request_init(req, url, method);
 
   return req;
@@ -194,7 +198,7 @@ request_from(JSContext* ctx, JSValueConst value) {
     url_from(&url, value, ctx);
 
     if(url_valid(&url))
-      req = request_new(ctx, url.path, url, METHOD_GET);
+      req = request_new(ctx, url, METHOD_GET);
   }
 
   return req;
@@ -262,7 +266,7 @@ JSValue
 minnet_request_new(JSContext* ctx, MinnetURL url, enum http_method method) {
   MinnetRequest* req;
 
-  if(!(req = request_new(ctx, 0, url, method)))
+  if(!(req = request_new(ctx, url, method)))
     return JS_ThrowOutOfMemory(ctx);
 
   return minnet_request_wrap(ctx, req);

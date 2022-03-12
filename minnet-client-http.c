@@ -28,8 +28,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         session->req_obj = minnet_request_wrap(ctx, client->request);
       if(js_is_nullish(session->resp_obj))
         session->resp_obj = minnet_response_wrap(ctx, client->response);
-      /*      client->response = response_new(ctx);
-                 url_copy(&client->response->url, &client->request->url, ctx);*/
+
       return 0;
     }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:

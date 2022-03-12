@@ -398,7 +398,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       JSValueConst args[2] = {session->ws_obj, JS_NULL};
 
       if(!opaque->req)
-        opaque->req = request_new(server->context.js, in, url, method);
+        opaque->req = request_new(server->context.js, /* in,*/ url, method);
 
       int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
 
@@ -414,7 +414,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         opaque = lws_opaque(server->context.js, wsi);
 
       if(!opaque->req)
-        opaque->req = request_new(ctx, 0, url, method);
+        opaque->req = request_new(ctx, /*0,*/ url, method);
 
       /*  MinnetBuffer* h = &opaque->req->headers;
         int num_hdr = headers_get(ctx, h, wsi);
@@ -474,7 +474,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " mountpoint='%.*s' path='%s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)mountpoint_len, url, path);
 
       if(!opaque->req)
-        opaque->req = request_new(ctx, path, url, method);
+        opaque->req = request_new(ctx, /*path,*/ url, method);
 
       if(!opaque->req->headers.write) {
         int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
