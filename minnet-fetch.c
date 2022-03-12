@@ -41,6 +41,7 @@ fetch_closure_free(void* ptr) {
 enum {
   ON_HTTP = 0,
   ON_ERROR,
+  ON_CLOSE,
   ON_FD,
 };
 
@@ -93,7 +94,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  JSValue ret, handlers[3], args[2];
+  JSValue ret, handlers[4], args[2];
   struct client_closure* cc;
   struct fetch_closure* fc;
 
@@ -111,11 +112,13 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   handlers[0] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, fetch_closure_dup(fc), fetch_closure_free);
   handlers[1] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_ERROR, fetch_closure_dup(fc), fetch_closure_free);
-  handlers[2] = JS_NewCClosure(ctx, &fetch_handler, 3, ON_FD, fetch_closure_dup(fc), fetch_closure_free);
+  handlers[2] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_CLOSE, fetch_closure_dup(fc), fetch_closure_free);
+  handlers[3] = JS_NewCClosure(ctx, &fetch_handler, 3, ON_FD, fetch_closure_dup(fc), fetch_closure_free);
 
   JS_SetPropertyStr(ctx, args[1], "onHttp", handlers[0]);
   JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);
-  JS_SetPropertyStr(ctx, args[1], "onFd", handlers[2]);
+  JS_SetPropertyStr(ctx, args[1], "onClose", handlers[2]);
+  JS_SetPropertyStr(ctx, args[1], "onFd", handlers[3]);
   JS_SetPropertyStr(ctx, args[1], "block", JS_FALSE);
 
   ret = minnet_client_closure(ctx, this_val, 2, args, 0, cc);

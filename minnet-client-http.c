@@ -51,16 +51,19 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
       // buf.start = scan_backwards(buf.start, '\0');
+      //
+      if(JS_IsObject(client->headers)) {
 
-      client->request->headers.start = buf.start;
+        client->request->headers.start = buf.start;
 
-      if(headers_from(&buf, wsi, client->headers, ctx))
-        return -1;
+        if(headers_from(&buf, wsi, client->headers, ctx))
+          return -1;
 
-      client->request->headers.end = buf.end;
+        client->request->headers.end = buf.end;
 
-      *(uint8_t**)in = buf.write;
-      len = buf.end - buf.write;
+        *(uint8_t**)in = buf.write;
+        len = buf.end - buf.write;
+      }
 
       /* if(!lws_http_is_redirected_to_get(wsi)) {
          lws_client_http_body_pending(wsi, 1);
