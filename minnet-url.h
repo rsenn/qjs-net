@@ -76,15 +76,20 @@ url_create(const char* s, JSContext* ctx) {
 }
 
 static inline MinnetURL*
-url_clone(MinnetURL* url) {
+url_dup(MinnetURL* url) {
   ++url->ref_count;
   return url;
 }
 
 static inline MinnetURL
 url_clone(MinnetURL url, JSContext* ctx) {
-  MinnetURL ret = {url.protocol, url.host ? js_strdup(ctx, url.host) : 0, url.path ? js_strdup(ctx, url.path) : 0, url.port};
-  return ret;
+  return (MinnetURL){
+      .ref_count = 1,
+      .protocol = url.protocol,
+      .host = url.host ? js_strdup(ctx, url.host) : 0,
+      .path = url.path ? js_strdup(ctx, url.path) : 0,
+      .port = url.port,
+  };
 }
 
 static inline void
