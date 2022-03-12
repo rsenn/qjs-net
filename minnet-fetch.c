@@ -72,11 +72,11 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   args[1] = argc <= 1 ? JS_NewObject(ctx) : JS_DupValue(ctx, argv[1]);
 
   handlers[0] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, fc[0], fetch_closure_free);
-  handlers[1] = JS_NewCClosure(ctx, &error_handler, 2, ON_ERROR, fc[1], fetch_closure_free);
+  handlers[1] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_ERROR, fc[1], fetch_closure_free);
 
-  JS_SetPropertyStr(ctx, options, "onHttp", handlers[0]);
-  JS_SetPropertyStr(ctx, options, "onError", handlers[1]);
-  JS_SetPropertyStr(ctx, options, "block", JS_FALSE);
+  JS_SetPropertyStr(ctx, args[1], "onHttp", handlers[0]);
+  JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);
+  JS_SetPropertyStr(ctx, args[1], "block", JS_FALSE);
 
   ret = minnet_client_closure(ctx, this_val, 2, args, 0, cc);
 
