@@ -125,6 +125,35 @@ request_zero(MinnetRequest* req) {
   req->body = BUFFER_0();
 }
 
+void
+request_clear(MinnetRequest* req, JSContext* ctx) {
+  url_free(&req->url, ctx);
+  buffer_free(&req->headers, JS_GetRuntime(ctx));
+  buffer_free(&req->body, JS_GetRuntime(ctx));
+}
+
+void
+request_clear_rt(MinnetRequest* req, JSRuntime* rt) {
+  url_free_rt(&req->url, rt);
+  buffer_free(&req->headers, rt);
+  buffer_free(&req->body, rt);
+}
+
+void
+request_free(MinnetRequest* req, JSContext* ctx) {
+  if(--req->ref_count == 0) {
+    request_clear(req, ctx);
+    js_free(ctx, req);
+  }
+}
+void
+request_free_rt(MinnetRequest* req, JSRuntime* rt) {
+  if(--req->ref_count == 0) {
+    request_clear_rt(req, rt);
+    js_free_rt(rt, req);
+  }
+}
+
 static const char*
 header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
   size_t len, namelen = strlen(name);

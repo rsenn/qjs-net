@@ -90,7 +90,7 @@ client_free(MinnetClient* client) {
     if(client->connect_info.method)
       js_free(ctx, client->connect_info.method);
 
-    url_free(&client->url, ctx);
+    // url_free(&client->url, ctx);
 
     js_free(ctx, client);
   }
@@ -149,10 +149,12 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->protocols = client_protocols;
   info->user = client;
 
-  if(argc >= 2) {
-    MinnetRequest* req;
+  client->request = request_from(ctx, argv[0]);
 
-    if((req = request_from(ctx, argv[argind])))
+  if(argc >= 2) {
+    //    MinnetRequest* req;
+
+    if(JS_IsObject(argv[1]))
       argind++;
     /*    if(JS_IsString(argv[argind])) {
           tmp = JS_ToCString(ctx, argv[argind]);
@@ -175,13 +177,13 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   method_str = js_strdup(ctx, JS_IsString(value) ? str : method_string(METHOD_GET));
   JS_FreeValue(ctx, value);
   JS_FreeCString(ctx, str);
-
-  if(tmp) {
-    url_parse(&client->url, tmp, ctx);
-    JS_FreeCString(ctx, tmp);
-  } else if(!client->request) {
-    url_fromobj(&client->url, options, ctx);
-  }
+  /*
+    if(tmp) {
+      url_parse(&client->url, tmp, ctx);
+      JS_FreeCString(ctx, tmp);
+    } else if(!client->request) {
+      url_fromobj(&client->url, options, ctx);
+    }*/
 
   GETCBPROP(options, "onPong", client->cb.pong)
   GETCBPROP(options, "onClose", client->cb.close)
@@ -208,15 +210,15 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     block = JS_ToBool(ctx, opt_block);
 
   // url = url_format(&client->url, ctx);
-  if(!client->request) {
+  /*if(!client->request) {
     client->request = request_new(ctx, url_location(&client->url, ctx), client->url, method_number(method_str));
     client->headers = JS_GetPropertyStr(ctx, options, "headers");
     client->body = JS_GetPropertyStr(ctx, options, "body");
   }
-
+*/
   // headers_from(&client->request->headers, wsi, client->headers, ctx);
 
-  url_info(&client->url, conn);
+  url_info(&client->request->url, conn);
   conn->pwsi = &wsi;
   conn->context = lws;
 
@@ -225,7 +227,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   fprintf(stderr, "PROTOCOL: %s\n", conn->protocol);
 #endif
 
-  switch(protocol_number(client->url.protocol)) {
+  switch(protocol_number(client->request->url.protocol)) {
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
       conn->method = method_str;
