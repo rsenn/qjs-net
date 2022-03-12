@@ -152,13 +152,13 @@ header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
 
 JSValue
 minnet_request_from(JSContext* ctx, JSValueConst value) {
-  MinnetURL* url;
   MinnetRequest* req = 0;
   JSValue ret = JS_NULL;
 
   if(JS_IsString(value)) {
-    req = request_new(ctx, url->path, url_dup(*url, ctx), METHOD_GET);
+
   } else if(JS_IsObject(value)) {
+    MinnetURL* url;
     if((req = minnet_request_data(value))) {
       req = request_dup(req);
     } else if((url = minnet_url_data(value))) {
