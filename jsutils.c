@@ -231,6 +231,7 @@ js_resolve_functions_zero(ResolveFunctions* funcs) {
   funcs->array[0] = JS_NULL;
   funcs->array[1] = JS_NULL;
 }
+
 static inline BOOL
 js_resolve_functions_is_null(ResolveFunctions const* funcs) {
   return JS_IsNull(funcs->array[0]) && JS_IsNull(funcs->array[1]);
@@ -330,7 +331,7 @@ js_error_new(JSContext* ctx, const char* fmt, ...) {
   JSValue err = JS_NewError(ctx);
   char buf[1024];
 
-  va_start(fmt, args);
+  va_start(args, fmt);
   vsnprintf(buf, sizeof(buf), fmt, args);
   va_end(args);
 

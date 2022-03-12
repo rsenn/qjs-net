@@ -223,6 +223,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   if(!block)
     ret = js_promise_create(ctx, &client->promise);
+
   url_dump("url", &client->url);
 
   errno = 0;
@@ -233,9 +234,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   if(!wsi) {
     if(!block) {
-      JSValue err;
-      err = js_error_new(ctx, "[2] Connection failed: %s", strerror(errno));
-      js_promise_reject(ctx, &client->promise, err);
+      if(js_promise_pending(&client->promise)) {
+        JSValue err = js_error_new(ctx, "[2] Connection failed: %s", strerror(errno));
+        js_promise_reject(ctx, &client->promise, err);
+        JS_FreeValue(ctx, err);
+      }
     } else {
       ret = JS_ThrowInternalError(ctx, "Connection failed: %s", strerror(errno));
       goto fail;

@@ -54,7 +54,8 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   switch(magic) {
     case ON_HTTP: {
-      js_promise_resolve(ctx, &client->promise, argv[1]);
+      if(js_promise_pending(&client->promise))
+        js_promise_resolve(ctx, &client->promise, argv[1]);
       break;
     }
     case ON_CLOSE:
@@ -62,7 +63,8 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
       JSValue err;
       err = JS_NewError(ctx);
       JS_SetPropertyStr(ctx, err, "message", JS_DupValue(ctx, argv[1]));
-      js_promise_reject(ctx, &client->promise, err);
+      if(js_promise_pending(&client->promise))
+        js_promise_reject(ctx, &client->promise, err);
       JS_FreeValue(ctx, err);
       break;
     }
