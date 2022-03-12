@@ -15,17 +15,13 @@ function FetchNext(array) {
         prom.then(buf => {
           let prom = response.text();
           prom.then(text => {
-            console.log('arrayBuffer()', console.config({ compact: false }), buf);
+            console.log('arrayBuffer()', console.config({ compact: 2 }), buf);
             //console.log('text()', text);
-            if(array.length) FetchNext(array);
-            else resolve();
+            array.length ? FetchNext(array) : resolve();
           });
         });
       })
-      .catch(error => {
-        console.log('error', error);
-        reject(error);
-      });
+      .catch(error => (console.log('error', error), reject(error)));
   });
 }
 

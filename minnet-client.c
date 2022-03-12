@@ -312,15 +312,9 @@ scan_backwards(uint8_t* ptr, uint8_t ch) {
 
 static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetHttpMethod method = -1;
   MinnetClient* client = lws_client(wsi);
   MinnetSession* sess = &client->session;
-  JSContext* ctx;
-  struct wsi_opaque_user_data* opaque;
-  int n;
-
-  ctx = client->context.js;
-  opaque = lws_opaque(wsi, ctx);
+  struct wsi_opaque_user_data* opaque = client->context.js ? lws_opaque(wsi, client->context.js) : 0;
 
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &client->cb.fd, in);
@@ -354,8 +348,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
       BOOL is_error = JS_IsUndefined(client->context.error);
 
-      (is_error ? js_promise_reject : js_promise_resolve)(ctx, &client->promise, client->context.error);
-      JS_FreeValue(ctx, client->context.error);
+      (is_error ? js_promise_reject : js_promise_resolve)(client->context.js, &client->promise, client->context.error);
+      JS_FreeValue(client->context.js, client->context.error);
       client->context.error = JS_UNDEFINED;
       break;
     }
@@ -377,14 +371,15 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       if(opaque->status < CLOSING) {
+        JSContext* ctx;
         int32_t result = -1;
         if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in)
-          client->context.error = JS_NewStringLen(ctx, in, len);
+          client->context.error = JS_NewStringLen(client->context.js, in, len);
         else
           client->context.error = JS_UNDEFINED;
 
         opaque->status = CLOSING;
-        if((client->cb.close.ctx = ctx)) {
+        if((ctx = client->cb.close.ctx)) {
           JSValue ret;
           int argc, err = opaque ? opaque->error : 0;
           JSValueConst cb_argv[4] = {sess->ws_obj};
@@ -459,7 +454,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE:
     case LWS_CALLBACK_RAW_RX: {
-      if((client->cb.message.ctx = ctx)) {
+      JSContext* ctx;
+      if((ctx = client->cb.message.ctx)) {
         MinnetWebsocket* ws = minnet_ws_data(sess->ws_obj);
         JSValue msg = opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
         JSValue cb_argv[] = {sess->ws_obj, msg};
@@ -471,8 +467,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       break;
     }
     case LWS_CALLBACK_CLIENT_RECEIVE_PONG: {
-      if((client->cb.pong.ctx = ctx)) {
-        JSValue data = JS_NewArrayBufferCopy(client->cb.pong.ctx, in, len);
+      JSContext* ctx;
+      if((ctx = client->cb.pong.ctx)) {
+        JSValue data = JS_NewArrayBufferCopy(ctx, in, len);
         JSValue cb_argv[] = {sess->ws_obj, data};
         client_exception(client, minnet_emit(&client->cb.pong, 2, cb_argv));
         JS_FreeValue(ctx, cb_argv[1]);
