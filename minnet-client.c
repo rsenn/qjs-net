@@ -159,7 +159,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   client->request = request_from(ctx, argv[0]);
 
   if(argc >= 2) {
-    //    MinnetRequest* req;
 
     if(JS_IsObject(argv[1]))
       argind++;
@@ -184,13 +183,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   method_str = js_strdup(ctx, JS_IsString(value) ? str : method_string(METHOD_GET));
   JS_FreeValue(ctx, value);
   JS_FreeCString(ctx, str);
-  /*
-    if(tmp) {
-      url_parse(&client->url, tmp, ctx);
-      JS_FreeCString(ctx, tmp);
-    } else if(!client->request) {
-      url_fromobj(&client->url, options, ctx);
-    }*/
 
   GETCBPROP(options, "onPong", client->cb.pong)
   GETCBPROP(options, "onClose", client->cb.close)
@@ -216,15 +208,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsUndefined(opt_block))
     block = JS_ToBool(ctx, opt_block);
 
-  // url = url_format(&client->url, ctx);
-  /*if(!client->request) {
-    client->request = request_new(ctx, url_location(&client->url, ctx), client->url, method_number(method_str));
-    client->headers = JS_GetPropertyStr(ctx, options, "headers");
-    client->body = JS_GetPropertyStr(ctx, options, "body");
-  }
-*/
-  // headers_from(&client->request->headers, wsi, client->headers, ctx);
-
   url_info(&client->request->url, conn);
   conn->pwsi = &wsi;
   conn->context = client->context.lws;
@@ -241,18 +224,14 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       break;
     }
   }
-  // url_fromobj(&client->url, options, ctx);
 
   if(!block)
     ret = js_promise_create(ctx, &client->promise);
 
-  // url_dump("url = ", &client->url);
-
   errno = 0;
-
   wsi2 = lws_client_connect_via_info(conn);
 
-  /*  fprintf(stderr, "wsi2 = %p, wsi = %p\n", wsi2, wsi);*/
+  /*fprintf(stderr, "wsi2 = %p, wsi = %p\n", wsi2, wsi);*/
 
   if(!wsi) {
     if(!block) {
@@ -270,14 +249,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!block)
     return ret;
 
-  // minnet_exception = FALSE;
   opaque = lws_opaque(wsi, client->context.js);
 
   for(;;) {
-    if(status != opaque->status) {
+    if(status != opaque->status)
       status = opaque->status;
-      // fprintf(stderr, "STATUS: %s\n", ((const char*[]){"CONNECTING", "OPEN", "CLOSING", "CLOSED"})[status]);
-    }
 
     if(status == CLOSED)
       break;
@@ -292,7 +268,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   // client_free(client);
 
-  // minnet_client = NULL;
 fail:
   return ret;
 }
@@ -343,11 +318,6 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   JSContext* ctx;
   struct wsi_opaque_user_data* opaque;
   int n;
-
-  /*  if(sess)
-      client = sess->client ? sess->client : (sess->client = lws_client(wsi));
-    else
-      client */
 
   ctx = client->context.js;
   opaque = lws_opaque(wsi, ctx);
@@ -452,8 +422,6 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
         opaque->status = OPEN;
         if((ctx = client->cb.connect.ctx)) {
-
-          // opaque->ws = ws_new(wsi, ctx);
 
           sess->ws_obj = minnet_ws_wrap(ctx, wsi);
 
