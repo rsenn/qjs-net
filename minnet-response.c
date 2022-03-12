@@ -7,7 +7,7 @@
 THREAD_LOCAL JSClassID minnet_response_class_id;
 THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
 
-enum { RESPONSE_BUFFER, RESPONSE_JSON, RESPONSE_TEXT, RESPONSE_HEADER };
+enum { RESPONSE_HEADER };
 enum { RESPONSE_OK, RESPONSE_URL, RESPONSE_STATUS, RESPONSE_TYPE, RESPONSE_OFFSET, RESPONSE_HEADERS };
 
 /*struct http_header*
@@ -119,7 +119,8 @@ enum {
 
 static JSValue
 minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
-  JSValue ret = JS_UNDEFINED;
+  JSValue ret, result = JS_UNDEFINED;
+  ResolveFunctions funcs;
   MinnetResponse* res;
 
   if(!(res = minnet_response_data2(ctx, this_val)))
@@ -127,15 +128,23 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
   switch(magic) {
     case RESPONSE_ARRAYBUFFER: {
+      result = JS_NewArrayBuffer /*Copy*/ (ctx, block_BEGIN(&res->body), block_SIZE(&res->body), 0, 0, 0);
       break;
     }
     case RESPONSE_TEXT: {
+      result = JS_NewStringLen(ctx, (char*)block_BEGIN(&res->body), buffer_HEAD(&res->body));
       break;
     }
     case RESPONSE_JSON: {
+      result = JS_ParseJSON(ctx, block_BEGIN(&res->body), buffer_HEAD(&res->body), res->url.path);
       break;
     }
   }
+
+  ret = js_promise_create(ctx, &funcs);
+
+  js_promise_resolve(ctx, &funcs, result);
+  JS_FreeValue(ctx, result);
 
   return ret;
 }
