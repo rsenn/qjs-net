@@ -323,3 +323,17 @@ js_is_promise(JSContext* ctx, JSValueConst value) {
   JS_FreeValue(ctx, ctor);
   return ret;
 }
+
+JSValue
+js_error_new(JSContext* ctx, const char* fmt, ...) {
+  va_list args;
+  JSValue err = JS_NewError(ctx);
+  char buf[1024];
+
+  va_start(fmt, args);
+  vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+
+  JS_SetPropertyStr(ctx, err, "message", JS_NewString(ctx, buf));
+  return err;
+}

@@ -59,6 +59,7 @@ BOOL js_promise_pending(ResolveFunctions const*);
 BOOL js_promise_done(ResolveFunctions const*);
 JSValue js_global_get(JSContext*, const char*);
 BOOL js_is_promise(JSContext*, JSValueConst);
+JSValue js_error_new(JSContext*, const char*, ...);
 
 static inline void
 js_dump_string(const char* str, size_t len, size_t maxlen) {

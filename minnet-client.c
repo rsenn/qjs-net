@@ -234,10 +234,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!wsi) {
     if(!block) {
       JSValue err;
-      char buf[1024];
-      snprintf(buf, sizeof(buf), "[2] Connection failed: %s", strerror(errno));
-      err = JS_NewError(ctx);
-      JS_SetPropertyStr(ctx, err, "message", JS_NewString(ctx, buf));
+      err = js_error_new(ctx, "[2] Connection failed: %s", strerror(errno));
       js_promise_reject(ctx, &client->promise, err);
     } else {
       ret = JS_ThrowInternalError(ctx, "Connection failed: %s", strerror(errno));
