@@ -10,7 +10,10 @@
 #define client_exception(client, retval) context_exception(&(client->context), (retval))
 
 typedef struct client_context {
-  MinnetContext context;
+  union {
+    int ref_count;
+    MinnetContext context;
+  };
   MinnetCallbacks cb;
   JSValue headers, body, next;
   MinnetURL url;
@@ -21,16 +24,19 @@ typedef struct client_context {
   ResolveFunctions promise;
 } MinnetClient;
 
+struct client_closure* client_closure_new(JSContext*);
+struct client_closure* client_closure_dup(struct client_closure*);
 void client_free(MinnetClient*);
-JSValue minnet_client(JSContext*, JSValue, int, JSValue argv[]);
+MinnetClient* client_dup(MinnetClient*);
 JSValue minnet_client_closure(JSContext*, JSValue, int, JSValue argv[], int magic, void* ptr);
+JSValue minnet_client(JSContext*, JSValue, int, JSValue argv[]);
+uint8_t* scan_backwards(uint8_t*, uint8_t);
 
 struct client_closure {
   int ref_count;
   MinnetClient* client;
 };
 
-void client_closure_free(void*);
 struct client_closure* client_closure_new(JSContext*);
 
 static inline struct client_context*

@@ -24,7 +24,7 @@ static const struct lws_protocols client_protocols[] = {
     {0},
 };
 
-void
+static void
 client_closure_free(void* ptr) {
   struct client_closure* closure = ptr;
 
@@ -84,7 +84,7 @@ void
 client_free(MinnetClient* client) {
   JSContext* ctx = client->context.js;
 
-  if(--client->context.ref_count == 0) {
+  if(--client->ref_count == 0) {
     context_clear(&client->context);
 
     if(client->connect_info.method)
@@ -94,6 +94,12 @@ client_free(MinnetClient* client) {
 
     js_free(ctx, client);
   }
+}
+
+MinnetClient*
+client_dup(MinnetClient* client) {
+  ++client->ref_count;
+  return client;
 }
 
 enum {

@@ -31,7 +31,7 @@ fetch_closure_free(void* ptr) {
     if(closure->client) {
       JSContext* ctx = closure->client->context.js;
 
-      // client_free(closure->client);
+      client_free(closure->client);
 
       js_free(ctx, closure);
     }
@@ -49,7 +49,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   struct fetch_closure* closure = opaque;
   MinnetClient* client = closure->client;
 
-  printf("%s magic=%d client=%p\n", __func__, magic, client);
+  printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
 
   switch(magic) {
     case ON_HTTP: {
@@ -61,6 +61,14 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
       break;
     }
     case ON_FD: {
+
+      JSValue os;
+
+      os = js_global_get(ctx, "os");
+
+      if(!JS_IsObject(os))
+        return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
+
       break;
     }
   }
@@ -101,7 +109,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->client);
 
-  fc->client = cc->client;
+  fc->client = client_dup(cc->client);
 
   return ret;
 }
