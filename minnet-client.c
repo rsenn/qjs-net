@@ -200,6 +200,10 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
+  JSValue opt_headers = JS_GetPropertyStr(ctx, options, "headers");
+  if(!JS_IsUndefined(opt_headers))
+    client->headers =  JS_DupValue(ctx, opt_headers);
+
   JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
   if(!JS_IsUndefined(opt_binary))
     opaque->binary = JS_ToBool(ctx, opt_binary);

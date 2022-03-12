@@ -59,7 +59,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         // client->request->headers.start = buf.start;
 
-        if(headers_from(&buf, wsi, client->headers, ctx))
+        if(headers_add(&buf, wsi, client->headers, ctx))
           return -1;
 
         // client->request->headers.end = buf.end;

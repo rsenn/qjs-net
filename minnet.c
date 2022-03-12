@@ -237,7 +237,7 @@ headers_atom(JSAtom atom, JSContext* ctx) {
 }
 
 int
-headers_from(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
+headers_add(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
 

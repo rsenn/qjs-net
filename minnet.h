@@ -151,7 +151,7 @@ void context_clear(MinnetContext*);
 void context_certificate(MinnetContext*, JSValueConst);
 JSValue headers_object(JSContext*, const char*, const char*);
 char* headers_atom(JSAtom, JSContext* ctx);
-int headers_from(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);
+int headers_add(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);
 ssize_t headers_set(JSContext*, MinnetBuffer*, const char* name, const char* value);
 int headers_get(JSContext*, MinnetBuffer*, struct lws* wsi);
 int fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
