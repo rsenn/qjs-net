@@ -144,6 +144,7 @@ extern THREAD_LOCAL int32_t minnet_log_level;
 extern THREAD_LOCAL JSContext* minnet_log_ctx;
 extern THREAD_LOCAL BOOL minnet_exception;
 
+void session_zero(MinnetSession*);
 int socket_geterror(int fd);
 BOOL context_exception(MinnetContext* context, JSValue retval);
 void context_clear(MinnetContext*);

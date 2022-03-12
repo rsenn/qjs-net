@@ -149,9 +149,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->protocols = client_protocols;
   info->user = client;
 
-  client->session.ws_obj = JS_NULL;
-  client->session.req_obj = JS_NULL;
-  client->session.resp_obj = JS_NULL;
+  session_zero(&client->session);
 
   client->request = request_from(ctx, argv[0]);
 
