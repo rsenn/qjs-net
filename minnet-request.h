@@ -31,7 +31,7 @@ char* request_dump(MinnetRequest const*, JSContext*);
 void request_init(MinnetRequest*, MinnetURL, enum http_method);
 MinnetRequest* request_new(JSContext*, const char*, MinnetURL, MinnetHttpMethod method);
 MinnetRequest* request_dup(MinnetRequest*);
-MinnetRequest* request_from(JSContext*, JSValueConst);
+MinnetRequest* request_fromobj(JSContext*, JSValueConst);
 void request_zero(MinnetRequest*);
 JSValue minnet_request_from(JSContext*, JSValueConst);
 JSValue minnet_request_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
