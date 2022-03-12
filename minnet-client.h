@@ -26,6 +26,7 @@ JSValue minnet_client(JSContext*, JSValue, int, JSValue argv[]);
 JSValue minnet_client_closure(JSContext*, JSValue, int, JSValue argv[], int magic, void* ptr);
 
 struct client_closure {
+  int ref_count;
   MinnetClient* client;
 };
 

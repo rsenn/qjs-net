@@ -99,7 +99,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   JS_FreeValue(ctx, args[1]);
 
-  printf("%s url=%s client=%p\n", __func__, js_inspect_tostring(ctx, args[0]), cc->client);
+  printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->client);
 
   fc->client = cc->client;
 

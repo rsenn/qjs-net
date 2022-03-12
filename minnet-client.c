@@ -28,20 +28,28 @@ void
 client_closure_free(void* ptr) {
   struct client_closure* closure = ptr;
 
-  if(closure->client) {
-    JSContext* ctx = closure->client->context.js;
+  if(--closure->ref_count == 0) {
+    if(closure->client) {
+      JSContext* ctx = closure->client->context.js;
 
-    printf("%s client=%p\n", __func__, closure->client);
+      printf("%s client=%p\n", __func__, closure->client);
 
-    client_free(closure->client);
+      client_free(closure->client);
 
-    js_free(ctx, closure);
+      js_free(ctx, closure);
+    }
   }
 }
 
 struct client_closure*
 client_closure_new(JSContext* ctx) {
   return js_mallocz(ctx, sizeof(struct client_closure));
+}
+
+struct client_closure*
+client_closure_dup(struct client_closure* c) {
+  ++c->ref_count;
+  return c;
 }
 
 static JSValue
@@ -85,6 +93,14 @@ client_free(MinnetClient* client) {
 
   js_free(ctx, client);
 }
+
+enum {
+  ON_RESOLVE = 0,
+  ON_REJECT,
+};
+
+static JSValue
+minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {}
 
 JSValue
 minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
@@ -241,15 +257,26 @@ fail:
 JSValue
 minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct client_closure* closure;
-  JSValue func, ret;
+  JSValue func[2], ret;
 
   if(!(closure = client_closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  func = JS_NewCClosure(ctx, &minnet_client_closure, 1, 0, closure, client_closure_free);
+  /*  func = JS_NewCClosure(ctx, &minnet_client_closure, 1, 0, closure, client_closure_free);
 
-  ret = JS_Call(ctx, func, this_val, argc, argv);
-  JS_FreeValue(ctx, func);
+    ret = JS_Call(ctx, func, this_val, argc, argv);
+    JS_FreeValue(ctx, func);
+  */
+  ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
+
+  func[0] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, client_closure_dup(closure), client_closure_free);
+  func[1] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_REJECT, client_closure_dup(closure), client_closure_free);
+
+  ret = js_invoke(ctx, ret, "then", 1, func[0]);
+  ret = js_invoke(ctx, ret, "catch", 1, func[1]);
+
+  JS_FreeValue(ctx, func[0]);
+  JS_FreeValue(ctx, func[1]);
 
   return ret;
 }
