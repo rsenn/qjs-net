@@ -85,7 +85,7 @@ session_clear(MinnetSession* session, JSContext* ctx) {
   JS_FreeValue(ctx, session->generator);
   JS_FreeValue(ctx, session->next);
 
-  buffer_free(&session->buffer, JS_GetRuntime(ctx));
+  buffer_free(&session->send_buf, JS_GetRuntime(ctx));
 }
 
 BOOL
