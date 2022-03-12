@@ -19,11 +19,11 @@ int method_number(const char*);
 
 typedef struct http_request {
   int ref_count;
+  BOOL read_only;
   enum http_method method;
   MinnetURL url;
   MinnetBuffer headers, body;
-  BOOL read_only;
- } MinnetRequest;
+} MinnetRequest;
 
 void request_format(MinnetRequest const*, char*, size_t, JSContext* ctx);
 char* request_dump(MinnetRequest const*, JSContext*);

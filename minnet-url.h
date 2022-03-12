@@ -79,6 +79,14 @@ url_dup(MinnetURL url, JSContext* ctx) {
   return ret;
 }
 
+static inline void
+url_copy(MinnetURL* url, const MinnetURL* other, JSContext* ctx) {
+  url->protocol = other->protocol;
+  url->host = other->host ? js_strdup(ctx, other->host) : 0;
+  url->path = other->path ? js_strdup(ctx, other->path) : 0;
+  url->port = other->port;
+}
+
 extern THREAD_LOCAL JSClassID minnet_url_class_id;
 
 int minnet_url_init(JSContext*, JSModuleDef* m);

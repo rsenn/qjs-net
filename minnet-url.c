@@ -358,28 +358,47 @@ THREAD_LOCAL JSClassID minnet_url_class_id;
 enum { URL_PROTOCOL, URL_HOST, URL_PORT, URL_PATH, URL_TLS };
 
 JSValue
-minnet_url_wrap(JSContext* ctx, MinnetURL u) {
-  MinnetURL* url;
+minnet_url_wrap(JSContext* ctx, MinnetURL* url) {
   JSValue url_obj = JS_NewObjectProtoClass(ctx, minnet_url_proto, minnet_url_class_id);
 
   if(JS_IsException(url_obj))
     return JS_EXCEPTION;
+  /*
+    if(!(url = js_mallocz(ctx, sizeof(MinnetURL)))) {
+      JS_FreeValue(ctx, url_obj);
+      return JS_EXCEPTION;
+    }
 
-  if(!(url = js_mallocz(ctx, sizeof(MinnetURL)))) {
-    JS_FreeValue(ctx, url_obj);
-    return JS_EXCEPTION;
-  }
-
-  *url = u;
-
+    *url = u;
+  */
   JS_SetOpaque(url_obj, url);
 
   return url_obj;
 }
 
+MinnetURL*
+url_new(JSContext* ctx) {
+
+  MinnetURL* url;
+
+  if(!(url = js_mallocz(ctx, sizeof(MinnetURL))))
+    return url;
+
+  url->ref_count = 1;
+  return url;
+}
+
 JSValue
 minnet_url_new(JSContext* ctx, MinnetURL u) {
-  return minnet_url_wrap(ctx, url_dup(u, ctx));
+
+  MinnetURL* url;
+
+  if(!(url = url_new(ctx)))
+    return JS_ThrowOutOfMemory(ctx);
+
+  url_copy(url, &u, ctx);
+
+  return minnet_url_wrap(ctx, url);
 }
 
 static JSValue

@@ -1,5 +1,5 @@
 import { exit, puts, open } from 'std';
-import { fetch, Request, Response, setLog, logLevels, LLL_INFO, LLL_USER } from 'net';
+import { fetch, Request, Response, setLog, logLevels, LLL_DEBUG, LLL_INFO, LLL_USER } from 'net';
 
 function WriteFile(name, data) {
   try {
@@ -65,12 +65,17 @@ function main(...args) {
     //args = ['http://www.w3.org/Home.html'];
     args = 'Assis,Autoren,Backgrounds,Beklagenswert,BewegungMaterie,BodyMassIndex,BriefBenz,CERN_Auffassungen,DeadEndBigBang,Elementarteilchen,GOMAntwort,GOMProjekt,Glaube,Gravitation,Hintergruende,Hix,Jooss,Kapillare,Krueger,LetterBenz,MasseEnergieFehler1,Materie,Materiedefinition,NeuesCERN,Neutrinos,Nobelpreis,PM_Urknall,PhysikFehler,Physik_heute,PhysikerPhysik,PistorPohl,SackgasseUrknall,Tegmark,TheoriePraxis,Urknall,Urknallbeschreibung,WasIstLos,Weltraumteleskop,WhatIsGoing,WikipediaPhysik_Einleitung'.split(',').map(n => `http://hauptplatz.unipohl.de/Wissenschaft/${n}.htm`);
 
-  let log = std.open('test-fetch.log', 'w+');
-
-  setLog(-1, (level, msg) => {
-    log.puts(logLevels[level].padEnd(10) + msg + '\n');
-    log.flush();
-  });
+  setLog(
+    LLL_DEBUG-1,
+    (() => {
+      let lf = open('test-fetch.log', 'w');
+      return (level, msg) => {
+        console.log(logLevels[level].padEnd(10) + msg);
+       /* lf.puts(logLevels[level].padEnd(10) + msg + '\n');
+        lf.flush();*/
+      };
+    })()
+  );
 
   import('console')
     .then(({ Console }) => ((globalThis.console = new Console({ inspectOptions: { compact: 1, depth: 2, maxArrayLength: 10, maxStringLength: Infinity, reparseable: false } })), run()))
