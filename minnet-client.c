@@ -188,6 +188,14 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
+  JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
+  if(!JS_IsUndefined(opt_binary))
+    opaque->binary = JS_ToBool(ctx, opt_binary);
+
+  JSValue opt_block = JS_GetPropertyStr(ctx, options, "block");
+  if(!JS_IsUndefined(opt_block))
+    block = JS_ToBool(ctx, opt_block);
+
   // url = url_format(&client->url, ctx);
   client->request = request_new(ctx, url_location(&client->url, ctx), client->url, method_number(method_str));
   client->headers = JS_GetPropertyStr(ctx, options, "headers");
@@ -237,19 +245,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-  // minnet_exception = FALSE;
-  opaque = lws_opaque(wsi, client->context.js);
-
-  JSValue opt_binary = JS_GetPropertyStr(ctx, options, "binary");
-  if(JS_IsBool(opt_binary))
-    opaque->binary = JS_ToBool(ctx, opt_binary);
-
-  JSValue opt_block = JS_GetPropertyStr(ctx, options, "block");
-  if(JS_IsBool(opt_block))
-    block = JS_ToBool(ctx, opt_block);
-
   if(!block)
     return ret;
+
+  // minnet_exception = FALSE;
+  opaque = lws_opaque(wsi, client->context.js);
 
   for(;;) {
     if(status != opaque->status) {

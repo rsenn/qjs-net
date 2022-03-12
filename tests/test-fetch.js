@@ -54,7 +54,7 @@ function main(...args) {
         console.log('SUCCEEDED');
       })
       .catch(err => {
-        console.log('FAILED', err);
+        console.log('FAILED:', err);
       });
   }
 }

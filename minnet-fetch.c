@@ -57,8 +57,13 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
       js_promise_resolve(ctx, &client->promise, argv[1]);
       break;
     }
+    case ON_CLOSE:
     case ON_ERROR: {
-      js_promise_reject(ctx, &client->promise, argv[1]);
+      JSValue err;
+      err = JS_NewError(ctx);
+      JS_SetPropertyStr(ctx, err, "message", JS_DupValue(ctx, argv[1]));
+      js_promise_reject(ctx, &client->promise, err);
+      JS_FreeValue(ctx, err);
       break;
     }
     case ON_FD: {
