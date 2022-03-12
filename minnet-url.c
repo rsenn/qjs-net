@@ -266,9 +266,11 @@ url_fromobj(MinnetURL* url, JSValueConst obj, JSContext* ctx) {
 
 MinnetURL
 url_from(JSContext* ctx, JSValueConst value) {
-  MinnetURL url = {0};
+  MinnetURL url = {0}, *other;
 
-  if(JS_IsObject(value)) {
+  if((other = minnet_url_data(value))) {
+    url = url_dup(*other, ctx);
+  } else if(JS_IsObject(value)) {
     url_fromobj(&url, value, ctx);
   } else if(JS_IsString(value)) {
     const char* str = JS_ToCString(ctx, value);

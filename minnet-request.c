@@ -160,7 +160,7 @@ request_from(JSContext* ctx, JSValueConst value) {
 
   url = url_from(ctx, value);
   if(url_valid(&url))
-    req = request_new(ctx, 0, url, METHOD_GET);
+    req = request_new(ctx, url.path, url, METHOD_GET);
 
   return req;
 }
