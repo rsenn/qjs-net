@@ -126,14 +126,12 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   int argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
   MinnetClient* client = 0;
-  MinnetSession* session = 0;
-  // struct lws_context_creation_info* info;
   JSValue options = argv[0];
   struct lws *wsi = 0, *wsi2;
-  const char *tmp = 0, *str;
+  const char* str;
   BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
-  char *url, *method_str = 0;
+  char* method_str = 0;
 
   SETLOG(LLL_INFO)
 
@@ -146,25 +144,18 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     ((struct client_closure*)ptr)->client = client;
 
   *client = (MinnetClient){.context = (MinnetContext){.ref_count = 1}, .headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
-  // info = &client->context.info;
-  //  conn = &client->connect_info;
 
   client->context.js = ctx;
   client->context.error = JS_NULL;
-  // minnet_client = &client;
 
-  memset(info, 0, sizeof(struct lws_context_creation_info));
-  info->options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-  info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
-  info->port = CONTEXT_PORT_NO_LISTEN;
-  info->protocols = client_protocols;
-  info->user = client;
+  memset(&client->context.info, 0, sizeof(struct lws_context_creation_info));
+  client->context.info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+  client->context.info.options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
+  client->context.info.port = CONTEXT_PORT_NO_LISTEN;
+  client->context.info.protocols = client_protocols;
+  client->context.info.user = client;
 
   session_zero(&client->session);
-  session = &client->session;
-
-  /*session->req_obj = minnet_request_from(ctx, argv[0]);
-  client->request = minnet_request_data(session->req_obj);*/
 
   client->request = request_from(ctx, argv[0]);
 
@@ -202,9 +193,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onHttp", client->on.http)
 
   if(!client->context.lws) {
-    sslcert_client(ctx, info, options);
+    sslcert_client(ctx, &client->context.info, options);
 
-    if(!(client->context.lws = lws_create_context(info))) {
+    if(!(client->context.lws = lws_create_context(&client->context.info))) {
       lwsl_err("minnet-client: libwebsockets init failed\n");
       return JS_ThrowInternalError(ctx, "minnet-client: libwebsockets init failed");
     }
