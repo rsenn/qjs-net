@@ -59,7 +59,7 @@ function main(...args) {
     args = 'Assis,Autoren,Backgrounds,Beklagenswert,BewegungMaterie,BodyMassIndex,BriefBenz,CERN_Auffassungen,DeadEndBigBang,Elementarteilchen,GOMAntwort,GOMProjekt,Glaube,Gravitation,Hintergruende,Hix,Jooss,Kapillare,Krueger,LetterBenz,MasseEnergieFehler1,Materie,Materiedefinition,NeuesCERN,Neutrinos,Nobelpreis,PM_Urknall,PhysikFehler,Physik_heute,PhysikerPhysik,PistorPohl,SackgasseUrknall,Tegmark,TheoriePraxis,Urknall,Urknallbeschreibung,WasIstLos,Weltraumteleskop,WhatIsGoing,WikipediaPhysik_Einleitung'.split(',').map(n => `http://hauptplatz.unipohl.de/Wissenschaft/${n}.htm`);
 
   setLog(
-    LLL_DEBUG - 1,
+     -1,
     (() => {
       let lf = open('test-fetch.log', 'w');
       return (level, msg) => {

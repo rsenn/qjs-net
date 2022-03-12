@@ -361,8 +361,7 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
   if(!(resp = js_mallocz(ctx, sizeof(MinnetResponse))))
     return JS_ThrowOutOfMemory(ctx);
 
-  /* using new_target to get the prototype is necessary when the
-     class is extended. */
+  /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");
   if(JS_IsException(proto))
     proto = JS_DupValue(ctx, minnet_response_proto);

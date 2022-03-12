@@ -109,6 +109,11 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       lwsl_user("http-established #1 " FGC(171, "%-38s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
 
+      size_t hdrlen = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP);
+
+      if((client->response->status_text = js_malloc(ctx, hdrlen + 1)))
+        lws_hdr_copy(wsi, client->response->status_text, hdrlen, WSI_TOKEN_HTTP);
+
       if(method_number(client->connect_info.method) == METHOD_POST) {
         lws_client_http_body_pending(wsi, 1);
         lws_callback_on_writable(wsi);
