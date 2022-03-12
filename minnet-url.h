@@ -26,10 +26,6 @@ typedef struct url {
   uint16_t port;
 } MinnetURL;
 
-MinnetProtocol protocol_number(const char*);
-const char* protocol_string(MinnetProtocol);
-uint16_t protocol_default_port(MinnetProtocol);
-BOOL protocol_is_tls(MinnetProtocol);
 void url_init(MinnetURL*, const char*, const char*, int port, const char* path, JSContext* ctx);
 void url_parse(MinnetURL*, const char*, JSContext*);
 char* url_format(const MinnetURL*, JSContext*);
@@ -44,7 +40,8 @@ MinnetURL url_from(JSContext*, JSValueConst);
 void url_dump(const char*, MinnetURL const*);
 JSValue query_object(const char*, JSContext*);
 char* query_from(JSValueConst, JSContext*);
-JSValue minnet_url_wrap(JSContext*, MinnetURL);
+JSValue minnet_url_wrap(JSContext*, MinnetURL*);
+MinnetURL* url_new(JSContext*);
 JSValue minnet_url_new(JSContext*, MinnetURL);
 JSValue minnet_url_method(JSContext*, JSValueConst, int, JSValueConst argv[], int magic);
 JSValue minnet_url_from(JSContext*, JSValueConst);
