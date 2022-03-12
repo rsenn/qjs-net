@@ -199,7 +199,10 @@ JSValue
 minnet_request_from(JSContext* ctx, JSValueConst value) {
   MinnetRequest* req;
 
-  req = request_from(ctx, value);
+  if(JS_IsObject(value) && (req = minnet_request_data(value)))
+    req = request_dup(req);
+  else
+    req = request_from(ctx, value);
 
   return minnet_request_wrap(ctx, req);
 }

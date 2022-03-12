@@ -99,7 +99,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       status = lws_http_client_http_response(wsi);
 
       lwsl_user("http-established #1 " FGC(171, "%-38s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
-      session->req_obj = minnet_request_wrap(ctx, client->request);
+      // session->req_obj = minnet_request_wrap(ctx, client->request);
 
       session->resp_obj = minnet_response_new(ctx, url_dup(client->request->url, ctx), status, TRUE, "text/html");
 

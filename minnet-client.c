@@ -115,8 +115,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   struct lws_context* lws = 0;
   int argind = 0, status = -1;
   JSValue value, ret = JS_NULL;
-  MinnetWebsocket* ws;
+  // MinnetWebsocket* ws;
   MinnetClient* client = 0;
+  MinnetSession* session = 0;
   struct lws_context_creation_info* info;
   struct lws_client_connect_info* conn;
   JSValue options = argv[0];
@@ -150,8 +151,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->user = client;
 
   session_zero(&client->session);
+  session = &client->session;
 
-  client->request = request_from(ctx, argv[0]);
+  session->req_obj = minnet_request_from(ctx, argv[0]);
+
+  client->request = minnet_request_data(session->req_obj); // request_from(ctx, argv[0]);
 
   if(argc >= 2) {
     //    MinnetRequest* req;
