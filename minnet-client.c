@@ -157,6 +157,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     } else if((req = minnet_request_data(argv[argind]))) {
       client->request = req;
       client->url = url_dup(req->url, ctx);
+      client->headers = JS_GetPropertyStr(ctx, argv[argind], "headers");
     }
   }
 
@@ -171,10 +172,10 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   JS_FreeValue(ctx, value);
   JS_FreeCString(ctx, str);
 
-  if(argind > 0) {
+  if(tmp) {
     url_parse(&client->url, tmp, ctx);
     JS_FreeCString(ctx, tmp);
-  } else {
+  } else if(!client->request) {
     url_from(&client->url, options, ctx);
   }
 
