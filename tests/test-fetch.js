@@ -70,9 +70,9 @@ function main(...args) {
     (() => {
       let lf = open('test-fetch.log', 'w');
       return (level, msg) => {
-        console.log(logLevels[level].padEnd(10) + msg);
-       /* lf.puts(logLevels[level].padEnd(10) + msg + '\n');
-        lf.flush();*/
+      //  console.log(logLevels[level].padEnd(10) + msg);
+         lf.puts(logLevels[level].padEnd(10) + msg + '\n');
+        lf.flush(); 
       };
     })()
   );

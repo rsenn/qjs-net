@@ -184,34 +184,43 @@ header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
 }
 
 MinnetRequest*
-request_from(JSContext* ctx, JSValueConst value) {
+request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
   MinnetRequest* req = 0;
   MinnetURL url = {0, 0, 0, 0};
 
-  if(JS_IsObject(value) && (req = minnet_request_data(value)))
+  if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0])))
     req = request_dup(req);
   else {
     /* if(JS_IsObject(value) && (req = minnet_request_data(value)))
       url = url_clone(req->url, ctx);
     else
     */
-    url_from(&url, value, ctx);
+    url_from(&url, argv[0], ctx);
 
     if(url_valid(&url))
       req = request_new(ctx, url, METHOD_GET);
   }
 
+  if(req)
+    if(argc >= 2 && JS_IsObject(argv[1])) {
+      JSValue headers = JS_GetPropertyStr(ctx, argv[1], "headers");
+      if(!JS_IsUndefined(headers))
+        headers_fromobj(&req->headers, headers, ctx);
+
+      JS_FreeValue(ctx, headers);
+    }
+
   return req;
 }
 
 JSValue
-minnet_request_from(JSContext* ctx, JSValueConst value) {
+minnet_request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
   MinnetRequest* req;
 
-  if(JS_IsObject(value) && (req = minnet_request_data(value)))
+  if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0])))
     req = request_dup(req);
   else
-    req = request_from(ctx, value);
+    req = request_from(ctx, argc, argv);
 
   return minnet_request_wrap(ctx, req);
 }
@@ -225,8 +234,7 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   if(!(req = request_alloc(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  /* using new_target to get the prototype is necessary when the
-     class is extended. */
+  /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");
   if(JS_IsException(proto))
     proto = JS_DupValue(ctx, minnet_request_proto);
