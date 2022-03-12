@@ -145,16 +145,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   *client = (MinnetClient){.context = (MinnetContext){.ref_count = 1}, .headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
 
-  client->context.js = ctx;
-  client->context.error = JS_NULL;
-
-  memset(&client->context.info, 0, sizeof(struct lws_context_creation_info));
-  client->context.info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-  client->context.info.options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
-  client->context.info.port = CONTEXT_PORT_NO_LISTEN;
-  client->context.info.protocols = client_protocols;
-  client->context.info.user = client;
-
   session_zero(&client->session);
 
   client->request = request_from(ctx, argv[0]);
@@ -179,6 +169,29 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsObject(options))
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
+  {
+    MinnetContext* context = &client->context;
+
+    context->js = ctx;
+    context->error = JS_NULL;
+
+    memset(&context->info, 0, sizeof(struct lws_context_creation_info));
+    context->info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+    context->info.options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
+    context->info.port = CONTEXT_PORT_NO_LISTEN;
+    context->info.protocols = client_protocols;
+    context->info.user = client;
+
+    if(!context->lws) {
+      sslcert_client(ctx, &context->info, options);
+
+      if(!(context->lws = lws_create_context(&context->info))) {
+        lwsl_err("minnet-client: libwebsockets init failed\n");
+        return JS_ThrowInternalError(ctx, "minnet-client: libwebsockets init failed");
+      }
+    }
+  }
+
   value = JS_GetPropertyStr(ctx, options, "method");
   str = JS_ToCString(ctx, value);
   method_str = js_strdup(ctx, JS_IsString(value) ? str : method_string(METHOD_GET));
@@ -191,15 +204,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onMessage", client->on.message)
   GETCBPROP(options, "onFd", client->on.fd)
   GETCBPROP(options, "onHttp", client->on.http)
-
-  if(!client->context.lws) {
-    sslcert_client(ctx, &client->context.info, options);
-
-    if(!(client->context.lws = lws_create_context(&client->context.info))) {
-      lwsl_err("minnet-client: libwebsockets init failed\n");
-      return JS_ThrowInternalError(ctx, "minnet-client: libwebsockets init failed");
-    }
-  }
 
   JSValue opt_headers = JS_GetPropertyStr(ctx, options, "headers");
   if(!JS_IsUndefined(opt_headers))
