@@ -1,35 +1,28 @@
 import { exit, puts, open } from 'std';
-import { fetch, Request, Response ,setLog, logLevels, LLL_INFO, LLL_USER } from 'net';
+import { fetch, Request, Response, setLog, logLevels, LLL_INFO, LLL_USER } from 'net';
 
 function FetchNext(array) {
   return new Promise((resolve, reject) => {
     let url = array.shift();
     let request = new Request(url);
-
-    console.log(`fetching \x1b[1;33m${url}\x1b[0m`, request);
+    console.log(`fetching \x1b[1;33m${url}\x1b[0m`);
+    console.log(request);
     let promise = fetch(request, {});
-
-//    console.log('FetchNext', promise);
-
     promise
       .then(response => {
-                 console.log('response', response);
-   let prom = response.arrayBuffer();
-
+        console.log('response', response);
+        let prom = response.arrayBuffer();
         prom.then(buf => {
           let prom = response.text();
-
           prom.then(text => {
             console.log('response', { buf, text });
-
             if(array.length) FetchNext(array);
             else resolve();
           });
         });
       })
       .catch(error => {
-            console.log('error',error);
-
+        console.log('error', error);
         reject(error);
       });
   });
@@ -38,57 +31,16 @@ function FetchNext(array) {
 function main(...args) {
   if(args.length == 0)
     //args = ['http://www.w3.org/Home.html'];
-    args = [
-      'Jooss',
-      'Assis',
-      'Autoren',
-      'NeuesCERN',
-      'WasIstLos',
-      'WhatIsGoing',
-      'PM_Urknall',
-      'PhysikerPhysik',
-      'Materiedefinition',
-      'BewegungMaterie',
-      'Krueger',
-      'Elementarteilchen',
-      'MasseEnergieFehler1',
-      'Physik_heute',
-      'Materie',
-      'Gravitation',
-      'WikipediaPhysik_Einleitung',
-      'Tegmark',
-      'CERN_Auffassungen',
-      'PhysikFehler',
-      'Nobelpreis',
-      'PistorPohl',
-      'Weltraumteleskop',
-      'Kapillare',
-      'TheoriePraxis',
-      'SackgasseUrknall',
-      'DeadEndBigBang',
-      'BriefBenz',
-      'LetterBenz',
-      'Beklagenswert',
-      'Urknall',
-      'Hintergruende',
-      'Backgrounds',
-      'Urknallbeschreibung',
-      'Glaube',
-      'Hix',
-      'Neutrinos',
-      'GOMProjekt',
-      'GOMAntwort',
-      'BodyMassIndex'
-    ].map(n => `http://hauptplatz.unipohl.de/Wissenschaft/${n}.htm`);
-
+    args =
+      'Assis,Autoren,Backgrounds,Beklagenswert,BewegungMaterie,BodyMassIndex,BriefBenz,CERN_Auffassungen,DeadEndBigBang,Elementarteilchen,GOMAntwort,GOMProjekt,Glaube,Gravitation,Hintergruende,Hix,Jooss,Kapillare,Krueger,LetterBenz,MasseEnergieFehler1,Materie,Materiedefinition,NeuesCERN,Neutrinos,Nobelpreis,PM_Urknall,PhysikFehler,Physik_heute,PhysikerPhysik,PistorPohl,SackgasseUrknall,Tegmark,TheoriePraxis,Urknall,Urknallbeschreibung,WasIstLos,Weltraumteleskop,WhatIsGoing,WikipediaPhysik_Einleitung'
+        .split(',')
+        .map(n => `http://hauptplatz.unipohl.de/Wissenschaft/${n}.htm`);
   let logfile = std.open('test-fetch.log', 'w+');
 
   setLog(-1, (level, msg) => {
-    //if(level < LLL_INFO || level == LLL_USER)
     logfile.puts(logLevels[level].padEnd(10) + msg + '\n');
     logfile.flush();
   });
-
   import('console')
     .then(({ Console }) => {
       console.log('Console', Console);
@@ -100,11 +52,9 @@ function main(...args) {
     .catch(() => {
       run();
     });
-
   function run() {
     let promise = FetchNext(args);
     console.log('promise', promise);
-
     promise
       .then(() => {
         console.log('SUCCEEDED');
@@ -114,7 +64,6 @@ function main(...args) {
       });
   }
 }
-
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
