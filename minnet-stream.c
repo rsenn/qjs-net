@@ -78,16 +78,30 @@ minnet_stream_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSV
   if(JS_IsException(obj))
     goto fail;
 
-  if(argc >= 2 && JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
-    uint32_t element_size = 0, count = 0;
-    JS_ToUint32(ctx, &element_size, argv[0]);
-    JS_ToUint32(ctx, &count, argv[1]);
+  while(argc > 0) {
 
-    strm->ring = lws_ring_create(element_size, count, stream_destroy_element);
+    if(JS_IsString(argv[0])) {
+      const char* type;
+      type = JS_ToCString(ctx, argv[0]);
+      pstrcpy(strm->type, sizeof(strm->type), type);
+      JS_FreeCString(ctx, type);
+      argc -= 1;
+      argv += 1;
 
-    argc -= 2;
-    argv += 2;
+    } else if(argc >= 2 && JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
+      uint32_t element_size = 0, count = 0;
+      JS_ToUint32(ctx, &element_size, argv[0]);
+      JS_ToUint32(ctx, &count, argv[1]);
+
+      strm->ring = lws_ring_create(element_size, count, stream_destroy_element);
+
+      argc -= 2;
+      argv += 2;
+    } else {
+      break;
+    }
   }
+
   /* while(argc >= 1) {
      size_t len;
      uint8_t* ptr;
