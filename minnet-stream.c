@@ -53,17 +53,39 @@ stream_insert(struct stream* strm, const void* ptr, size_t n) {
 
   return lws_ring_insert(strm->ring, ptr, n);
 }
+
 size_t
 stream_consume(struct stream* strm, void* ptr, size_t n) {
   assert(strm->ring);
 
   return lws_ring_consume(strm->ring, 0, ptr, n);
 }
+
+size_t
+stream_skip(struct stream* strm, size_t n) {
+  assert(strm->ring);
+
+  return lws_ring_consume(strm->ring, 0, 0, n);
+}
+
 const void*
 stream_next(struct stream* strm) {
   assert(strm->ring);
   return lws_ring_get_element(strm->ring, 0);
 }
+
+size_t
+stream_size(struct stream* strm) {
+  assert(strm->ring);
+  return lws_ring_get_count_waiting_elements(strm->ring, 0);
+}
+
+size_t
+stream_avail(struct stream* strm) {
+  assert(strm->ring);
+  return lws_ring_get_count_free_elements(strm->ring);
+}
+
 void
 stream_zero(struct stream* strm) {
   lws_ring_destroy(strm->ring);
