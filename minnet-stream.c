@@ -8,37 +8,55 @@ THREAD_LOCAL JSValue minnet_stream_proto, minnet_stream_ctor;
 
 void
 stream_dump(struct stream const* strm) {
-  fprintf(stderr, "\nMinnetStream {\n\tref_count = %zu", strm->ref_count);
-  buffer_dump("buffer", &strm->buffer);
-  fputs("\n}", stderr);
-  fflush(stderr);
+  /*  fprintf(stderr, "\nMinnetStream {\n\tref_count = %zu", strm->ref_count);
+    buffer_dump("buffer", &strm->buffer);
+    fputs("\n}", stderr);
+    fflush(stderr);*/
 }
 
-void
-stream_init(struct stream* strm, const char* type, size_t typelen, const void* x, size_t n) {
-  //  memset(strm, 0, sizeof(*strm));
+static void
+stream_destroy_element(void* element) {}
 
-  if(x)
-    buffer_write(&strm->buffer, x, n);
+void
+stream_init(struct stream* strm, size_t element_len, size_t count, const char* type, size_t typelen) {
+  //  memset(strm, 0, sizeof(*strm));
 
   if(type)
     pstrcpy(strm->type, MIN(typelen + 1, sizeof(strm->type)), type);
+
+  strm->ring = lws_ring_create(element_len, count, stream_destroy_element);
 }
 
 struct stream*
 stream_new(JSContext* ctx) {
+  struct stream* strm;
+
+  if((strm = js_mallocz(ctx, sizeof(MinnetStream))))
+    strm->ref_count = 1;
+  return strm;
+}
+
+struct stream*
+stream_new2(size_t element_len, size_t count, JSContext* ctx) {
   MinnetStream* strm;
 
-  if((strm = js_mallocz(ctx, sizeof(MinnetStream)))) {
-    pstrcpy(strm->type, sizeof(strm->type), "application/binary");
+  if((strm = stream_new(ctx))) {
+    const char* type = "application/binary";
+    stream_init(strm, element_len, count, type, strlen(type));
   }
   return strm;
 }
 
 void
 stream_zero(struct stream* strm) {
+  lws_ring_destroy(strm->ring);
   memset(strm, 0, sizeof(MinnetStream));
-  strm->buffer = BUFFER_0();
+}
+
+void
+stream_free(struct stream* strm, JSRuntime* rt) {
+  lws_ring_destroy(strm->ring);
+  js_free_rt(rt, strm);
 }
 
 JSValue
@@ -46,7 +64,7 @@ minnet_stream_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSV
   JSValue proto, obj;
   MinnetStream* strm;
 
-  if(!(strm = js_mallocz(ctx, sizeof(MinnetStream))))
+  if(!(strm = stream_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   /* using new_target to get the prototype is necessary when the
@@ -60,20 +78,20 @@ minnet_stream_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSV
   if(JS_IsException(obj))
     goto fail;
 
-  while(argc >= 1) {
-    size_t len;
-    uint8_t* ptr;
-    if(JS_IsString(argv[0])) {
-      const char* str = JS_ToCStringLen(ctx, &len, argv[0]);
-      buffer_append(&strm->buffer, str, len, ctx);
-      JS_FreeCString(ctx, str);
-    } else if((ptr = JS_GetArrayBuffer(ctx, &len, argv[0]))) {
-      buffer_append(&strm->buffer, ptr, len, ctx);
-    }
-    argc--;
-    argv++;
-  }
-
+  /* while(argc >= 1) {
+     size_t len;
+     uint8_t* ptr;
+     if(JS_IsString(argv[0])) {
+       const char* str = JS_ToCStringLen(ctx, &len, argv[0]);
+       buffer_append(&strm->buffer, str, len, ctx);
+       JS_FreeCString(ctx, str);
+     } else if((ptr = JS_GetArrayBuffer(ctx, &len, argv[0]))) {
+       buffer_append(&strm->buffer, ptr, len, ctx);
+     }
+     argc--;
+     argv++;
+   }
+ */
   JS_SetOpaque(obj, strm);
 
   return obj;
@@ -129,17 +147,17 @@ minnet_stream_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case STREAM_LENGTH: {
-      ret = JS_NewUint32(ctx, buffer_HEAD(&strm->buffer));
+      ret = JS_NewUint32(ctx, lws_ring_get_count_waiting_elements(strm->ring, 0));
       break;
     }
-    case STREAM_BUFFER: {
-      ret = buffer_HEAD(&strm->buffer) ? buffer_toarraybuffer(&strm->buffer, ctx) : JS_NULL;
-      break;
-    }
-    case STREAM_TEXT: {
-      ret = buffer_HEAD(&strm->buffer) ? buffer_tostring(&strm->buffer, ctx) : JS_NULL;
-      break;
-    }
+      /*    case STREAM_BUFFER: {
+            ret = buffer_HEAD(&strm->buffer) ? buffer_toarraybuffer(&strm->buffer, ctx) : JS_NULL;
+            break;
+          }
+          case STREAM_TEXT: {
+            ret = buffer_HEAD(&strm->buffer) ? buffer_tostring(&strm->buffer, ctx) : JS_NULL;
+            break;
+          }*/
   }
   return ret;
 }
@@ -158,23 +176,23 @@ minnet_stream_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
 
   if(!(strm = minnet_stream_data(ctx, this_val)))
     return JS_EXCEPTION;
+  /*
+    len = buffer_BYTES(&strm->buffer);
+    ptr = strm->buffer.read;
 
-  len = buffer_BYTES(&strm->buffer);
-  ptr = strm->buffer.read;
+    if(argc >= 1) {
+      uint32_t n = len;
+      JS_ToUint32(ctx, &n, argv[0]);
+      if(n < len)
+        len = n;
+    }
 
-  if(argc >= 1) {
-    uint32_t n = len;
-    JS_ToUint32(ctx, &n, argv[0]);
-    if(n < len)
-      len = n;
-  }
-
-  if(len) {
-    ret = JS_NewStringLen(ctx, (const char*)ptr, len);
-    strm->buffer.read += len;
-  } else {
-    *pdone = TRUE;
-  }
+    if(len) {
+      ret = JS_NewStringLen(ctx, (const char*)ptr, len);
+      strm->buffer.read += len;
+    } else {
+      *pdone = TRUE;
+    }*/
 
   return ret;
 }
@@ -184,7 +202,7 @@ minnet_stream_finalizer(JSRuntime* rt, JSValue val) {
   MinnetStream* strm = JS_GetOpaque(val, minnet_stream_class_id);
   if(strm && --strm->ref_count == 0) {
 
-    buffer_free(&strm->buffer, rt);
+    // buffer_free(&strm->buffer, rt);
 
     js_free_rt(rt, strm);
   }

@@ -4,20 +4,21 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "minnet.h"
-#include "minnet-buffer.h"
+#include <libwebsockets.h>
 
 typedef struct stream {
   size_t ref_count;
   char type[256];
-  MinnetBuffer buffer;
+  struct lws_ring* ring;
 } MinnetStream;
 
 void stream_dump(struct stream const*);
-void stream_init(struct stream*, const char* type, size_t typelen, const void* x, size_t len);
+void stream_init(struct stream*, size_t, size_t, const char* type, size_t typelen);
 struct stream* stream_new(JSContext*);
+struct stream* stream_new2(size_t, size_t, JSContext*);
 void stream_zero(struct stream*);
-JSValue minnet_stream_constructor(JSContext*, JSValue new_target, int argc, JSValue argv[]);
-JSValue minnet_stream_new(JSContext*, const char* type, size_t typelen, const void* x, size_t len);
+JSValue minnet_stream_constructor(JSContext*, JSValue, int, JSValue argv[]);
+JSValue minnet_stream_new(JSContext*, const char*, size_t, const void* x, size_t n);
 JSValue minnet_stream_wrap(JSContext*, struct stream*);
 
 extern JSClassDef minnet_stream_class;
