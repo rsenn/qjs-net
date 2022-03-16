@@ -47,6 +47,23 @@ stream_new2(size_t element_len, size_t count, JSContext* ctx) {
   return strm;
 }
 
+size_t
+stream_insert(struct stream* strm, const void* ptr, size_t n) {
+  assert(strm->ring);
+
+  return lws_ring_insert(strm->ring, ptr, n);
+}
+size_t
+stream_consume(struct stream* strm, void* ptr, size_t n) {
+  assert(strm->ring);
+
+  return lws_ring_consume(strm->ring, 0, ptr, n);
+}
+const void*
+stream_next(struct stream* strm) {
+  assert(strm->ring);
+  return lws_ring_get_element(strm->ring, 0);
+}
 void
 stream_zero(struct stream* strm) {
   lws_ring_destroy(strm->ring);
@@ -102,20 +119,6 @@ minnet_stream_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSV
     }
   }
 
-  /* while(argc >= 1) {
-     size_t len;
-     uint8_t* ptr;
-     if(JS_IsString(argv[0])) {
-       const char* str = JS_ToCStringLen(ctx, &len, argv[0]);
-       buffer_append(&strm->buffer, str, len, ctx);
-       JS_FreeCString(ctx, str);
-     } else if((ptr = JS_GetArrayBuffer(ctx, &len, argv[0]))) {
-       buffer_append(&strm->buffer, ptr, len, ctx);
-     }
-     argc--;
-     argv++;
-   }
- */
   JS_SetOpaque(obj, strm);
 
   return obj;
@@ -136,8 +139,6 @@ minnet_stream_new(JSContext* ctx, const char* type, size_t typelen, const void* 
   // buffer_alloc(&strm->buffer, n ? n : 1024, ctx);
   stream_init(strm, type, typelen, x, n);
 
-  strm->ref_count = 1;
-
   return minnet_stream_wrap(ctx, strm);
 }
 
@@ -155,7 +156,7 @@ minnet_stream_wrap(JSContext* ctx, struct stream* strm) {
   return ret;
 }
 
-enum { STREAM_TYPE, STREAM_LENGTH, STREAM_BUFFER, STREAM_TEXT };
+enum { STREAM_TYPE, STREAM_LENGTH, STREAM_AVAIL, STREAM_BUFFER, STREAM_TEXT };
 
 static JSValue
 minnet_stream_get(JSContext* ctx, JSValueConst this_val, int magic) {
@@ -172,6 +173,10 @@ minnet_stream_get(JSContext* ctx, JSValueConst this_val, int magic) {
     }
     case STREAM_LENGTH: {
       ret = JS_NewUint32(ctx, lws_ring_get_count_waiting_elements(strm->ring, 0));
+      break;
+    }
+    case STREAM_AVAIL: {
+      ret = JS_NewUint32(ctx, lws_ring_get_count_free_elements(strm->ring));
       break;
     }
       /*    case STREAM_BUFFER: {
@@ -240,6 +245,7 @@ JSClassDef minnet_stream_class = {
 const JSCFunctionListEntry minnet_stream_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_stream_get, 0, STREAM_TYPE, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("length", minnet_stream_get, 0, STREAM_LENGTH, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("avail", minnet_stream_get, 0, STREAM_AVAIL, JS_PROP_ENUMERABLE),
     JS_ITERATOR_NEXT_DEF("next", 0, minnet_stream_next, 0),
     JS_CFUNC_DEF("[Symbol.iterator]", 0, minnet_stream_iterator),
     JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_stream_get, 0, STREAM_BUFFER, 0),
