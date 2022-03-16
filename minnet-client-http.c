@@ -92,7 +92,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           JS_FreeValue(client->on.close.ctx, cb_argv[1]);
         }
       }
-                  lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
+      lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
       return -1;
     }
 
@@ -181,7 +181,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           if(JS_IsNumber(ret))
             JS_ToInt32(client->on.http.ctx, &result, ret);
         }
-            lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
+        lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
 
         return result;
       }

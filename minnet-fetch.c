@@ -1,4 +1,6 @@
 #define _GNU_SOURCE
+#include "minnet-request.h"
+#include "minnet-response.h"
 #include "minnet-client.h"
 #include "minnet-buffer.h"
 #include "jsutils.h"
@@ -255,8 +257,9 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   CURL* curl = 0;
   CURLM* multi = 0;
   CURLcode curlRes;
-  const char* url;
+  // const char* url;
   FILE* fi;
+  MinnetRequest* req;
   MinnetResponse* res;
   uint8_t* buffer;
   long bufSize;
@@ -267,6 +270,9 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   struct header_context hctx = {ctx, 0};
   struct curl_callback* callback_data = 0;
   int still_running = 1;
+
+  req = request_from(ctx, argc, argv);
+
   JSValue resObj = JS_NewObjectClass(ctx, minnet_response_class_id);
   if(JS_IsException(resObj))
     return JS_EXCEPTION;
@@ -277,10 +283,12 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
     return JS_EXCEPTION;
   }
 
-  if(!JS_IsString(argv[0]))
+  /*if(!JS_IsString(argv[0]))
     return JS_EXCEPTION;
-  url = JS_ToCString(ctx, argv[0]);
-  res->url = js_strdup(ctx, url);
+  url = JS_ToCString(ctx, argv[0]);*/
+
+  url_copy(&res->url, &req->url, ctx);
+
   if(argc > 1 && JS_IsObject(argv[1])) {
     JSValue method, body, headers;
     const char* method_str;
