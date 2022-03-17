@@ -341,7 +341,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
     /*
      * HTTP/1.0 no keepalive: close network connection
      * HTTP/1.1 or HTTP1.0 + KA: wait / process next transaction
-     * HTTP/2: stream ended, parent connection remains up
+     * HTTP/2: ringbuffer ended, parent connection remains up
      */
     lws_callback_on_writable(wsi);
   }

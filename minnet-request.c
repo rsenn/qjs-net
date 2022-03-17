@@ -3,7 +3,7 @@
 #include <cutils.h>
 #include "minnet-request.h"
 #include "minnet-url.h"
-#include "minnet-stream.h"
+#include "minnet-ringbuffer.h"
 #include "jsutils.h"
 #include <ctype.h>
 #include <strings.h>
@@ -330,7 +330,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
         const char* type = header_get(ctx, &typelen, &req->headers, "content-type");
 
         ret = buffer_tostring(&req->body, ctx);
-        //  ret = minnet_stream_new(ctx, type, typelen, block_BEGIN(&req->body), buffer_HEAD(&req->body));
+        //  ret = minnet_ringbuffer_new(ctx, type, typelen, block_BEGIN(&req->body), buffer_HEAD(&req->body));
       } else {
         ret = JS_NULL;
       }
