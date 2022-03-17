@@ -167,7 +167,13 @@ url_info(const MinnetURL* url, struct lws_client_connect_info* info) {
   switch(proto) {
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
+#if defined(LWS_ROLE_H2) && defined(LWS_ROLE_H1)
+      info->alpn = "h2,http/1.1";
+#elif defined(LWS_ROLE_H2)
+      info->alpn = "h2";
+#elif defined(LWS_ROLE_H1)
       info->alpn = "http/1.1";
+#endif
       info->protocol = "http";
       break;
     }

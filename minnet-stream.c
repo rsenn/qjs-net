@@ -1,5 +1,6 @@
 #include "minnet-stream.h"
 #include <quickjs.h>
+#include <assert.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

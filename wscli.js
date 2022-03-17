@@ -177,6 +177,9 @@ function main(...args) {
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
+        const { reservedBits,firstFragment,finalFragment,partialBuffered}=ws;
+
+        console.log('ws',{ reservedBits,firstFragment,finalFragment,partialBuffered});
         console.log('onConnect', { ws, req });
         const { address, port } = ws;
         const remote = `${address}:${port}`;
