@@ -5,6 +5,7 @@ import REPL from 'repl';
 import inspect from 'inspect';
 import net, { Socket, URL } from 'net';
 import { Console } from 'console';
+import { quote } from 'util';
 
 const connections = new Set();
 
@@ -125,9 +126,12 @@ class CLI extends REPL {
       std.exit(0);
     });
     let log = this.printFunction(console.log);
-    console.log = (...args) => {
+    console.log = str => {
       //log('console.log:', args);
-      log(...args);
+      while(str.endsWith('\n'))
+        str=str.slice(0,-1);
+
+      log(str);
     };
     this.runSync();
   }
@@ -188,15 +192,23 @@ function main(...args) {
   console.log('headers', headers);
   function createWS(url, callbacks, listen = 0) {
     let urlObj = new URL(url);
+    let repl;
 
-    net.setLog(((params.debug ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1, (level, msg) => {
+     console.log('params.debug', params.debug);
+ net.setLog(net.LLL_USER | (((params.debug >= 2 ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1), (level, msg) => {
       let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
-      msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+      //msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+      /*
+      msg = quote(msg, "'");*/
+msg = msg.replace(/(\r?\n)*$/, '');
 
-      if(!/POLL/.test(msg) && /MINNET/.test(p)) if (params.debug && /(client|http|read|write)/i.test(msg)) console.log(p.padEnd(8), msg);
+      if(!/POLL/.test(msg) /*&& /MINNET/.test(p)*/)
+      //if(!/^(\[|:|_|lws_)/.test(msg) || /MINNET/.test(p))
+       //if(params.debug && /(client|http|read|write)/i.test(msg))
+        //console.log(p.padEnd(8)+ msg);
+        repl.printStatus(p.padEnd(8)+ msg);
     });
 
-    let repl;
 
     const fn = [net.client, net.server][+listen];
     console.log('createWS', { url, binary });
@@ -223,7 +235,7 @@ function main(...args) {
         connections.add(ws);
         /*const {  url}=req;
         console.log('req',{  url });*/
-        console.log('onConnect', { ws, req });
+        console.log('onConnect', { ws, req }, req.url);
         const { address, port } = ws;
         const remote = `${address}:${port}`;
         try {
@@ -231,8 +243,9 @@ function main(...args) {
         } catch(err) {
           console.log('error:', err.message);
         }
-        //        const {url}= req;
         repl.printStatus(`Connected to ${remote}`);
+
+        ws.send(DNSQuery('libwebsockets.org'));
       },
       onClose(ws, status, reason, error) {
         console.log('onClose', { ws, status, reason, error });

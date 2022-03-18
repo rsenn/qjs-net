@@ -22,7 +22,7 @@ protocol_number(const char* protocol) {
     if(!strcasecmp(protocol, protocol_names[i]))
       break;
 
-  return i;
+  return PROTOCOL_RAW;
 }
 
 const char*

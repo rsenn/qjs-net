@@ -18,9 +18,9 @@ static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, vo
 // THREAD_LOCAL MinnetClient* minnet_client = 0;
 
 static const struct lws_protocols client_protocols[] = {
+    {"raw", client_callback, 0, 0, 0, 0, 0},
     {"http", http_client_callback, 0, 0, 0, 0, 0},
     {"ws", client_callback, 0, 0, 0, 0, 0},
-    {"raw", client_callback, 0, 0, 0, 0, 0},
     {0},
 };
 
@@ -32,7 +32,7 @@ client_closure_free(void* ptr) {
     if(closure->client) {
       JSContext* ctx = closure->client->context.js;
 
-      printf("%s client=%p\n", __func__, closure->client);
+      // printf("%s client=%p\n", __func__, closure->client);
 
       client_free(closure->client);
 
@@ -43,7 +43,12 @@ client_closure_free(void* ptr) {
 
 struct client_closure*
 client_closure_new(JSContext* ctx) {
-  return js_mallocz(ctx, sizeof(struct client_closure));
+  struct client_closure* closure;
+
+  if((closure = js_mallocz(ctx, sizeof(struct client_closure))))
+    closure->ref_count = 1;
+
+  return closure;
 }
 
 struct client_closure*
@@ -85,18 +90,19 @@ client_free(MinnetClient* client) {
   JSContext* ctx = client->context.js;
 
   if(--client->ref_count == 0) {
-    context_clear(&client->context);
-
     JS_FreeValue(ctx, client->headers);
     JS_FreeValue(ctx, client->body);
     JS_FreeValue(ctx, client->next);
 
-    session_clear(&client->session, ctx);
-
-    if(client->connect_info.method)
+    if(client->connect_info.method) {
       js_free(ctx, client->connect_info.method);
+      client->connect_info.method = 0;
+    }
 
     js_promise_free(ctx, &client->promise);
+
+    context_clear(&client->context);
+    session_clear(&client->session, ctx);
 
     js_free(ctx, client);
   }
@@ -125,7 +131,21 @@ enum {
 };
 
 static JSValue
-minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {}
+minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+
+  /*switch(magic) {
+    case ON_RESOLVE: {
+      printf("%s %s %d\n", __func__, "ON_RESOLVE", ((struct client_closure*)ptr)->ref_count);
+      break;
+    }
+    case ON_REJECT: {
+      printf("%s %s\n", __func__, "ON_REJECT", ((struct client_closure*)ptr)->ref_count);
+      break;
+    }
+  }
+*/
+  return JS_UNDEFINED;
+}
 
 JSValue
 minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
@@ -134,10 +154,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   MinnetClient* client = 0;
   JSValue options = argv[0];
   struct lws *wsi = 0, *wsi2;
-  const char* str;
+
   BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
-  char* method_str = 0;
   MinnetProtocol proto;
 
   // SETLOG(LLL_INFO)
@@ -199,12 +218,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-  value = JS_GetPropertyStr(ctx, options, "method");
-  str = JS_ToCString(ctx, value);
-  method_str = js_strdup(ctx, JS_IsString(value) ? str : method_string(METHOD_GET));
-  JS_FreeValue(ctx, value);
-  JS_FreeCString(ctx, str);
-
   GETCBPROP(options, "onPong", client->on.pong)
   GETCBPROP(options, "onClose", client->on.close)
   GETCBPROP(options, "onConnect", client->on.connect)
@@ -234,24 +247,35 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   client->response = response_new(ctx);
   url_copy(&client->response->url, &client->request->url, ctx);
 
+  proto = protocol_number(client->request->url.protocol);
+
   url_info(&client->request->url, &client->connect_info);
   client->connect_info.pwsi = &wsi;
   client->connect_info.context = client->context.lws;
 
-#ifdef DEBUG_OUTPUT
-  fprintf(stderr, "METHOD: %s\n", method_str);
-  fprintf(stderr, "PROTOCOL: %s\n", conn->protocol);
-#endif
-
-  proto = protocol_number(client->request->url.protocol);
-
   switch(proto) {
+    case PROTOCOL_RAW: {
+      client->connect_info.method = js_strdup(ctx, "RAW");
+      break;
+    }
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
-      client->connect_info.method = method_str;
+      const char* str;
+
+      value = JS_GetPropertyStr(ctx, options, "method");
+      str = JS_ToCString(ctx, value);
+      client->connect_info.method = js_strdup(ctx, JS_IsString(value) ? str : method_string(METHOD_GET));
+      JS_FreeValue(ctx, value);
+      JS_FreeCString(ctx, str);
+
       break;
     }
   }
+
+#ifdef DEBUG_OUTPUT
+  fprintf(stderr, "METHOD: %s\n", client->connect_info.method);
+  fprintf(stderr, "PROTOCOL: %s\n", conn->protocol);
+#endif
 
   if(!block)
     ret = js_promise_create(ctx, &client->promise);
@@ -265,6 +289,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
     vhost = lws_create_vhost(client->context.lws, &client->context.info);
     wsi2 = lws_create_adopt_udp(vhost, url->host, url->port, 0, "raw", 0, 0, 0, 0, 0);
+    *client->connect_info.pwsi = wsi2;
   } else
 #endif
   {
@@ -314,28 +339,32 @@ fail:
 JSValue
 minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct client_closure* closure;
-  JSValue func[2], ret, tmp;
+  JSValue ret;
 
   if(!(closure = client_closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
 
-  // closure->client->context.ref_count += 2;
+  if(js_is_promise(ctx, ret)) {
+    JSValue func[2], tmp;
 
-  func[0] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, client_closure_dup(closure), client_closure_free);
-  func[1] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_REJECT, client_closure_dup(closure), client_closure_free);
+    func[0] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, client_closure_dup(closure), client_closure_free);
+    func[1] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_REJECT, client_closure_dup(closure), client_closure_free);
 
-  tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
-  JS_FreeValue(ctx, ret);
-  ret = tmp;
+    tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
+    JS_FreeValue(ctx, ret);
+    ret = tmp;
 
-  tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
-  JS_FreeValue(ctx, ret);
-  ret = tmp;
+    tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
+    JS_FreeValue(ctx, ret);
+    ret = tmp;
 
-  JS_FreeValue(ctx, func[0]);
-  JS_FreeValue(ctx, func[1]);
+    JS_FreeValue(ctx, func[0]);
+    JS_FreeValue(ctx, func[1]);
+  }
+
+  client_closure_free(closure);
 
   return ret;
 }
@@ -353,6 +382,7 @@ static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetClient* client = lws_client(wsi);
   struct wsi_opaque_user_data* opaque = 0;
+  int ret = 0;
 
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &client->on.fd, in);
@@ -363,21 +393,13 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if(client->context.js)
     opaque = lws_opaque(wsi, client->context.js);
 
-  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i\n",
-            22 + (reason * 2),
-            lws_callback_name(reason) + 13,
-            lws_is_ssl(wsi),
-            len,
-            (int)MIN(len, 32),
-            (reason == LWS_CALLBACK_RAW_RX || reason == LWS_CALLBACK_CLIENT_RECEIVE || reason == LWS_CALLBACK_RECEIVE) ? 0 : (char*)in);
-
   switch(reason) {
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
     case LWS_CALLBACK_PROTOCOL_INIT: {
-      return 0;
+      break;
     }
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
-      return 0;
+      break;
     }
     case LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL: {
@@ -386,21 +408,17 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
-      BOOL is_error = JS_IsUndefined(client->context.error);
 
-      (is_error ? js_promise_reject : js_promise_resolve)(client->context.js, &client->promise, client->context.error);
-      JS_FreeValue(client->context.js, client->context.error);
-      client->context.error = JS_UNDEFINED;
       break;
     }
 
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
     case LWS_CALLBACK_CONNECTING: {
-      return 0;
+      break;
     }
     case LWS_CALLBACK_WSI_CREATE:
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
-      return 0;
+      break;
     }
     case LWS_CALLBACK_CLIENT_CLOSED: {
       if(opaque->status < CLOSED) {
@@ -443,8 +461,15 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
           JS_FreeValue(ctx, cb_argv[2]);
           JS_FreeValue(ctx, cb_argv[3]);
         }
-        return result;
+        ret = result;
+        break;
       }
+    }
+    case LWS_CALLBACK_RAW_ADOPT: {
+      // lwsl_user("ADOPT! %s", client->request->url.protocol);
+
+      if(strcasecmp(client->request->url.protocol, "udp"))
+        break;
     }
 
     case LWS_CALLBACK_ESTABLISHED:
@@ -480,7 +505,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       if((ret = lws_write(wsi, buf->read, size, LWS_WRITE_TEXT)) != size) {
         lwsl_err("sending message failed: %d < %d\n", ret, size);
-        return -1;
+        ret = -1;
+        break;
       }
 
       buffer_reset(buf);
@@ -512,6 +538,14 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       }
       break;
     }
+    case LWS_CALLBACK_WSI_DESTROY: {
+      BOOL is_error = JS_IsUndefined(client->context.error);
+
+      (is_error ? js_promise_reject : js_promise_resolve)(client->context.js, &client->promise, client->context.error);
+      JS_FreeValue(client->context.js, client->context.error);
+      client->context.error = JS_UNDEFINED;
+      break;
+    }
     case LWS_CALLBACK_PROTOCOL_DESTROY: {
       break;
     }
@@ -522,7 +556,16 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   }
 
   if(opaque && opaque->status >= CLOSING)
-    return -1;
+    ret = -1;
 
-  return 0;
+  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i ret=%d\n",
+            22 + (reason * 2),
+            lws_callback_name(reason) + 13,
+            lws_is_ssl(wsi),
+            len,
+            (int)MIN(len, 32),
+            (reason == LWS_CALLBACK_RAW_RX || reason == LWS_CALLBACK_CLIENT_RECEIVE || reason == LWS_CALLBACK_RECEIVE) ? 0 : (char*)in,
+            ret);
+
+  return ret;
 }
