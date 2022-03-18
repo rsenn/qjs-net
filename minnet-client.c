@@ -138,6 +138,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
   char* method_str = 0;
+  MinnetProtocol proto;
 
   // SETLOG(LLL_INFO)
 
@@ -242,7 +243,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   fprintf(stderr, "PROTOCOL: %s\n", conn->protocol);
 #endif
 
-  switch(protocol_number(client->request->url.protocol)) {
+  proto = protocol_number(client->request->url.protocol);
+
+  switch(proto) {
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
       client->connect_info.method = method_str;
@@ -254,8 +257,19 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     ret = js_promise_create(ctx, &client->promise);
 
   errno = 0;
-  wsi2 = lws_client_connect_via_info(&client->connect_info);
 
+#ifdef LWS_WITH_UDP
+  if(proto == PROTOCOL_RAW && !strcmp(client->request->url.protocol, "udp")) {
+    struct lws_vhost* vhost;
+    MinnetURL* url = &client->request->url;
+
+    vhost = lws_create_vhost(client->context.lws, &client->context.info);
+    wsi2 = lws_create_adopt_udp(vhost, url->host, url->port, 0, "raw", 0, 0, 0, 0, 0);
+  } else
+#endif
+  {
+    wsi2 = lws_client_connect_via_info(&client->connect_info);
+  }
   /*fprintf(stderr, "wsi2 = %p, wsi = %p\n", wsi2, wsi);*/
 
   if(!wsi) {
