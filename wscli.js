@@ -61,6 +61,50 @@ function GetOpt(options = {}, args) {
   return r;
 }
 
+function FromDomain(buffer) {
+  let s = '',
+    i = 0,
+    u8 = new Uint8Array(buffer);
+  for(;;) {
+    let len = u8[i++];
+    if(len == 0) return s;
+    if(s != '') s += '.';
+    while(len--) s += String.fromCharCode(u8[i++]);
+  }
+}
+function ToDomain(str, alpha = false) {
+  return str.split('.').reduce(alpha ? (a, s) => a + String.fromCharCode(s.length) + s : (a, s) => a.concat([s.length, ...s.split('').map(ch => ch.charCodeAt(0))]), alpha ? '' : []);
+}
+
+function DNSQuery(domain) {
+  let type = 0x01;
+  if(/^([0-9]+\.?){4}$/.test(domain)) {
+    domain = domain.split('.').reverse().join('.') + '.in-addr.arpa';
+    type = 0x0c;
+  }
+  console.log('DNSQuery', domain);
+  let outBuf = new Uint8Array([0xff, 0xff, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ...ToDomain(domain), 0x00, 0x00, type, 0x00, 0x01]).buffer;
+  new DataView(outBuf).setUint16(0, outBuf.byteLength - 2, false);
+  console.log('DNSQuery', outBuf);
+  return outBuf;
+}
+
+function DNSResponse(buffer) {
+  let u8 = new Uint8Array(buffer);
+  let header = new DataView(buffer, 0, 12);
+  let ofs = 2 + header.getUint16(0, false);
+  header = new DataView(buffer, ofs, 12);
+  let type = header.getUint16(2, false);
+  ofs += 12;
+  let addr;
+  if(type == 0x0c)
+    addr = FromDomain(buffer.slice(ofs));
+  else
+    addr = u8.slice(-4).join('.');
+  return addr;
+}
+
+
 class CLI extends REPL {
   constructor(prompt2) {
     //console.log('process.argv', process.argv);
@@ -177,9 +221,8 @@ function main(...args) {
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
-        const { reservedBits,firstFragment,finalFragment,partialBuffered}=ws;
-
-        console.log('ws',{ reservedBits,firstFragment,finalFragment,partialBuffered});
+        /*const {  url}=req;
+        console.log('req',{  url });*/
         console.log('onConnect', { ws, req });
         const { address, port } = ws;
         const remote = `${address}:${port}`;

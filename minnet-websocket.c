@@ -12,6 +12,7 @@ THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
 THREAD_LOCAL JSClassID minnet_ws_class_id;
 
 enum {
+  WEBSOCKET_PROTOCOL,
   WEBSOCKET_FD,
   WEBSOCKET_ADDRESS,
   WEBSOCKET_FAMILY,
@@ -21,10 +22,10 @@ enum {
   WEBSOCKET_BINARY,
   WEBSOCKET_READYSTATE,
   WEBSOCKET_CONTEXT,
-  WEBSOCKET_RESERVED_BITS,
-  WEBSOCKET_FINAL_FRAGMENT,
-  WEBSOCKET_FIRST_FRAGMENT,
-  WEBSOCKET_PARTIAL_BUFFERED,
+  /*  WEBSOCKET_RESERVED_BITS,
+    WEBSOCKET_FINAL_FRAGMENT,
+    WEBSOCKET_FIRST_FRAGMENT,
+    WEBSOCKET_PARTIAL_BUFFERED,*/
 };
 enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
 
@@ -418,34 +419,27 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_NewUint32(ctx, ws_opaque(ws)->status);
       break;
     }
+    case WEBSOCKET_PROTOCOL: {
+      const struct lws_protocols* protocol;
+      if((protocol = lws_get_protocol(ws->lwsi)))
+        ret = JS_NewString(ctx, protocol->name);
+      break;
+    }
 
-    case WEBSOCKET_RESERVED_BITS: {
-      ret = JS_NewUint32(ctx, lws_get_reserved_bits(ws->lwsi));
-      break;
-    }
-    case WEBSOCKET_FINAL_FRAGMENT: {
-      ret = JS_NewBool(ctx, lws_is_final_fragment(ws->lwsi));
-      break;
-    }
-    case WEBSOCKET_FIRST_FRAGMENT: {
-      ret = JS_NewBool(ctx, lws_is_first_fragment(ws->lwsi));
-      break;
-    }
-    case WEBSOCKET_PARTIAL_BUFFERED: {
-      ret = JS_NewInt32(ctx, lws_partial_buffered(ws->lwsi));
-      break;
-    }
-      /* case WEBSOCKET_CONTEXT: {
-         MinnetBuffer buf = BUFFER_0();
-         void* ptr;
-         if((ptr = buffer_alloc(&buf, 2048, ctx))) {
-           struct lws_context* context = lws_get_context(ws->lwsi);
-           int r;
-           if((r = lws_json_dump_context(context, ptr, buffer_AVAIL(&buf), 0)) > 0)
-             ret = JS_NewStringLen(ctx, ptr, r);
-
-           buffer_free(&buf, ctx);
-         }
+      /* case WEBSOCKET_RESERVED_BITS: {
+         ret = JS_NewUint32(ctx, lws_get_reserved_bits(ws->lwsi));
+         break;
+       }
+       case WEBSOCKET_FINAL_FRAGMENT: {
+         ret = JS_NewBool(ctx, lws_is_final_fragment(ws->lwsi));
+         break;
+       }
+       case WEBSOCKET_FIRST_FRAGMENT: {
+         ret = JS_NewBool(ctx, lws_is_first_fragment(ws->lwsi));
+         break;
+       }
+       case WEBSOCKET_PARTIAL_BUFFERED: {
+         ret = JS_NewInt32(ctx, lws_partial_buffered(ws->lwsi));
          break;
        }*/
   }
@@ -537,6 +531,7 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
     JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
     JS_CFUNC_DEF("close", 1, minnet_ws_close),
+    JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_ws_get, 0, WEBSOCKET_PROTOCOL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_get, 0, WEBSOCKET_ADDRESS, 0),
     JS_ALIAS_DEF("remoteAddress", "address"),
@@ -547,10 +542,10 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_ALIAS_DEF("tls", "ssl"),
     JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_get, minnet_ws_set, WEBSOCKET_BINARY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("reservedBits", minnet_ws_get, 0, WEBSOCKET_RESERVED_BITS, 0),
+    /*JS_CGETSET_MAGIC_FLAGS_DEF("reservedBits", minnet_ws_get, 0, WEBSOCKET_RESERVED_BITS, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("firstFragment", minnet_ws_get, 0, WEBSOCKET_FIRST_FRAGMENT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("finalFragment", minnet_ws_get, 0, WEBSOCKET_FINAL_FRAGMENT, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("partialBuffered", minnet_ws_get, 0, WEBSOCKET_PARTIAL_BUFFERED, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("partialBuffered", minnet_ws_get, 0, WEBSOCKET_PARTIAL_BUFFERED, 0),*/
     JS_ALIAS_DEF("remote", "peer"),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebSocket", JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("CONNECTING", 0, JS_PROP_CONFIGURABLE),
