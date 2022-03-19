@@ -45,12 +45,12 @@ macro(find_libwebsockets)
       set(CMAKE_INSTALL_RPATH "${LIBWEBSOCKETS_LIBRARY_DIR}" CACHE PATH "Install runtime path")
     endif(CMAKE_INSTALL_RPATH)
 
-    set(LIBWEBSOCKETS_LIBRARY  "${LIBWEBSOCKETS_LIBRARY}" CACHE FILEPATH "libwebsockets library")
+    set(LIBWEBSOCKETS_LIBRARY "${LIBWEBSOCKETS_LIBRARY}" CACHE FILEPATH "libwebsockets library")
     set(LIBWEBSOCKETS_LIBRARY_DIR "${LIBWEBSOCKETS_LIBRARY_DIR}" CACHE PATH "libwebsockets library directory")
     set(LIBWEBSOCKETS_INCLUDE_DIRS "${LIBWEBSOCKETS_INCLUDE_DIRS};${OPENSSL_INCLUDE_DIRS}" CACHE PATH "libwebsockets include directory")
 
     set(LIBWEBSOCKETS_FOUND TRUE)
-    
+
   endif(NOT LIBWEBSOCKETS_FOUND)
 
 endmacro(find_libwebsockets)
