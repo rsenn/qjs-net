@@ -1,6 +1,8 @@
 macro(find_curl)
   include(FindCURL)
-  include(FindPkgConfig)
+  if(NOT PKG_CONFIG_FOUND)
+    include(FindPkgConfig)
+  endif(NOT PKG_CONFIG_FOUND)
   pkg_search_module(CURL libcurl)
 
   if(NOT CURL_FOUND)

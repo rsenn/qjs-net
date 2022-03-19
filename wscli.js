@@ -14,7 +14,8 @@ function GetOpt(options = {}, args) {
   let r = {};
   let positional = (r['@'] = []);
   if(!(options instanceof Array)) options = Object.entries(options);
-  const findOpt = a => options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
+  const findOpt = a =>
+    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
   let [, params] = options.find(o => o[0] == '@') || [];
   if(typeof params == 'string') params = params.split(',');
   for(let i = 0; i < args.length; i++) {
@@ -74,7 +75,14 @@ function FromDomain(buffer) {
   }
 }
 function ToDomain(str, alpha = false) {
-  return str.split('.').reduce(alpha ? (a, s) => a + String.fromCharCode(s.length) + s : (a, s) => a.concat([s.length, ...s.split('').map(ch => ch.charCodeAt(0))]), alpha ? '' : []);
+  return str
+    .split('.')
+    .reduce(
+      alpha
+        ? (a, s) => a + String.fromCharCode(s.length) + s
+        : (a, s) => a.concat([s.length, ...s.split('').map(ch => ch.charCodeAt(0))]),
+      alpha ? '' : []
+    );
 }
 
 function DNSQuery(domain) {
@@ -84,7 +92,26 @@ function DNSQuery(domain) {
     type = 0x0c;
   }
   console.log('DNSQuery', domain);
-  let outBuf = new Uint8Array([0xff, 0xff, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ...ToDomain(domain), 0x00, 0x00, type, 0x00, 0x01]).buffer;
+  let outBuf = new Uint8Array([
+    0xff,
+    0xff,
+    0x01,
+    0x00,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    ...ToDomain(domain),
+    0x00,
+    0x00,
+    type,
+    0x00,
+    0x01
+  ]).buffer;
   new DataView(outBuf).setUint16(0, outBuf.byteLength - 2, false);
   console.log('DNSQuery', outBuf);
   return outBuf;
@@ -98,13 +125,10 @@ function DNSResponse(buffer) {
   let type = header.getUint16(2, false);
   ofs += 12;
   let addr;
-  if(type == 0x0c)
-    addr = FromDomain(buffer.slice(ofs));
-  else
-    addr = u8.slice(-4).join('.');
+  if(type == 0x0c) addr = FromDomain(buffer.slice(ofs));
+  else addr = u8.slice(-4).join('.');
   return addr;
 }
-
 
 class CLI extends REPL {
   constructor(prompt2) {
@@ -128,8 +152,7 @@ class CLI extends REPL {
     let log = this.printFunction(console.log);
     console.log = str => {
       //log('console.log:', args);
-      while(str.endsWith('\n'))
-        str=str.slice(0,-1);
+      while(str.endsWith('\n')) str = str.slice(0, -1);
 
       log(str);
     };
@@ -194,21 +217,23 @@ function main(...args) {
     let urlObj = new URL(url);
     let repl;
 
-     console.log('params.debug', params.debug);
- net.setLog(net.LLL_USER | (((params.debug >= 2 ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1), (level, msg) => {
-      let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
+    console.log('params.debug', params.debug);
+    net.setLog(net.LLL_USER | (((params.debug >= 2 ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1), (level, msg) => {
+      let p =
+        ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][
+          level && Math.log2(level)
+        ] ?? level + '';
       //msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
       /*
       msg = quote(msg, "'");*/
-msg = msg.replace(/(\r?\n)*$/, '');
+      msg = msg.replace(/(\r?\n)*$/, '');
 
       if(!/POLL/.test(msg) /*&& /MINNET/.test(p)*/)
-      //if(!/^(\[|:|_|lws_)/.test(msg) || /MINNET/.test(p))
-       //if(params.debug && /(client|http|read|write)/i.test(msg))
+        //if(!/^(\[|:|_|lws_)/.test(msg) || /MINNET/.test(p))
+        //if(params.debug && /(client|http|read|write)/i.test(msg))
         //console.log(p.padEnd(8)+ msg);
-        repl.printStatus(p.padEnd(8)+ msg);
+        repl.printStatus(p.padEnd(8) + msg);
     });
-
 
     const fn = [net.client, net.server][+listen];
     console.log('createWS', { url, binary });
@@ -233,19 +258,19 @@ msg = msg.replace(/(\r?\n)*$/, '');
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
-        /*const {  url}=req;
+        /*
         console.log('req',{  url });*/
         console.log('onConnect', { ws, req }, req.url);
-        const { address, port } = ws;
-        const remote = `${address}:${port}`;
+        const remote = `${ws.address}:${ws.port}`;
         try {
           repl = new CLI(remote);
         } catch(err) {
           console.log('error:', err.message);
         }
         repl.printStatus(`Connected to ${remote}`);
-
-        ws.send(DNSQuery('libwebsockets.org'));
+        const { url } = req;
+        const { protocol, port } = url;
+        if(protocol == 'udp' && port == 53) ws.send(DNSQuery('libwebsockets.org'));
       },
       onClose(ws, status, reason, error) {
         console.log('onClose', { ws, status, reason, error });

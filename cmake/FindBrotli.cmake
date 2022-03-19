@@ -1,5 +1,7 @@
 macro(find_brotli)
-  include(FindPkgConfig)
+  if(NOT PKG_CONFIG_FOUND)
+    include(FindPkgConfig)
+  endif(NOT PKG_CONFIG_FOUND)
   message(STATUS "Finding brotli library...")
   pkg_search_module(BROTLIDEC libbrotlidec brotlidec QUIET)
   pkg_search_module(BROTLIENC libbrotlienc brotlienc QUIET)

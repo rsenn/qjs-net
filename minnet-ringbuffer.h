@@ -5,6 +5,7 @@
 #include <cutils.h>
 #include "minnet.h"
 #include <libwebsockets.h>
+#include <pthread.h>
 
 typedef struct ringbuffer {
   size_t ref_count;
