@@ -25,12 +25,10 @@ macro(find_curl)
   endif(CURL_LIBRARY)
 
   if(NOT CURL_INCLUDE_DIR)
-    string(REGEX REPLACE "/lib" "/include" CURL_INCLUDE_DIR
-                         "${CURL_LIBRARY_DIR}")
+    string(REGEX REPLACE "/lib" "/include" CURL_INCLUDE_DIR "${CURL_LIBRARY_DIR}")
 
     if(CURL_INCLUDE_DIR)
-      set(CURL_INCLUDE_DIR "${CURL_INCLUDE_DIR}" CACHE PATH
-                                                       "curl include directory")
+      set(CURL_INCLUDE_DIR "${CURL_INCLUDE_DIR}" CACHE PATH "curl include directory")
     endif(CURL_INCLUDE_DIR)
   endif(NOT CURL_INCLUDE_DIR)
 
@@ -40,8 +38,7 @@ macro(find_curl)
     endif(EXISTS ${CURL_LIBRARY})
 
     if(CURL_LIBRARY_DIR)
-      set(CURL_LIBRARY_DIR "${CURL_LIBRARY_DIR}" CACHE PATH
-                                                       "curl library directory")
+      set(CURL_LIBRARY_DIR "${CURL_LIBRARY_DIR}" CACHE PATH "curl library directory")
     endif(CURL_LIBRARY_DIR)
   endif(NOT CURL_LIBRARY_DIR)
 
