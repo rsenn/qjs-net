@@ -216,6 +216,7 @@ function main(...args) {
   function createWS(url, callbacks, listen = 0) {
     let urlObj = new URL(url);
     let repl;
+    let is_dns = false;
 
     console.log('params.debug', params.debug);
     net.setLog(net.LLL_USER | (((params.debug >= 2 ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1), (level, msg) => {
@@ -270,7 +271,10 @@ function main(...args) {
         repl.printStatus(`Connected to ${remote}`);
         const { url } = req;
         const { protocol, port } = url;
-        if(protocol == 'udp' && port == 53) ws.send(DNSQuery('libwebsockets.org'));
+        if((is_dns = protocol == 'udp' && port == 53)) {
+          ws.binary = true;
+          ws.send(DNSQuery('libwebsockets.org'));
+        }
       },
       onClose(ws, status, reason, error) {
         console.log('onClose', { ws, status, reason, error });
@@ -306,7 +310,12 @@ function main(...args) {
           msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
           msg = msg.substring(0, 100);
         }
-        console.log('onMessage', { ws, msg });
+        if(is_dns) {
+          let response = DNSResponse(msg);
+          console.log('onMessage', { ws, response });
+        } else {
+          console.log('onMessage', { ws, msg });
+        }
       },
       onError(ws, error) {
         console.log('onError', ws, error);

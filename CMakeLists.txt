@@ -191,7 +191,13 @@ if(BUILD_LIBWEBSOCKETS)
     ExternalProject_Add_StepDependencies(libwebsockets configure libbrotli)
     #add_dependencies(libwebsockets libbrotli)
   endif(TARGET libbrotli)
+else(BUILD_LIBWEBSOCKETS)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindBrotli.cmake)
 
+  find_brotli()
+  if(WIN32)
+    link_libraries(crypt32 iphlpapi)
+  endif(WIN32)
 endif(BUILD_LIBWEBSOCKETS)
 
 if(OPENSSL_INCLUDE_DIR AND NOT OPENSSL_LIBRARY_DIR)
@@ -233,7 +239,11 @@ function(DUMP_TARGET TARGET)
   endforeach()
 endfunction(DUMP_TARGET TARGET)
 
-add_library(quickjs-minnet MODULE ${JS_BINDINGS_SOURCES})
+if(WIN32)
+	add_library(quickjs-minnet MODULE ${JS_BINDINGS_SOURCES})
+else(WIN32)
+	add_library(quickjs-minnet SHARED ${JS_BINDINGS_SOURCES})
+endif(WIN32)
 
 if(BUILD_LIBWEBSOCKETS)
   add_dependencies(quickjs-minnet libwebsockets)
@@ -254,7 +264,7 @@ endif(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
 
 target_link_directories(quickjs-minnet PUBLIC ${QUICKJS_LIBRARY_DIR})
 
-target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARY} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES})
+target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY} ${MBEDTLS_LIBRARIES} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES})
 
 message(
   "Libraries:\n\

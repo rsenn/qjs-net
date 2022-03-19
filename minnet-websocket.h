@@ -5,10 +5,12 @@
 
 #warning winsock2
 #include <winsock2.h>
+#if 0
 struct pollfd {
   int fd;
   short events, revents;
 };
+#endif
 #endif
 
 #include "minnet.h"

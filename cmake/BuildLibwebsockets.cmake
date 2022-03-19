@@ -16,12 +16,21 @@ macro(build_libwebsockets)
   # include: libwebsockets find_package(libwebsockets)
   set(LIBWEBSOCKETS_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets")
-  set(LIBWEBSOCKETS_LIBRARIES "${MBEDTLS_LIBRARIES};brotlienc;brotlidec;cap" CACHE STRING "libwebsockets libraries")
-  if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
-    set(LIBWEBSOCKETS_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a" ${LIBWEBSOCKETS_LIBRARIES})
-  else(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
-    set(LIBWEBSOCKETS_LIBRARIES "websockets" ${LIBWEBSOCKETS_LIBRARIES})
-  endif(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
+  set(LIBWEBSOCKETS_LIBRARIES "brotlienc;brotlidec;cap")
+  if(OPENSSL_LIBRARIES)
+    set(LIBWEBSOCKETS_LIBRARIES "${OPENSSL_LIBRARIES};${LIBWEBSOCKETS_LIBRARIES}")
+  else(OPENSSL_LIBRARIES)
+    if(MBEDTLS_LIBRARIES)
+      set(LIBWEBSOCKETS_LIBRARIES "${MBEDTLS_LIBRARIES};${LIBWEBSOCKETS_LIBRARIES}")
+    endif(MBEDTLS_LIBRARIES)
+  endif(OPENSSL_LIBRARIES)
+
+  #if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
+    set(LIBWEBSOCKETS_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a;${LIBWEBSOCKETS_LIBRARIES}")
+  #else(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
+  #  set(LIBWEBSOCKETS_LIBRARIES "websockets;${LIBWEBSOCKETS_LIBRARIES}")
+  #endif(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
+  set(LIBWEBSOCKETS_LIBRARIES "${LIBWEBSOCKETS_LIBRARIES}" CACHE STRING "libwebsockets libraries")
 
   set(LIBWEBSOCKETS_INCLUDE_DIRS "${LIBWEBSOCKETS_INCLUDE_DIRS}" CACHE PATH "libwebsockets include directory")
   set(LIBWEBSOCKETS_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib CACHE PATH "libwebsockets library directory")
@@ -104,7 +113,8 @@ macro(build_libwebsockets)
       -DLWS_WITH_RANGES:BOOL=ON
       -DLWS_WITH_SERVER:BOOL=ON
       -DLWS_WITH_SOCKS5:BOOL=ON
-      -DLWS_WITH_SYS_ASYNC_DNS:BOOL=ON
+      -DLWS_FALLBACK_GETHOSTBYNAME:BOOL=ON
+      -DLWS_WITH_SYS_ASYNC_DNS:BOOL=OFF
       -DLWS_WITH_THREADPOOL:BOOL=ON
       -DLWS_WITH_UNIX_SOCK:BOOL=ON
       -DLWS_WITH_ZIP_FOPS:BOOL=ON
