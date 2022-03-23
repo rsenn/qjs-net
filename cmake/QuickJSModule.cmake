@@ -27,10 +27,10 @@ function(compile_module SOURCE)
   list(APPEND COMPILED_MODULES "${BASE}.c")
   set(COMPILED_MODULES "${COMPILED_MODULES}" PARENT_SCOPE)
 
-  #add_custom_command(OUTPUT "${OUTPUT_FILE}" COMMAND qjsc -v -c -o "${OUTPUT_FILE}" -m "${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE}" DEPENDS ${QJSC_DEPS} WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"COMMENT "Generate ${OUTPUT_FILE} from ${SOURCE} using qjs compiler" SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE} DEPENDS qjs-inspect qjs-misc)
+  #add_custom_command(OUTPUT "${OUTPUT_FILE}" COMMAND qjsc -v -c -o "${OUTPUT_FILE}" -m "${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE}" DEPENDS ${QJSC_DEPS} WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"COMMENT "Generate ${OUTPUT_FILE} from ${SOURCE} using qjs compiler" SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE} DEPENDS quickjs-inspect quickjs-misc)
   add_custom_target(
     "${BASE}.c" BYPRODUCTS "${OUTPUT_FILE}" COMMAND "${QJSC}" -v -c -o "${OUTPUT_FILE}" -m "${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE}" DEPENDS ${QJSC_DEPS} WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    COMMENT "Generate ${OUTPUT_FILE} from ${SOURCE} using qjs compiler" SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE}" #DEPENDS qjs-inspect qjs-misc
+    COMMENT "Generate ${OUTPUT_FILE} from ${SOURCE} using qjs compiler" SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE}" #DEPENDS quickjs-inspect quickjs-misc
   )
 endfunction(compile_module SOURCE)
 
@@ -41,7 +41,7 @@ function(make_module FNAME)
   string(TOUPPER "${FNAME}" UUNAME)
   string(REGEX REPLACE "-" "_" UNAME "${UUNAME}")
 
-  set(TARGET_NAME qjs-${NAME})
+  set(TARGET_NAME quickjs-${NAME})
 
   if(ARGN)
     set(SOURCES ${ARGN} ${${VNAME}_SOURCES})
