@@ -128,7 +128,7 @@ js_buffer_to(JSBuffer buf, void** pptr, size_t* plen) {
 }
 
 void
-js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, int* plen) {
+js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen) {
   if(!JS_IsString(buf.value)) {
     size_t len = 0;
     js_buffer_to(buf, pptr, &len);
