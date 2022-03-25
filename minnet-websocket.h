@@ -1,7 +1,7 @@
 #ifndef MINNET_WEBSOCKET_H
 #define MINNET_WEBSOCKET_H
 
-#if (defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)) && !defined(__MSYS__)
+#if(defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)) && !defined(__MSYS__)
 
 #warning winsock2
 #include <winsock2.h>

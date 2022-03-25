@@ -123,9 +123,9 @@ context_certificate(MinnetContext* context, JSValueConst options) {
   context->key = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslPrivateKey"));
   context->ca = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslCA"));
 
-  js_buffer_to3(context->crt, &i->ssl_cert_filepath, &i->server_ssl_cert_mem, &i->server_ssl_cert_mem_len);
-  js_buffer_to3(context->key, &i->ssl_private_key_filepath, &i->server_ssl_private_key_mem, &i->server_ssl_private_key_mem_len);
-  js_buffer_to3(context->ca, &i->ssl_ca_filepath, &i->server_ssl_ca_mem, &i->server_ssl_ca_mem_len);
+  js_buffer_to3(context->crt, &i->ssl_cert_filepath, (void**)&i->server_ssl_cert_mem, &i->server_ssl_cert_mem_len);
+  js_buffer_to3(context->key, &i->ssl_private_key_filepath, (void**)&i->server_ssl_private_key_mem, &i->server_ssl_private_key_mem_len);
+  js_buffer_to3(context->ca, &i->ssl_ca_filepath, (void**)&i->server_ssl_ca_mem, &i->server_ssl_ca_mem_len);
 }
 
 static void
