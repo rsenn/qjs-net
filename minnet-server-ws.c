@@ -95,7 +95,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
         session->resp_obj = minnet_response_new(ctx, opaque->req->url, status, 0, TRUE, "text/html");
 
-        lwsl_user("ws   " FG("%d") "%-38s" NC " wsi#%" PRId64 " req=%p url=%s\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, opaque->req, opaque->req->url);
+        lwsl_user("ws   " FG("%d") "%-38s" NC " wsi#%" PRId64 " req=%p\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, opaque->req);
         server_exception(server, minnet_emit_this(&server->cb.connect, session->ws_obj, 2, &session->ws_obj));
       }
 

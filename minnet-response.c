@@ -32,7 +32,7 @@ header_free(JSRuntime* rt, struct http_header* hdr) {
 
 void
 response_format(MinnetResponse const* resp, char* buf, size_t len) {
-  snprintf(buf, len, FGC(226, "MinnetResponse") " { url: '%s', status: %d, ok: %s, type: '%s' }", resp->url, resp->status, resp->ok ? "true" : "false", resp->type);
+  snprintf(buf, len, FGC(226, "MinnetResponse") " { url.path: '%s', status: %d, ok: %s, type: '%s' }", resp->url.path, resp->status, resp->ok ? "true" : "false", resp->type);
 }
 
 char*

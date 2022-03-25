@@ -95,7 +95,7 @@ client_free(MinnetClient* client) {
     JS_FreeValue(ctx, client->next);
 
     if(client->connect_info.method) {
-      js_free(ctx, client->connect_info.method);
+      js_free(ctx, (void*)client->connect_info.method);
       client->connect_info.method = 0;
     }
 

@@ -187,7 +187,7 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp, JS
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int is_ssl = lws_is_ssl(wsi);
 
-  lwsl_user("http " FG("198") "%-38s" NC " wsi#%" PRId64 " url=%s status=%d type=%s length=%zu", "RESPOND", opaque->serial, resp->url, resp->status, resp->type, buffer_HEAD(&resp->body));
+  lwsl_user("http " FG("198") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu", "RESPOND", opaque->serial, resp->status, resp->type, buffer_HEAD(&resp->body));
 
   // resp->read_only = TRUE;
 
@@ -379,7 +379,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     url_len = url_length(&url);
   }
 
-  lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, (int)url_len, url);
+  lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url.path='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, (int)url_len, url.path);
 
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
@@ -469,7 +469,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(url.path && in && len < url_len && !strcmp(url.path, in))
         mountpoint_len = url_len - len;
 
-      lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " mountpoint='%.*s' path='%s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)mountpoint_len, url, path);
+      lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " mountpoint='%.*s' path='%s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)mountpoint_len, url.path, path);
 
       if(!opaque->req)
         opaque->req = request_new(ctx, /*path,*/ url, method);
@@ -548,7 +548,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             session->next = JS_UNDEFINED;
           } else {
 
-            lwsl_user("http " FG("%d") "%-38s" NC " url=%s path=%s mountpoint=%.*s\n", 22 + (reason * 2), lws_callback_name(reason) + 13, url, path, (int)mountpoint_len, url);
+            lwsl_user("http " FG("%d") "%-38s" NC " path=%s mountpoint=%.*s\n", 22 + (reason * 2), lws_callback_name(reason) + 13, path, (int)mountpoint_len, url.path);
             if(lws_http_transaction_completed(wsi))
               return -1;
           }
@@ -559,7 +559,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           }
         }
       } else {
-        lwsl_user("http NOT FOUND\turl=%s path=%s mountpoint=%.*s\n", url, path, (int)mountpoint_len, url);
+        lwsl_user("http NOT FOUND\tpath=%s mountpoint=%.*s\n", path, (int)mountpoint_len, url.path);
         break;
       }
       if(req->method == METHOD_GET || is_h2(wsi))
@@ -656,14 +656,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
   int ret = 0;
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE && (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
-    lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " fd=%i is_h2=%i is_ssl=%i url=%s method=%s in='%.*s' ret=%d\n",
+    lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " fd=%i is_h2=%i is_ssl=%i method=%s in='%.*s' ret=%d\n",
               22 + (reason * 2),
               lws_callback_name(reason) + 13,
               opaque ? opaque->serial : -1,
               lws_get_socket_fd(wsi),
               (session && session->h2) || is_h2(wsi),
               lws_is_ssl(wsi),
-              url,
               method_name(method),
               (int)len,
               (char*)in,
