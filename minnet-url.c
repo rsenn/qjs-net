@@ -531,13 +531,13 @@ minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
 }
 
 JSValue
-minnet_url_from(JSContext* ctx, JSValueConst value) {
+minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetURL* url;
 
   if(!(url = url_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  url_from(url, value, ctx);
+  url_from(url, argv[0], ctx);
 
   if(!url_valid(url))
     return JS_ThrowTypeError(ctx, "Not a valid URL");
