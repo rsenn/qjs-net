@@ -409,7 +409,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
 
       if(!opaque)
-        opaque = lws_opaque(server->context.js, wsi);
+        opaque = lws_opaque(wsi, server->context.js);
 
       if(!opaque->req)
         opaque->req = request_new(ctx, /*0,*/ url, method);
@@ -481,10 +481,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             if(!opaque->req->path[0])
               pstrcpy(opaque->req->path, sizeof(opaque->req->path), path);
       */
-      session->mount = mount_find(server->context.info.mounts, path, 0);
+      session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, path, 0);
       if(url.path && !session->mount)
-        if(!(session->mount = mount_find(server->context.info.mounts, url.path, mountpoint_len)))
-          session->mount = mount_find(server->context.info.mounts, url.path, 0);
+        if(!(session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, url.path, mountpoint_len)))
+          session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, url.path, 0);
 
       session->h2 = is_h2(wsi);
 

@@ -558,7 +558,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if(opaque && opaque->status >= CLOSING)
     ret = -1;
 
-  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i ret=%d\n",
+  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu\n",
             22 + (reason * 2),
             lws_callback_name(reason) + 13,
             lws_is_ssl(wsi),

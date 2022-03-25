@@ -160,7 +160,7 @@ minnet_ringbuffer_new(JSContext* ctx, const char* type, size_t typelen, const vo
     return JS_ThrowOutOfMemory(ctx);
 
   // buffer_alloc(&strm->buffer, n ? n : 1024, ctx);
-  ringbuffer_init(strm, type, typelen, x, n);
+  //ringbuffer_init(strm, x,n, type, typelen);
 
   return minnet_ringbuffer_wrap(ctx, strm);
 }

@@ -156,7 +156,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   if(JS_IsString(opt_host)) {
     if(info->vhost_name)
-      js_free(ctx, info->vhost_name);
+      js_free(ctx, (void*)info->vhost_name);
     info->vhost_name = js_to_string(ctx, opt_host);
   }
 
