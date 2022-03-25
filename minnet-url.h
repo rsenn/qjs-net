@@ -49,7 +49,7 @@ JSValue minnet_url_wrap(JSContext*, MinnetURL*);
 MinnetURL* url_new(JSContext*);
 JSValue minnet_url_new(JSContext*, MinnetURL);
 JSValue minnet_url_method(JSContext*, JSValueConst, int, JSValueConst argv[], int magic);
-JSValue minnet_url_from(JSContext*, JSValueConst);
+JSValue minnet_url_from(JSContext*, JSValue, int, JSValueConst argv[]);
 JSValue minnet_url_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
 int minnet_url_init(JSContext*, JSModuleDef*);
 
