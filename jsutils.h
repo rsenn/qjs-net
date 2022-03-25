@@ -37,7 +37,7 @@ JSValue js_iterator_next(JSContext*, JSValueConst, JSValueConst*, BOOL* done_p, 
 int js_copy_properties(JSContext*, JSValueConst, JSValueConst, int flags);
 JSBuffer js_buffer_from(JSContext*, JSValueConst);
 void js_buffer_to(JSBuffer, void**, size_t*);
-void js_buffer_to3(JSBuffer, const char**, void**, size_t* plen);
+void js_buffer_to3(JSBuffer, const char**, void**, unsigned* plen);
 BOOL js_buffer_valid(const JSBuffer*);
 JSBuffer js_buffer_clone(const JSBuffer*, JSContext*);
 void js_buffer_dump(const JSBuffer*, DynBuf*);
