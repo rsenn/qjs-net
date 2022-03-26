@@ -7,9 +7,11 @@ set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag")
 
 #option(BUILD_SHARED_LIBWEBSOCKETS "Shared building of dependency libraries" OFF)
 option(BUILD_LIBWEBSOCKETS "in-tree build of libwebsockets" ON)
-option(USE_CURL "Build curl library" ON)
-option(BUILD_CURL "Build curl library" ${LOCAL_CURL})
 option(DO_TESTS "Perform tests" ON)
+option(USE_CURL "Use curl for fetch()" OFF)
+if(USE_CURL)
+  option(BUILD_CURL "Build curl library" ${LOCAL_CURL})
+endif(USE_CURL)
 
 #set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "PIC code")
 #set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
