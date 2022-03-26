@@ -42,7 +42,7 @@ typedef struct msg__broker {
 
 /* one of these is created for each client connecting to us */
 
-typedef  struct per_session_data__broker {
+typedef struct per_session_data__broker {
   struct per_session_data__broker* pss_list;
   struct lws* wsi;
   uint32_t tail;
@@ -126,13 +126,13 @@ broker_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         return -1;
       }
 
-      lws_ring_consume_and_update_oldest_tail(vhd->ring,                        /* lws_ring object */
+      lws_ring_consume_and_update_oldest_tail(vhd->ring,           /* lws_ring object */
                                               MinnetBrokerSession, /* type of objects with tails */
-                                              &pss->tail,                       /* tail of guy doing the consuming */
-                                              1,                                /* number of payload objects being consumed */
-                                              vhd->pss_list,                    /* head of list of objects with tails */
-                                              tail,                             /* member name of tail in objects with tails */
-                                              pss_list                          /* member name of next object in objects with tails */
+                                              &pss->tail,          /* tail of guy doing the consuming */
+                                              1,                   /* number of payload objects being consumed */
+                                              vhd->pss_list,       /* head of list of objects with tails */
+                                              tail,                /* member name of tail in objects with tails */
+                                              pss_list             /* member name of next object in objects with tails */
       );
 
       /* more to do? */
@@ -185,5 +185,5 @@ broker_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   return 0;
 }
 
-#define LWS_PLUGIN_PROTOCOL_MINIMAL \
+#define MINNET_PLUGIN_BROKER \
   { "minnet-broker", broker_callback, sizeof(MinnetBrokerSession), 128, 0, NULL, 0 }
