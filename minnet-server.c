@@ -9,7 +9,8 @@
 #include <quickjs-libc.h>
 #include <libwebsockets.h>
 
-#include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
+//#include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
+#include "minnet-plugin-broker.c"
 
 // THREAD_LOCAL MinnetServer minnet_server = {0};
 
@@ -24,7 +25,7 @@ static struct lws_protocols protocols[] = {
     {"defprot", lws_callback_http_dummy, 0, 0},
     {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
-    {"proxy-raw", raw_client_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    MINNET_PLUGIN_BROKER(broker),
     {0},
 };
 
@@ -32,8 +33,8 @@ static struct lws_protocols protocols2[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"defprot", defprot_callback, sizeof(MinnetSession), 0},
     {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"proxy-raw", raw_client_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+  //  {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    MINNET_PLUGIN_BROKER(broker),
     {0, 0},
 };
 
@@ -56,7 +57,16 @@ static const struct lws_http_mount mount = {
     /* .mountpoint_len */ 1,             /* char count */
     /* .basic_auth_login_file */ NULL,
 };
-
+static const struct lws_extension  extensions[] = {
+  {
+    "permessage-deflate",
+    lws_extension_callback_pm_deflate,
+    "permessage-deflate"
+     "; client_no_context_takeover"
+     "; client_max_window_bits"
+  },
+  { NULL, NULL, NULL /* terminator */ }
+};
 JSValue
 minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   int argind = 0, a = 0;

@@ -125,7 +125,6 @@ function(ADD_UNIQUE LIST)
   set("${LIST}" "${RESULT}" PARENT_SCOPE)
 endfunction(ADD_UNIQUE LIST)
 
-
 function(CONTAINS LIST VALUE OUTPUT)
   list(FIND "${LIST}" "${VALUE}" INDEX)
   if(${INDEX} GREATER -1)

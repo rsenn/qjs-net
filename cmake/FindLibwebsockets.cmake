@@ -29,8 +29,10 @@ macro(find_libwebsockets)
     endif(OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY)
 
     if(OPENSSL_CRYPTO_LIBRARY)
+
     endif(OPENSSL_CRYPTO_LIBRARY)
     if(OPENSSL_SSL_LIBRARY)
+
     endif(OPENSSL_SSL_LIBRARY)
 
     if(pkgcfg_lib_LIBWEBSOCKETS_websockets AND EXISTS "${pkgcfg_lib_LIBWEBSOCKETS_websockets}")

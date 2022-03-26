@@ -185,5 +185,5 @@ broker_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   return 0;
 }
 
-#define MINNET_PLUGIN_BROKER \
-  { "minnet-broker", broker_callback, sizeof(MinnetBrokerSession), 128, 0, NULL, 0 }
+#define MINNET_PLUGIN_BROKER(protocol_name) \
+  { #protocol_name, broker_callback, sizeof(MinnetBrokerSession), 128, 0, NULL, 0 }
