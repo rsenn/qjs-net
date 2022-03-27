@@ -87,8 +87,14 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       if(server->cb.connect.ctx) {
 
-        if(!opaque->req)
-          opaque->req = request_new(ctx, /* in,*/ url_create(lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), ctx), METHOD_GET);
+        if(!opaque->req) {
+          const char* url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI);
+
+          if(!url)
+            url = server->context.info.vhost_name;
+
+          opaque->req = request_new(ctx, url_create(url, ctx), METHOD_GET);
+        }
 
         assert(opaque->req);
 
