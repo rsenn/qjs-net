@@ -93,10 +93,13 @@ context_exception(MinnetContext* context, JSValue retval) {
   if(JS_IsException(retval)) {
     context->exception = TRUE;
     JSValue exception = JS_GetException(context->js);
-
+    JSValue stack = JS_GetPropertyStr(context->js, exception, "stack");
     const char* err = JS_ToCString(context->js, exception);
-    printf("Got exception: %s\n", err);
+    const char* stk = JS_ToCString(context->js, stack);
+    printf("Got exception: %s\n%s\n", err, stk);
     JS_FreeCString(context->js, err);
+    JS_FreeCString(context->js, stk);
+    JS_FreeValue(context->js, stack);
     JS_Throw(context->js, exception);
   }
 
