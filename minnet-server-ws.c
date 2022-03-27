@@ -19,11 +19,13 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   }
   if(ctx) {
     if(!opaque)
-      opaque = lws_opaque(wsi, ctx);
+      if((opaque = lws_opaque(wsi, ctx)))
+        if(!opaque->ws)
+          opaque->ws = ws_new(wsi, ctx);
   }
 
-  /*if(opaque->ws && !JS_IsObject(session->ws_obj))
-    session->ws_obj = minnet_ws_wrap(ctx, wsi);*/
+  if(!opaque->ws && session && !JS_IsObject(session->ws_obj))
+    opaque->ws = ws_new(wsi, ctx);
 
   if(session && !session->server)
     session->server = server;
@@ -36,7 +38,6 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   switch(reason) {
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
-      opaque->ws = ws_new(wsi, ctx);
       break;
     }
 
@@ -54,7 +55,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_WSI_CREATE: {
       if(!opaque)
         if(ctx)
-          opaque = lws_opaque(wsi, ctx);
+          if((opaque = lws_opaque(wsi, ctx)))
+            opaque->ws = ws_new(wsi, ctx);
 
       return 0;
     }
@@ -84,6 +86,10 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       status = lws_http_client_http_response(wsi);
 
       opaque->status = OPEN;
+
+      /*if(server->context.js && session)
+        if(!JS_IsObject(session->ws_obj) && opaque->ws)
+          session->ws_obj = minnet_ws_wrap(server->context.js, opaque->ws);*/
 
       if(server->cb.connect.ctx) {
 
