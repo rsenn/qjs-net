@@ -45,6 +45,7 @@ export function Fetch(url, file) {
 
   return ret;
 }
+
 export const TestFetch = (host, port) => (location, file) => Fetch(`http://${host}:${port}/${location}`, file);
 
 export default Fetch;

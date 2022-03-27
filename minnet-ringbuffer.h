@@ -41,6 +41,7 @@ static inline int
 ringbuffer_lock(struct ringbuffer* strm) {
   return pthread_mutex_lock(&strm->lock_ring);
 }
+
 static inline int
 ringbuffer_unlock(struct ringbuffer* strm) {
   return pthread_mutex_unlock(&strm->lock_ring);

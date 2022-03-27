@@ -94,6 +94,7 @@ js_to_string(JSContext* ctx, JSValueConst value) {
   }
   return ret;
 }
+
 static inline BOOL
 js_is_nullish(JSValueConst value) {
   return JS_IsNull(value) || JS_IsUndefined(value);

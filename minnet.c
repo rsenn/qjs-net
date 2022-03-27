@@ -504,6 +504,7 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
   out[0] = (events & POLLIN) ? opaque->handlers[READ_HANDLER] : JS_NULL;
   out[1] = (events & POLLOUT) ? opaque->handlers[WRITE_HANDLER] : JS_NULL;
 }
+
 */
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {

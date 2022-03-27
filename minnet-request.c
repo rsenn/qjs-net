@@ -150,6 +150,7 @@ request_free(MinnetRequest* req, JSContext* ctx) {
     js_free(ctx, req);
   }
 }
+
 void
 request_free_rt(MinnetRequest* req, JSRuntime* rt) {
   if(--req->ref_count == 0) {

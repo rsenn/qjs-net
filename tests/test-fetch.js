@@ -99,6 +99,7 @@ function main(...args) {
       });
   }
 }
+
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {

@@ -57,6 +57,7 @@ static const struct lws_http_mount mount = {
     /* .mountpoint_len */ 1,             /* char count */
     /* .basic_auth_login_file */ NULL,
 };
+
 static const struct lws_extension  extensions[] = {
   {
     "permessage-deflate",
@@ -67,6 +68,7 @@ static const struct lws_extension  extensions[] = {
   },
   { NULL, NULL, NULL /* terminator */ }
 };
+
 JSValue
 minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   int argind = 0, a = 0;
@@ -300,7 +302,7 @@ int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetSession* session = user;
   MinnetServer* server = session ? session->server : lws_context_user(lws_get_context(wsi));
-  //JSContext* ctx = server->context.js;
+  JSContext* ctx = server->context.js;
 
   // if(!lws_is_poll_callback(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
 

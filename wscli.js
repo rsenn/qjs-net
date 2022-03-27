@@ -74,6 +74,7 @@ function FromDomain(buffer) {
     while(len--) s += String.fromCharCode(u8[i++]);
   }
 }
+
 function ToDomain(str, alpha = false) {
   return str
     .split('.')
@@ -341,6 +342,7 @@ function main(...args) {
     repl.cleanup(why);
   }
 }
+
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {

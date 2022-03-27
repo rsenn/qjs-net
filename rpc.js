@@ -51,6 +51,7 @@ export function Mapper(map = new WeakMap()) {
   };
   return Object.setPrototypeOf(self, Mapper.prototype);
 }
+
 Mapper.prototype = function() {};
 Mapper.prototype.constructor = Mapper;
 
@@ -183,6 +184,7 @@ export function RPCObject(id, connection) {
   let obj = define(new.target ? this : new RPCObject(id), { connection, id });
   return api.methods({ id }).then(r => Object.assign(obj, r));
 }
+
 RPCObject.prototype[Symbol.toStringTag] = 'RPCObject';
 
 export function RPCFactory(api) {
@@ -672,6 +674,7 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
 
   return instance;
 }
+
 for(let ctor of [RPCSocket, Connection, RPCClient, RPCServer]) {
   let set = new Set();
   define(ctor, {
@@ -880,9 +883,11 @@ function DeserializeKeys(e) {
 function DeserializeMap(e) {
   return new Map(DeserializeEntries(e));
 }
+
 function DeserializeObject(e) {
   return Object.fromEntries(DeserializeEntries(e));
 }
+
 function ForwardMethods(e, ret = {}, thisObj) {
   let keys = DeserializeKeys(e);
   for(let key of keys) {

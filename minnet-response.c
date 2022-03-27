@@ -71,6 +71,7 @@ ssize_t
 response_write(MinnetResponse* resp, const void* x, size_t n, JSContext* ctx) {
   return buffer_append(&resp->body, x, n, ctx);
 }
+
 void
 response_clear(MinnetResponse* resp, JSContext* ctx) {
   url_free(&resp->url, ctx);
