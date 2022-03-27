@@ -33,7 +33,7 @@ static struct lws_protocols protocols2[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"defprot", defprot_callback, sizeof(MinnetSession), 0},
     {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-  //  {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    //  {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
     {0, 0},
 };
@@ -58,16 +58,12 @@ static const struct lws_http_mount mount = {
     /* .basic_auth_login_file */ NULL,
 };
 
-static const struct lws_extension  extensions[] = {
-  {
-    "permessage-deflate",
-    lws_extension_callback_pm_deflate,
-    "permessage-deflate"
-     "; client_no_context_takeover"
-     "; client_max_window_bits"
-  },
-  { NULL, NULL, NULL /* terminator */ }
-};
+static const struct lws_extension extensions[] = {{"permessage-deflate",
+                                                   lws_extension_callback_pm_deflate,
+                                                   "permessage-deflate"
+                                                   "; client_no_context_takeover"
+                                                   "; client_max_window_bits"},
+                                                  {NULL, NULL, NULL /* terminator */}};
 
 JSValue
 minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
@@ -131,6 +127,18 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     JS_FreeValue(ctx, opt_private_key);
   }
 
+  if(!JS_IsUndefined(opt_port)) {
+    int32_t port;
+    JS_ToInt32(ctx, &port, opt_port);
+    url.port = port;
+  }
+
+  if(JS_IsString(opt_host)) {
+    if(url.host)
+      js_free(ctx, url.host);
+    url.host = js_to_string(ctx, opt_host);
+  }
+
   GETCB(opt_on_pong, server->cb.pong)
   GETCB(opt_on_close, server->cb.close)
   GETCB(opt_on_connect, server->cb.connect)
@@ -158,22 +166,23 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(is_tls) {
     info->options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
     info->options |= /*LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | */ LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
-  }
+  } /*
 
-  if(!JS_IsUndefined(opt_port)) {
-    int32_t port;
-    JS_ToInt32(ctx, &port, opt_port);
-    info->port = port;
-  }
+   if(!JS_IsUndefined(opt_port)) {
+     int32_t port;
+     JS_ToInt32(ctx, &port, opt_port);
+     info->port = port;
+   }
 
-  if(JS_IsString(opt_host)) {
-    if(info->vhost_name)
-      js_free(ctx, (void*)info->vhost_name);
-    info->vhost_name = js_to_string(ctx, opt_host);
-  }
-
+   if(JS_IsString(opt_host)) {
+     if(info->vhost_name)
+       js_free(ctx, (void*)info->vhost_name);
+     info->vhost_name = js_to_string(ctx, opt_host);
+   }
+ */
   if(!info->vhost_name)
-    info->vhost_name = js_strdup(ctx, "localhost");
+    if((info->vhost_name = js_malloc(ctx, strlen(url.host) + 7)))
+      sprintf(info->vhost_name, "%s:%u", url.host, url.port);
 
   info->error_document_404 = 0; // "/404.html";
   info->mounts = &mount;

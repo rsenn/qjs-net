@@ -379,7 +379,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     url_len = url_length(&url);
   }
 
-  lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url.path='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, (int)url_len, url.path);
+  lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url.path='%s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, url.path);
 
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:

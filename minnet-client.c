@@ -153,7 +153,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   JSValue value, ret = JS_NULL;
   MinnetClient* client = 0;
   JSValue options = argv[0];
-  struct lws /**wsi = 0, */*wsi2;
+  struct lws /**wsi = 0, */* wsi2;
 
   BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
@@ -295,7 +295,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   {
     wsi2 = lws_client_connect_via_info(&client->connect_info);
   }
-   fprintf(stderr, "client->wsi = %p, wsi2 = %p\n", client->wsi, wsi2);
+  fprintf(stderr, "client->wsi = %p, wsi2 = %p\n", client->wsi, wsi2);
 
   if(!client->wsi /*&& !wsi2*/) {
     if(!block) {
@@ -518,7 +518,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_RX: {
       JSContext* ctx;
       if((ctx = client->on.message.ctx)) {
-        //MinnetWebsocket* ws = minnet_ws_data(client->session.ws_obj);
+        // MinnetWebsocket* ws = minnet_ws_data(client->session.ws_obj);
         JSValue msg = opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
         JSValue cb_argv[] = {client->session.ws_obj, msg};
 

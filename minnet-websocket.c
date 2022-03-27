@@ -144,7 +144,7 @@ minnet_ws_wrap(JSContext* ctx, struct lws* wsi) {
   JS_SetOpaque(ret, ws);
 
   if((opaque = lws_opaque(wsi, ctx))) {
-    assert(opaque->ws == 0);
+    assert(opaque->ws == 0 || opaque->ws == ws);
 
     opaque->obj = JS_VALUE_GET_OBJ(ret);
     opaque->ws = ws;
@@ -162,7 +162,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   int64_t m, len;
   MinnetSession* sess;
   JSValue ret = JS_UNDEFINED;
-  //struct wsi_opaque_user_data* opaque;
+  // struct wsi_opaque_user_data* opaque;
   MinnetBuffer buffer = BUFFER(0);
 
   if(!(ws = minnet_ws_data2(ctx, this_val)))

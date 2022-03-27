@@ -121,7 +121,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       BOOL done = FALSE;
       int n;
       ssize_t size, r;
-      //MinnetRequest* req = client->request;
+      // MinnetRequest* req = client->request;
       MinnetBuffer buf;
       buffer_alloc(&buf, 1024, client->context.js);
       if(lws_http_is_redirected_to_get(wsi))
