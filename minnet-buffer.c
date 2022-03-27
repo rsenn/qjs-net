@@ -79,7 +79,7 @@ void
 buffer_init(MinnetBuffer* buf, uint8_t* start, size_t len) {
   block_init(&buf->block, start, len);
 
-  buf->read == buf->start;
+  buf->read = buf->start;
   buf->write = buf->start;
   buf->alloc = 0;
 }
@@ -115,7 +115,7 @@ buffer_free(MinnetBuffer* buf, JSRuntime* rt) {
 }
 
 BOOL
-buffer_write(MinnetBuffer* buf, const char* x, size_t n) {
+buffer_write(MinnetBuffer* buf, const void* x, size_t n) {
   assert((size_t)buffer_AVAIL(buf) >= n);
   memcpy(buf->write, x, n);
   buf->write += n;
@@ -192,7 +192,7 @@ buffer_fromvalue(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
     buffer_write(buf, input.data, input.size);
     ret = 1;
   }
-end:
+
   js_buffer_free(&input, ctx);
   return ret;
 }
@@ -203,12 +203,12 @@ buffer_tostring(MinnetBuffer const* buf, JSContext* ctx) {
 }
 
 size_t
-buffer_escape(MinnetBuffer* buf, const char* x, size_t len, JSContext* ctx) {
+buffer_escape(MinnetBuffer* buf, const void* x, size_t len, JSContext* ctx) {
   const uint8_t *ptr, *end;
 
   size_t prev = buffer_BYTES(buf);
 
-  for(ptr = (const uint8_t*)x, end = (const uint8_t*)x + len; ptr < end; ptr++) {
+  for(ptr = x, end = (const uint8_t*)x + len; ptr < end; ptr++) {
     char c = *ptr;
 
     if(buffer_AVAIL(buf) < 4)

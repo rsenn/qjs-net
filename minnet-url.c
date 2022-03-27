@@ -344,11 +344,11 @@ query_from(JSValueConst obj, JSContext* ctx) {
     prop = JS_AtomToCString(ctx, tab[i].atom);
 
     dbuf_putstr(&out, prop);
-    dbuf_put(&out, "=", 1);
+    dbuf_putc(&out, '=');
     dbuf_realloc(&out, out.size + (len * 3) + 1);
 
-    lws_urlencode(&out.buf[out.size], str, out.allocated_size - out.size);
-    out.size += strlen(&out.buf[out.size]);
+    lws_urlencode((char*)&out.buf[out.size], str, out.allocated_size - out.size);
+    out.size += strlen((const char*)&out.buf[out.size]);
 
     JS_FreeCString(ctx, prop);
     JS_FreeCString(ctx, str);
@@ -357,7 +357,7 @@ query_from(JSValueConst obj, JSContext* ctx) {
   }
 
   js_free(ctx, tab);
-  return out.buf;
+  return (char*)out.buf;
 }
 
 static THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;

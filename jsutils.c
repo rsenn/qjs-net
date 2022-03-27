@@ -135,7 +135,7 @@ js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen) {
     if(plen)
       *plen = len;
   } else
-    *pstr = buf.data;
+    *pstr = (const char*)buf.data;
 }
 
 BOOL

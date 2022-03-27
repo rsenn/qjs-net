@@ -161,7 +161,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   int64_t m, len;
   MinnetSession* sess;
   JSValue ret = JS_UNDEFINED;
-  struct wsi_opaque_user_data* opaque;
+  //struct wsi_opaque_user_data* opaque;
   MinnetBuffer buffer = BUFFER(0);
 
   if(!(ws = minnet_ws_data2(ctx, this_val)))

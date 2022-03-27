@@ -518,7 +518,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_RX: {
       JSContext* ctx;
       if((ctx = client->on.message.ctx)) {
-        MinnetWebsocket* ws = minnet_ws_data(client->session.ws_obj);
+        //MinnetWebsocket* ws = minnet_ws_data(client->session.ws_obj);
         JSValue msg = opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
         JSValue cb_argv[] = {client->session.ws_obj, msg};
 
