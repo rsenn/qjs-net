@@ -22,8 +22,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       opaque = lws_opaque(wsi, ctx);
   }
 
-  if(opaque->ws && !JS_IsObject(session->ws_obj))
-    session->ws_obj = minnet_ws_wrap(ctx, wsi);
+  /*if(opaque->ws && !JS_IsObject(session->ws_obj))
+    session->ws_obj = minnet_ws_wrap(ctx, wsi);*/
 
   if(session && !session->server)
     session->server = server;
