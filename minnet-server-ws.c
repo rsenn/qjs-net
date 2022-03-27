@@ -17,19 +17,22 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     assert(server);
     return fd_callback(wsi, reason, &server->cb.fd, in);
   }
-  if(ctx) {
-    if(!opaque)
-      if((opaque = lws_opaque(wsi, ctx)))
-        if(!opaque->ws)
-          opaque->ws = ws_new(wsi, ctx);
+
+  if(!opaque && ctx)
+    opaque = lws_opaque(wsi, ctx);
+
+  //  if(!opaque->ws && session && !JS_IsObject(session->ws_obj)) {
+  //    session->ws_obj = minnet_ws_object(ctx,wsi);
+  //    opaque->ws = minnet_ws_data(session->ws_obj);
+  //  }
+  if(session) {
+    if(!JS_IsObject(session->ws_obj)) {
+      session->ws_obj = minnet_ws_new(ctx, wsi);
+    }
+
+    if(!session->server)
+      session->server = server;
   }
-
-  if(!opaque->ws && session && !JS_IsObject(session->ws_obj))
-    opaque->ws = ws_new(wsi, ctx);
-
-  if(session && !session->server)
-    session->server = server;
-
   if(lws_is_http_callback(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
@@ -87,10 +90,11 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       opaque->status = OPEN;
 
+      // session->ws_obj = minnet_ws_wrap(server->context.js, wsi);
+
       /*if(server->context.js && session)
         if(!JS_IsObject(session->ws_obj) && opaque->ws)
-          session->ws_obj = minnet_ws_wrap(server->context.js, opaque->ws);*/
-
+*/
       if(server->cb.connect.ctx) {
 
         if(!opaque->req) {

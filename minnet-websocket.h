@@ -34,6 +34,7 @@ extern int64_t ws_serial;
 MinnetWebsocket* ws_new(struct lws*, JSContext*);
 MinnetWebsocket* ws_from_wsi2(struct lws*, JSContext*);
 struct wsi_opaque_user_data* lws_opaque(struct lws* wsi, JSContext* ctx);
+JSValue minnet_ws_new(JSContext* ctx, struct lws* wsi);
 JSValue minnet_ws_object(JSContext*, struct lws*);
 JSValue minnet_ws_wrap(JSContext*, struct lws*);
 JSValue minnet_ws_constructor(JSContext*, JSValue, int, JSValue[]);

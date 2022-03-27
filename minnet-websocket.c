@@ -30,7 +30,7 @@ enum {
 
 enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
 
-static JSValue
+JSValue
 minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
   struct wsi_opaque_user_data* opaque;
@@ -163,7 +163,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   MinnetSession* sess;
   JSValue ret = JS_UNDEFINED;
   // struct wsi_opaque_user_data* opaque;
-  MinnetBuffer buffer = BUFFER(0);
+  MinnetBuffer buffer = {{0}};
 
   if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;

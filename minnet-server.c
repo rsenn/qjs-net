@@ -21,8 +21,8 @@ int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_
 // int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
-    {"ws", ws_callback, 0, 1024, sizeof(MinnetSession), NULL, 0},
-    {"defprot", lws_callback_http_dummy, 0, 0},
+    {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    //{"defprot", lws_callback_http_dummy, sizeof(MinnetSession),1024, 0, NULL, 0},
     {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
@@ -31,7 +31,7 @@ static struct lws_protocols protocols[] = {
 
 static struct lws_protocols protocols2[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"defprot", defprot_callback, sizeof(MinnetSession), 0},
+    // {"defprot", defprot_callback, sizeof(MinnetSession), 0},
     {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     //  {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
