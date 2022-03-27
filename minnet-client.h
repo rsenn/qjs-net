@@ -14,6 +14,7 @@ typedef struct client_context {
     int ref_count;
     MinnetContext context;
   };
+  struct lws* wsi;
   MinnetCallbacks on;
   JSValue headers, body, next;
   // MinnetURL url;

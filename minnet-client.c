@@ -153,7 +153,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   JSValue value, ret = JS_NULL;
   MinnetClient* client = 0;
   JSValue options = argv[0];
-  struct lws *wsi = 0, *wsi2;
+  struct lws /**wsi = 0, */*wsi2;
 
   BOOL block = TRUE;
   struct wsi_opaque_user_data* opaque = 0;
@@ -250,7 +250,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   proto = protocol_number(client->request->url.protocol);
 
   url_info(&client->request->url, &client->connect_info);
-  client->connect_info.pwsi = &wsi;
+  client->connect_info.pwsi = &client->wsi;
   client->connect_info.context = client->context.lws;
 
   switch(proto) {
@@ -295,9 +295,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   {
     wsi2 = lws_client_connect_via_info(&client->connect_info);
   }
-  /*fprintf(stderr, "wsi2 = %p, wsi = %p\n", wsi2, wsi);*/
+   fprintf(stderr, "client->wsi = %p, wsi2 = %p\n", client->wsi, wsi2);
 
-  if(!wsi) {
+  if(!client->wsi /*&& !wsi2*/) {
     if(!block) {
       if(js_promise_pending(&client->promise)) {
         JSValue err = js_error_new(ctx, "[2] Connection failed: %s", strerror(errno));
@@ -313,7 +313,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!block)
     return ret;
 
-  opaque = lws_opaque(wsi, client->context.js);
+  opaque = lws_opaque(client->wsi, client->context.js);
 
   for(;;) {
     if(status != opaque->status)

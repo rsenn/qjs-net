@@ -368,26 +368,38 @@ fd_handler(struct lws* wsi, MinnetCallback* cb, struct lws_pollargs args) {
 
 int
 fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args) {
+
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL: break;
+    case LWS_CALLBACK_UNLOCK_POLL: return 0;
+
     case LWS_CALLBACK_ADD_POLL_FD: {
-      if(cb->ctx)
-        return fd_handler(wsi, cb, *args);
+
+      if(cb->ctx) {
+        fd_handler(wsi, cb, *args);
+      }
+      return 0;
     }
     case LWS_CALLBACK_DEL_POLL_FD: {
-      if(cb->ctx)
-       return  fd_handler(wsi, cb, *args);
+
+      if(cb->ctx) {
+        fd_handler(wsi, cb, *args);
+      }
+      return 0;
     }
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-      if(cb->ctx && args->events != args->prev_events)
-          return fd_handler(wsi, cb, *args);
+      if(cb->ctx) {
+        if(args->events != args->prev_events) {
+          fd_handler(wsi, cb, *args);
+        }
+      }
+      return 0;
     }
+
     default: {
       return -1;
     }
   }
-  return 0;
 }
 
 static const char*
