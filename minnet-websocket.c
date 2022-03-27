@@ -207,7 +207,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
   if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  MinnetBuffer header = {0, 0, 0, 0, 0};
+  MinnetBuffer header = BUFFER_0();
 
   switch(magic) {
     case RESPONSE_BODY: {

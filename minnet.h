@@ -72,6 +72,8 @@ struct http_request;
 #define BGC(c, str) BG(#c) str NC
 #define NC "\x1b[0m"
 
+#define LOG(name, fmt, args...) lwsl_user("%-5s" FG("%d") "%-38s" NC " wsi#%" PRId64 " " fmt "\n", (name), 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, args);
+
 #ifdef _Thread_local
 #define THREAD_LOCAL _Thread_local
 #elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_CC) || defined(__IBMCPP__)

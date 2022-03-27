@@ -31,6 +31,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   if(lws_is_http_callback(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
+  LOG("WS", "in='%.*s'", (int)len, in);
+
   switch(reason) {
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
@@ -95,7 +97,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
         session->resp_obj = minnet_response_new(ctx, opaque->req->url, status, 0, TRUE, "text/html");
 
-        lwsl_user("ws   " FG("%d") "%-38s" NC " wsi#%" PRId64 " req=%p\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, opaque->req);
+        LOG("WS", "req=%p", opaque->req);
         server_exception(server, minnet_emit_this(&server->cb.connect, session->ws_obj, 2, &session->ws_obj));
       }
 
@@ -118,7 +120,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
           opaque->status = CLOSING;
 
-          lwsl_user("ws   " FG("%d") "%-38s" NC " fd=%d, status=%d\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), opaque->status);
+          LOG("WS", "fd=%d, status=%d\n", lws_get_socket_fd(wsi), opaque->status);
 
           JSValue cb_argv[3] = {session->ws_obj, code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED, why};
           server_exception(server, minnet_emit(&server->cb.close, code != -1 ? 3 : 1, cb_argv));

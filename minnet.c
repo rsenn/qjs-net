@@ -359,11 +359,14 @@ headers_get(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
 int
 fd_handler(struct lws* wsi, MinnetCallback* cb, struct lws_pollargs args) {
   JSValue argv[3] = {JS_NewInt32(cb->ctx, args.fd)};
+
   minnet_handlers(cb->ctx, wsi, args, &argv[1]);
   minnet_emit(cb, 3, argv);
+
   JS_FreeValue(cb->ctx, argv[0]);
   JS_FreeValue(cb->ctx, argv[1]);
   JS_FreeValue(cb->ctx, argv[2]);
+  return 0;
 }
 
 int
@@ -402,9 +405,9 @@ fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* c
   }
 }
 
-static const char*
+/*static const char*
 io_events(int events) {
-  switch(events /* & (POLLIN | POLLOUT)*/) {
+  switch(events) {
     case POLLOUT | POLLHUP: return "OUT|HUP";
     case POLLIN | POLLOUT | POLLHUP | POLLERR: return "IN|OUT|HUP|ERR";
     case POLLOUT | POLLHUP | POLLERR: return "OUT|HUP|ERR";
@@ -412,13 +415,12 @@ io_events(int events) {
     case POLLIN: return "IN";
     case POLLOUT:
       return "OUT";
-      //  case 0: return "0";
   }
   assert(!events);
   return "";
-}
+}*/
 
-static int
+/*static int
 io_parse_events(const char* str) {
   int events = 0;
 
@@ -431,13 +433,14 @@ io_parse_events(const char* str) {
   if(strstr(str, "ERR"))
     events |= POLLERR;
   return events;
-}
+}*/
 
 static JSValue
 minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   struct handler_closure* closure = ptr;
   struct pollfd* p;
-  int32_t wr, ret;
+  int32_t wr;
+  JSValue ret = JS_UNDEFINED;
 
   assert(closure->opaque);
   p = &closure->opaque->poll;
@@ -459,10 +462,10 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
 
     // errno = 0;
 
-    ret = lws_service_fd(lws_get_context(closure->lwsi), &x);
+    ret = JS_NewInt32(ctx, lws_service_fd(lws_get_context(closure->lwsi), &x));
   }
 
-  return JS_UNDEFINED;
+  return ret;
 }
 
 static void

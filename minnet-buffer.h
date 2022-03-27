@@ -46,13 +46,19 @@ typedef union byte_buffer {
 } MinnetBuffer;
 
 #define BUFFER(buf) \
-  (MinnetBuffer) { (uint8_t*)(buf) + LWS_PRE, (uint8_t*)(buf) + sizeof(buf) - 1, (uint8_t*)(buf) + LWS_PRE, (uint8_t*)(buf) + LWS_PRE, 0 }
+  (MinnetBuffer) { \
+    { (uint8_t*)(buf) + LWS_PRE, (uint8_t*)(buf) + sizeof(buf) - 1, (uint8_t*)(buf) + LWS_PRE, (uint8_t*)(buf) + LWS_PRE, 0 } \
+  }
 
 #define BUFFER_0() \
-  (MinnetBuffer) { 0, 0, 0, 0, 0 }
+  (MinnetBuffer) { \
+    { 0, 0, 0, 0, 0 } \
+  }
 
 #define BUFFER_N(buf, n) \
-  (MinnetBuffer) { (uint8_t*)(buf), (uint8_t*)(buf) + (n), (uint8_t*)(buf), (uint8_t*)(buf), 0 }
+  (MinnetBuffer) { \
+    { (uint8_t*)(buf), (uint8_t*)(buf) + (n), (uint8_t*)(buf), (uint8_t*)(buf), 0 } \
+  }
 
 #define buffer_AVAIL(b) (ptrdiff_t)((b)->end - (b)->write)
 #define buffer_BYTES(b) (ptrdiff_t)((b)->write - (b)->read)
