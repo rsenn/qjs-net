@@ -4,6 +4,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include <assert.h>
+#include <limits.h>
 
 static char const* const protocol_names[] = {
     "ws",
