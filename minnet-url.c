@@ -159,6 +159,14 @@ url_free_rt(MinnetURL* url, JSRuntime* rt) {
   memset(url, 0, sizeof(MinnetURL));
 }
 
+MinnetProtocol
+url_set_protocol(MinnetURL* url, const char* proto) {
+  MinnetProtocol p = protocol_number(proto);
+
+  url->protocol = protocol_string(p);
+  return p;
+}
+
 void
 url_info(const MinnetURL url, struct lws_client_connect_info* info) {
   MinnetProtocol proto = url.protocol ? protocol_number(url.protocol) : PROTOCOL_RAW;
@@ -399,14 +407,12 @@ url_new(JSContext* ctx) {
 
 JSValue
 minnet_url_new(JSContext* ctx, MinnetURL u) {
-
   MinnetURL* url;
 
   if(!(url = url_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   url_copy(url, u, ctx);
-
   return minnet_url_wrap(ctx, url);
 }
 

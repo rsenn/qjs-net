@@ -12,13 +12,7 @@
 //#include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
 #include "minnet-plugin-broker.c"
 
-// THREAD_LOCAL MinnetServer minnet_server = {0};
-
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-/*int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-int ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);*/
-// int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
@@ -58,12 +52,14 @@ static const struct lws_http_mount mount = {
     /* .basic_auth_login_file */ NULL,
 };
 
-static const struct lws_extension extensions[] = {{"permessage-deflate",
-                                                   lws_extension_callback_pm_deflate,
-                                                   "permessage-deflate"
-                                                   "; client_no_context_takeover"
-                                                   "; client_max_window_bits"},
-                                                  {NULL, NULL, NULL /* terminator */}};
+static const struct lws_extension extensions[] = {
+    {"permessage-deflate",
+     lws_extension_callback_pm_deflate,
+     "permessage-deflate"
+     "; client_no_context_takeover"
+     "; client_max_window_bits"},
+    {NULL, NULL, NULL /* terminator */},
+};
 
 JSValue
 minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
@@ -130,21 +126,19 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(!JS_IsUndefined(opt_port)) {
     int32_t port;
     JS_ToInt32(ctx, &port, opt_port);
-    info->port = port;
-  } else {
-    info->port = url.port;
+    url.port = port;
   }
 
-  if(JS_IsString(opt_host)) {
-    info->vhost_name = js_to_string(ctx, opt_host);
-  } else {
-    info->vhost_name = js_strdup(ctx, url.host);
+  if(JS_IsString(opt_host))
+    js_replace_string(ctx, opt_host, &url.host);
+  if(JS_IsString(opt_protocol)) {
+    const char* protocol;
+
+    if((protocol = JS_ToCString(ctx, opt_protocol))) {
+      url_set_protocol(&url, protocol);
+      JS_FreeCString(ctx, protocol);
+    }
   }
-  /* if(JS_IsString(opt_protocol)) {
-     info->listen_accept_protocol = js_to_string(ctx, opt_protocol);
-   } else {
-     info->listen_accept_protocol = js_strdup(ctx, url.protocol);
-   }*/
 
   GETCB(opt_on_pong, server->cb.pong)
   GETCB(opt_on_close, server->cb.close)
@@ -164,6 +158,10 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
       //| LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE
       ;
   info->user = server;
+  info->vhost_name = url_format((MinnetURL){.host = url.host, .port = url.port}, ctx);
+  info->port = url.port;
+  info->error_document_404 = "/404.html";
+  info->mounts = &mount;
 
   info->options |= LWS_SERVER_OPTION_PEER_CERT_NOT_REQUIRED;
   info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
@@ -172,26 +170,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(is_tls) {
     info->options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
     info->options |= /*LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS | */ LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER | LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
-  } /*
-
-   if(!JS_IsUndefined(opt_port)) {
-     int32_t port;
-     JS_ToInt32(ctx, &port, opt_port);
-     info->port = port;
-   }
-
-   if(JS_IsString(opt_host)) {
-     if(info->vhost_name)
-       js_free(ctx, (void*)info->vhost_name);
-     info->vhost_name = js_to_string(ctx, opt_host);
-   }
- */
-  /*  if(!info->vhost_name)
-      if((info->vhost_name = js_malloc(ctx, ((strlen(url.host) + 7) + 15) & ~0xf)))
-        sprintf(info->vhost_name, "%s:%u", url.host, url.port);*/
-  info->vhost_name = url_format((MinnetURL){.host = url.host, .port = url.port}, ctx);
-  info->error_document_404 = "/404.html";
-  info->mounts = &mount;
+  }
 
   if(is_tls)
     context_certificate(&server->context, options);

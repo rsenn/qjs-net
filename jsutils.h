@@ -95,6 +95,20 @@ js_to_string(JSContext* ctx, JSValueConst value) {
   return ret;
 }
 
+static inline char*
+js_replace_string(JSContext* ctx, JSValueConst value, char** sptr) {
+  const char* s;
+
+  if(*sptr)
+    js_free(ctx, *sptr);
+
+  if((s = JS_ToCString(ctx, value))) {
+    *sptr = js_strdup(ctx, s);
+    JS_FreeCString(ctx, s);
+  }
+  return *sptr;
+}
+
 static inline BOOL
 js_is_nullish(JSValueConst value) {
   return JS_IsNull(value) || JS_IsUndefined(value);

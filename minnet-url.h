@@ -43,6 +43,7 @@ const char* url_query(const MinnetURL);
 void url_fromobj(MinnetURL*, JSValueConst, JSContext*);
 BOOL url_from(MinnetURL*, JSValueConst, JSContext*);
 void url_dump(const char*, MinnetURL const*);
+MinnetProtocol url_set_protocol(MinnetURL* url, const char* proto);
 JSValue query_object(const char*, JSContext*);
 char* query_from(JSValueConst, JSContext*);
 JSValue minnet_url_wrap(JSContext*, MinnetURL*);
