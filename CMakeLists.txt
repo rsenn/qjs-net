@@ -95,8 +95,8 @@ endif()
 if(NOT BUILD_LIBWEBSOCKETS)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibwebsockets.cmake)
   find_libwebsockets()
-  include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS})
-  link_libraries(${LIBWEBSOCKETS_LIBRARY} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES})
+  include_directories(${LIBWEBSOCKETS_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR})
+  link_libraries(${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES})
 endif(NOT BUILD_LIBWEBSOCKETS)
 
 if(NOT LIBWEBSOCKETS_FOUND)
@@ -142,14 +142,21 @@ if(BUILD_LIBWEBSOCKETS)
     endif(BUILD_MBEDTLS)
   endif(WITH_MBEDTLS)
   if(WITH_SSL AND NOT WITH_MBEDTLS)
+
+    if(OPENSSL_ROOT_DIR)
+      list(APPEND CMAKE_PREFIX_PATH "${OPENSSL_ROOT_DIR}")
+    endif(OPENSSL_ROOT_DIR)
+
     if(NOT OPENSSL_LIBRARIES)
-      if(NOT PKG_CONFIG_FOUND)
+
+      include(FindOpenSSL)
+      #[[if(NOT PKG_CONFIG_FOUND)
         include(FindPkgConfig)
       endif(NOT PKG_CONFIG_FOUND)
       pkg_check_modules(OPENSSL openssl)
       #find_package(OpenSSL REQUIRED)
       #pkg_search_module(OPENSSL openssl)
-
+]]
     endif(NOT OPENSSL_LIBRARIES)
   endif(WITH_SSL AND NOT WITH_MBEDTLS)
 
@@ -229,7 +236,7 @@ if(USE_CURL)
 endif(USE_CURL)
 
 link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${OPENSSL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
-include_directories(${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
+include_directories(${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
 
 file(GLOB JS_BINDINGS_SOURCES *.c *.h)
 list(FILTER JS_BINDINGS_SOURCES EXCLUDE REGEX ".*-plugin-.*")
@@ -264,10 +271,9 @@ set(OPENSSL_LIBRARIES "${OPENSSL_SSL_LIBRARY};${OPENSSL_CRYPTO_LIBRARY}" CACHE S
 if(USE_CURL)
   target_include_directories(quickjs-minnet PRIVATE ${CURL_INCLUDE_DIR})
   target_link_libraries(quickjs-minnet ${CURL_LIBRARY})
-
 endif(USE_CURL)
 
-target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIRS})
+target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIR})
 set_target_properties(
   quickjs-minnet PROPERTIES INSTALL_RPATH "${OPENSSL_LIBRARY_DIR}" COMPILE_FLAGS "-fvisibility=hidden" LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
                             INTERFACE_LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}" PREFIX "" OUTPUT_NAME "net")
@@ -277,17 +283,9 @@ if(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
   target_link_directories(quickjs-minnet PUBLIC ${LIBWEBSOCKETS_LIBRARY_DIR})
 endif(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
 
-target_link_directories(quickjs-minnet PUBLIC ${QUICKJS_LIBRARY_DIR})
+target_link_directories(quickjs-minnet PUBLIC ${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR})
 
-target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY} ${MBEDTLS_LIBRARIES} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES})
-
-message(
-  "Libraries:\n\
-  libwebsockets - ${LIBWEBSOCKETS_LIBRARY}\n\
-  mbedtls - ${MBEDTLS_LIBRARIES}\n\
-  curl - ${CURL_LIBRARY}\n\
-  openssl - ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY}\n\
-")
+target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY})
 
 message(
   "Library directories:\n\
@@ -295,6 +293,22 @@ message(
   mbedtls - ${MBEDTLS_LIBRARY_DIR}\n\
   curl - ${CURL_LIBRARY_DIR}\n\
   openssl - ${OPENSSL_LIBRARY_DIR}\n\
+")
+
+message(
+  "Include directories:\n\
+  libwebsockets - ${LIBWEBSOCKETS_INCLUDE_DIR}\n\
+  mbedtls - ${MBEDTLS_INCLUDE_DIR}\n\
+  curl - ${CURL_INCLUDE_DIR}\n\
+  openssl - ${OPENSSL_INCLUDE_DIR}\n\
+")
+
+message(
+  "Libraries:\n\
+  libwebsockets - ${LIBWEBSOCKETS_LIBRARIES}\n\
+  mbedtls - ${MBEDTLS_LIBRARIES}\n\
+  curl - ${CURL_LIBRARY}\n\
+  openssl - ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY}\n\
 ")
 
 if(NOT QUICKJS_C_MODULE_DIR)
