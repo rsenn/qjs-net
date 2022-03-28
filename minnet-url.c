@@ -106,38 +106,38 @@ url_parse(MinnetURL* url, const char* u, JSContext* ctx) {
 }
 
 char*
-url_format(const MinnetURL* url, JSContext* ctx) {
-  size_t len = (url->protocol ? strlen(url->protocol) + 3 : 0) + (url->host ? strlen(url->host) + 1 + 5 : 0) + (url->path ? strlen(url->path) : 0) + 1;
+url_format(const MinnetURL url, JSContext* ctx) {
+  size_t len = (url.protocol ? strlen(url.protocol) + 3 : 0) + (url.host ? strlen(url.host) + 1 + 5 : 0) + (url.path ? strlen(url.path) : 0) + 1;
   char* str;
   MinnetProtocol proto = -1;
 
   if((str = js_malloc(ctx, len))) {
-    const char* host = url->host ? url->host : "0.0.0.0";
+    const char* host = url.host ? url.host : "0.0.0.0";
     size_t pos = 0;
     str[pos] = '\0';
-    if(url->protocol) {
-      proto = protocol_number(url->protocol);
-      strcpy(str, url->protocol);
+    if(url.protocol) {
+      proto = protocol_number(url.protocol);
+      strcpy(str, url.protocol);
       pos += strlen(str);
       strcpy(&str[pos], "://");
       pos += 3;
     }
-    if(proto != -1 && url->port == protocol_default_port(proto)) {
+    if(proto != -1 && url.port == protocol_default_port(proto)) {
       strcpy(&str[pos], host);
       pos += strlen(&str[pos]);
     } else {
-      pos += sprintf(&str[pos], "%s:%u", host, url->port);
+      pos += sprintf(&str[pos], "%s:%u", host, url.port);
     }
-    if(url->path)
-      strcpy(&str[pos], url->path);
+    if(url.path)
+      strcpy(&str[pos], url.path);
   }
   return str;
 }
 
 size_t
-url_length(const MinnetURL* url) {
-  size_t portlen = url->port >= 10000 ? 6 : url->port >= 1000 ? 5 : url->port >= 100 ? 4 : url->port >= 10 ? 3 : url->port >= 1 ? 2 : 0;
-  return (url->protocol ? strlen(url->protocol) + 3 : 0) + (url->host ? strlen(url->host) + portlen : 0) + (url->path ? strlen(url->path) : 0) + 1;
+url_length(const MinnetURL url) {
+  size_t portlen = url.port >= 10000 ? 6 : url.port >= 1000 ? 5 : url.port >= 100 ? 4 : url.port >= 10 ? 3 : url.port >= 1 ? 2 : 0;
+  return (url.protocol ? strlen(url.protocol) + 3 : 0) + (url.host ? strlen(url.host) + portlen : 0) + (url.path ? strlen(url.path) : 0) + 1;
 }
 
 void
@@ -159,8 +159,8 @@ url_free_rt(MinnetURL* url, JSRuntime* rt) {
 }
 
 void
-url_info(const MinnetURL* url, struct lws_client_connect_info* info) {
-  MinnetProtocol proto = url->protocol ? protocol_number(url->protocol) : PROTOCOL_RAW;
+url_info(const MinnetURL url, struct lws_client_connect_info* info) {
+  MinnetProtocol proto = url.protocol ? protocol_number(url.protocol) : PROTOCOL_RAW;
 
   memset(info, 0, sizeof(struct lws_client_connect_info));
 
@@ -189,8 +189,8 @@ url_info(const MinnetURL* url, struct lws_client_connect_info* info) {
     }
   }
 
-  info->port = url->port;
-  info->address = url->host;
+  info->port = url.port;
+  info->address = url.host;
 
   if(protocol_is_tls(proto)) {
     info->ssl_connection = LCCSCF_USE_SSL | LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;
@@ -198,7 +198,7 @@ url_info(const MinnetURL* url, struct lws_client_connect_info* info) {
     info->ssl_connection |= LCCSCF_ALLOW_INSECURE;
   }
 
-  info->path = url->path ? url->path : "/";
+  info->path = url.path ? url.path : "/";
   info->host = info->address;
   info->origin = info->address;
 }
@@ -216,17 +216,17 @@ url_connect(MinnetURL* url, struct lws_context* context, struct lws** p_wsi) {
 }*/
 
 char*
-url_location(const MinnetURL* url, JSContext* ctx) {
+url_location(const MinnetURL url, JSContext* ctx) {
   const char* query;
   if((query = url_query(url)))
-    return js_strndup(ctx, url->path, query - url->path);
-  return js_strdup(ctx, url->path);
+    return js_strndup(ctx, url.path, query - url.path);
+  return js_strdup(ctx, url.path);
 }
 
 const char*
-url_query(const MinnetURL* url) {
+url_query(const MinnetURL url) {
   const char* p;
-  for(p = url->path; *p; p++) {
+  for(p = url.path; *p; p++) {
     if(*p == '\\') {
       ++p;
       continue;
@@ -275,7 +275,7 @@ url_from(MinnetURL* url, JSValueConst value, JSContext* ctx) {
   MinnetURL* other;
 
   if((other = minnet_url_data(value))) {
-    url_copy(url, other, ctx);
+    url_copy(url, *other, ctx);
   } else if(JS_IsObject(value)) {
     url_fromobj(url, value, ctx);
   } else if(JS_IsString(value)) {
@@ -404,7 +404,7 @@ minnet_url_new(JSContext* ctx, MinnetURL u) {
   if(!(url = url_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  url_copy(url, &u, ctx);
+  url_copy(url, u, ctx);
 
   return minnet_url_wrap(ctx, url);
 }
@@ -452,7 +452,7 @@ minnet_url_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int ma
   size_t len;
   const char* str;
 
-  if(!(url = JS_GetOpaque2(ctx, this_val, minnet_url_class_id)))
+  if(!(url = minnet_url_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   switch(magic) {
@@ -513,14 +513,14 @@ minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
   MinnetURL* url;
   JSValue ret = JS_UNDEFINED;
 
-  if(!(url = JS_GetOpaque2(ctx, this_val, minnet_url_class_id)))
+  if(!(url = minnet_url_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   switch(magic) {
     case URL_TO_STRING: {
       char* str;
 
-      if((str = url_format(url, ctx))) {
+      if((str = url_format(*url, ctx))) {
         ret = JS_NewString(ctx, str);
         js_free(ctx, str);
       }
@@ -539,7 +539,7 @@ minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
 
   url_from(url, argv[0], ctx);
 
-  if(!url_valid(url))
+  if(!url_valid(*url))
     return JS_ThrowTypeError(ctx, "Not a valid URL");
 
   return minnet_url_wrap(ctx, url);

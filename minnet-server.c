@@ -105,6 +105,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
   JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
+  JSValue opt_protocol = JS_GetPropertyStr(ctx, options, "protocol");
   JSValue opt_tls = JS_GetPropertyStr(ctx, options, "tls");
   JSValue opt_on_pong = JS_GetPropertyStr(ctx, options, "onPong");
   JSValue opt_on_close = JS_GetPropertyStr(ctx, options, "onClose");
@@ -129,14 +130,21 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(!JS_IsUndefined(opt_port)) {
     int32_t port;
     JS_ToInt32(ctx, &port, opt_port);
-    url.port = port;
+    info->port = port;
+  } else {
+    info->port = url.port;
   }
 
   if(JS_IsString(opt_host)) {
-    if(url.host)
-      js_free(ctx, url.host);
-    url.host = js_to_string(ctx, opt_host);
+    info->vhost_name = js_to_string(ctx, opt_host);
+  } else {
+    info->vhost_name = js_strdup(ctx, url.host);
   }
+  /* if(JS_IsString(opt_protocol)) {
+     info->listen_accept_protocol = js_to_string(ctx, opt_protocol);
+   } else {
+     info->listen_accept_protocol = js_strdup(ctx, url.protocol);
+   }*/
 
   GETCB(opt_on_pong, server->cb.pong)
   GETCB(opt_on_close, server->cb.close)
@@ -145,8 +153,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   GETCB(opt_on_fd, server->cb.fd)
   GETCB(opt_on_http, server->cb.http)
 
-  /*  protocols[0].user = ctx;
-    protocols[1].user = ctx;*/
+  for(int i = 0; i < countof(protocols); i++) protocols[i].user = ctx;
 
   server->context.js = ctx;
   server->context.error = JS_NULL;
@@ -179,10 +186,10 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
      info->vhost_name = js_to_string(ctx, opt_host);
    }
  */
-    /*  if(!info->vhost_name)
-        if((info->vhost_name = js_malloc(ctx, ((strlen(url.host) + 7) + 15) & ~0xf)))
-          sprintf(info->vhost_name, "%s:%u", url.host, url.port);*/
-
+  /*  if(!info->vhost_name)
+      if((info->vhost_name = js_malloc(ctx, ((strlen(url.host) + 7) + 15) & ~0xf)))
+        sprintf(info->vhost_name, "%s:%u", url.host, url.port);*/
+  info->vhost_name = url_format((MinnetURL){.host = url.host, .port = url.port}, ctx);
   info->error_document_404 = "/404.html";
   info->mounts = &mount;
 

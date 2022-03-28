@@ -69,8 +69,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
-      if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
-        return -1;
+      /*if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
+        return -1;*/
 
       /*return http_server_callback(wsi, reason, user, in, len);*/
       if(!opaque)

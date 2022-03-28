@@ -33,13 +33,13 @@ uint16_t protocol_default_port(MinnetProtocol);
 BOOL protocol_is_tls(MinnetProtocol);
 void url_init(MinnetURL*, const char*, const char*, int port, const char* path, JSContext* ctx);
 void url_parse(MinnetURL*, const char*, JSContext*);
-char* url_format(const MinnetURL*, JSContext*);
-size_t url_length(const MinnetURL*);
+char* url_format(const MinnetURL, JSContext*);
+size_t url_length(const MinnetURL);
 void url_free(MinnetURL*, JSContext*);
 void url_free_rt(MinnetURL*, JSRuntime*);
-void url_info(const MinnetURL*, struct lws_client_connect_info*);
-char* url_location(const MinnetURL*, JSContext*);
-const char* url_query(const MinnetURL*);
+void url_info(const MinnetURL, struct lws_client_connect_info*);
+char* url_location(const MinnetURL, JSContext*);
+const char* url_query(const MinnetURL);
 void url_fromobj(MinnetURL*, JSValueConst, JSContext*);
 BOOL url_from(MinnetURL*, JSValueConst, JSContext*);
 void url_dump(const char*, MinnetURL const*);
@@ -54,18 +54,18 @@ JSValue minnet_url_constructor(JSContext*, JSValueConst, int, JSValueConst argv[
 int minnet_url_init(JSContext*, JSModuleDef*);
 
 static inline const char*
-url_path(const MinnetURL* url) {
-  return url->path;
+url_path(const MinnetURL url) {
+  return url.path;
 }
 
 static inline BOOL
-url_valid(const MinnetURL* url) {
-  return url->host && url->path;
+url_valid(const MinnetURL url) {
+  return url.host && url.path;
 }
 
 static inline MinnetProtocol
-url_protocol(const MinnetURL* url) {
-  return protocol_number(url->protocol);
+url_protocol(const MinnetURL url) {
+  return protocol_number(url.protocol);
 }
 
 static inline MinnetURL
@@ -93,11 +93,11 @@ url_clone(MinnetURL url, JSContext* ctx) {
 }
 
 static inline void
-url_copy(MinnetURL* url, const MinnetURL* other, JSContext* ctx) {
-  url->protocol = other->protocol;
-  url->host = other->host ? js_strdup(ctx, other->host) : 0;
-  url->path = other->path ? js_strdup(ctx, other->path) : 0;
-  url->port = other->port;
+url_copy(MinnetURL* url, const MinnetURL other, JSContext* ctx) {
+  url->protocol = other.protocol;
+  url->host = other.host ? js_strdup(ctx, other.host) : 0;
+  url->path = other.path ? js_strdup(ctx, other.path) : 0;
+  url->port = other.port;
 }
 
 extern THREAD_LOCAL JSClassID minnet_url_class_id;

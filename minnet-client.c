@@ -245,11 +245,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
   client->response = response_new(ctx);
-  url_copy(&client->response->url, &client->request->url, ctx);
+  url_copy(&client->response->url, client->request->url, ctx);
 
   proto = protocol_number(client->request->url.protocol);
 
-  url_info(&client->request->url, &client->connect_info);
+  url_info(client->request->url, &client->connect_info);
   client->connect_info.pwsi = &client->wsi;
   client->connect_info.context = client->context.lws;
 

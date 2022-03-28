@@ -376,7 +376,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     } else {
       // url = lws_uri_and_method(wsi, ctx, &method);
     }
-    url_len = url_length(&url);
+    url_len = url_length(url);
   }
 
   LOG("HTTP", "url.path='%s'", url.path);
@@ -394,6 +394,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
       JSValueConst args[2] = {session->ws_obj, JS_NULL};
+
+      if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
+        return -1;
 
       if(!opaque->req)
         opaque->req = request_new(server->context.js, /* in,*/ url, method);

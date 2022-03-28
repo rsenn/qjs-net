@@ -10,7 +10,11 @@
 struct http_mount;
 
 typedef struct server_context {
-  MinnetContext context;
+  union {
+    int ref_count;
+    MinnetContext context;
+  };
+  struct lws* wsi;
   MinnetCallbacks cb;
 } MinnetServer;
 
