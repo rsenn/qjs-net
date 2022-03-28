@@ -22,7 +22,7 @@ int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_
 
 static struct lws_protocols protocols[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    //{"defprot", lws_callback_http_dummy, sizeof(MinnetSession),1024, 0, NULL, 0},
+    {"defprot", lws_callback_http_dummy, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
@@ -31,7 +31,7 @@ static struct lws_protocols protocols[] = {
 
 static struct lws_protocols protocols2[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    // {"defprot", defprot_callback, sizeof(MinnetSession), 0},
+    {"defprot", defprot_callback, sizeof(MinnetSession), 0},
     {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     //  {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
@@ -75,14 +75,13 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   JSValue ret, options;
   struct lws_context_creation_info* info;
 
-  SETLOG(LLL_INFO)
+  // SETLOG(LLL_INFO)
 
   if(!(server = js_mallocz(ctx, sizeof(MinnetServer))))
     return JS_ThrowOutOfMemory(ctx);
 
   info = &server->context.info;
 
-  lwsl_user("Minnet WebSocket Server\n");
   ret = JS_NewInt32(ctx, 0);
   options = argv[0];
 
@@ -91,9 +90,9 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     if((str = JS_ToCString(ctx, argv[argind]))) {
       url_parse(&url, str, ctx);
 
-      info->port = url.port;
-      info->vhost_name = js_strdup(ctx, url.host);
-      // info->listen_accept_protocol = js_strdup(ctx, url.protocol);
+      // info->port = url.port;
+      // info->vhost_name = js_strdup(ctx, url.host);
+      //  info->listen_accept_protocol = js_strdup(ctx, url.protocol);
       JS_FreeCString(ctx, str);
     }
     argind++;
@@ -118,14 +117,14 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   if(!JS_IsUndefined(opt_tls)) {
     is_tls = JS_ToBool(ctx, opt_tls);
-  } else {
-    JSValue opt_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
+  } /* else {
+     JSValue opt_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
 
-    if(JS_IsString(opt_private_key))
-      is_tls = TRUE;
+     if(JS_IsString(opt_private_key))
+       is_tls = TRUE;
 
-    JS_FreeValue(ctx, opt_private_key);
-  }
+     JS_FreeValue(ctx, opt_private_key);
+   }*/
 
   if(!JS_IsUndefined(opt_port)) {
     int32_t port;
@@ -146,8 +145,8 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   GETCB(opt_on_fd, server->cb.fd)
   GETCB(opt_on_http, server->cb.http)
 
-  protocols[0].user = ctx;
-  protocols[1].user = ctx;
+  /*  protocols[0].user = ctx;
+    protocols[1].user = ctx;*/
 
   server->context.js = ctx;
   server->context.error = JS_NULL;
@@ -180,11 +179,11 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
      info->vhost_name = js_to_string(ctx, opt_host);
    }
  */
-  if(!info->vhost_name)
-    if((info->vhost_name = js_malloc(ctx, strlen(url.host) + 7)))
-      sprintf(info->vhost_name, "%s:%u", url.host, url.port);
+    /*  if(!info->vhost_name)
+        if((info->vhost_name = js_malloc(ctx, ((strlen(url.host) + 7) + 15) & ~0xf)))
+          sprintf(info->vhost_name, "%s:%u", url.host, url.port);*/
 
-  info->error_document_404 = 0; // "/404.html";
+  info->error_document_404 = "/404.html";
   info->mounts = &mount;
 
   if(is_tls)
@@ -249,8 +248,8 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     lwsl_err("libwebsockets init failed\n");
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
   }
-  /*
-    if(!lws_create_vhost(server->context.lws, &server->context.info)) {
+
+  /*    if(!lws_create_vhost(server->context.lws, &server->context.info)) {
       lwsl_err("Failed to create vhost\n");
       return JS_ThrowInternalError(ctx, "Failed to create vhost");
     }*/
@@ -289,14 +288,18 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     }
   }
 
-  if(info->ssl_cert_filepath)
-    JS_FreeCString(ctx, info->ssl_cert_filepath);
+  js_buffer_free(&server->context.key, ctx);
+  js_buffer_free(&server->context.crt, ctx);
+  js_buffer_free(&server->context.ca, ctx);
 
-  if(info->ssl_private_key_filepath)
-    JS_FreeCString(ctx, info->ssl_private_key_filepath);
+  /* if(info->ssl_cert_filepath)
+     JS_FreeCString(ctx, info->ssl_cert_filepath);
 
-  js_free(ctx, (void*)info->vhost_name);
+   if(info->ssl_private_key_filepath)
+     JS_FreeCString(ctx, info->ssl_private_key_filepath);
 
+   js_free(ctx, (void*)info->vhost_name);
+ */
   FREECB(server->cb.pong)
   FREECB(server->cb.close)
   FREECB(server->cb.connect)

@@ -122,6 +122,7 @@ context_clear(MinnetContext* context) {
 void
 context_certificate(MinnetContext* context, JSValueConst options) {
   struct lws_context_creation_info* i = &context->info;
+
   context->crt = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslCert"));
   context->key = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslPrivateKey"));
   context->ca = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslCA"));
