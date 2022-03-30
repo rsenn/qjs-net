@@ -141,3 +141,21 @@ function(CONTAINS LIST VALUE OUTPUT)
   endif(NOT RESULT)
   set("${OUTPUT}" "${RESULT}" PARENT_SCOPE)
 endfunction(CONTAINS LIST VALUE OUTPUT)
+
+function(BASENAME OUTPUT_VAR STR)
+  string(REGEX REPLACE ".*/" "" TMP_STR "${STR}")
+  if(ARGN)
+    string(REGEX REPLACE "\\${ARGN}\$" "" TMP_STR "${TMP_STR}")
+  endif(ARGN)
+
+  set("${OUTPUT_VAR}" "${TMP_STR}" PARENT_SCOPE)
+endfunction(BASENAME OUTPUT_VAR FILE)
+
+function(DIRNAME OUTPUT_VAR STR)
+  string(REGEX REPLACE "/[^/]+/*$" "" TMP_STR "${STR}")
+  if(ARGN)
+    string(REGEX REPLACE "\\${ARGN}\$" "" TMP_STR "${TMP_STR}")
+  endif(ARGN)
+
+  set("${OUTPUT_VAR}" "${TMP_STR}" PARENT_SCOPE)
+endfunction(DIRNAME OUTPUT_VAR FILE)

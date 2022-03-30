@@ -9,6 +9,25 @@ macro(find_libwebsockets)
 
     if(LIBWEBSOCKETS_FOUND)
 
+      message("LIBWEBSOCKETS_CONFIG: ${LIBWEBSOCKETS_CONFIG}")
+      include(${LIBWEBSOCKETS_CONFIG})
+
+      dirname(LIBWEBSOCKETS_DIR "${LIBWEBSOCKETS_CONFIG}")
+      message("LIBWEBSOCKETS_DIR: ${LIBWEBSOCKETS_DIR}")
+
+      include(${LIBWEBSOCKETS_DIR}/LibwebsocketsTargets.cmake)
+
+      get_target_property(pkgcfg_lib_LIBWEBSOCKETS_websockets websockets INTERFACE_LINK_LIBRARIES)
+      get_target_property(LIBWEBSOCKETS_INCLUDE_DIR websockets INTERFACE_INCLUDE_DIRECTORIES)
+
+      string(REGEX REPLACE "/include.*" "/lib" LIBWEBSOCKETS_LIBRARY_DIR "${LIBWEBSOCKETS_INCLUDE_DIR}")
+
+      #     string(REGEX REPLACE " *" "" pkgcfg_lib_LIBWEBSOCKETS_websockets "${pkgcfg_lib_LIBWEBSOCKETS_websockets}")
+      set(LIBWEBSOCKETS_LIBRARIES ${LIBWEBSOCKETS_LIBRARIES} ${pkgcfg_lib_LIBWEBSOCKETS_websockets})
+      list(FILTER LIBWEBSOCKETS_LIBRARIES EXCLUDE REGEX websockets_shared)
+      message("LIBWEBSOCKETS_INCLUDE_DIR: ${LIBWEBSOCKETS_INCLUDE_DIR}")
+      message("LIBWEBSOCKETS_LIBRARY_DIR: ${LIBWEBSOCKETS_LIBRARY_DIR}")
+
     else(LIBWEBSOCKETS_FOUND)
 
       if(NOT PKG_CONFIG_FOUND)
