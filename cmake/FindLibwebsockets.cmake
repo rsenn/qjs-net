@@ -4,17 +4,25 @@ macro(find_libwebsockets)
     unset(LIBWEBSOCKETS_INCLUDE_DIR CACHE)
     unset(LIBWEBSOCKETS_LIBRARY_DIR CACHE)
     unset(LIBWEBSOCKETS_LIBRARIES CACHE)
-    if(NOT PKG_CONFIG_FOUND)
-      include(FindPkgConfig)
-    endif(NOT PKG_CONFIG_FOUND)
 
-    if(LIBWEBSOCKETS_ROOT_DIR)
-      list(PREPEND CMAKE_PREFIX_PATH "${LIBWEBSOCKETS_ROOT_DIR}")
-      list(PREPEND CMAKE_MODULE_PATH "${LIBWEBSOCKETS_ROOT_DIR}/lib/cmake/libwebsockets")
-    endif(LIBWEBSOCKETS_ROOT_DIR)
-    set(LIBWEBSOCKETS_ROOT_DIR "${LIBWEBSOCKETS_ROOT_DIR}" "libwebsockets installation prefix")
+    find_package(LIBWEBSOCKETS NAMES libwebsockets)
 
-    pkg_check_modules(LIBWEBSOCKETS libwebsockets)
+    if(LIBWEBSOCKETS_FOUND)
+
+    else(LIBWEBSOCKETS_FOUND)
+
+      if(NOT PKG_CONFIG_FOUND)
+        include(FindPkgConfig)
+      endif(NOT PKG_CONFIG_FOUND)
+
+      if(LIBWEBSOCKETS_ROOT_DIR)
+        list(PREPEND CMAKE_PREFIX_PATH "${LIBWEBSOCKETS_ROOT_DIR}")
+        list(PREPEND CMAKE_MODULE_PATH "${LIBWEBSOCKETS_ROOT_DIR}/lib/cmake/libwebsockets")
+      endif(LIBWEBSOCKETS_ROOT_DIR)
+      set(LIBWEBSOCKETS_ROOT_DIR "${LIBWEBSOCKETS_ROOT_DIR}" "libwebsockets installation prefix")
+
+      pkg_check_modules(LIBWEBSOCKETS libwebsockets)
+    endif(LIBWEBSOCKETS_FOUND)
 
     if(NOT DEFINED OPENSSL_FOUND)
       include(FindOpenSSL)
@@ -22,14 +30,14 @@ macro(find_libwebsockets)
 
     message("pkgcfg_lib_LIBWEBSOCKETS_websockets: ${pkgcfg_lib_LIBWEBSOCKETS_websockets}")
 
-     if(pkgcfg_lib_LIBWEBSOCKETS_websockets AND EXISTS "${pkgcfg_lib_LIBWEBSOCKETS_websockets}")
-        set(LIBWEBSOCKETS_LIBRARIES "${pkgcfg_lib_LIBWEBSOCKETS_websockets}")
+    if(pkgcfg_lib_LIBWEBSOCKETS_websockets AND EXISTS "${pkgcfg_lib_LIBWEBSOCKETS_websockets}")
+      set(LIBWEBSOCKETS_LIBRARIES "${pkgcfg_lib_LIBWEBSOCKETS_websockets}")
     endif(pkgcfg_lib_LIBWEBSOCKETS_websockets AND EXISTS "${pkgcfg_lib_LIBWEBSOCKETS_websockets}")
-    
+
     if(NOT LIBWEBSOCKETS_LIBRARIES)
-        if(LIBWEBSOCKETS_LINK_LIBRARIES)
-          set(LIBWEBSOCKETS_LIBRARIES "${LIBWEBSOCKETS_LINK_LIBRARIES}")
-        endif(LIBWEBSOCKETS_LINK_LIBRARIES)      
+      if(LIBWEBSOCKETS_LINK_LIBRARIES)
+        set(LIBWEBSOCKETS_LIBRARIES "${LIBWEBSOCKETS_LINK_LIBRARIES}")
+      endif(LIBWEBSOCKETS_LINK_LIBRARIES)
     endif(NOT LIBWEBSOCKETS_LIBRARIES)
     message("LIBWEBSOCKETS_LIBRARIES: ${LIBWEBSOCKETS_LIBRARIES}")
 
