@@ -100,7 +100,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret, handlers[4], args[2];
-  struct client_closure* cc;
+  MinnetClosure* cc;
   struct fetch_closure* fc;
 
   if(argc >= 2 && !JS_IsObject(argv[1]))
@@ -109,7 +109,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   if(!(fc = fetch_closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  if(!(cc = client_closure_new(ctx)))
+  if(!(cc = closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   args[0] = argv[0];

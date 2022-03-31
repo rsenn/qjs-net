@@ -1,9 +1,23 @@
 #include "minnet-server-proxy.h"
 #include <libwebsockets.h>
 
-static int
+typedef struct proxy_msg {
+  lws_dll2_t list;
+  size_t len;
+
+} proxy_msg_t;
+
+typedef struct proxy_conn {
+  struct lws* wsi_ws;
+  struct lws* wsi_raw;
+
+  lws_dll2_owner_t pending_msg_to_ws;
+  lws_dll2_owner_t pending_msg_to_raw;
+} proxy_conn_t;
+
+int
 proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
-  MinnetProxyMessage* msg = lws_container_of(d, MinnetProxyMessage, list);
+  proxy_msg_t* msg = lws_container_of(d, proxy_msg_t, list);
 
   lws_dll2_remove(d);
   free(msg);
@@ -12,69 +26,70 @@ proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
 }
 
 int
-proxy_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetProxyConnection* pc = (MinnetProxyConnection*)lws_get_opaque_user_data(wsi);
-  MinnetProxyMessage* msg;
+callback_proxy_ws_server(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+  proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);
+  struct lws_client_connect_info i;
+  proxy_msg_t* msg;
   uint8_t* data;
+  int m, a;
 
   switch(reason) {
-    case LWS_CALLBACK_ESTABLISHED: {
-      struct lws_client_connect_info info;
+    case LWS_CALLBACK_ESTABLISHED:
 
-      if(!pc) {
-        if(!(pc = malloc(sizeof(MinnetProxyConnection)))) {
-          lwsl_err("error allocating MinnetProxyConnection\n");
-          return -1;
-        }
+      pc = malloc(sizeof(*pc));
+      memset(pc, 0, sizeof(*pc));
 
-        memset(pc, 0, sizeof(MinnetProxyConnection));
+      lws_set_opaque_user_data(wsi, pc);
 
-        lws_set_opaque_user_data(wsi, pc);
-      }
+      pc->wsi_ws = wsi;
 
-      pc->wsi[ACCEPTED] = wsi;
+      memset(&i, 0, sizeof(i));
 
-      memset(&info, 0, sizeof(info));
-      info.method = "RAW";
-      info.context = lws_get_context(wsi);
-      info.port = 1234;
-      info.address = "127.0.0.1";
-      info.ssl_connection = 0;
-      info.local_protocol_name = "proxy-raw";
-      info.opaque_user_data = pc;
-      info.pwsi = &pc->wsi[ONWARD];
+      i.method = "RAW";
+      i.context = lws_get_context(wsi);
+      i.port = 1234;
+      i.address = "127.0.0.1";
+      i.ssl_connection = 0;
+      i.local_protocol_name = "lws-ws-raw-raw";
 
-      if(!lws_client_connect_via_info(&info)) {
-        lwsl_warn("proxy_callback: onward connection failed");
+      i.opaque_user_data = pc;
+
+      i.pwsi = &pc->wsi_raw;
+
+      if(!lws_client_connect_via_info(&i)) {
+        lwsl_warn("%s: onward connection failed\n", __func__);
         return -1;
       }
-      break;
-    }
-    case LWS_CALLBACK_CLOSED: {
-      lws_dll2_foreach_safe(&pc->queue[ACCEPTED], NULL, proxy_ws_raw_msg_destroy);
 
-      pc->wsi[ACCEPTED] = NULL;
+      break;
+
+    case LWS_CALLBACK_CLOSED:
+
+      lws_dll2_foreach_safe(&pc->pending_msg_to_ws, NULL, proxy_ws_raw_msg_destroy);
+
+      pc->wsi_ws = NULL;
       lws_set_opaque_user_data(wsi, NULL);
 
-      if(!pc->wsi[ONWARD]) {
+      if(!pc->wsi_raw) {
+
         free(pc);
         break;
       }
 
-      if(pc->queue[ONWARD].count) {
-        lws_set_timeout(pc->wsi[ONWARD], PENDING_TIMEOUT_KILLED_BY_PROXY_CLIENT_CLOSE, 3);
+      if(pc->pending_msg_to_raw.count) {
+
+        lws_set_timeout(pc->wsi_raw, PENDING_TIMEOUT_KILLED_BY_PROXY_CLIENT_CLOSE, 3);
         break;
       }
 
-      lws_wsi_close(pc->wsi[ONWARD], LWS_TO_KILL_ASYNC);
+      lws_wsi_close(pc->wsi_raw, LWS_TO_KILL_ASYNC);
       break;
-    }
-    case LWS_CALLBACK_SERVER_WRITEABLE: {
-      int m, a;
-      if(!pc || !pc->queue[ACCEPTED].count)
+
+    case LWS_CALLBACK_SERVER_WRITEABLE:
+      if(!pc || !pc->pending_msg_to_ws.count)
         break;
 
-      msg = lws_container_of(pc->queue[ACCEPTED].head, MinnetProxyMessage, list);
+      msg = lws_container_of(pc->pending_msg_to_ws.head, proxy_msg_t, list);
       data = (uint8_t*)&msg[1] + LWS_PRE;
 
       m = lws_write(wsi, data, msg->len, LWS_WRITE_TEXT);
@@ -87,15 +102,15 @@ proxy_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, vo
         return -1;
       }
 
-      if(pc->queue[ACCEPTED].count)
+      if(pc->pending_msg_to_ws.count)
         lws_callback_on_writable(wsi);
       break;
-    }
-    case LWS_CALLBACK_RECEIVE: {
-      if(!pc || !pc->wsi[ONWARD])
+
+    case LWS_CALLBACK_RECEIVE:
+      if(!pc || !pc->wsi_raw)
         break;
 
-      msg = (MinnetProxyMessage*)malloc(sizeof(*msg) + LWS_PRE + len);
+      msg = (proxy_msg_t*)malloc(sizeof(*msg) + LWS_PRE + len);
       data = (uint8_t*)&msg[1] + LWS_PRE;
 
       if(!msg) {
@@ -107,65 +122,65 @@ proxy_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, vo
       msg->len = len;
       memcpy(data, in, len);
 
-      lws_dll2_add_tail(&msg->list, &pc->queue[ONWARD]);
+      lws_dll2_add_tail(&msg->list, &pc->pending_msg_to_raw);
 
-      lws_callback_on_writable(pc->wsi[ONWARD]);
+      lws_callback_on_writable(pc->wsi_raw);
       break;
-    }
-    default: {
-      break;
-    }
+
+    default: break;
   }
 
   return 0;
 }
 
 int
-raw_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetProxyConnection* pc = (MinnetProxyConnection*)lws_get_opaque_user_data(wsi);
-  MinnetProxyMessage* msg;
+callback_proxy_raw_client(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+  proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);
+  proxy_msg_t* msg;
   uint8_t* data;
+  int m, a;
 
   switch(reason) {
-    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      lwsl_warn("raw_client_callback: onward raw connection failed\n");
-      pc->wsi[ONWARD] = NULL;
+    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+      lwsl_warn("%s: onward raw connection failed\n", __func__);
+      pc->wsi_raw = NULL;
       break;
-    }
-    case LWS_CALLBACK_RAW_ADOPT: {
-      lwsl_user("RAW_ADOPT\n");
-      pc->wsi[ONWARD] = wsi;
+
+    case LWS_CALLBACK_RAW_ADOPT:
+      lwsl_user("LWS_CALLBACK_RAW_ADOPT\n");
+      pc->wsi_raw = wsi;
       lws_callback_on_writable(wsi);
       break;
-    }
-    case LWS_CALLBACK_RAW_CLOSE: {
-      lwsl_user("RAW_CLOSE\n");
 
-      lws_dll2_foreach_safe(&pc->queue[ONWARD], NULL, proxy_ws_raw_msg_destroy);
+    case LWS_CALLBACK_RAW_CLOSE:
+      lwsl_user("LWS_CALLBACK_RAW_CLOSE\n");
 
-      pc->wsi[ONWARD] = NULL;
+      lws_dll2_foreach_safe(&pc->pending_msg_to_raw, NULL, proxy_ws_raw_msg_destroy);
+
+      pc->wsi_raw = NULL;
       lws_set_opaque_user_data(wsi, NULL);
 
-      if(!pc->wsi[ACCEPTED]) {
+      if(!pc->wsi_ws) {
+
         free(pc);
         break;
       }
 
-      if(pc->queue[ACCEPTED].count) {
+      if(pc->pending_msg_to_ws.count) {
 
-        lws_set_timeout(pc->wsi[ACCEPTED], PENDING_TIMEOUT_KILLED_BY_PROXY_CLIENT_CLOSE, 3);
+        lws_set_timeout(pc->wsi_ws, PENDING_TIMEOUT_KILLED_BY_PROXY_CLIENT_CLOSE, 3);
         break;
       }
 
-      lws_wsi_close(pc->wsi[ACCEPTED], LWS_TO_KILL_ASYNC);
+      lws_wsi_close(pc->wsi_ws, LWS_TO_KILL_ASYNC);
       break;
-    }
-    case LWS_CALLBACK_RAW_RX: {
-      lwsl_user("RAW_RX (%d)\n", (int)len);
-      if(!pc || !pc->wsi[ACCEPTED])
+
+    case LWS_CALLBACK_RAW_RX:
+      lwsl_user("LWS_CALLBACK_RAW_RX (%d)\n", (int)len);
+      if(!pc || !pc->wsi_ws)
         break;
 
-      msg = (MinnetProxyMessage*)malloc(sizeof(*msg) + LWS_PRE + len);
+      msg = (proxy_msg_t*)malloc(sizeof(*msg) + LWS_PRE + len);
       data = (uint8_t*)&msg[1] + LWS_PRE;
 
       if(!msg) {
@@ -177,18 +192,17 @@ raw_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
       msg->len = len;
       memcpy(data, in, len);
 
-      lws_dll2_add_tail(&msg->list, &pc->queue[ACCEPTED]);
+      lws_dll2_add_tail(&msg->list, &pc->pending_msg_to_ws);
 
-      lws_callback_on_writable(pc->wsi[ACCEPTED]);
+      lws_callback_on_writable(pc->wsi_ws);
       break;
-    }
-    case LWS_CALLBACK_RAW_WRITEABLE: {
-      int m, a;
-      lwsl_user("RAW_WRITEABLE\n");
-      if(!pc || !pc->queue[ONWARD].count)
+
+    case LWS_CALLBACK_RAW_WRITEABLE:
+      lwsl_user("LWS_CALLBACK_RAW_WRITEABLE\n");
+      if(!pc || !pc->pending_msg_to_raw.count)
         break;
 
-      msg = lws_container_of(pc->queue[ONWARD].head, MinnetProxyMessage, list);
+      msg = lws_container_of(pc->pending_msg_to_raw.head, proxy_msg_t, list);
       data = (uint8_t*)&msg[1] + LWS_PRE;
 
       m = lws_write(wsi, data, msg->len, LWS_WRITE_TEXT);
@@ -201,13 +215,10 @@ raw_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* use
         return -1;
       }
 
-      if(pc->queue[ONWARD].count)
+      if(pc->pending_msg_to_raw.count)
         lws_callback_on_writable(wsi);
       break;
-    }
-    default: {
-      break;
-    }
+    default: break;
   }
 
   return 0;

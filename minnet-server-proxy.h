@@ -6,17 +6,18 @@
 
 enum { ACCEPTED = 0, ONWARD };
 
-typedef struct proxy_msg {
+/*typedef struct proxy_msg {
   lws_dll2_t list;
   size_t len;
-} MinnetProxyMessage;
+} MinnetProxyMessage;*/
 
 typedef struct proxy_connection {
   struct lws* wsi[2];
   lws_dll2_owner_t queue[2];
 } MinnetProxyConnection;
 
-int proxy_callback(struct lws*, enum lws_callback_reasons reason, void* user, void* in, size_t len);
-int raw_client_callback(struct lws*, enum lws_callback_reasons reason, void* user, void* in, size_t len);
+int proxy_ws_raw_msg_destroy(struct lws_dll2*, void*);
+int callback_proxy_ws_server(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
+int callback_proxy_raw_client(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
 
 #endif /* MINNET_SERVER_PROXY_H */

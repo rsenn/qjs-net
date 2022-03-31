@@ -49,12 +49,33 @@ vhost_options_new(JSContext* ctx, JSValueConst vhost_option) {
 }
 
 void
+vhost_options_free_list(JSContext* ctx, MinnetVhostOptions* vo) {
+  MinnetVhostOptions* next;
+
+  do {
+
+    if(vo->name)
+      js_free(ctx, (void*)vo->name);
+    if(vo->value)
+      js_free(ctx, (void*)vo->value);
+    if(vo->options)
+      vhost_options_free_list(ctx, vo->options);
+
+    next = vo->next;
+    js_free(ctx, (void*)vo);
+  } while((vo = next));
+}
+
+void
 vhost_options_free(JSContext* ctx, MinnetVhostOptions* vo) {
 
   if(vo->name)
     js_free(ctx, (void*)vo->name);
   if(vo->value)
     js_free(ctx, (void*)vo->value);
+
+  if(vo->options)
+    vhost_options_free_list(ctx, vo->options);
 
   js_free(ctx, (void*)vo);
 }
@@ -182,7 +203,7 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
 }
 
 int
-http_server_respond(struct lws* wsi, MinnetBuffer* buf, MinnetResponse* resp, JSContext* ctx) {
+http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* resp, JSContext* ctx) {
 
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int is_ssl = lws_is_ssl(wsi);

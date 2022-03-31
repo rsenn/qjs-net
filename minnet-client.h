@@ -25,21 +25,12 @@ typedef struct client_context {
   ResolveFunctions promise;
 } MinnetClient;
 
-struct client_closure* client_closure_new(JSContext*);
-struct client_closure* client_closure_dup(struct client_closure*);
 void client_free(MinnetClient*);
 MinnetClient* client_dup(MinnetClient*);
 void client_zero(MinnetClient* client);
 JSValue minnet_client_closure(JSContext*, JSValue, int, JSValue argv[], int magic, void* ptr);
 JSValue minnet_client(JSContext*, JSValue, int, JSValue argv[]);
 uint8_t* scan_backwards(uint8_t*, uint8_t);
-
-struct client_closure {
-  int ref_count;
-  MinnetClient* client;
-};
-
-struct client_closure* client_closure_new(JSContext*);
 
 static inline struct client_context*
 lws_client(struct lws* wsi) {

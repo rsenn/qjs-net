@@ -96,6 +96,21 @@ typedef enum client_state {
   CLOSED = 3,
 } MinnetStatus;
 
+typedef enum on_promise {
+  ON_RESOLVE = 0,
+  ON_REJECT,
+} MinnetPromiseEvent;
+
+typedef struct closure {
+  int ref_count;
+  union {
+    struct context* context;
+    struct client_context* client;
+    struct server_context* server;
+  };
+  void (*free_func)(/*void**/);
+} MinnetClosure;
+
 typedef struct ws_callback {
   JSContext* ctx;
   JSValue this_obj;
@@ -170,6 +185,9 @@ void session_zero(MinnetSession*);
 void session_clear(MinnetSession*, JSContext*);
 BOOL context_exception(MinnetContext*, JSValue);
 void context_clear(MinnetContext*);
+MinnetClosure* closure_new(JSContext*);
+MinnetClosure* closure_dup(MinnetClosure*);
+void closure_free(void*);
 int minnet_lws_unhandled(const char*, int);
 JSValue headers_object(JSContext*, const void*, const void*);
 char* headers_atom(JSAtom, JSContext*);

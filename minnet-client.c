@@ -24,9 +24,9 @@ static const struct lws_protocols client_protocols[] = {
     {0},
 };
 
-static void
-client_closure_free(void* ptr) {
-  struct client_closure* closure = ptr;
+/*static void
+closure_free(void* ptr) {
+  MinnetClosure* closure = ptr;
 
   if(--closure->ref_count == 0) {
     if(closure->client) {
@@ -41,22 +41,22 @@ client_closure_free(void* ptr) {
   }
 }
 
-struct client_closure*
-client_closure_new(JSContext* ctx) {
-  struct client_closure* closure;
+MinnetClosure*
+closure_new(JSContext* ctx) {
+  MinnetClosure* closure;
 
-  if((closure = js_mallocz(ctx, sizeof(struct client_closure))))
+  if((closure = js_mallocz(ctx, sizeof(MinnetClosure))))
     closure->ref_count = 1;
 
   return closure;
 }
 
-struct client_closure*
-client_closure_dup(struct client_closure* c) {
+MinnetClosure*
+closure_dup(MinnetClosure* c) {
   ++c->ref_count;
   return c;
 }
-
+*/
 static JSValue
 close_status(JSContext* ctx, const char* in, size_t len) {
   if(len >= 2)
@@ -136,21 +136,16 @@ client_dup(MinnetClient* client) {
   return client;
 }
 
-enum {
-  ON_RESOLVE = 0,
-  ON_REJECT,
-};
-
 static JSValue
 minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
 
   /*switch(magic) {
     case ON_RESOLVE: {
-      printf("%s %s %d\n", __func__, "ON_RESOLVE", ((struct client_closure*)ptr)->ref_count);
+      printf("%s %s %d\n", __func__, "ON_RESOLVE", ((MinnetClosure*)ptr)->ref_count);
       break;
     }
     case ON_REJECT: {
-      printf("%s %s\n", __func__, "ON_REJECT", ((struct client_closure*)ptr)->ref_count);
+      printf("%s %s\n", __func__, "ON_REJECT", ((MinnetClosure*)ptr)->ref_count);
       break;
     }
   }
@@ -177,8 +172,10 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   client_zero(client);
 
-  if(ptr)
-    ((struct client_closure*)ptr)->client = client;
+  if(ptr) {
+    ((MinnetClosure*)ptr)->client = client;
+    ((MinnetClosure*)ptr)->free_func = &client_free;
+  }
 
   *client = (MinnetClient){.context = (MinnetContext){.ref_count = 1}, .headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
 
@@ -349,10 +346,10 @@ fail:
 
 JSValue
 minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  struct client_closure* closure;
+  MinnetClosure* closure;
   JSValue ret;
 
-  if(!(closure = client_closure_new(ctx)))
+  if(!(closure = closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
@@ -360,8 +357,8 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(js_is_promise(ctx, ret)) {
     JSValue func[2], tmp;
 
-    func[0] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, client_closure_dup(closure), client_closure_free);
-    func[1] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_REJECT, client_closure_dup(closure), client_closure_free);
+    func[0] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
+    func[1] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
 
     tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
     JS_FreeValue(ctx, ret);
@@ -375,7 +372,7 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     JS_FreeValue(ctx, func[1]);
   }
 
-  client_closure_free(closure);
+  closure_free(closure);
 
   return ret;
 }

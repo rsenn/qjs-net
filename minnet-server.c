@@ -9,7 +9,7 @@
 #include <quickjs-libc.h>
 #include <libwebsockets.h>
 
-//#include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
+#include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
 #include "minnet-plugin-broker.c"
 
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
@@ -20,6 +20,7 @@ static struct lws_protocols protocols[] = {
     {"defprot", lws_callback_http_dummy, sizeof(MinnetSession), 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
+    LWS_PLUGIN_PROTOCOL_RAW_PROXY,
     {0},
 };
 
@@ -29,6 +30,7 @@ static struct lws_protocols protocols2[] = {
     {"defprot", defprot_callback, sizeof(MinnetSession), 0},
     //  {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
+    LWS_PLUGIN_PROTOCOL_RAW_PROXY,
     {0, 0},
 };
 
@@ -64,20 +66,13 @@ static const struct lws_extension extensions[] = {
 static MinnetServer*
 server_new(JSContext* ctx) {
   MinnetServer* server;
-  struct lws_context_creation_info* info;
-  struct lws_context* context;
 
   if(!(server = js_mallocz(ctx, sizeof(MinnetServer))))
     return (void*)-1;
 
   server->context.error = JS_NULL;
   server->context.js = ctx;
-
-  info = &server->context.info;
-
-  info->protocols = protocols2;
-
-  info->user = server;
+  server->context.info = (struct lws_context_creation_info){.protocols = protocols2, .user = server};
 
   return server;
 }
@@ -97,6 +92,18 @@ server_init(MinnetServer* server) {
   return TRUE;
 }
 
+void
+server_free(MinnetServer* server) {
+  JSContext* ctx = server->context.js;
+
+  if(--server->ref_count == 0) {
+    js_promise_free(ctx, &server->promise);
+
+    context_clear(&server->context);
+
+    js_free(ctx, server);
+  }
+}
 void
 server_certificate(MinnetContext* context, JSValueConst options) {
   struct lws_context_creation_info* info = &context->info;
@@ -131,12 +138,16 @@ server_certificate(MinnetContext* context, JSValueConst options) {
   }
 }
 
+static JSValue
+minnet_server_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  return JS_UNDEFINED;
+}
+
 JSValue
-minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   int argind = 0, a = 0;
   BOOL block = TRUE, is_tls = FALSE, is_h2 = TRUE;
   MinnetServer* server;
-  MinnetVhostOptions* mimetypes = 0;
   MinnetURL url = {0};
   JSValue ret, options;
   struct lws_context_creation_info* info;
@@ -146,7 +157,10 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(!server)
     return JS_ThrowInternalError(ctx, "lws init failed");
 
-  // SETLOG(LLL_INFO)
+  if(ptr) {
+    ((MinnetClosure*)ptr)->server = server;
+    ((MinnetClosure*)ptr)->free_func = &server_free;
+  }
 
   info = &server->context.info;
 
@@ -245,7 +259,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   // info->options |= LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
 
   if(JS_IsArray(ctx, opt_mimetypes)) {
-    MinnetVhostOptions *vopts, **vop = (MinnetVhostOptions**)&mimetypes;
+    MinnetVhostOptions *vopts, **vop = &server->mimetypes;
     uint32_t i;
     for(i = 0;; i++) {
       JSValue mimetype = JS_GetPropertyUint32(ctx, opt_mimetypes, i);
@@ -259,7 +273,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   {
     MinnetVhostOptions* pvo;
 
-    for(pvo = mimetypes; pvo; pvo = pvo->next) {
+    for(pvo = server->mimetypes; pvo; pvo = pvo->next) {
       // printf("pvo mimetype %s %s\n", pvo->name, pvo->value);
     }
   }
@@ -276,7 +290,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
         if(JS_IsUndefined(mountval))
           break;
         mount = mount_new(ctx, mountval, 0);
-        mount->extra_mimetypes = mimetypes;
+        mount->extra_mimetypes = server->mimetypes;
         mount->pro = "http";
         ADD(m, mount, next);
       }
@@ -291,7 +305,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
         const char* name = JS_AtomToCString(ctx, prop);
         JSValue mountval = JS_GetProperty(ctx, opt_mounts, prop);
         mount = mount_new(ctx, mountval, name);
-        mount->extra_mimetypes = mimetypes;
+        mount->extra_mimetypes = server->mimetypes;
         mount->pro = "http";
         ADD(m, mount, next);
         JS_FreeCString(ctx, name);
@@ -321,14 +335,8 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   // lws_context_destroy(server->context.lws);
 
-  if(mimetypes) {
-    MinnetVhostOptions *vhost_options, *next;
-
-    for(vhost_options = mimetypes; vhost_options; vhost_options = next) {
-      next = (MinnetVhostOptions*)vhost_options->lws.next;
-      vhost_options_free(ctx, vhost_options);
-    }
-  }
+  if(server->mimetypes)
+    vhost_options_free_list(ctx, server->mimetypes);
 
   if(info->mounts) {
     const MinnetHttpMount *mount, *next;
@@ -370,6 +378,39 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   FREECB(server->cb.message)
   FREECB(server->cb.fd)
   FREECB(server->cb.http)
+
+  return ret;
+}
+
+JSValue
+minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  struct closure* closure;
+  JSValue ret;
+
+  if(!(closure = closure_new(ctx)))
+    return JS_ThrowOutOfMemory(ctx);
+
+  ret = minnet_server_closure(ctx, this_val, argc, argv, 0, closure);
+
+  if(js_is_promise(ctx, ret)) {
+    JSValue func[2], tmp;
+
+    func[0] = JS_NewCClosure(ctx, &minnet_server_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
+    func[1] = JS_NewCClosure(ctx, &minnet_server_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
+
+    tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
+    JS_FreeValue(ctx, ret);
+    ret = tmp;
+
+    tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
+    JS_FreeValue(ctx, ret);
+    ret = tmp;
+
+    JS_FreeValue(ctx, func[0]);
+    JS_FreeValue(ctx, func[1]);
+  }
+
+  closure_free(closure);
 
   return ret;
 }

@@ -34,15 +34,17 @@ typedef struct http_mount {
   struct http_response* resp;
 } MinnetHttpSession;*/
 
-MinnetVhostOptions* vhost_options_create(JSContext*, const char* name, const char* value);
-void vhost_options_free(JSContext*, MinnetVhostOptions* vo);
-MinnetVhostOptions* vhost_options_new(JSContext*, JSValueConst vhost_option);
-MinnetHttpMount* mount_create(JSContext*, const char*, const char* origin, const char* def, enum lws_mount_protocols origin_proto);
-MinnetHttpMount* mount_new(JSContext*, JSValueConst, const char* key);
+MinnetVhostOptions* vhost_options_create(JSContext*, const char*, const char*);
+MinnetVhostOptions* vhost_options_new(JSContext*, JSValue);
+void vhost_options_free_list(JSContext*, MinnetVhostOptions*);
+void vhost_options_free(JSContext*, MinnetVhostOptions*);
+MinnetHttpMount* mount_create(JSContext*, const char*, const char*, const char* def, enum lws_mount_protocols origin_proto);
+MinnetHttpMount* mount_new(JSContext*, JSValue, const char*);
 struct http_mount* mount_find(MinnetHttpMount*, const char*, size_t);
 void mount_free(JSContext*, MinnetHttpMount const*);
-int http_server_writable(struct lws*, struct http_response*, BOOL done);
-int http_server_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
+int http_server_respond(struct lws*, MinnetBuffer*, struct http_response*, JSContext* ctx);
+int http_server_writable(struct lws*, struct http_response*, BOOL);
+int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
 
 static inline int
 is_h2(struct lws* wsi) {
