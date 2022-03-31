@@ -133,6 +133,20 @@ url_format(const MinnetURL* url, JSContext* ctx) {
   return str;
 }
 
+size_t
+url_length(const MinnetURL url) {
+  size_t portlen = url.port >= 10000 ? 6 : url.port >= 1000 ? 5 : url.port >= 100 ? 4 : url.port >= 10 ? 3 : url.port >= 1 ? 2 : 0;
+  return (url.protocol ? strlen(url.protocol) + 3 : 0) + (url.host ? strlen(url.host) + portlen : 0) + (url.path ? strlen(url.path) : 0) + 1;
+}
+
+MinnetProtocol
+url_set_protocol(MinnetURL* url, const char* proto) {
+  MinnetProtocol p = protocol_number(proto);
+
+  url->protocol = protocol_string(p);
+  return p;
+}
+
 void
 url_free(MinnetURL* url, JSContext* ctx) {
   if(url->host)
@@ -160,7 +174,13 @@ url_info(const MinnetURL* url, struct lws_client_connect_info* info) {
   switch(proto) {
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
+#if defined(LWS_ROLE_H2) && defined(LWS_ROLE_H1)
+      info->alpn = "h2,http/1.1";
+#elif defined(LWS_ROLE_H2)
+      info->alpn = "h2";
+#elif defined(LWS_ROLE_H1)
       info->alpn = "http/1.1";
+#endif
       info->protocol = "http";
       break;
     }
