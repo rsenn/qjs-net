@@ -2,6 +2,7 @@
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 #include "minnet-server-http.h"
+#include "minnet-server-proxy.h"
 #include "minnet-response.h"
 #include "minnet-request.h"
 #include "minnet-url.h"
@@ -18,6 +19,8 @@ static struct lws_protocols protocols[] = {
     {"ws", ws_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     {"defprot", lws_callback_http_dummy, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"lws-ws-raw-ws", callback_proxy_ws_server, 0, 1024, 0, NULL, 0},
+    {"lws-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
     LWS_PLUGIN_PROTOCOL_RAW_PROXY,

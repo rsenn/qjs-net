@@ -25,67 +25,68 @@ proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
   return 0;
 }
 
+static proxy_conn_t*
+proxy_new() {
+  proxy_conn_t* pc;
+  if((pc = malloc(sizeof(*pc))))
+    memset(pc, 0, sizeof(*pc));
+
+  return pc;
+}
+
 int
 callback_proxy_ws_server(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);
-  struct lws_client_connect_info i;
-  proxy_msg_t* msg;
-  uint8_t* data;
-  int m, a;
 
   switch(reason) {
-    case LWS_CALLBACK_ESTABLISHED:
+    case LWS_CALLBACK_ESTABLISHED: {
+      struct lws_client_connect_info info;
 
-      pc = malloc(sizeof(*pc));
-      memset(pc, 0, sizeof(*pc));
-
+      pc = proxy_new();
       lws_set_opaque_user_data(wsi, pc);
 
       pc->wsi_ws = wsi;
 
-      memset(&i, 0, sizeof(i));
+      memset(&info, 0, sizeof(info));
 
-      i.method = "RAW";
-      i.context = lws_get_context(wsi);
-      i.port = 1234;
-      i.address = "127.0.0.1";
-      i.ssl_connection = 0;
-      i.local_protocol_name = "lws-ws-raw-raw";
+      info.method = "RAW";
+      info.context = lws_get_context(wsi);
+      info.port = 1234;
+      info.address = "127.0.0.1";
+      info.ssl_connection = 0;
+      info.local_protocol_name = "lws-ws-raw-raw";
 
-      i.opaque_user_data = pc;
+      info.opaque_user_data = pc;
 
-      i.pwsi = &pc->wsi_raw;
+      info.pwsi = &pc->wsi_raw;
 
-      if(!lws_client_connect_via_info(&i)) {
+      if(!lws_client_connect_via_info(&info)) {
         lwsl_warn("%s: onward connection failed\n", __func__);
         return -1;
       }
 
       break;
-
-    case LWS_CALLBACK_CLOSED:
-
+    }
+    case LWS_CALLBACK_CLOSED: {
       lws_dll2_foreach_safe(&pc->pending_msg_to_ws, NULL, proxy_ws_raw_msg_destroy);
-
       pc->wsi_ws = NULL;
       lws_set_opaque_user_data(wsi, NULL);
-
       if(!pc->wsi_raw) {
-
         free(pc);
         break;
       }
-
       if(pc->pending_msg_to_raw.count) {
-
         lws_set_timeout(pc->wsi_raw, PENDING_TIMEOUT_KILLED_BY_PROXY_CLIENT_CLOSE, 3);
         break;
       }
-
       lws_wsi_close(pc->wsi_raw, LWS_TO_KILL_ASYNC);
       break;
+    }
+    case LWS_CALLBACK_SERVER_WRITEABLE: {
+      proxy_msg_t* msg;
+      uint8_t* data;
+      int m, a;
 
-    case LWS_CALLBACK_SERVER_WRITEABLE:
       if(!pc || !pc->pending_msg_to_ws.count)
         break;
 
@@ -105,8 +106,11 @@ callback_proxy_ws_server(struct lws* wsi, enum lws_callback_reasons reason, void
       if(pc->pending_msg_to_ws.count)
         lws_callback_on_writable(wsi);
       break;
+    }
+    case LWS_CALLBACK_RECEIVE: {
+      proxy_msg_t* msg;
+      uint8_t* data;
 
-    case LWS_CALLBACK_RECEIVE:
       if(!pc || !pc->wsi_raw)
         break;
 
@@ -126,8 +130,10 @@ callback_proxy_ws_server(struct lws* wsi, enum lws_callback_reasons reason, void
 
       lws_callback_on_writable(pc->wsi_raw);
       break;
-
-    default: break;
+    }
+    default: {
+      break;
+    }
   }
 
   return 0;

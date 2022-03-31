@@ -82,16 +82,19 @@ vhost_options_free(JSContext* ctx, MinnetVhostOptions* vo) {
 
 MinnetHttpMount*
 mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, enum lws_mount_protocols origin_proto) {
-  MinnetHttpMount* m = js_mallocz(ctx, sizeof(MinnetHttpMount));
+  MinnetHttpMount* m;
 
-  // printf("mount_create mnt=%-10s org=%-10s def=%s\n", mountpoint, origin, def);
+  if((m = js_mallocz(ctx, sizeof(MinnetHttpMount)))) {
 
-  m->lws.mountpoint = js_strdup(ctx, mountpoint);
-  m->lws.origin = origin ? js_strdup(ctx, origin) : 0;
-  m->lws.def = def ? js_strdup(ctx, def) : 0;
-  m->lws.protocol = origin_proto == LWSMPRO_CALLBACK ? "http" : "defprot";
-  m->lws.origin_protocol = origin_proto;
-  m->lws.mountpoint_len = strlen(mountpoint);
+    // printf("mount_create mnt=%-10s org=%-10s def=%s\n", mountpoint, origin, def);
+
+    m->lws.mountpoint = js_strdup(ctx, mountpoint);
+    m->lws.origin = origin ? js_strdup(ctx, origin) : 0;
+    m->lws.def = def ? js_strdup(ctx, def) : 0;
+    m->lws.protocol = origin_proto == LWSMPRO_CALLBACK ? "http" : "defprot";
+    m->lws.origin_protocol = origin_proto;
+    m->lws.mountpoint_len = strlen(mountpoint);
+  }
 
   return m;
 }
