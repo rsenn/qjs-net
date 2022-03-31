@@ -62,7 +62,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       // buf.start = scan_backwards(buf.start, '\0');
       if(JS_IsObject(client->headers)) {
         // client->request->headers.start = buf.start;
-        if(headers_from(&buf, wsi, client->headers, client->context.js))
+        if(headers_add(&buf, wsi, client->headers, client->context.js))
           return -1;
         // client->request->headers.end = buf.end;
         *(uint8_t**)in = buf.write;

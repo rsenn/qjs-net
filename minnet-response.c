@@ -293,7 +293,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
          break;
        }*/
     case RESPONSE_HEADERS: {
-      ret = headers_object(ctx, &resp->headers);
+      ret = headers_object(ctx, &resp->headers.start, &resp->headers.write);
       break;
     }
     case RESPONSE_BODYUSED: {
