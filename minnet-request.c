@@ -44,7 +44,7 @@ method_number(const char* name) {
 void
 request_format(MinnetRequest const* req, char* buf, size_t len, JSContext* ctx) {
   char* headers = buffer_escaped(&req->headers, ctx);
-  char* url = url_format(req->url, ctx);
+  char* url = url_format(&req->url, ctx);
   snprintf(buf, len, FGC(196, "MinnetRequest") " { method: '%s', url: '%s', headers: '%s' }", method_name(req->method), url, headers);
 
   js_free(ctx, headers);
@@ -246,7 +246,7 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   while(argc > 0) {
 
     if(!got_url) {
-      got_url = url_from(&req->url, argv[0], ctx);
+      /*got_url = */url_from(&req->url, argv[0], ctx);
 
     } else if(JS_IsObject(argv[0])) {
       js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);
@@ -313,7 +313,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_HEADERS: {
-      ret = headers_object(ctx, req->headers.start, req->headers.end);
+      ret = headers_object(ctx, &req->headers.start);
       // ret = buffer_tostring(&req->headers, ctx);
       break;
     }

@@ -3,7 +3,7 @@
 #include "minnet-request.h"
 #include "minnet-response.h"
 #include "minnet-websocket.h"
-#include "minnet-ringbuffer.h"
+#include "minnet-stream.h"
 #include "minnet-url.h"
 #include "jsutils.h"
 #include "minnet-buffer.h"
@@ -53,6 +53,23 @@ THREAD_LOCAL int32_t minnet_log_level = 0;
 THREAD_LOCAL JSContext* minnet_log_ctx = 0;
 // THREAD_LOCAL BOOL minnet_exception = FALSE;
 
+static const JSCFunctionListEntry minnet_loglevels[] = {
+    JS_INDEX_STRING_DEF(1, "ERR"),
+    JS_INDEX_STRING_DEF(2, "WARN"),
+    JS_INDEX_STRING_DEF(4, "NOTICE"),
+    JS_INDEX_STRING_DEF(8, "INFO"),
+    JS_INDEX_STRING_DEF(16, "DEBUG"),
+    JS_INDEX_STRING_DEF(32, "PARSER"),
+    JS_INDEX_STRING_DEF(64, "HEADER"),
+    JS_INDEX_STRING_DEF(128, "EXT"),
+    JS_INDEX_STRING_DEF(256, "CLIENT"),
+    JS_INDEX_STRING_DEF(512, "LATENCY"),
+    JS_INDEX_STRING_DEF(1024, "USER"),
+    JS_INDEX_STRING_DEF(2048, "THREAD"),
+    JS_INDEX_STRING_DEF(4095, "ALL"),
+};
+
+
 int
 socket_geterror(int fd) {
   int e;
@@ -66,57 +83,19 @@ socket_geterror(int fd) {
   return -1;
 }
 
-void
-session_zero(MinnetSession* session) {
-  memset(session, 0, sizeof(MinnetSession));
-  session->ws_obj = JS_NULL;
-  session->req_obj = JS_NULL;
-  session->resp_obj = JS_NULL;
-  session->generator = JS_NULL;
-  session->next = JS_NULL;
-}
-
-void
-session_clear(MinnetSession* session, JSContext* ctx) {
-
-  JS_FreeValue(ctx, session->ws_obj);
-  JS_FreeValue(ctx, session->req_obj);
-  JS_FreeValue(ctx, session->resp_obj);
-  JS_FreeValue(ctx, session->generator);
-  JS_FreeValue(ctx, session->next);
-
-  buffer_free(&session->send_buf, JS_GetRuntime(ctx));
-}
-
 BOOL
 context_exception(MinnetContext* context, JSValue retval) {
   if(JS_IsException(retval)) {
     context->exception = TRUE;
     JSValue exception = JS_GetException(context->js);
-    JSValue stack = JS_GetPropertyStr(context->js, exception, "stack");
+
     const char* err = JS_ToCString(context->js, exception);
-    const char* stk = JS_ToCString(context->js, stack);
-    printf("Got exception: %s\n%s\n", err, stk);
+    printf("Got exception: %s\n", err);
     JS_FreeCString(context->js, err);
-    JS_FreeCString(context->js, stk);
-    JS_FreeValue(context->js, stack);
     JS_Throw(context->js, exception);
   }
 
   return context->exception;
-}
-
-void
-context_clear(MinnetContext* context) {
-  JSContext* ctx = context->js;
-
-  lws_context_destroy(context->lws);
-
-  JS_FreeValue(ctx, context->crt);
-  JS_FreeValue(ctx, context->key);
-  JS_FreeValue(ctx, context->ca);
-
-  JS_FreeValue(ctx, context->error);
 }
 
 static void
@@ -136,10 +115,7 @@ lws_log_callback(int level, const char* line) {
       if(len > 0 && line[len - 1] == '\n')
         len--;
 
-      JSValueConst argv[2] = {
-          JS_NewInt32(minnet_log_ctx, level),
-          JS_NewStringLen(minnet_log_ctx, line + n, len - n),
-      };
+      JSValueConst argv[2] = {JS_NewInt32(minnet_log_ctx, level), JS_NewStringLen(minnet_log_ctx, line + n, len - n)};
       JSValue ret = JS_Call(minnet_log_ctx, minnet_log_cb, minnet_log_this, 2, argv);
 
       if(JS_IsException(ret)) {
@@ -198,12 +174,12 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 }
 
 JSValue
-headers_object(JSContext* ctx, const void* start, const void* e) {
+headers_object(JSContext* ctx, const MinnetBuffer* buffer) {
   JSValue ret = JS_NewObject(ctx);
   size_t len, namelen, n;
-  const uint8_t *x, *end;
-  for(x = start, end = e; x < end; x += len + 1) {
-    len = byte_chrs(x, end - x, "\r\n", 2);
+  uint8_t *x, *end;
+  for(x = buffer->start, end = buffer->write; x < end; x += len + 1) {
+    len = byte_chr(x, end - x, '\n');
     if(len > (n = byte_chr(x, len, ':'))) {
       const char* prop = (namelen = n) ? js_strndup(ctx, (const char*)x, namelen) : 0;
       if(x[n] == ':')
@@ -234,7 +210,7 @@ headers_atom(JSAtom atom, JSContext* ctx) {
 }
 
 int
-headers_add(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
+headers_from(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
 
@@ -244,8 +220,8 @@ headers_add(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* 
   for(i = 0; i < tab_len; i++) {
     JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);
     size_t len;
-    void* prop;
-    const void* str;
+    char* prop;
+    const char* str;
     int ret;
 
     str = JS_ToCStringLen(ctx, &len, value);
@@ -264,40 +240,6 @@ headers_add(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* 
 
   js_free(ctx, tab);
   return 0;
-}
-
-int
-headers_fromobj(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
-  JSPropertyEnum* tab;
-  uint32_t tab_len, i;
-
-  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
-    return 0;
-
-  for(i = 0; i < tab_len; i++) {
-    JSValue jsval = JS_GetProperty(ctx, obj, tab[i].atom);
-    size_t value_len, prop_len;
-    const char *value, *prop;
-
-    value = JS_ToCStringLen(ctx, &value_len, jsval);
-    JS_FreeValue(ctx, jsval);
-
-    prop = JS_AtomToCString(ctx, tab[i].atom);
-    prop_len = strlen(prop);
-
-    buffer_grow(buffer, prop_len + 2 + value_len + 2, ctx);
-
-    buffer_write(buffer, prop, prop_len);
-    buffer_write(buffer, ": ", 2);
-    buffer_write(buffer, value, value_len);
-    buffer_write(buffer, "\r\n", 2);
-
-    JS_FreeCString(ctx, prop);
-    JS_FreeCString(ctx, value);
-  }
-
-  js_free(ctx, tab);
-  return i;
 }
 
 ssize_t
@@ -348,16 +290,48 @@ headers_get(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
 }
 
 int
+headers_fromobj(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
+  JSPropertyEnum* tab;
+  uint32_t tab_len, i;
+
+  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
+    return 0;
+
+  for(i = 0; i < tab_len; i++) {
+    JSValue jsval = JS_GetProperty(ctx, obj, tab[i].atom);
+    size_t value_len, prop_len;
+    const char *value, *prop;
+
+    value = JS_ToCStringLen(ctx, &value_len, jsval);
+    JS_FreeValue(ctx, jsval);
+
+    prop = JS_AtomToCString(ctx, tab[i].atom);
+    prop_len = strlen(prop);
+
+    buffer_grow(buffer, prop_len + 2 + value_len + 2, ctx);
+
+    buffer_write(buffer, prop, prop_len);
+    buffer_write(buffer, ": ", 2);
+    buffer_write(buffer, value, value_len);
+    buffer_write(buffer, "\r\n", 2);
+
+    JS_FreeCString(ctx, prop);
+    JS_FreeCString(ctx, value);
+  }
+
+  js_free(ctx, tab);
+  return i;
+}
+
+
+int
 fd_handler(struct lws* wsi, MinnetCallback* cb, struct lws_pollargs args) {
   JSValue argv[3] = {JS_NewInt32(cb->ctx, args.fd)};
-
   minnet_handlers(cb->ctx, wsi, args, &argv[1]);
   minnet_emit(cb, 3, argv);
-
   JS_FreeValue(cb->ctx, argv[0]);
   JS_FreeValue(cb->ctx, argv[1]);
   JS_FreeValue(cb->ctx, argv[2]);
-  return 0;
 }
 
 int
@@ -396,9 +370,9 @@ fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* c
   }
 }
 
-/*static const char*
+static const char*
 io_events(int events) {
-  switch(events) {
+  switch(events /* & (POLLIN | POLLOUT)*/) {
     case POLLOUT | POLLHUP: return "OUT|HUP";
     case POLLIN | POLLOUT | POLLHUP | POLLERR: return "IN|OUT|HUP|ERR";
     case POLLOUT | POLLHUP | POLLERR: return "OUT|HUP|ERR";
@@ -406,12 +380,13 @@ io_events(int events) {
     case POLLIN: return "IN";
     case POLLOUT:
       return "OUT";
+      //  case 0: return "0";
   }
   assert(!events);
   return "";
-}*/
+}
 
-/*static int
+static int
 io_parse_events(const char* str) {
   int events = 0;
 
@@ -424,14 +399,13 @@ io_parse_events(const char* str) {
   if(strstr(str, "ERR"))
     events |= POLLERR;
   return events;
-}*/
+}
 
 static JSValue
 minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   struct handler_closure* closure = ptr;
   struct pollfd* p;
-  int32_t wr;
-  JSValue ret = JS_UNDEFINED;
+  int32_t wr, ret;
 
   assert(closure->opaque);
   p = &closure->opaque->poll;
@@ -453,10 +427,10 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
 
     // errno = 0;
 
-    ret = JS_NewInt32(ctx, lws_service_fd(lws_get_context(closure->lwsi), &x));
+    ret = lws_service_fd(lws_get_context(closure->lwsi), &x);
   }
 
-  return ret;
+  return JS_UNDEFINED;
 }
 
 static void
@@ -498,7 +472,6 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
   out[0] = (events & POLLIN) ? opaque->handlers[READ_HANDLER] : JS_NULL;
   out[1] = (events & POLLOUT) ? opaque->handlers[WRITE_HANDLER] : JS_NULL;
 }
-
 */
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {
@@ -541,26 +514,12 @@ minnet_emit(const struct ws_callback* cb, int argc, JSValue* argv) {
   return minnet_emit_this(cb, cb->this_obj /* ? *cb->this_obj : JS_NULL*/, argc, argv);
 }
 
-static const JSCFunctionListEntry minnet_loglevels[] = {
-    JS_INDEX_STRING_DEF(1, "ERR"),
-    JS_INDEX_STRING_DEF(2, "WARN"),
-    JS_INDEX_STRING_DEF(4, "NOTICE"),
-    JS_INDEX_STRING_DEF(8, "INFO"),
-    JS_INDEX_STRING_DEF(16, "DEBUG"),
-    JS_INDEX_STRING_DEF(32, "PARSER"),
-    JS_INDEX_STRING_DEF(64, "HEADER"),
-    JS_INDEX_STRING_DEF(128, "EXT"),
-    JS_INDEX_STRING_DEF(256, "CLIENT"),
-    JS_INDEX_STRING_DEF(512, "LATENCY"),
-    JS_INDEX_STRING_DEF(1024, "USER"),
-    JS_INDEX_STRING_DEF(2048, "THREAD"),
-    JS_INDEX_STRING_DEF(4095, "ALL"),
-};
-
 static const JSCFunctionListEntry minnet_funcs[] = {
-    JS_CFUNC_DEF("server", 1, minnet_server),
+    JS_CFUNC_DEF("server", 1, minnet_ws_server),
     JS_CFUNC_DEF("client", 1, minnet_client),
+#ifdef USE_CURL
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
+#endif
     JS_CFUNC_SPECIAL_DEF("socket", 1, constructor, minnet_ws_constructor),
     JS_CFUNC_SPECIAL_DEF("url", 1, constructor, minnet_url_constructor),
     // JS_CGETSET_DEF("log", get_log, set_log),
@@ -633,18 +592,18 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
     JS_SetModuleExport(ctx, m, "Request", minnet_request_ctor);
 
   // Add class Stream
-  JS_NewClassID(&minnet_ringbuffer_class_id);
+  JS_NewClassID(&minnet_stream_class_id);
 
-  JS_NewClass(JS_GetRuntime(ctx), minnet_ringbuffer_class_id, &minnet_ringbuffer_class);
-  minnet_ringbuffer_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_ringbuffer_proto, minnet_ringbuffer_proto_funcs, minnet_ringbuffer_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_ringbuffer_class_id, minnet_ringbuffer_proto);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_stream_class_id, &minnet_stream_class);
+  minnet_stream_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_stream_proto, minnet_stream_proto_funcs, minnet_stream_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_stream_class_id, minnet_stream_proto);
 
-  minnet_ringbuffer_ctor = JS_NewCFunction2(ctx, minnet_ringbuffer_constructor, "MinnetRingBuffer", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_ringbuffer_ctor, minnet_ringbuffer_proto);
+  minnet_stream_ctor = JS_NewCFunction2(ctx, minnet_stream_constructor, "MinnetStream", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_stream_ctor, minnet_stream_proto);
 
   if(m)
-    JS_SetModuleExport(ctx, m, "Stream", minnet_ringbuffer_ctor);
+    JS_SetModuleExport(ctx, m, "Stream", minnet_stream_ctor);
 
   // Add class URL
   minnet_url_init(ctx, m);
@@ -807,3 +766,39 @@ lws_callback_name(int reason) {
       "LWS_CALLBACK_CONNECTING",
   })[reason];
 }
+
+void
+context_clear(MinnetContext* context) {
+  JSContext* ctx = context->js;
+
+  lws_context_destroy(context->lws);
+
+  JS_FreeValue(ctx, context->crt);
+  JS_FreeValue(ctx, context->key);
+  JS_FreeValue(ctx, context->ca);
+
+  JS_FreeValue(ctx, context->error);
+}
+
+void
+session_zero(MinnetSession* session) {
+  memset(session, 0, sizeof(MinnetSession));
+  session->ws_obj = JS_NULL;
+  session->req_obj = JS_NULL;
+  session->resp_obj = JS_NULL;
+  session->generator = JS_NULL;
+  session->next = JS_NULL;
+}
+
+void
+session_clear(MinnetSession* session, JSContext* ctx) {
+
+  JS_FreeValue(ctx, session->ws_obj);
+  JS_FreeValue(ctx, session->req_obj);
+  JS_FreeValue(ctx, session->resp_obj);
+  JS_FreeValue(ctx, session->generator);
+  JS_FreeValue(ctx, session->next);
+
+  buffer_free(&session->send_buf, JS_GetRuntime(ctx));
+}
+

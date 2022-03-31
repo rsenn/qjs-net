@@ -134,6 +134,7 @@ typedef struct session_data {
   struct server_context* server;
   struct client_context* client;
   MinnetBuffer send_buf;
+  char* url;
 } MinnetSession;
 
 typedef struct callbacks {
@@ -164,27 +165,22 @@ extern THREAD_LOCAL int32_t minnet_log_level;
 extern THREAD_LOCAL JSContext* minnet_log_ctx;
 extern THREAD_LOCAL BOOL minnet_exception;
 
-void session_zero(MinnetSession*);
-void session_clear(MinnetSession* session, JSContext* ctx);
-int socket_geterror(int fd);
-BOOL context_exception(MinnetContext* context, JSValue retval);
-void context_clear(MinnetContext*);
-void server_certificate(MinnetContext*, JSValueConst);
-JSValue headers_object(JSContext*, const void*, const void*);
-char* headers_atom(JSAtom, JSContext* ctx);
-int headers_add(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);
-ssize_t headers_set(JSContext*, MinnetBuffer*, const char* name, const char* value);
-int headers_get(JSContext*, MinnetBuffer*, struct lws* wsi);
-int headers_fromobj(MinnetBuffer*, JSValueConst, JSContext*);
-int fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
-int fd_callback(struct lws*, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args);
-int minnet_lws_unhandled(const char* handler, int);
-JSValue minnet_emit_this(const struct ws_callback*, JSValueConst this_obj, int argc, JSValue* argv);
-JSValue minnet_emit(const struct ws_callback*, int argc, JSValue* argv);
-void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValue out[2]);
-void value_dump(JSContext*, const char* n, JSValue const* v);
-VISIBLE JSModuleDef* JS_INIT_MODULE(JSContext*, const char* module_name);
-const char* lws_callback_name(int);
+int          socket_geterror(int);
+BOOL         context_exception(MinnetContext*, JSValue);
+int          minnet_lws_unhandled(const char*, int);
+JSValue      headers_object(JSContext*, const MinnetBuffer*);
+char*        headers_atom(JSAtom, JSContext*);
+int          headers_from(MinnetBuffer*, struct lws*, JSValue, JSContext* ctx);
+ssize_t      headers_set(JSContext*, MinnetBuffer*, const char*, const char* value);
+int          headers_get(JSContext*, MinnetBuffer*, struct lws*);
+int          fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
+int          fd_callback(struct lws*, enum lws_callback_reasons, MinnetCallback*, struct lws_pollargs* args);
+void         minnet_handlers(JSContext*, struct lws*, struct lws_pollargs, JSValue out[2]);
+JSValue      minnet_emit_this(const struct ws_callback*, JSValue, int, JSValue* argv);
+JSValue      minnet_emit(const struct ws_callback*, int, JSValue*);
+void         value_dump(JSContext*, const char*, JSValue const*);
+JSModuleDef* js_init_module_minnet(JSContext*, const char*);
+const char*  lws_callback_name(int);
 
 static inline BOOL
 lws_is_poll_callback(int reason) {
