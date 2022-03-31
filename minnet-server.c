@@ -108,6 +108,46 @@ server_free(MinnetServer* server) {
     js_free(ctx, server);
   }
 }
+
+void
+server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
+  JSContext* ctx = server->context.js;
+  struct lws_context_creation_info* info = &server->context.info;
+  MinnetHttpMount** m = &info->mounts;
+
+  *m = 0;
+
+  if(JS_IsArray(ctx, opt_mounts)) {
+    uint32_t i;
+    for(i = 0;; i++) {
+      MinnetHttpMount* mount;
+      JSValue mountval = JS_GetPropertyUint32(ctx, opt_mounts, i);
+      if(JS_IsUndefined(mountval))
+        break;
+      mount = mount_new(ctx, mountval, 0);
+      mount->extra_mimetypes = server->mimetypes;
+      mount->pro = "http";
+      ADD(m, mount, next);
+    }
+  } else if(JS_IsObject(opt_mounts)) {
+    JSPropertyEnum* tmp_tab;
+    uint32_t i, tmp_len = 0;
+    JS_GetOwnPropertyNames(ctx, &tmp_tab, &tmp_len, opt_mounts, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK);
+
+    for(i = 0; i < tmp_len; i++) {
+      MinnetHttpMount* mount;
+      JSAtom prop = tmp_tab[i].atom;
+      const char* name = JS_AtomToCString(ctx, prop);
+      JSValue mountval = JS_GetProperty(ctx, opt_mounts, prop);
+      mount = mount_new(ctx, mountval, name);
+      mount->extra_mimetypes = server->mimetypes;
+      mount->pro = "http";
+      ADD(m, mount, next);
+      JS_FreeCString(ctx, name);
+    }
+  }
+}
+
 void
 server_certificate(MinnetContext* context, JSValueConst options) {
   struct lws_context_creation_info* info = &context->info;
@@ -282,40 +322,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-  info->mounts = 0;
-  {
-    MinnetHttpMount** m = (MinnetHttpMount**)&info->mounts;
+  // info->mounts = 0;
 
-    if(JS_IsArray(ctx, opt_mounts)) {
-      uint32_t i;
-      for(i = 0;; i++) {
-        MinnetHttpMount* mount;
-        JSValue mountval = JS_GetPropertyUint32(ctx, opt_mounts, i);
-        if(JS_IsUndefined(mountval))
-          break;
-        mount = mount_new(ctx, mountval, 0);
-        mount->extra_mimetypes = server->mimetypes;
-        mount->pro = "http";
-        ADD(m, mount, next);
-      }
-    } else if(JS_IsObject(opt_mounts)) {
-      JSPropertyEnum* tmp_tab;
-      uint32_t i, tmp_len = 0;
-      JS_GetOwnPropertyNames(ctx, &tmp_tab, &tmp_len, opt_mounts, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK);
-
-      for(i = 0; i < tmp_len; i++) {
-        MinnetHttpMount* mount;
-        JSAtom prop = tmp_tab[i].atom;
-        const char* name = JS_AtomToCString(ctx, prop);
-        JSValue mountval = JS_GetProperty(ctx, opt_mounts, prop);
-        mount = mount_new(ctx, mountval, name);
-        mount->extra_mimetypes = server->mimetypes;
-        mount->pro = "http";
-        ADD(m, mount, next);
-        JS_FreeCString(ctx, name);
-      }
-    }
-  }
+  server_mounts(server, opt_mounts);
 
   if(!server_init(server))
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");

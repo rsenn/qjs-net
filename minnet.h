@@ -155,8 +155,6 @@ typedef struct session_data {
   struct server_context* server;
   struct client_context* client;
   MinnetBuffer send_buf;
-  MinnetURL url;
-  MinnetHttpMethod method;
 } MinnetSession;
 
 typedef struct callbacks {
