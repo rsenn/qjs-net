@@ -80,7 +80,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         sess->ws_obj = minnet_ws_wrap(ctx, wsi);
         opaque->ws = minnet_ws_data2(ctx, sess->ws_obj);
 
-        lwsl_user("ws   " FG("%d") "%-38s" NC " wsi#%" PRId64 " req=%p url=%s\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, opaque->req, opaque->req->url);
+        LOG("ws", "wsi#%" PRId64 " req=%p url.path=%s", opaque->serial, opaque->req, opaque->req->url.path);
         server_exception(&minnet_server, minnet_emit_this(&minnet_server.cb.connect, sess->ws_obj, 2, &sess->ws_obj));
       }
 
@@ -102,7 +102,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
         opaque->status = CLOSING;
 
-        lwsl_user("ws   " FG("%d") "%-38s" NC " fd=%d, status=%d\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), opaque->status);
+        LOG("ws", "fd=%d, status=%d", lws_get_socket_fd(wsi), opaque->status);
 
         if(ctx) {
           JSValue cb_argv[3] = {sess->ws_obj, code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED, why};
@@ -160,8 +160,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
   }
 
-  // lwsl_user("ws   " FG("%d") "%-38s" NC " fd=%d url='%s' in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), lws_get_uri(wsi, minnet_server.context.js,
-  // WSI_TOKEN_GET_URI), (int)len, (char*)in);
+  // lwsl_user("ws   " FG("%d") "%-38s" NC " fd=%d url='%s' in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), lws_get_uri(wsi, minnet_server.context.js, // WSI_TOKEN_GET_URI), (int)len, (char*)in);
 
   if(opaque && opaque->status >= CLOSING)
     return -1;

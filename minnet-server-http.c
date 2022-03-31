@@ -377,7 +377,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
   url_len = url ? strlen(url) : 0;
 
-  lwsl_user("HTTP " FG("%d") "%-38s" NC " wsi#%" PRId64 " url='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)url_len, url);
+  LOG("HTTP", "wsi#%" PRId64 " url.path='%.*s'", opaque->serial, (int)url_len, opaque->req ? opaque->req->url.path : 0);
 
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
@@ -466,7 +466,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(url && in && len < url_len && !strcmp((url_len - len) + url, in))
         mountpoint_len = url_len - len;
 
-      lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " mountpoint='%.*s' path='%s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)mountpoint_len, url, path);
+      LOG("http", "wsi#%" PRId64 " mountpoint='%.*s' path='%s'", opaque->serial, (int)mountpoint_len, url, opaque->req->url.path);
 
       if(!opaque->req) {
         MinnetURL url = {0};
@@ -492,13 +492,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         assert(!strncmp(url, mount->mnt, mlen));
         assert(!strcmp(url + mlen, path));
 
-        lwsl_user("http " FG("%d") "%-38s" NC " mount: mnt='%s', org='%s', pro='%s', origin_protocol='%s'\n",
-                  22 + (reason * 2),
-                  lws_callback_name(reason) + 13,
-                  mount->mnt,
-                  mount->org,
-                  mount->pro,
-                  ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK"})[(uintptr_t)mount->lws.origin_protocol]);
+        lwsl_user("http " FG("%d") "%-38s" NC " mount: mnt='%s', org='%s', pro='%s', origin_protocol='%s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, mount->mnt, mount->org, mount->pro, ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK"})[(uintptr_t)mount->lws.origin_protocol]);
       }
 
       args[0] = serv->req_obj = minnet_request_wrap(ctx, opaque->req);
@@ -509,7 +503,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetRequest* req = opaque->req;
       MinnetResponse* resp = minnet_response_data2(ctx, args[1]);
 
-      lwsl_user("http " FG("%d") "%-38s" NC " req=%p, header=%zu\n", 22 + (reason * 2), lws_callback_name(reason) + 13, req, buffer_HEAD(&req->headers));
+      LOG("http", "req=%p, header=%zu", req, buffer_HEAD(&req->headers));
 
       ++req->ref_count;
       MinnetCallback* cb = &minnet_server.cb.http;
@@ -545,7 +539,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             serv->next = JS_UNDEFINED;
           } else {
 
-            lwsl_user("http " FG("%d") "%-38s" NC " url=%s path=%s mountpoint=%.*s\n", 22 + (reason * 2), lws_callback_name(reason) + 13, url, path, (int)mountpoint_len, url);
+            LOG("http", "url=%s path=%s mountpoint=%.*s", url, path, (int)mountpoint_len, opaque->req->url.path);
             if(lws_http_transaction_completed(wsi))
               return -1;
           }
@@ -571,15 +565,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetResponse* resp = minnet_response_data2(minnet_server.context.js, serv->resp_obj);
       BOOL done = FALSE;
 
-      lwsl_user("http-writeable " FG("%d") "%-38s" NC " wsi#%" PRId64 " h2=%u mnt=%s remain=%td type=%s url.path=%s",
-                22 + (reason * 2),
-                lws_callback_name(reason) + 13,
-                opaque->serial,
-                serv->h2,
-                serv->mount ? serv->mount->mnt : 0,
-                resp ? buffer_BYTES(&resp->body) : 0,
-                resp ? resp->type : 0,
-                resp->url.path ? resp->url.path : 0);
+      lwsl_user("http-writeable " FG("%d") "%-38s" NC " wsi#%" PRId64 " h2=%u mnt=%s remain=%td type=%s url.path=%s", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, serv->h2, serv->mount ? serv->mount->mnt : 0, resp ? buffer_BYTES(&resp->body) : 0, resp ? resp->type : 0, resp->url.path ? resp->url.path : 0);
 
       if(JS_IsObject(serv->generator)) {
         JSValue ret = JS_UNDEFINED;
@@ -651,18 +637,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
   int ret = 0;
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE && (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
-    lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " fd=%i is_h2=%i is_ssl=%i url=%s method=%s in='%.*s' ret=%d\n",
-              22 + (reason * 2),
-              lws_callback_name(reason) + 13,
-              opaque->serial,
-              lws_get_socket_fd(wsi),
-              (serv && serv->h2) || is_h2(wsi),
-              lws_is_ssl(wsi),
-              url,
-              method_name(method),
-              (int)len,
-              (char*)in,
-              ret);
+    lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " fd=%i is_h2=%i is_ssl=%i url=%s method=%s in='%.*s' ret=%d\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, lws_get_socket_fd(wsi), (serv && serv->h2) || is_h2(wsi), lws_is_ssl(wsi), url, method_name(method), (int)len, (char*)in, ret);
   }
 
   ret = lws_callback_http_dummy(wsi, reason, user, in, len);
