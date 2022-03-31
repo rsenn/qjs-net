@@ -44,7 +44,7 @@ method_number(const char* name) {
 void
 request_format(MinnetRequest const* req, char* buf, size_t len, JSContext* ctx) {
   char* headers = buffer_escaped(&req->headers, ctx);
-  char* url = url_format(&req->url, ctx);
+  char* url = url_format(req->url, ctx);
   snprintf(buf, len, FGC(196, "MinnetRequest") " { method: '%s', url: '%s', headers: '%s' }", method_name(req->method), url, headers);
 
   js_free(ctx, headers);

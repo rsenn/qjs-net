@@ -370,7 +370,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   if(opaque->req) {
     if(!(url = serv->url))
 
-      url = serv->url = url_format(&opaque->req->url, ctx);
+      url = serv->url = url_format(opaque->req->url, ctx);
     method = opaque->req->method;
   } else {
     // url = lws_uri_and_method(wsi, ctx, &method);

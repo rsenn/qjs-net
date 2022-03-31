@@ -260,7 +260,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   proto = protocol_number(client->request->url.protocol);
 
-  url_info(&client->request->url, &client->connect_info);
+  url_info(client->request->url, &client->connect_info);
   client->connect_info.pwsi = &client->wsi;
   client->connect_info.context = client->context.lws;
 
