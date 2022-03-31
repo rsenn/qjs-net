@@ -10,14 +10,23 @@
 struct http_mount;
 
 typedef struct server_context {
-  MinnetContext context;
+  union {
+    int ref_count;
+    MinnetContext context;
+  };
+  struct lws* wsi;
   MinnetCallbacks cb;
 } MinnetServer;
 
 struct proxy_connection;
 
-JSValue minnet_ws_server(JSContext*, JSValue, int argc, JSValue* argv);
+JSValue minnet_server(JSContext*, JSValue, int argc, JSValue* argv);
+int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int raw_client_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int ws_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
-extern THREAD_LOCAL MinnetServer minnet_server;
+// extern THREAD_LOCAL MinnetServer minnet_server;
 
 #endif /* MINNET_SERVER_H */

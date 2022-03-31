@@ -39,7 +39,7 @@ void vhost_options_free(JSContext*, MinnetVhostOptions* vo);
 MinnetVhostOptions* vhost_options_new(JSContext*, JSValueConst vhost_option);
 MinnetHttpMount* mount_create(JSContext*, const char*, const char* origin, const char* def, enum lws_mount_protocols origin_proto);
 MinnetHttpMount* mount_new(JSContext*, JSValueConst, const char* key);
-struct http_mount* mount_find(const char*, size_t);
+struct http_mount* mount_find(MinnetHttpMount*, const char*, size_t);
 void mount_free(JSContext*, MinnetHttpMount const*);
 int http_server_writable(struct lws*, struct http_response*, BOOL done);
 int http_server_callback(struct lws*, enum lws_callback_reasons, void* user, void* in, size_t len);
