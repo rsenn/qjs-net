@@ -112,24 +112,11 @@ context_clear(MinnetContext* context) {
 
   lws_context_destroy(context->lws);
 
-  js_buffer_free(&context->crt, ctx);
-  js_buffer_free(&context->key, ctx);
-  js_buffer_free(&context->ca, ctx);
+  JS_FreeValue(ctx, context->crt);
+  JS_FreeValue(ctx, context->key);
+  JS_FreeValue(ctx, context->ca);
 
   JS_FreeValue(ctx, context->error);
-}
-
-void
-context_certificate(MinnetContext* context, JSValueConst options) {
-  struct lws_context_creation_info* i = &context->info;
-
-  context->crt = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslCert"));
-  context->key = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslPrivateKey"));
-  context->ca = js_buffer_from(context->js, JS_GetPropertyStr(context->js, options, "sslCA"));
-
-  js_buffer_to3(context->crt, &i->ssl_cert_filepath, (void**)&i->server_ssl_cert_mem, &i->server_ssl_cert_mem_len);
-  js_buffer_to3(context->key, &i->ssl_private_key_filepath, (void**)&i->server_ssl_private_key_mem, &i->server_ssl_private_key_mem_len);
-  js_buffer_to3(context->ca, &i->ssl_ca_filepath, (void**)&i->server_ssl_ca_mem, &i->server_ssl_ca_mem_len);
 }
 
 static void

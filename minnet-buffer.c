@@ -184,7 +184,7 @@ buffer_fromarraybuffer(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
 int
 buffer_fromvalue(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
   int ret = -1;
-  JSBuffer input = js_buffer_from(ctx, value);
+  JSBuffer input = js_buffer_new(ctx, value);
 
   if(input.data == 0) {
     ret = 0;

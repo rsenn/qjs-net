@@ -35,7 +35,8 @@ JSValue js_function_bind(JSContext*, JSValueConst, int, JSValueConst argv[]);
 JSValue js_function_bind_1(JSContext*, JSValueConst, JSValueConst);
 JSValue js_iterator_next(JSContext*, JSValueConst, JSValueConst*, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValueConst, JSValueConst, int flags);
-JSBuffer js_buffer_from(JSContext*, JSValueConst);
+void js_buffer_from(JSContext*, JSBuffer*, JSValue);
+JSBuffer js_buffer_new(JSContext*, JSValue);
 void js_buffer_to(JSBuffer, void**, size_t*);
 void js_buffer_to3(JSBuffer, const char**, void**, unsigned* plen);
 BOOL js_buffer_valid(const JSBuffer*);
@@ -61,6 +62,14 @@ void js_promise_free(JSContext*, ResolveFunctions*);
 JSValue js_global_get(JSContext*, const char*);
 BOOL js_is_promise(JSContext*, JSValueConst);
 JSValue js_error_new(JSContext*, const char*, ...);
+uint8_t* js_toptrsize(JSContext*, unsigned int*, JSValue);
+
+static inline void
+js_clear(JSContext* ctx, const void** ptr) {
+  if(*ptr)
+    js_free(ctx, *ptr);
+  *ptr = 0;
+}
 
 static inline void
 js_dump_string(const char* str, size_t len, size_t maxlen) {

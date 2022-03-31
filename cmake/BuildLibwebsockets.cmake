@@ -180,7 +180,7 @@ macro(build_libwebsockets)
                -DLWS_WITH_LWSWS:BOOL=OFF
                -DLWS_WITH_LWS_DSH:BOOL=OFF
                -DLWS_WITH_MBEDTLS:BOOL=OFF
-               -DLWS_WITH_MINIMAL_EXAMPLES:BOOL=ON
+               -DLWS_WITH_MINIMAL_EXAMPLES:BOOL=OFF
                -DLWS_WITH_MINIZ:BOOL=OFF
                -DLWS_WITH_NETLINK:BOOL=ON
                -DLWS_WITH_NETWORK:BOOL=ON
@@ -208,7 +208,7 @@ macro(build_libwebsockets)
                -DLWS_WITH_STRUCT_JSON:BOOL=OFF
                -DLWS_WITH_STRUCT_SQLITE3:BOOL=OFF
                -DLWS_WITH_SUL_DEBUGGING:BOOL=OFF
-               -DLWS_WITH_SYS_ASYNC_DNS:BOOL=ON
+               -DLWS_WITH_SYS_ASYNC_DNS:BOOL=OFF
                -DLWS_WITH_SYS_DHCP_CLIENT:BOOL=OFF
                -DLWS_WITH_SYS_FAULT_INJECTION:BOOL=OFF
                -DLWS_WITH_SYS_METRICS:BOOL=OFF

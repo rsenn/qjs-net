@@ -25,7 +25,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   //    session->ws_obj = minnet_ws_object(ctx,wsi);
   //    opaque->ws = minnet_ws_data(session->ws_obj);
   //  }
-  if(session) {
+  if(ctx && session) {
     if(!JS_IsObject(session->ws_obj)) {
       session->ws_obj = minnet_ws_new(ctx, wsi);
     }
@@ -43,14 +43,13 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
       break;
     }
-
-    case LWS_CALLBACK_PROTOCOL_INIT: {
-
-      break;
-    }
-
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS:
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+    case LWS_CALLBACK_PROTOCOL_INIT:
+    case LWS_CALLBACK_PROTOCOL_DESTROY: {
+      return 0;
+    }
+
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }

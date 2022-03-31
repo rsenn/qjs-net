@@ -104,8 +104,23 @@ js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags
   return i;
 }
 
+void
+js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
+  buf->data = 0;
+  buf->size = 0;
+  buf->free = &js_buffer_free_default;
+  buf->value = JS_UNDEFINED;
+
+  if(JS_IsString(value)) {
+    buf->data = (uint8_t*)JS_ToCStringLen(ctx, &buf->size, value);
+    buf->value = value;
+  } else if((buf->data = JS_GetArrayBuffer(ctx, &buf->size, value))) {
+    buf->value = JS_DupValue(ctx, value);
+  }
+}
+
 JSBuffer
-js_buffer_from(JSContext* ctx, JSValueConst value) {
+js_buffer_new(JSContext* ctx, JSValueConst value) {
   JSBuffer ret = {0, 0, &js_buffer_free_default, JS_UNDEFINED};
   ret.free = &js_buffer_free_default;
 
@@ -145,7 +160,9 @@ js_buffer_valid(const JSBuffer* in) {
 
 JSBuffer
 js_buffer_clone(const JSBuffer* in, JSContext* ctx) {
-  JSBuffer ret = js_buffer_from(ctx, in->value);
+  JSBuffer ret;
+
+  js_buffer_from(ctx, &ret, in->value);
 
   /*  ret.size = in->size;
    ret.free = in->free;*/
@@ -340,4 +357,15 @@ js_error_new(JSContext* ctx, const char* fmt, ...) {
 
   JS_SetPropertyStr(ctx, err, "message", JS_NewString(ctx, buf));
   return err;
+}
+
+uint8_t*
+js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value) {
+  size_t n = 0;
+  void *ret = 0, *ptr;
+  if((ptr = JS_GetArrayBuffer(ctx, &n, value))) {
+    if((ret = js_malloc(ctx, n)))
+      memcpy(ret, ptr, n);
+  }
+  return ret;
 }

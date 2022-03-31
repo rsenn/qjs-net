@@ -358,10 +358,15 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   JSContext* ctx = server ? server->context.js : 0;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
   MinnetURL url = {0, 0, 0, 0};
-  MinnetWebsocket* ws = opaque->ws;
+  MinnetWebsocket* ws = opaque ? opaque->ws : 0;
   size_t url_len = 0;
 
-  if(LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
+  if(lws_is_poll_callback(reason)) {
+    assert(server);
+    return fd_callback(wsi, reason, &server->cb.fd, in);
+  }
+
+  if(reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
     if(session && session->serial != opaque->serial) {
       session->serial = opaque->serial;
       session->h2 = is_h2(wsi);
@@ -387,7 +392,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       return 0;
       break;
     }
-    case LWS_CALLBACK_PROTOCOL_INIT: {
+    case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS:
+    case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+    case LWS_CALLBACK_PROTOCOL_INIT:
+    case LWS_CALLBACK_PROTOCOL_DESTROY: {
 
       break;
     }
@@ -596,7 +604,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             fprintf(stderr, "Exception: %s\n", JS_ToCString(ctx, exception));
             done = TRUE;
           } else if(!done) {
-            JSBuffer out = js_buffer_from(server->context.js, ret);
+            JSBuffer out = js_buffer_new(server->context.js, ret);
             LOG("HTTP", "size=%zu", out.size);
             buffer_append(&resp->body, out.data, out.size, ctx);
             js_buffer_free(&out, server->context.js);

@@ -157,7 +157,7 @@ typedef struct context {
   struct lws_context_creation_info info;
   BOOL exception;
   JSValue error;
-  JSBuffer crt, key, ca;
+  JSValue crt, key, ca;
 } MinnetContext;
 
 extern THREAD_LOCAL int32_t minnet_log_level;
@@ -169,7 +169,7 @@ void session_clear(MinnetSession* session, JSContext* ctx);
 int socket_geterror(int fd);
 BOOL context_exception(MinnetContext* context, JSValue retval);
 void context_clear(MinnetContext*);
-void context_certificate(MinnetContext*, JSValueConst);
+void server_certificate(MinnetContext*, JSValueConst);
 JSValue headers_object(JSContext*, const void*, const void*);
 char* headers_atom(JSAtom, JSContext* ctx);
 int headers_add(MinnetBuffer*, struct lws* wsi, JSValue obj, JSContext* ctx);

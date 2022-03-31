@@ -72,17 +72,28 @@ close_reason(JSContext* ctx, const char* in, size_t len) {
 }
 
 static void
-sslcert_client(JSContext* ctx, struct lws_context_creation_info* info, JSValueConst options) {
-  JSValue opt_ssl_cert = JS_GetPropertyStr(ctx, options, "sslCert");
-  JSValue opt_ssl_private_key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
-  JSValue opt_ssl_ca = JS_GetPropertyStr(ctx, options, "sslCA");
+client_certificate(MinnetContext* context, JSValueConst options) {
+  struct lws_context_creation_info* info = &context->info;
+  JSContext* ctx = context->js;
 
-  if(JS_IsString(opt_ssl_cert))
-    info->ssl_cert_filepath = JS_ToCString(ctx, opt_ssl_cert);
-  if(JS_IsString(opt_ssl_private_key))
-    info->ssl_private_key_filepath = JS_ToCString(ctx, opt_ssl_private_key);
-  if(JS_IsString(opt_ssl_ca))
-    info->ssl_ca_filepath = JS_ToCString(ctx, opt_ssl_ca);
+  context->crt = JS_GetPropertyStr(ctx, options, "sslCert");
+  context->key = JS_GetPropertyStr(ctx, options, "sslPrivateKey");
+  context->ca = JS_GetPropertyStr(ctx, options, "sslCA");
+
+  if(JS_IsString(context->crt))
+    info->client_ssl_cert_filepath = js_tostring(ctx, context->crt);
+  else
+    info->client_ssl_cert_mem = js_toptrsize(ctx, &info->client_ssl_cert_mem_len, context->crt);
+
+  if(JS_IsString(context->key))
+    info->client_ssl_private_key_filepath = js_tostring(ctx, context->key);
+  else
+    info->client_ssl_key_mem = js_toptrsize(ctx, &info->client_ssl_key_mem_len, context->key);
+
+  if(JS_IsString(context->ca))
+    info->client_ssl_ca_filepath = js_tostring(ctx, context->ca);
+  else
+    info->client_ssl_ca_mem = js_toptrsize(ctx, &info->client_ssl_ca_mem_len, context->ca);
 }
 
 void
@@ -209,7 +220,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     context->info.user = client;
 
     if(!context->lws) {
-      sslcert_client(ctx, &context->info, options);
+      client_certificate(&client->context, options);
 
       if(!(context->lws = lws_create_context(&context->info))) {
         lwsl_err("minnet-client: libwebsockets init failed\n");

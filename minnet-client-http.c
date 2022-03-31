@@ -129,7 +129,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       while(!done) {
         value = js_iterator_next(client->context.js, client->body, &next, &done, 0, 0);
         if(!js_is_nullish(value)) {
-          JSBuffer b = js_buffer_from(client->context.js, value);
+          JSBuffer b = js_buffer_new(client->context.js, value);
           printf("\x1b[2K\ryielded %p %zu\n", b.data, b.size);
           buffer_append(&buf, b.data, b.size, client->context.js);
           printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_BYTES(&buf), buffer_HEAD(&buf));
