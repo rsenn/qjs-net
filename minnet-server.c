@@ -353,5 +353,3 @@ server_certificate(MinnetContext* context, JSValueConst options) {
     printf("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
   }
 }
-
-

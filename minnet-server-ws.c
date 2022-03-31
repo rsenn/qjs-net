@@ -49,7 +49,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       MinnetURL url;
       url_parse(&url, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), ctx);
-      opaque->req = request_new(ctx,url, METHOD_GET);
+      opaque->req = request_new(ctx, url, METHOD_GET);
 
       int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
       break;
@@ -65,7 +65,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       if(minnet_server.cb.connect.ctx) {
 
         if(!opaque->req) {
-          MinnetURL url={0};
+          MinnetURL url = {0};
           url_parse(&url, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), ctx);
           opaque->req = request_new(ctx, url, METHOD_GET);
         }

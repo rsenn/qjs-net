@@ -370,7 +370,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   if(opaque->req) {
     if(!(url = serv->url))
 
-    url = serv->url = url_format(&opaque->req->url, ctx);
+      url = serv->url = url_format(&opaque->req->url, ctx);
     method = opaque->req->method;
   } else {
     // url = lws_uri_and_method(wsi, ctx, &method);
@@ -390,8 +390,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       JSValueConst args[2] = {ws_obj, JS_NULL};
 
       if(!opaque->req) {
-      MinnetURL url={0};
-      url_parse(&url, lws_get_uri(wsi, minnet_server.context.js, WSI_TOKEN_GET_URI), ctx);
+        MinnetURL url = {0};
+        url_parse(&url, lws_get_uri(wsi, minnet_server.context.js, WSI_TOKEN_GET_URI), ctx);
         opaque->req = request_new(minnet_server.context.js, url, method);
       }
 
@@ -406,15 +406,15 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
 
       if(!opaque->req) {
-      MinnetURL url={0};
-      url_parse(&url, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), ctx);
+        MinnetURL url = {0};
+        url_parse(&url, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), ctx);
         opaque->req = request_new(ctx, url, method);
       }
 
-    /*  MinnetBuffer* h = &opaque->req->headers;
-      int num_hdr = headers_get(ctx, h, wsi);
-      lwsl_user("http " FGC(171, "%-38s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
-*/
+      /*  MinnetBuffer* h = &opaque->req->headers;
+        int num_hdr = headers_get(ctx, h, wsi);
+        lwsl_user("http " FGC(171, "%-38s") " %s\n", lws_callback_name(reason) + 13, request_dump(opaque->req, ctx));
+  */
       // return 0;
       break;
     }
@@ -469,8 +469,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       lwsl_user("http " FG("%d") "%-38s" NC " wsi#%" PRId64 " mountpoint='%.*s' path='%s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque->serial, (int)mountpoint_len, url, path);
 
       if(!opaque->req) {
-      MinnetURL url={0};
-      url_parse(&url, lws_get_uri(wsi,ctx, WSI_TOKEN_GET_URI), ctx);
+        MinnetURL url = {0};
+        url_parse(&url, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), ctx);
         opaque->req = request_new(ctx, url, method);
       }
 
@@ -478,7 +478,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
       }
 
-      //if(!opaque->req->url.path)  pstrcpy(opaque->req->path, sizeof(opaque->req->path), path);
+      // if(!opaque->req->url.path)  pstrcpy(opaque->req->path, sizeof(opaque->req->path), path);
 
       serv->mount = mount_find(path, 0);
       if(url && !serv->mount)

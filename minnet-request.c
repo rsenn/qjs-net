@@ -246,7 +246,7 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   while(argc > 0) {
 
     if(!got_url) {
-      /*got_url = */url_from(&req->url, argv[0], ctx);
+      /*got_url = */ url_from(&req->url, argv[0], ctx);
 
     } else if(JS_IsObject(argv[0])) {
       js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);

@@ -3,7 +3,7 @@
 #include "minnet-request.h"
 #include "minnet-response.h"
 #include "minnet-websocket.h"
-#include "minnet-stream.h"
+#include "minnet-ringbuffer.h"
 #include "minnet-url.h"
 #include "jsutils.h"
 #include "minnet-buffer.h"
@@ -68,7 +68,6 @@ static const JSCFunctionListEntry minnet_loglevels[] = {
     JS_INDEX_STRING_DEF(2048, "THREAD"),
     JS_INDEX_STRING_DEF(4095, "ALL"),
 };
-
 
 int
 socket_geterror(int fd) {
@@ -322,7 +321,6 @@ headers_fromobj(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
   js_free(ctx, tab);
   return i;
 }
-
 
 int
 fd_handler(struct lws* wsi, MinnetCallback* cb, struct lws_pollargs args) {
@@ -591,19 +589,19 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Request", minnet_request_ctor);
 
-  // Add class Stream
-  JS_NewClassID(&minnet_stream_class_id);
+  // Add class Ringbuffer
+  JS_NewClassID(&minnet_ringbuffer_class_id);
 
-  JS_NewClass(JS_GetRuntime(ctx), minnet_stream_class_id, &minnet_stream_class);
-  minnet_stream_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_stream_proto, minnet_stream_proto_funcs, minnet_stream_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_stream_class_id, minnet_stream_proto);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_ringbuffer_class_id, &minnet_ringbuffer_class);
+  minnet_ringbuffer_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_ringbuffer_proto, minnet_ringbuffer_proto_funcs, minnet_ringbuffer_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_ringbuffer_class_id, minnet_ringbuffer_proto);
 
-  minnet_stream_ctor = JS_NewCFunction2(ctx, minnet_stream_constructor, "MinnetStream", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_stream_ctor, minnet_stream_proto);
+  minnet_ringbuffer_ctor = JS_NewCFunction2(ctx, minnet_ringbuffer_constructor, "MinnetRingbuffer", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_ringbuffer_ctor, minnet_ringbuffer_proto);
 
   if(m)
-    JS_SetModuleExport(ctx, m, "Stream", minnet_stream_ctor);
+    JS_SetModuleExport(ctx, m, "Ringbuffer", minnet_ringbuffer_ctor);
 
   // Add class URL
   minnet_url_init(ctx, m);
@@ -642,7 +640,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
     return NULL;
   JS_AddModuleExport(ctx, m, "Response");
   JS_AddModuleExport(ctx, m, "Request");
-  JS_AddModuleExport(ctx, m, "Stream");
+  JS_AddModuleExport(ctx, m, "Ringbuffer");
   JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExport(ctx, m, "default");
@@ -801,4 +799,3 @@ session_clear(MinnetSession* session, JSContext* ctx) {
 
   buffer_free(&session->send_buf, JS_GetRuntime(ctx));
 }
-

@@ -88,21 +88,18 @@ url_clone(MinnetURL url, JSContext* ctx) {
       .port = url.port,
   };
 }
-JSValue
-minnet_url_new(JSContext* ctx, MinnetURL u);
+JSValue minnet_url_new(JSContext* ctx, MinnetURL u);
 static inline void
 url_copy(MinnetURL* url, const MinnetURL other, JSContext* ctx) {
   url->protocol = other.protocol;
   url->host = other.host ? js_strdup(ctx, other.host) : 0;
   url->path = other.path ? js_strdup(ctx, other.path) : 0;
   url->port = other.port;
- }
-
+}
 
 static inline BOOL
 url_valid(const MinnetURL url) {
-    return url.host && url.path;
-     }
-
+  return url.host && url.path;
+}
 
 #endif /* MINNET_URL_H */
