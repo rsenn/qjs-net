@@ -1,8 +1,4 @@
-#include "minnet-url.h"
-/*#include "minnet-request.h"
-#include "minnet-response.h"*/
-#include <quickjs.h>
-#include <cutils.h>
+#include "minnet.h"
 #include <assert.h>
 #include <limits.h>
 
@@ -84,14 +80,15 @@ url_parse(MinnetURL* url, const char* u, JSContext* ctx) {
     url->protocol = js_strndup(ctx, u, s - u);
     proto = protocol_number(url->protocol);
     u = s + 3;
+  } else {
+    url->protocol = 0;
   }
 
   for(s = u; *s; ++s)
     if(*s == ':' || *s == '/')
       break;
 
-  if(s > u)
-    url->host = js_strndup(ctx, u, s - u);
+  url->host = s > u ? js_strndup(ctx, u, s - u) : 0;
 
   if(*s == ':') {
     unsigned long n = strtoul(++s, (char**)&t, 10);
@@ -99,11 +96,56 @@ url_parse(MinnetURL* url, const char* u, JSContext* ctx) {
     url->port = n != ULONG_MAX ? n : 0;
     if(s < t)
       s = t;
-  } else {
+  } else if(url->protocol) {
     url->port = protocol_default_port(proto);
+  } else {
+    url->port = 0;
   }
 
-  url->path = js_strdup(ctx, *s ? s : "/");
+  url->path = s && *s ? js_strdup(ctx, s) : 0;
+}
+
+MinnetURL
+url_create(const char* str, JSContext* ctx) {
+  MinnetURL ret = {1, 0, 0, 0, 0};
+  url_parse(&ret, str, ctx);
+  return ret;
+}
+
+size_t
+url_print(char* buf, size_t size, const MinnetURL url) {
+  size_t pos = 0;
+
+  if(url.protocol && *url.protocol) {
+    if((pos += buf ? strlcpy(buf, url.protocol, size - pos) : strlen(url.protocol)) + 3 > size)
+      return pos;
+
+    if((pos += buf ? strlcpy(&buf[pos], "://", size - pos) : 3) >= size)
+      return pos;
+  }
+
+  if(url.host) {
+    if((pos += buf ? strlcpy(&buf[pos], url.host, size - pos) : strlen(url.host)) >= size)
+      return pos;
+  }
+
+  if(url.port) {
+    if(size - pos < 7)
+      return pos;
+    if(!buf) {
+      pos += 1 + (url.port > 9999 ? 5 : url.port > 999 ? 4 : url.port > 99 ? 3 : url.port > 9 ? 2 : 1);
+    } else {
+      sprintf(&buf[pos], ":%u", url.port);
+      pos += strlen(&buf[pos]);
+    }
+  }
+
+  if(url.path) {
+    if((pos += buf ? strlcpy(&buf[pos], url.path, size - pos) : strlen(url.path)) >= size)
+      return pos;
+  }
+
+  return pos;
 }
 
 char*
@@ -137,8 +179,9 @@ url_format(const MinnetURL url, JSContext* ctx) {
 
 size_t
 url_length(const MinnetURL url) {
-  size_t portlen = url.port >= 10000 ? 6 : url.port >= 1000 ? 5 : url.port >= 100 ? 4 : url.port >= 10 ? 3 : url.port >= 1 ? 2 : 0;
-  return (url.protocol ? strlen(url.protocol) + 3 : 0) + (url.host ? strlen(url.host) + portlen : 0) + (url.path ? strlen(url.path) : 0) + 1;
+  return url_print(0, 8192, url);
+  /*size_t portlen = url.port >= 10000 ? 6 : url.port >= 1000 ? 5 : url.port >= 100 ? 4 : url.port >= 10 ? 3 : url.port >= 1 ? 2 : 0;
+  return (url.protocol ? strlen(url.protocol) + 3 : 0) + (url.host ? strlen(url.host) + portlen : 0) + (url.path ? strlen(url.path) : 0) + 1;*/
 }
 
 void
@@ -280,7 +323,7 @@ url_fromobj(MinnetURL* url, JSValueConst obj, JSContext* ctx) {
 }
 
 BOOL
-url_from(MinnetURL* url, JSValueConst value, JSContext* ctx) {
+url_fromvalue(MinnetURL* url, JSValueConst value, JSContext* ctx) {
   MinnetURL* other;
 
   if((other = minnet_url_data(value))) {
@@ -544,7 +587,7 @@ minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
   if(!(url = url_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
-  url_from(url, argv[0], ctx);
+  url_fromvalue(url, argv[0], ctx);
 
   if(!url_valid(*url))
     return JS_ThrowTypeError(ctx, "Not a valid URL");

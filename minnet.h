@@ -4,7 +4,6 @@
 #include <cutils.h>
 #include <quickjs.h>
 #include <libwebsockets.h>
-#include "minnet-buffer.h"
 #include "jsutils.h"
 
 union byte_buffer;
@@ -84,6 +83,9 @@ struct http_request;
 #error No TLS implementation found.
 #endif
 
+#include "minnet-buffer.h"
+#include "minnet-url.h"
+
 enum { READ_HANDLER = 0, WRITE_HANDLER };
 enum http_method;
 
@@ -131,6 +133,10 @@ struct http_mount;
 struct server_context;
 struct client_context;
 
+enum http_method { METHOD_GET = 0, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_CONNECT, METHOD_HEAD };
+
+typedef enum http_method MinnetHttpMethod;
+
 typedef struct session_data {
   JSValue ws_obj;
   union {
@@ -149,7 +155,8 @@ typedef struct session_data {
   struct server_context* server;
   struct client_context* client;
   MinnetBuffer send_buf;
-  char* url;
+  MinnetURL url;
+  MinnetHttpMethod method;
 } MinnetSession;
 
 typedef struct callbacks {

@@ -28,17 +28,11 @@ typedef struct http_mount {
   MinnetCallback callback;
 } MinnetHttpMount;
 
-/*typedef struct http_session {
-  struct socket* ws;
-  struct http_request* req;
-  struct http_response* resp;
-} MinnetHttpSession;*/
-
 MinnetVhostOptions* vhost_options_create(JSContext*, const char*, const char*);
 MinnetVhostOptions* vhost_options_new(JSContext*, JSValue);
 void vhost_options_free_list(JSContext*, MinnetVhostOptions*);
 void vhost_options_free(JSContext*, MinnetVhostOptions*);
-MinnetHttpMount* mount_create(JSContext*, const char*, const char*, const char* def, enum lws_mount_protocols origin_proto);
+MinnetHttpMount* mount_create(JSContext*, const char*, const char*, const char* def, const char* pro, enum lws_mount_protocols origin_proto);
 MinnetHttpMount* mount_new(JSContext*, JSValue, const char*);
 struct http_mount* mount_find(MinnetHttpMount*, const char*, size_t);
 void mount_free(JSContext*, MinnetHttpMount const*);

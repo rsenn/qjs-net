@@ -4,7 +4,6 @@
 #include "minnet-response.h"
 #include "minnet-websocket.h"
 #include "minnet-ringbuffer.h"
-#include "minnet-url.h"
 #include "jsutils.h"
 #include "minnet-buffer.h"
 #include <assert.h>

@@ -3,7 +3,6 @@
 
 #include <quickjs.h>
 #include "minnet.h"
-#include "minnet-url.h"
 #include "minnet-request.h"
 #include "jsutils.h"
 

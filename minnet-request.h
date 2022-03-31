@@ -5,14 +5,9 @@
 #include <cutils.h>
 #include "minnet.h"
 #include "minnet-buffer.h"
-#include "minnet-url.h"
 
 struct socket;
 struct http_response;
-
-enum http_method { METHOD_GET = 0, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_CONNECT, METHOD_HEAD };
-
-typedef enum http_method MinnetHttpMethod;
 
 const char* method_string(enum http_method);
 int method_number(const char*);
@@ -59,17 +54,21 @@ minnet_request_data2(JSContext* ctx, JSValueConst obj) {
 }
 
 static inline char*
-lws_uri_and_method(struct lws* wsi, JSContext* ctx, MinnetHttpMethod* method) {
+minnet_uri_and_method(struct lws* wsi, JSContext* ctx, MinnetHttpMethod* method) {
   char* url;
 
   if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_POST_URI)))
-    *method = METHOD_POST;
-  else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI)))
-    *method = METHOD_GET;
-  else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_HEAD_URI)))
-    *method = METHOD_HEAD;
-  else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_OPTIONS_URI)))
-    *method = METHOD_OPTIONS;
+    if(method)
+      *method = METHOD_POST;
+    else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI)))
+      if(method)
+        *method = METHOD_GET;
+      else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_HEAD_URI)))
+        if(method)
+          *method = METHOD_HEAD;
+        else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_OPTIONS_URI)))
+          if(method)
+            *method = METHOD_OPTIONS;
 
   return url;
 }

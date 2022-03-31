@@ -3,8 +3,9 @@
 
 #include <libwebsockets.h>
 #include <quickjs.h>
+#include <cutils.h>
 #include <stdint.h>
-#include "minnet.h"
+//#include "minnet.h"
 
 typedef enum protocol {
   PROTOCOL_WS = 0,
@@ -33,6 +34,7 @@ uint16_t protocol_default_port(MinnetProtocol);
 BOOL protocol_is_tls(MinnetProtocol);
 void url_init(MinnetURL*, const char*, const char*, int port, const char* path, JSContext* ctx);
 void url_parse(MinnetURL*, const char*, JSContext*);
+MinnetURL url_create(const char*, JSContext*);
 char* url_format(const MinnetURL, JSContext*);
 size_t url_length(const MinnetURL);
 void url_free(MinnetURL*, JSContext*);
@@ -41,7 +43,7 @@ void url_info(const MinnetURL, struct lws_client_connect_info*);
 char* url_location(const MinnetURL, JSContext*);
 const char* url_query(const MinnetURL);
 void url_fromobj(MinnetURL*, JSValueConst, JSContext*);
-BOOL url_from(MinnetURL*, JSValueConst, JSContext*);
+BOOL url_fromvalue(MinnetURL*, JSValueConst, JSContext*);
 void url_dump(const char*, MinnetURL const*);
 MinnetProtocol url_set_protocol(MinnetURL* url, const char* proto);
 JSValue query_object(const char*, JSContext*);
@@ -53,6 +55,8 @@ JSValue minnet_url_method(JSContext*, JSValueConst, int, JSValueConst argv[], in
 JSValue minnet_url_from(JSContext*, JSValue, int, JSValueConst argv[]);
 JSValue minnet_url_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
 int minnet_url_init(JSContext*, JSModuleDef*);
+
+extern THREAD_LOCAL JSClassID minnet_url_class_id;
 
 static inline const char*
 url_path(const MinnetURL url) {
@@ -67,13 +71,6 @@ url_valid(const MinnetURL url) {
 static inline MinnetProtocol
 url_protocol(const MinnetURL url) {
   return protocol_number(url.protocol);
-}
-
-static inline MinnetURL
-url_create(const char* s, JSContext* ctx) {
-  MinnetURL url = {0, 0, 0, 0};
-  url_parse(&url, s, ctx);
-  return url;
 }
 
 static inline MinnetURL*
@@ -100,8 +97,6 @@ url_copy(MinnetURL* url, const MinnetURL other, JSContext* ctx) {
   url->path = other.path ? js_strdup(ctx, other.path) : 0;
   url->port = other.port;
 }
-
-extern THREAD_LOCAL JSClassID minnet_url_class_id;
 
 int minnet_url_init(JSContext*, JSModuleDef* m);
 

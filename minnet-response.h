@@ -6,7 +6,6 @@
 #include <libwebsockets.h>
 #include "minnet.h"
 #include "minnet-buffer.h"
-#include "minnet-url.h"
 
 struct http_request;
 

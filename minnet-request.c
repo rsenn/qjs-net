@@ -2,7 +2,6 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "minnet-request.h"
-#include "minnet-url.h"
 #include "minnet-ringbuffer.h"
 #include "jsutils.h"
 #include <ctype.h>
@@ -192,7 +191,7 @@ request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
   if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0]))) {
     req = request_dup(req);
   } else {
-    url_from(&url, argv[0], ctx);
+    url_fromvalue(&url, argv[0], ctx);
 
     if(url_valid(url))
       req = request_new(ctx, url, METHOD_GET);
@@ -246,7 +245,7 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   while(argc > 0) {
 
     if(!got_url) {
-      /*got_url = */ url_from(&req->url, argv[0], ctx);
+      /*got_url = */ url_fromvalue(&req->url, argv[0], ctx);
 
     } else if(JS_IsObject(argv[0])) {
       js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);

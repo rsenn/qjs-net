@@ -160,7 +160,7 @@ static JSValue
 minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   int64_t m, len;
-  MinnetSession* sess;
+  MinnetSession* session;
   JSValue ret = JS_UNDEFINED;
   // struct wsi_opaque_user_data* opaque;
   MinnetBuffer buffer = {{0}};
@@ -178,9 +178,9 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   len = buffer_BYTES(&buffer);
 
-  if((sess = ws_session(ws))) {
+  if((session = ws_session(ws))) {
 
-    buffer_append(&sess->send_buf, buffer.read, len, ctx);
+    buffer_append(&session->send_buf, buffer.read, len, ctx);
     lws_callback_on_writable(ws->lwsi);
 
   } else {
