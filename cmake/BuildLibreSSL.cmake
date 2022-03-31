@@ -52,7 +52,7 @@ macro(build_libressl)
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libressl
     PREFIX libressl
     DOWNLOAD_NAME libressl-${LIBRESSL_VERSION}.tar.gz
-    URL  https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${LIBRESSL_VERSION}.tar.gz
+    URL https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${LIBRESSL_VERSION}.tar.gz
     CMAKE_ARGS "-DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" "-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}" "-DCMAKE_BUILD_TYPE=${LIBRESSL_BUILD_TYPE}"
     CMAKE_CACHE_ARGS
       "-DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}"

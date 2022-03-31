@@ -12,6 +12,7 @@ option(USE_CURL "Use curl for fetch()" OFF)
 if(USE_CURL)
   option(BUILD_CURL "Build curl library" ${LOCAL_CURL})
 endif(USE_CURL)
+option(BUILD_MINIMAL_EXAMPLES "Build minimal-examples" OFF)
 
 #set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "PIC code")
 #set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
@@ -273,19 +274,30 @@ if(USE_CURL)
   target_link_libraries(quickjs-minnet ${CURL_LIBRARY})
 endif(USE_CURL)
 
-target_include_directories(quickjs-minnet PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIR})
-set_target_properties(
-  quickjs-minnet PROPERTIES INSTALL_RPATH "${OPENSSL_LIBRARY_DIR}" COMPILE_FLAGS "-fvisibility=hidden" LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
-                            INTERFACE_LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}" PREFIX "" OUTPUT_NAME "net")
-target_compile_definitions(quickjs-minnet PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
+list(APPEND OPENSSL_LIBRARIES pthread dl)
 
-if(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
-  target_link_directories(quickjs-minnet PUBLIC ${LIBWEBSOCKETS_LIBRARY_DIR})
-endif(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
+macro(TARGET_LINK TARGET)
+  set(OUTPUT_NAME ${ARGN})
+  target_include_directories(${TARGET} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIR})
+  set_target_properties(
+    ${TARGET} PROPERTIES INSTALL_RPATH "${OPENSSL_LIBRARY_DIR}" COMPILE_FLAGS "-fvisibility=hidden" LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
+                         INTERFACE_LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}" PREFIX "")
 
-target_link_directories(quickjs-minnet PUBLIC ${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR})
+  if(OUTPUT_NAME)
+    set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "${OUTPUT_NAME}")
+  endif(OUTPUT_NAME)
+  target_compile_definitions(${TARGET} PRIVATE -DJS_SHARED_LIBRARY=1 -DJS_BINDINGS_INIT_MODULE=1)
 
-target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY})
+  if(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
+    target_link_directories(${TARGET} PUBLIC ${LIBWEBSOCKETS_LIBRARY_DIR})
+  endif(EXISTS "${LIBWEBSOCKETS_LIBRARY_DIR}")
+
+  target_link_directories(${TARGET} PUBLIC ${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR})
+
+  target_link_libraries(${TARGET} ${QUICKJS_LIBRARY} ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY})
+endmacro(TARGET_LINK TARGET)
+
+target_link(quickjs-minnet net)
 
 message(
   "Library directories:\n\
@@ -340,3 +352,156 @@ if(DO_TESTS)
 endif(DO_TESTS)
 
 install(FILES wscli.js DESTINATION bin PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
+
+if(BUILD_MINIMAL_EXAMPLES)
+  #  file(GLOB MINIMAL_EXAMPLES libwebsockets/minimal-examples/*/*/minimal*.c)
+  set(MINIMAL_EXAMPLES
+      client-server/minimal-ws-proxy/minimal-ws-proxy.c
+      http-client/minimal-http-client-attach/minimal-http-client-attach.c
+      http-client/minimal-http-client-captive-portal/minimal-http-client-captive-portal.c
+      http-client/minimal-http-client-certinfo/minimal-http-client-certinfo.c
+      http-client/minimal-http-client-custom-headers/minimal-http-client-custom-headers.c
+      http-client/minimal-http-client-h2-rxflow/minimal-http-client.c
+      http-client/minimal-http-client-hugeurl/minimal-http-client-hugeurl.c
+      http-client/minimal-http-client-jit-trust/minimal-http-client.c
+      http-client/minimal-http-client/minimal-http-client.c
+      http-client/minimal-http-client-multi/minimal-http-client-multi.c
+      http-client/minimal-http-client-post/minimal-http-client-post.c
+      http-server/minimal-http-server-basicauth/minimal-http-server-basicauth.c
+      http-server/minimal-http-server-cgi/minimal-http-server.c
+      http-server/minimal-http-server-custom-headers/minimal-http-server-custom-headers.c
+      http-server/minimal-http-server-deaddrop/minimal-http-server-deaddrop.c
+      http-server/minimal-http-server-dynamic/minimal-http-server-dynamic.c
+      http-server/minimal-http-server-eventlib-custom/minimal-http-server.c
+      http-server/minimal-http-server-eventlib-demos/minimal-http-server-eventlib-demos.c
+      http-server/minimal-http-server-eventlib-foreign/minimal-http-server-eventlib-foreign.c
+      http-server/minimal-http-server-eventlib/minimal-http-server-eventlib.c
+      http-server/minimal-http-server-eventlib-smp/minimal-http-server-eventlib-smp.c
+      http-server/minimal-http-server-form-get/minimal-http-server-form-get.c
+      http-server/minimal-http-server-form-post-file/minimal-http-server-form-post-file.c
+      http-server/minimal-http-server-form-post-lwsac/minimal-http-server-form-post.c
+      http-server/minimal-http-server-form-post/minimal-http-server-form-post.c
+      http-server/minimal-http-server-fulltext-search/minimal-http-server.c
+      http-server/minimal-http-server-h2-long-poll/minimal-http-server.c
+      http-server/minimal-http-server-mimetypes/minimal-http-server-mimetypes.c
+      http-server/minimal-http-server/minimal-http-server.c
+      http-server/minimal-http-server-multivhost/minimal-http-server.c
+      http-server/minimal-http-server-proxy/minimal-http-server-proxy.c
+      http-server/minimal-http-server-smp/minimal-http-server-smp.c
+      http-server/minimal-http-server-sse/minimal-http-server-sse.c
+      http-server/minimal-http-server-sse-ring/minimal-http-server-sse-ring.c
+      http-server/minimal-http-server-tls-80/minimal-http-server-tls-80.c
+      http-server/minimal-http-server-tls-mem/minimal-http-server-tls-mem.c
+      http-server/minimal-http-server-tls/minimal-http-server-tls.c
+      mqtt-client/minimal-mqtt-client/minimal-mqtt-client.c
+      mqtt-client/minimal-mqtt-client-multi/minimal-mqtt-client-multi.c
+      raw/minimal-raw-adopt-tcp/minimal-raw-adopt-tcp.c
+      raw/minimal-raw-adopt-udp/minimal-raw-adopt-udp.c
+      raw/minimal-raw-fallback-http-server/minimal-raw-fallback-http-server.c
+      raw/minimal-raw-file/minimal-raw-file.c
+      raw/minimal-raw-netcat/minimal-raw-netcat.c
+      raw/minimal-raw-proxy-fallback/minimal-raw-proxy-fallback.c
+      raw/minimal-raw-proxy/minimal-raw-proxy.c
+      raw/minimal-raw-serial/minimal-raw-file.c
+      raw/minimal-raw-vhost/minimal-raw-vhost.c
+      secure-streams/minimal-secure-streams-blob/minimal-secure-streams.c
+      secure-streams/minimal-secure-streams-client-tx/minimal-secure-streams-client-tx.c
+      secure-streams/minimal-secure-streams-hugeurl/minimal-secure-streams.c
+      secure-streams/minimal-secure-streams-metadata/minimal-secure-streams.c
+      secure-streams/minimal-secure-streams/minimal-secure-streams.c
+      secure-streams/minimal-secure-streams-perf/minimal-secure-streams.c
+      secure-streams/minimal-secure-streams-policy2c/minimal-secure-streams.c
+      secure-streams/minimal-secure-streams-post/minimal-secure-streams-post.c
+      secure-streams/minimal-secure-streams-seq/minimal-secure-streams.c
+      secure-streams/minimal-secure-streams-smd/minimal-secure-streams-smd.c
+      secure-streams/minimal-secure-streams-staticpolicy/minimal-secure-streams.c
+      secure-streams/minimal-secure-streams-stress/minimal-secure-streams.c
+      secure-streams/minimal-secure-streams-testsfail/minimal-secure-streams-testsfail.c
+      secure-streams/minimal-secure-streams-threads/minimal-secure-streams-threads.c
+      ws-client/minimal-ws-client-echo/minimal-ws-client-echo.c
+      ws-client/minimal-ws-client/minimal-ws-client.c
+      ws-client/minimal-ws-client-ping/minimal-ws-client-ping.c
+      ws-client/minimal-ws-client-pmd-bulk/minimal-ws-client-pmd-bulk.c
+      ws-client/minimal-ws-client-rx/minimal-ws-client.c
+      ws-client/minimal-ws-client-spam/minimal-ws-client-spam.c
+      ws-client/minimal-ws-client-spam-tx-rx/minimal-ws-client.c
+      ws-client/minimal-ws-client-tx/minimal-ws-client.c
+      ws-server/minimal-ws-broker/minimal-ws-broker.c
+      ws-server/minimal-ws-raw-proxy/minimal-ws-raw-proxy.c
+      ws-server/minimal-ws-server-echo/minimal-ws-server-echo.c
+      ws-server/minimal-ws-server/minimal-ws-server.c
+      ws-server/minimal-ws-server-pmd-bulk/minimal-ws-server-pmd-bulk.c
+      ws-server/minimal-ws-server-pmd-corner/minimal-ws-server-pmd-corner.c
+      ws-server/minimal-ws-server-pmd/minimal-ws-server-pmd.c
+      ws-server/minimal-ws-server-ring/minimal-ws-server-ring.c
+      ws-server/minimal-ws-server-threadpool/minimal-ws-server-threadpool.c
+      ws-server/minimal-ws-server-threads-foreign-libuv-smp/minimal-ws-server.c
+      ws-server/minimal-ws-server-threads/minimal-ws-server.c
+      ws-server/minimal-ws-server-threads-smp/minimal-ws-server.c
+      ws-server/minimal-ws-server-timer/minimal-ws-server.c)
+  list(FILTER MINIMAL_EXAMPLES EXCLUDE REGEX "(libuv|dbus|secure.streams|thread|mqtt|jit|fulltext|eventlib)")
+  set(EXAMPLES_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/minimal-examples")
+  make_directory("${EXAMPLES_SOURCE_DIR}")
+  file(RELATIVE_PATH EXAMPLES_RELATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" "${EXAMPLES_SOURCE_DIR}")
+
+  find_program(CLANG_FORMAT clang-format)
+
+  foreach(MINIMAL_EXAMPLE ${MINIMAL_EXAMPLES})
+
+    set(SOURCE "libwebsockets/minimal-examples/${MINIMAL_EXAMPLE}")
+    #message("SOURCE:" ${SOURCE})
+    dirname(DIR "${SOURCE}")
+    #message("DIR:" ${DIR})
+    file(GLOB SOURCES ${DIR}/*.*)
+
+    basename(EXAMPLE "${DIR}")
+    #message("EXAMPLE:" ${EXAMPLE})
+
+    if(EXISTS "${DIR}/mount-origin")
+      set(MOUNT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${DIR}/mount-origin")
+    endif(EXISTS "${DIR}/mount-origin")
+
+    foreach(SRC ${SOURCES})
+      basename(BASE "${SRC}")
+      set(GENERATED_SOURCE "${EXAMPLES_SOURCE_DIR}/${BASE}")
+      if("${SRC}" MATCHES "minimal-[^/\\\\]*\\.[ch]$")
+        set(GENERATED_SOURCE "${EXAMPLES_SOURCE_DIR}/${EXAMPLE}.c")
+      endif("${SRC}" MATCHES "minimal-[^/\\\\]*\\.[ch]$")
+
+      if(NOT EXISTS "${GENERATED_SOURCE}")
+        message("SRC:" ${SRC})
+
+        if("${SRC}" MATCHES "\\.[ch]$")
+          exec_program(${CLANG_FORMAT} ARGS -style=file ${SRC} OUTPUT_VARIABLE EXAMPLE_SOURCE)
+          #string(REGEX REPLACE "-100y.cert" "-100y.crt" EXAMPLE_SOURCE "${EXAMPLE_SOURCE}")
+          #string(REGEX REPLACE "-100y" "" EXAMPLE_SOURCE "${EXAMPLE_SOURCE}")
+          string(REGEX REPLACE "\"localhost-100y" "\"${EXAMPLES_SOURCE_DIR}/localhost-100y" EXAMPLE_SOURCE "${EXAMPLE_SOURCE}")
+          string(REGEX REPLACE "\"./mount-origin\"" "\"${MOUNT_DIR}\"" EXAMPLE_SOURCE "${EXAMPLE_SOURCE}")
+
+          file(WRITE "${GENERATED_SOURCE}" "${EXAMPLE_SOURCE}")
+        else("${SRC}" MATCHES "\\.[ch]$")
+          file(COPY "${SRC}" DESTINATION "${EXAMPLES_SOURCE_DIR}")
+        endif("${SRC}" MATCHES "\\.[ch]$")
+
+      endif(NOT EXISTS "${GENERATED_SOURCE}")
+    endforeach(SRC ${SOURCES})
+    basename(BASE "${SOURCE}")
+
+    add_executable(${EXAMPLE} "${EXAMPLES_SOURCE_DIR}/${BASE}")
+    set_target_properties(${EXAMPLE} PROPERTIES OUTPUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/minimal-examples/${EXAMPLE}")
+    target_compile_definitions(
+      ${EXAMPLE}
+      PUBLIC -DLWS_WITH_CACHE_NSCOOKIEJAR
+             -DLWS_WITH_CONMON
+             -DLWS_WITH_HTTP2
+             -DLWS_WITH_HTTP_BASIC_AUTH
+             -DLWS_WITH_MBEDTLS
+             -DLWS_WITH_NO_LOGS
+             -DLWS_WITH_PLUGINS
+             #-DLWS_WITH_SYS_METRICS
+             -DLWS_WITH_TLS
+             #-DLWS_WITH_TLS_SESSIONS
+    )
+    target_link(${EXAMPLE})
+  endforeach(MINIMAL_EXAMPLE ${MINIMAL_EXAMPLES})
+endif(BUILD_MINIMAL_EXAMPLES)

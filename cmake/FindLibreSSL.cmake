@@ -42,8 +42,8 @@ macro(find_libressl)
   endif(LIBRESSL_INCLUDE_DIR AND LIBRESSL_SSL_LIBRARY)
 
   include(FindPackageHandleStandardArgs)
-  find_package_handle_standard_args(libreSSL FOUND_VAR LIBRESSL_FOUND REQUIRED_VARS LIBRESSL_INCLUDE_DIR LIBRESSL_SSL_LIBRARY LIBRESSL_CRYPTO_LIBRARY LIBRESSL_TLS_LIBRARY LIBRESSL_LIBRARIES LIBRESSL_VERSION
-                                    VERSION_VAR LIBRESSL_VERSION)
+  find_package_handle_standard_args(libreSSL FOUND_VAR LIBRESSL_FOUND REQUIRED_VARS LIBRESSL_INCLUDE_DIR LIBRESSL_SSL_LIBRARY LIBRESSL_CRYPTO_LIBRARY LIBRESSL_TLS_LIBRARY LIBRESSL_LIBRARIES
+                                                                                    LIBRESSL_VERSION VERSION_VAR LIBRESSL_VERSION)
 
   if(LIBRESSL_FOUND)
     if(NOT TARGET libcrypto)
@@ -54,13 +54,13 @@ macro(find_libressl)
     if(NOT TARGET libssl)
       add_library(libssl UNKNOWN IMPORTED)
       set_target_properties(libssl PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${LIBRESSL_INCLUDE_DIR}" INTERFACE_LINK_LIBRARIES libtls IMPORTED_LINK_INTERFACE_LANGUAGES "C" IMPORTED_LOCATION
-                                                                                                                                                                              "${LIBRESSL_SSL_LIBRARY}")
+                                                                                                                                                                            "${LIBRESSL_SSL_LIBRARY}")
     endif()
 
     if(NOT TARGET libtls)
       add_library(libtls UNKNOWN IMPORTED)
       set_target_properties(libtls PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${LIBRESSL_INCLUDE_DIR}" INTERFACE_LINK_LIBRARIES libcrypto IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                                                IMPORTED_LOCATION "${LIBRESSL_TLS_LIBRARY}")
+                                              IMPORTED_LOCATION "${LIBRESSL_TLS_LIBRARY}")
     endif()
 
     get_target_property(LIBRESSL_LIBRARY_LOCATION libressl IMPORTED_LOCATION)
