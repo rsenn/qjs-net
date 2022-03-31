@@ -1,14 +1,16 @@
 #ifndef MINNET_WEBSOCKET_H
 #define MINNET_WEBSOCKET_H
 
-#if defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)
+#if(defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)) && !defined(__MSYS__)
 
 #warning winsock2
 #include <winsock2.h>
+#if 0
 struct pollfd {
   int fd;
   short events, revents;
 };
+#endif
 #endif
 
 #include "minnet.h"
@@ -31,9 +33,10 @@ extern int64_t ws_serial;
 
 MinnetWebsocket* ws_new(struct lws*, JSContext*);
 MinnetWebsocket* ws_from_wsi2(struct lws*, JSContext*);
+struct wsi_opaque_user_data* lws_opaque(struct lws* wsi, JSContext* ctx);
+JSValue minnet_ws_new(JSContext* ctx, struct lws* wsi);
 JSValue minnet_ws_object(JSContext*, struct lws*);
 JSValue minnet_ws_wrap(JSContext*, struct lws*);
-void minnet_ws_sslcert(JSContext*, struct lws_context_creation_info*, JSValue options);
 JSValue minnet_ws_constructor(JSContext*, JSValue, int, JSValue[]);
 
 extern THREAD_LOCAL JSClassID minnet_ws_class_id;
@@ -54,21 +57,6 @@ struct wsi_opaque_user_data {
   int error;
   BOOL binary;
 };
-
-static inline struct wsi_opaque_user_data*
-lws_opaque(struct lws* wsi, JSContext* ctx) {
-  struct wsi_opaque_user_data* opaque;
-
-  if((opaque = lws_get_opaque_user_data(wsi)))
-    return opaque;
-
-  opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data));
-  opaque->serial = ++ws_serial;
-  opaque->status = CONNECTING;
-
-  lws_set_opaque_user_data(wsi, opaque);
-  return opaque;
-}
 
 static inline struct session_data*
 lws_session(struct lws* wsi) {
@@ -92,7 +80,8 @@ ws_session(MinnetWebsocket* ws) {
 
 static inline MinnetWebsocket*
 ws_from_wsi(struct lws* wsi) {
-  return ((struct wsi_opaque_user_data*)lws_get_opaque_user_data(wsi))->ws;
+  struct wsi_opaque_user_data* opaque;
+  return (opaque = lws_get_opaque_user_data(wsi)) ? opaque->ws : 0;
 }
 
 /*

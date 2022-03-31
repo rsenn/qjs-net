@@ -145,7 +145,7 @@ minnet_ws_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
   minnet_server.context.info.mounts = &mount;
 
   if(is_tls) {
-    minnet_ws_sslcert(ctx, &minnet_server.context.info, options);
+    server_certificate(&minnet_server.context, options);
   }
 
   if(JS_IsArray(ctx, opt_mimetypes)) {
@@ -319,3 +319,39 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
 
   return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
+
+void
+server_certificate(MinnetContext* context, JSValueConst options) {
+  struct lws_context_creation_info* info = &context->info;
+  JSContext* ctx = context->js;
+
+  context->crt = JS_GetPropertyStr(context->js, options, "sslCert");
+  context->key = JS_GetPropertyStr(context->js, options, "sslPrivateKey");
+  context->ca = JS_GetPropertyStr(context->js, options, "sslCA");
+
+  if(JS_IsString(context->crt)) {
+    info->ssl_cert_filepath = js_tostring(ctx, context->crt);
+    printf("server SSL certificate file: %s\n", info->ssl_cert_filepath);
+  } else {
+    info->server_ssl_cert_mem = js_toptrsize(ctx, &info->server_ssl_cert_mem_len, context->crt);
+    printf("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
+  }
+
+  if(JS_IsString(context->key)) {
+    info->ssl_private_key_filepath = js_tostring(ctx, context->key);
+    printf("server SSL private key file: %s\n", info->ssl_private_key_filepath);
+  } else {
+    info->server_ssl_private_key_mem = js_toptrsize(ctx, &info->server_ssl_private_key_mem_len, context->key);
+    printf("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
+  }
+
+  if(JS_IsString(context->ca)) {
+    info->ssl_ca_filepath = js_tostring(ctx, context->ca);
+    printf("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
+  } else {
+    info->server_ssl_ca_mem = js_toptrsize(ctx, &info->server_ssl_ca_mem_len, context->ca);
+    printf("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
+  }
+}
+
+
