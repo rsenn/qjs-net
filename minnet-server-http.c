@@ -741,11 +741,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   int ret = 0;
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE && (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
     LOG("HTTP",
-        "fd=%i is_h2=%i is_ssl=%i method=%s in='%.*s' ret=%d\n",
+        "fd=%i is_h2=%i is_ssl=%i in='%.*s' ret=%d\n",
         lws_get_socket_fd(wsi),
         (session && session->h2) || is_h2(wsi),
         lws_is_ssl(wsi),
-        opaque && opaque->req ? method_name(opaque->req->method) : 0,
         (int)len,
         (char*)in,
         ret);
