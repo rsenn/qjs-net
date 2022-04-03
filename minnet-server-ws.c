@@ -18,7 +18,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   if(lws_is_http_callback(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
-  LOG("WS", "is_h2=%i, is_ssl=%i, in='%.*s', session=%p, opaque=%p", is_h2(wsi), lws_is_ssl(wsi), (int)len, in, session, opaque);
+  LOG("WS", "%s%sin='%.*s', session=%p, opaque=%p", is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in, session, opaque);
 
   switch(reason) {
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
@@ -63,9 +63,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         opaque = lws_opaque(wsi, ctx);
       assert(opaque);
 
-      MinnetURL url;
-      url_parse(&url, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), ctx);
-      opaque->req = request_new(ctx, url, METHOD_GET);
+      if(!opaque->req)
+        opaque->req = request_fromwsi(ctx, wsi);
 
       int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
       break;
@@ -76,41 +75,45 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       int status;
       status = lws_http_client_http_response(wsi);
       MinnetHttpMount* mount;
-      MinnetURL* url = &opaque->req->url;
+      MinnetURL* url;
 
-      if((mount = mount_find_s(server->context.info.mounts, url->path))) {
-        printf("found mount mnt=%s org=%s def=%s pro=%s\n", mount->mnt, mount->org, mount->def, mount->pro);
+      if(!opaque->req)
+        opaque->req = request_fromwsi(ctx, wsi);
 
-        
+      if(opaque->req) {
+        url = &opaque->req->url;
+
+        if((mount = mount_find_s(server->context.info.mounts, url->path))) {
+          printf("found mount mnt=%s org=%s def=%s pro=%s\n", mount->mnt, mount->org, mount->def, mount->pro);
+        }
+
+        opaque->status = OPEN;
+
+        if(server->cb.connect.ctx) {
+
+          /*if(!opaque->req) {
+            MinnetURL url = {0};
+            url_parse(&url, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), ctx);
+            opaque->req = request_new(ctx, url, METHOD_GET);
+          }*/
+
+          assert(opaque->req);
+
+          if(!JS_IsObject(session->req_obj))
+            session->req_obj = minnet_request_wrap(ctx, opaque->req);
+
+          session->resp_obj = minnet_response_new(ctx, opaque->req->url, status, 0, TRUE, "text/html");
+
+          if(!JS_IsObject(session->ws_obj))
+            session->ws_obj = minnet_ws_wrap(ctx, wsi);
+
+          if(!opaque->ws)
+            opaque->ws = minnet_ws_data(session->ws_obj);
+
+          LOG("ws", "wsi#%" PRId64 " req=%p url.path=%s", opaque->serial, opaque->req, opaque->req->url.path);
+          server_exception(server, minnet_emit_this(&server->cb.connect, session->ws_obj, 2, &session->ws_obj));
+        }
       }
-
-      opaque->status = OPEN;
-
-      if(server->cb.connect.ctx) {
-
-        /*if(!opaque->req) {
-          MinnetURL url = {0};
-          url_parse(&url, lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI), ctx);
-          opaque->req = request_new(ctx, url, METHOD_GET);
-        }*/
-
-        assert(opaque->req);
-
-        if(!JS_IsObject(session->req_obj))
-          session->req_obj = minnet_request_wrap(ctx, opaque->req);
-
-        session->resp_obj = minnet_response_new(ctx, opaque->req->url, status, 0, TRUE, "text/html");
-
-        if(!JS_IsObject(session->ws_obj))
-          session->ws_obj = minnet_ws_wrap(ctx, wsi);
-
-        if(!opaque->ws)
-          opaque->ws = minnet_ws_data(session->ws_obj);
-
-        LOG("ws", "wsi#%" PRId64 " req=%p url.path=%s", opaque->serial, opaque->req, opaque->req->url.path);
-        server_exception(server, minnet_emit_this(&server->cb.connect, session->ws_obj, 2, &session->ws_obj));
-      }
-
       return 0;
     }
 

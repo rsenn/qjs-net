@@ -121,6 +121,17 @@ request_fromobj(JSContext* ctx, JSValueConst options) {
   return req;
 }
 
+MinnetRequest*
+request_fromwsi(JSContext* ctx, struct lws* wsi) {
+  const char* url;
+  MinnetHttpMethod method = -1;
+
+  if((url = minnet_uri_and_method(wsi, ctx, &method)))
+    return request_new(ctx, url_create(url, ctx), method);
+
+  return 0;
+}
+
 void
 request_zero(MinnetRequest* req) {
   memset(req, 0, sizeof(MinnetRequest));

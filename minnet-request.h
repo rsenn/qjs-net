@@ -26,6 +26,7 @@ void request_init(MinnetRequest*, MinnetURL, enum http_method);
 MinnetRequest* request_new(JSContext*, MinnetURL, MinnetHttpMethod method);
 MinnetRequest* request_dup(MinnetRequest*);
 MinnetRequest* request_fromobj(JSContext*, JSValueConst);
+MinnetRequest* request_fromwsi(JSContext*, struct lws*);
 void request_zero(MinnetRequest*);
 void request_clear(MinnetRequest*, JSContext*);
 void request_clear_rt(MinnetRequest*, JSRuntime*);

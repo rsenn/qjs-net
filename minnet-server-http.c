@@ -401,7 +401,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
     }
   }
 
-  lwsl_user("http_server_writable wsi#%" PRIi64 " done=%i remain=%zu final=%d", opaque->serial, done, buffer_BYTES(&resp->body), p == LWS_WRITE_HTTP_FINAL);
+  //lwsl_user("http_server_writable wsi#%" PRIi64 " done=%i remain=%zu final=%d", opaque->serial, done, buffer_BYTES(&resp->body), p == LWS_WRITE_HTTP_FINAL);
 
   if(p == LWS_WRITE_HTTP_FINAL) {
     if(lws_http_transaction_completed(wsi))
@@ -452,7 +452,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     if(session && ctx)
       opaque = lws_opaque(wsi, ctx);
 
-  LOG("HTTP", "is_h2=%i, is_ssl=%i, in='%.*s', session=%p, opaque=%p", is_h2(wsi), lws_is_ssl(wsi), (int)len, in, session, opaque);
+  LOG("HTTP", "%s%sin='%.*s', session=%p, opaque=%p", is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in, session, opaque);
 
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
@@ -533,7 +533,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_BODY: {
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
 
-      LOG("HTTP", "is_h2=%i len: %zu, size: %zu", is_h2(wsi), len, buffer_HEAD(&req->body));
+      LOG("HTTP", "%slen: %zu, size: %zu", is_h2(wsi) ? "h2, " : "", len, buffer_HEAD(&req->body));
 
       if(len) {
         buffer_append(&req->body, in, len, ctx);
@@ -662,8 +662,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       BOOL done = FALSE;
 
       LOG("HTTP",
-          "h2=%u mnt=%s remain=%td type=%s url.path=%s",
-          session->h2,
+          "%sremain=%td type=%s url.path=%s",
+          session->h2 ? "h2, " : "",
           session->mount ? session->mount->mnt : 0,
           resp ? buffer_BYTES(&resp->body) : 0,
           resp ? resp->type : 0,
@@ -740,14 +740,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
   int ret = 0;
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE && (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
-    LOG("HTTP",
-        "fd=%i is_h2=%i is_ssl=%i in='%.*s' ret=%d\n",
-        lws_get_socket_fd(wsi),
-        (session && session->h2) || is_h2(wsi),
-        lws_is_ssl(wsi),
-        (int)len,
-        (char*)in,
-        ret);
+    LOG("HTTP", "fd=%i %s%sin='%.*s' ret=%d\n", lws_get_socket_fd(wsi), (session && session->h2) || is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, (char*)in, ret);
   }
 
   ret = lws_callback_http_dummy(wsi, reason, user, in, len);

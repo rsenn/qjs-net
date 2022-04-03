@@ -106,6 +106,7 @@ endif(NOT LIBWEBSOCKETS_FOUND)
 
 if(BUILD_LIBWEBSOCKETS)
 
+  option(WITH_HTTP2 "Use HTTP/2" ON)
   option(WITH_SSL "Use SSL" ON)
   option(WITH_MBEDTLS "Use MbedTLS replacement for OpenSSL" OFF)
   option(WITH_BROTLI "Use brotli HTTP stream compression" ON)
