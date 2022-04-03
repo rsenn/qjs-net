@@ -401,7 +401,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
     }
   }
 
-  //lwsl_user("http_server_writable wsi#%" PRIi64 " done=%i remain=%zu final=%d", opaque->serial, done, buffer_BYTES(&resp->body), p == LWS_WRITE_HTTP_FINAL);
+  // lwsl_user("http_server_writable wsi#%" PRIi64 " done=%i remain=%zu final=%d", opaque->serial, done, buffer_BYTES(&resp->body), p == LWS_WRITE_HTTP_FINAL);
 
   if(p == LWS_WRITE_HTTP_FINAL) {
     if(lws_http_transaction_completed(wsi))
@@ -452,7 +452,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     if(session && ctx)
       opaque = lws_opaque(wsi, ctx);
 
-  LOG("HTTP", "%s%sin='%.*s', session=%p, opaque=%p", is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in, session, opaque);
+  LOG("HTTP", "%s%sin='%.*s'", is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in);
 
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:

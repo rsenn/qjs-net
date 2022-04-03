@@ -18,7 +18,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   if(lws_is_http_callback(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
-  LOG("WS", "%s%sin='%.*s', session=%p, opaque=%p", is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in, session, opaque);
+  LOG("WS", "%s%sin='%.*s'", is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in);
 
   switch(reason) {
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
