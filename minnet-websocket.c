@@ -3,6 +3,8 @@
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 #include "minnet-server-http.h"
+#include "minnet-request.h"
+#include "minnet-response.h"
 #include "minnet.h"
 #include <strings.h>
 #include <assert.h>
