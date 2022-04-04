@@ -57,7 +57,6 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         lws_set_opaque_user_data(wsi, 0);
         opaque_free(opaque, ctx);
       }
-      // session_clear(session, ctx);
       return 0;
     }
 
