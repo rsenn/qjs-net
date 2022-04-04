@@ -490,7 +490,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         opaque->status = OPEN;
         if((ctx = client->on.connect.ctx)) {
 
-          client->session.ws_obj = minnet_ws_wrap(ctx, wsi);
+          client->session.ws_obj = minnet_ws_fromwsi(ctx, wsi);
 
           if(reason != LWS_CALLBACK_RAW_CONNECTED) {
             client->session.req_obj = minnet_request_wrap(ctx, client->request);

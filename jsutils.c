@@ -218,7 +218,7 @@ js_is_iterator(JSContext* ctx, JSValueConst obj) {
 JSAtom
 js_symbol_static_atom(JSContext* ctx, const char* name) {
   JSValue sym = js_symbol_static_value(ctx, name);
-  JSAtom ret = JS_ValueToAtom(ctx, sym);
+  JSAtom ret = JS_IsUndefined(sym) ? -1 : JS_ValueToAtom(ctx, sym);
   JS_FreeValue(ctx, sym);
   return ret;
 }
@@ -367,5 +367,17 @@ js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value) {
     if((ret = js_malloc(ctx, n)))
       memcpy(ret, ptr, n);
   }
+  return ret;
+}
+
+BOOL
+js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str) {
+  BOOL ret = FALSE;
+  JSValue value;
+  value = JS_GetPropertyStr(ctx, obj, str);
+  if(!JS_IsException(value))
+    ret = JS_ToBool(ctx, value);
+
+  JS_FreeValue(ctx, value);
   return ret;
 }

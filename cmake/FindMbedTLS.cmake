@@ -74,7 +74,7 @@ macro(find_mbedtls)
     endif(NOT LIBRARY_DIR)
 
     if(EXISTS "${LIBRARY_DIR}")
-      list(APPEND CMAKE_INSTALL_RPATH "${LIBRARY_PATH}")
+      rpath_append(CMAKE_INSTALL_RPATH "${LIBRARY_PATH}")
     endif(EXISTS "${LIBRARY_DIR}")
 
     set(MBEDTLS_LIBRARY_DIR "${LIBRARY_DIR}" CACHE PATH "MbedTLS library directory")

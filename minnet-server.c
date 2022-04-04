@@ -285,6 +285,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->vhost_name = url_format((MinnetURL){.host = url.host, .port = url.port}, ctx);
   info->error_document_404 = "/404.html";
   info->port = url.port;
+  info->timeout_secs = 0;
 
   if(is_tls) {
     server_certificate(&server->context, options);
@@ -298,7 +299,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   if(is_h2) {
     info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
-    info->options |= LWS_SERVER_OPTION_VH_H2_HALF_CLOSED_LONG_POLL;
+    // info->options |= LWS_SERVER_OPTION_VH_H2_HALF_CLOSED_LONG_POLL;
   }
   // info->options |= LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
 
@@ -329,10 +330,10 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!server_init(server))
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
 
+  lws_service_adjust_timeout(server->context.lws, 1, 0);
+
   if(!block)
     return ret;
-
-  lws_service_adjust_timeout(server->context.lws, 1, 0);
 
   while(a >= 0) {
     if(!JS_IsNull(server->context.error)) {

@@ -50,6 +50,8 @@ JSValue minnet_fetch(JSContext*, JSValueConst, int, JSValueConst*);
 static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 THREAD_LOCAL int32_t minnet_log_level = 0;
 THREAD_LOCAL JSContext* minnet_log_ctx = 0;
+THREAD_LOCAL struct list_head minnet_sockets = {0, 0};
+static THREAD_LOCAL uint32_t session_serial = 0;
 // THREAD_LOCAL BOOL minnet_exception = FALSE;
 
 int
@@ -68,15 +70,23 @@ socket_geterror(int fd) {
 void
 session_zero(MinnetSession* session) {
   memset(session, 0, sizeof(MinnetSession));
+  session->serial = -1;
   session->ws_obj = JS_NULL;
   session->req_obj = JS_NULL;
   session->resp_obj = JS_NULL;
   session->generator = JS_NULL;
   session->next = JS_NULL;
+
+  session->serial = ++session_serial;
+
+  // list_add(&session->link, &minnet_sessions);
+
+  printf("%s #%i %p\n", __func__, session->serial, session);
 }
 
 void
 session_clear(MinnetSession* session, JSContext* ctx) {
+  // list_del(&session->link);
 
   JS_FreeValue(ctx, session->ws_obj);
   JS_FreeValue(ctx, session->req_obj);
@@ -85,6 +95,20 @@ session_clear(MinnetSession* session, JSContext* ctx) {
   JS_FreeValue(ctx, session->next);
 
   buffer_free(&session->send_buf, JS_GetRuntime(ctx));
+
+  printf("%s #%i %p\n", __func__, session->serial, session);
+}
+
+JSValue
+session_object(struct wsi_opaque_user_data* session, JSContext* ctx) {
+  JSValue ret;
+  ret = JS_NewArray(ctx);
+
+  JS_SetPropertyUint32(ctx, ret, 0, session->serial ? JS_NewInt32(ctx, session->serial) : JS_NULL);
+  JS_SetPropertyUint32(ctx, ret, 1, session->ws ? minnet_ws_wrap(ctx, session->ws) : JS_NULL);
+  JS_SetPropertyUint32(ctx, ret, 2, session->req ? minnet_request_wrap(ctx, session->req) : JS_NULL);
+  JS_SetPropertyUint32(ctx, ret, 3, session->resp ? minnet_response_wrap(ctx, session->resp) : JS_NULL);
+  return ret;
 }
 
 BOOL
@@ -531,6 +555,23 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSVa
 }
 
 */
+JSValue
+minnet_get_sessions(JSContext* ctx, JSValueConst this_val) {
+  struct list_head* el;
+  JSValue ret;
+  uint32_t i = 0;
+
+  ret = JS_NewArray(ctx);
+
+  list_for_each(el, &minnet_sockets) {
+    struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
+    printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
+
+    JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
+  }
+  return ret;
+}
+
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {
   JSValue func;
@@ -595,6 +636,8 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_SPECIAL_DEF("socket", 1, constructor, minnet_ws_constructor),
     JS_CFUNC_SPECIAL_DEF("url", 1, constructor, minnet_url_constructor),
     // JS_CGETSET_DEF("log", get_log, set_log),
+    // JS_CGETSET_DEF("sessions", minnet_get_sessions, 0),
+    JS_CFUNC_DEF("getSessions", 0, minnet_get_sessions),
     JS_CFUNC_DEF("setLog", 1, minnet_set_log),
     JS_PROP_INT32_DEF("METHOD_GET", METHOD_GET, 0),
     JS_PROP_INT32_DEF("METHOD_POST", METHOD_POST, 0),
@@ -632,6 +675,8 @@ static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   /*  minnet_log_cb = JS_UNDEFINED;
     minnet_log_this = JS_UNDEFINED;*/
+
+  init_list_head(&minnet_sockets);
 
   JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 

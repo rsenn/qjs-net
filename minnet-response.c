@@ -42,15 +42,15 @@ response_dump(MinnetResponse const* resp) {
   return buf;
 }
 
-void
+/*void
 response_zero(MinnetResponse* resp) {
   memset(resp, 0, sizeof(MinnetResponse));
   resp->body = BUFFER_0();
-}
+}*/
 
 void
 response_init(MinnetResponse* resp, MinnetURL url, int32_t status, char* status_text, BOOL ok, char* type) {
-  memset(resp, 0, sizeof(MinnetResponse));
+  // memset(resp, 0, sizeof(MinnetResponse));
 
   resp->status = status;
   resp->status_text = status_text;
@@ -120,6 +120,8 @@ response_new(JSContext* ctx) {
   if(!(resp = js_mallocz(ctx, sizeof(MinnetResponse))))
     JS_ThrowOutOfMemory(ctx);
 
+  resp->ref_count = 1;
+
   return resp;
 }
 
@@ -143,7 +145,7 @@ minnet_response_wrap(JSContext* ctx, MinnetResponse* resp) {
   if(JS_IsException(ret))
     return JS_EXCEPTION;
 
-  JS_SetOpaque(ret, resp);
+  JS_SetOpaque(ret, response_dup(resp));
   return ret;
 }
 

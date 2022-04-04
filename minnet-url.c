@@ -2,6 +2,31 @@
 #include <assert.h>
 #include <limits.h>
 
+#ifndef HAVE_STRLCPY
+size_t
+strlcpy(char* dst, const char* src, size_t siz) {
+  register char* d = dst;
+  register const char* s = src;
+  register size_t n = siz;
+
+  if(n != 0 && --n != 0) {
+    do {
+      if((*d++ = *s++) == 0)
+        break;
+    } while(--n != 0);
+  }
+
+  if(n == 0) {
+    if(siz != 0)
+      *d = '\0';
+    while(*s++)
+      ;
+  }
+
+  return (s - src - 1);
+}
+#endif
+
 static char const* const protocol_names[] = {
     "ws",
     "wss",
@@ -17,7 +42,7 @@ protocol_number(const char* protocol) {
 
   for(i = countof(protocol_names) - 1; i >= 0; --i)
     if(!strcasecmp(protocol, protocol_names[i]))
-      break;
+      return i;
 
   return PROTOCOL_RAW;
 }
@@ -102,7 +127,9 @@ url_parse(MinnetURL* url, const char* u, JSContext* ctx) {
     url->port = 0;
   }
 
-  url->path = s && *s ? js_strdup(ctx, s) : 0;
+  // if(!url->path)
+  if(s && *s)
+    url->path = s && *s ? js_strdup(ctx, s) : 0;
 }
 
 MinnetURL
@@ -596,6 +623,34 @@ minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
 }
 
 JSValue
+minnet_url_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  DynBuf dbuf;
+  char* str;
+  MinnetURL* url;
+  JSValue ret, options = argc >= 2 && JS_IsObject(argv[1]) ? JS_DupValue(ctx, argv[1]) : argc >= 1 && JS_IsObject(argv[0]) ? JS_DupValue(ctx, argv[0]) : JS_NewObject(ctx);
+  JSValue opt_colors = JS_GetPropertyStr(ctx, options, "colors");
+  BOOL colors = JS_IsUndefined(opt_colors) ? TRUE : JS_ToBool(ctx, opt_colors);
+  JS_FreeValue(ctx, opt_colors);
+
+  if(!(url = minnet_url_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  dbuf_init2(&dbuf, ctx, (DynBufReallocFunc*)js_realloc);
+
+  dbuf_putstr(&dbuf, colors ? "\x1b[1;31mMinnetURL\x1b[0m" : "MinnetURL");
+  if((str = url_format(*url, ctx))) {
+    dbuf_printf(&dbuf, colors ? " \x1b[1;33m%s\x1b[0m" : " %s", str);
+    js_free(ctx, str);
+  }
+  ret = JS_NewStringLen(ctx, dbuf.buf, dbuf.size);
+  dbuf_free(&dbuf);
+
+  JS_FreeValue(ctx, options);
+
+  return ret;
+}
+
+JSValue
 minnet_url_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetURL* url;
@@ -651,6 +706,7 @@ static const JSCFunctionListEntry minnet_url_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_url_get, minnet_url_set, URL_PATH, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("tls", minnet_url_get, 0, URL_TLS, 0),
     JS_CFUNC_MAGIC_DEF("toString", 0, minnet_url_method, URL_TO_STRING),
+    JS_CFUNC_DEF("inspect", 0, minnet_url_inspect),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetURL", JS_PROP_CONFIGURABLE),
 };
 
@@ -660,6 +716,7 @@ static const JSCFunctionListEntry minnet_url_static_funcs[] = {
 
 int
 minnet_url_init(JSContext* ctx, JSModuleDef* m) {
+  JSAtom inspect_atom;
 
   // Add class URL
   JS_NewClassID(&minnet_url_class_id);
@@ -671,6 +728,11 @@ minnet_url_init(JSContext* ctx, JSModuleDef* m) {
   JS_SetPropertyFunctionList(ctx, minnet_url_ctor, minnet_url_static_funcs, countof(minnet_url_static_funcs));
 
   JS_SetConstructor(ctx, minnet_url_ctor, minnet_url_proto);
+
+  if((inspect_atom = js_symbol_static_atom(ctx, "inspect")) >= 0) {
+    JS_SetProperty(ctx, minnet_url_proto, inspect_atom, JS_NewCFunction(ctx, minnet_url_inspect, "inspect", 0));
+    JS_FreeAtom(ctx, inspect_atom);
+  }
 
   if(m)
     JS_SetModuleExport(ctx, m, "URL", minnet_url_ctor);

@@ -38,6 +38,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       break;
     }
     case LWS_CALLBACK_PROTOCOL_INIT: {
+      session_zero(session);
       return 0;
     }
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {

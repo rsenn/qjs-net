@@ -63,6 +63,7 @@ JSValue js_global_get(JSContext*, const char*);
 BOOL js_is_promise(JSContext*, JSValueConst);
 JSValue js_error_new(JSContext*, const char*, ...);
 uint8_t* js_toptrsize(JSContext*, unsigned int*, JSValue);
+BOOL js_get_propertystr_bool(JSContext*, JSValue, const char*);
 
 static inline void
 js_clear(JSContext* ctx, const void** ptr) {

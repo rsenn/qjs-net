@@ -184,6 +184,7 @@ typedef struct context {
 extern THREAD_LOCAL int32_t minnet_log_level;
 extern THREAD_LOCAL JSContext* minnet_log_ctx;
 extern THREAD_LOCAL BOOL minnet_exception;
+extern THREAD_LOCAL struct list_head minnet_sockets;
 
 int socket_geterror(int);
 void session_zero(MinnetSession*);

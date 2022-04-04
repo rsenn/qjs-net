@@ -35,6 +35,7 @@ BOOL protocol_is_tls(MinnetProtocol);
 void url_init(MinnetURL*, const char*, const char*, int port, const char* path, JSContext* ctx);
 void url_parse(MinnetURL*, const char*, JSContext*);
 MinnetURL url_create(const char*, JSContext*);
+size_t url_print(char*, size_t, const MinnetURL);
 char* url_format(const MinnetURL, JSContext*);
 size_t url_length(const MinnetURL);
 void url_free(MinnetURL*, JSContext*);
@@ -65,7 +66,7 @@ url_path(const MinnetURL url) {
 
 static inline BOOL
 url_valid(const MinnetURL url) {
-  return url.host && url.path;
+  return url.host || url.path;
 }
 
 static inline MinnetProtocol
@@ -96,6 +97,14 @@ url_copy(MinnetURL* url, const MinnetURL other, JSContext* ctx) {
   url->host = other.host ? js_strdup(ctx, other.host) : 0;
   url->path = other.path ? js_strdup(ctx, other.path) : 0;
   url->port = other.port;
+}
+
+static char*
+url_string(MinnetURL const* url) {
+  static char buf[4096];
+
+  url_print(buf, sizeof(buf), *url);
+  return buf;
 }
 
 int minnet_url_init(JSContext*, JSModuleDef* m);

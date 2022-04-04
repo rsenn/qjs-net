@@ -6,6 +6,7 @@
 #include "jsutils.h"
 #include <ctype.h>
 #include <strings.h>
+#include <libwebsockets.h>
 
 THREAD_LOCAL JSClassID minnet_request_class_id;
 THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;
@@ -59,7 +60,7 @@ request_dump(MinnetRequest const* req, JSContext* ctx) {
 
 void
 request_init(MinnetRequest* req, MinnetURL url, enum http_method method) {
-  memset(req, 0, sizeof(MinnetRequest));
+  // memset(req, 0, sizeof(MinnetRequest));
 
   req->url = url;
   req->method = method;
@@ -123,13 +124,32 @@ request_fromobj(JSContext* ctx, JSValueConst options) {
 
 MinnetRequest*
 request_fromwsi(JSContext* ctx, struct lws* wsi) {
-  const char* url;
+  const char* uri;
   MinnetHttpMethod method = -1;
 
-  if((url = minnet_uri_and_method(wsi, ctx, &method)))
-    return request_new(ctx, url_create(url, ctx), method);
+  if((uri = minnet_uri_and_method(wsi, ctx, &method))) {
+    MinnetURL url = url_create(uri, ctx);
+    struct lws_vhost* vhost;
+
+    if((vhost = lws_get_vhost(wsi))) {
+      const char* name;
+
+      if((name = lws_get_vhost_name(vhost)))
+        url_parse(&url, name, ctx);
+    }
+
+    return request_new(ctx, url, method);
+  }
 
   return 0;
+}
+
+MinnetRequest*
+request_fromurl(JSContext* ctx, const char* uri) {
+  MinnetHttpMethod method = METHOD_GET;
+  MinnetURL url = url_create(uri, ctx);
+
+  return request_new(ctx, url, method);
 }
 
 void
@@ -292,7 +312,7 @@ minnet_request_wrap(JSContext* ctx, MinnetRequest* req) {
   if(JS_IsException(ret))
     return JS_EXCEPTION;
 
-  JS_SetOpaque(ret, req);
+  JS_SetOpaque(ret, request_dup(req));
 
   return ret;
 }
