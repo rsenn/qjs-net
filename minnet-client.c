@@ -160,7 +160,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   JSValue options = argv[0];
   struct lws /**wsi = 0, */* wsi2;
 
-  BOOL block = TRUE;
+  BOOL block = TRUE, binary = FALSE;
   struct wsi_opaque_user_data* opaque = 0;
   MinnetProtocol proto;
 
@@ -234,7 +234,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   value = JS_GetPropertyStr(ctx, options, "binary");
   if(!JS_IsUndefined(value))
-    opaque->binary = JS_ToBool(ctx, value);
+    binary = JS_ToBool(ctx, value);
   JS_FreeValue(ctx, value);
 
   value = JS_GetPropertyStr(ctx, options, "block");
@@ -317,10 +317,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
+  opaque = lws_opaque(client->wsi, client->context.js);
+  opaque->binary = binary;
+
   if(!block)
     return ret;
-
-  opaque = lws_opaque(client->wsi, client->context.js);
 
   for(;;) {
     if(status != opaque->status)
