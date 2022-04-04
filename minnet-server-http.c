@@ -366,7 +366,8 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
 
     fclose(fp);
   } else {
-    const char* body = "<html><head><title>404 Not Found</title><meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/></head><body><h1>404 Not Found</h1></body></html>";
+    const char* body = "<html>\n  <head>\n    <title>404 Not Found</title>\n    <meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/>\n  </head>\n  <body>\n    <h1>404 Not "
+                       "Found</h1>\n  </body>\n</html>";
     resp->status = 404;
     resp->ok = FALSE;
 
