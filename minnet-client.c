@@ -140,11 +140,11 @@ minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   /*switch(magic) {
     case ON_RESOLVE: {
-      printf("%s %s %d\n", __func__, "ON_RESOLVE", ((MinnetClosure*)ptr)->ref_count);
+      //printf("%s %s %d\n", __func__, "ON_RESOLVE", ((MinnetClosure*)ptr)->ref_count);
       break;
     }
     case ON_REJECT: {
-      printf("%s %s\n", __func__, "ON_REJECT", ((MinnetClosure*)ptr)->ref_count);
+      //printf("%s %s\n", __func__, "ON_REJECT", ((MinnetClosure*)ptr)->ref_count);
       break;
     }
   }
