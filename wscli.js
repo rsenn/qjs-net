@@ -150,12 +150,13 @@ class CLI extends REPL {
       this.printStatus(`EXIT`, false);
       std.exit(0);
     });
-    let log = this.printFunction(console.log);
-    console.log = str => {
+    let orig_log = console.log;
+    let log = this.printFunction((...args) => orig_log(...args));
+    console.log = (...args) => {
       //log('console.log:', args);
-      while(str.endsWith('\n')) str = str.slice(0, -1);
+      //while(str.endsWith('\n')) str = str.slice(0, -1);
 
-      log(str);
+      this.printStatus(args.map(inspect));
     };
     this.runSync();
   }
@@ -262,7 +263,7 @@ function main(...args) {
         connections.add(ws);
         /*
         console.log('req',{  url });*/
-        console.log('onConnect', { ws, req }, req.url);
+        console.log('onConnect', { ws, req });
         const remote = `${ws.address}:${ws.port}`;
         try {
           repl = new CLI(remote);
@@ -307,6 +308,7 @@ function main(...args) {
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
+        console.log('onMessage', { ws });
         if(typeof msg == 'string') {
           msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
           msg = msg.substring(0, 100);
