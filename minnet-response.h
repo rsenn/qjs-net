@@ -27,21 +27,20 @@ typedef struct http_response {
   MinnetBuffer headers, body;
 } MinnetResponse;
 
-void            response_format(MinnetResponse const*, char*, size_t);
-char*           response_dump(MinnetResponse const*);
-void            response_init(MinnetResponse*, MinnetURL, int32_t, char* status_text, BOOL ok, char* type);
+void response_format(MinnetResponse const*, char*, size_t);
+char* response_dump(MinnetResponse const*);
+void response_init(MinnetResponse*, MinnetURL, int32_t, char* status_text, BOOL ok, char* type);
 MinnetResponse* response_dup(MinnetResponse*);
-ssize_t         response_write(MinnetResponse*, const void*, size_t, JSContext* ctx);
-void            response_clear(MinnetResponse*, JSContext*);
-void            response_clear_rt(MinnetResponse*, JSRuntime*);
-void            response_free(MinnetResponse*, JSContext*);
-void            response_free_rt(MinnetResponse*, JSRuntime*);
+ssize_t response_write(MinnetResponse*, const void*, size_t, JSContext* ctx);
+void response_clear(MinnetResponse*, JSContext*);
+void response_clear_rt(MinnetResponse*, JSRuntime*);
+void response_free(MinnetResponse*, JSContext*);
+void response_free_rt(MinnetResponse*, JSRuntime*);
 MinnetResponse* response_new(JSContext*);
-JSValue         minnet_response_new(JSContext*, MinnetURL, int, char* status_text, BOOL ok, const char* type);
-JSValue         minnet_response_wrap(JSContext*, MinnetResponse*);
-JSValue         minnet_response_constructor(JSContext*, JSValue, int, JSValue argv[]);
-void            minnet_response_finalizer(JSRuntime*, JSValue);
-
+JSValue minnet_response_new(JSContext*, MinnetURL, int, char* status_text, BOOL ok, const char* type);
+JSValue minnet_response_wrap(JSContext*, MinnetResponse*);
+JSValue minnet_response_constructor(JSContext*, JSValue, int, JSValue argv[]);
+void minnet_response_finalizer(JSRuntime*, JSValue);
 
 extern THREAD_LOCAL JSClassID minnet_response_class_id;
 extern THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;

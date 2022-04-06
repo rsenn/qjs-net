@@ -90,7 +90,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         url = &opaque->req->url;
 
         if((mount = mount_find_s(server->context.info.mounts, url->path))) {
-          //printf("found mount mnt=%s org=%s def=%s pro=%s\n", mount->mnt, mount->org, mount->def, mount->pro);
+          // printf("found mount mnt=%s org=%s def=%s pro=%s\n", mount->mnt, mount->org, mount->def, mount->pro);
         }
 
         if(!JS_IsObject(session->req_obj))

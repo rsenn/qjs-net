@@ -81,7 +81,7 @@ session_zero(MinnetSession* session) {
 
   // list_add(&session->link, &minnet_sessions);
 
-  //printf("%s #%i %p\n", __func__, session->serial, session);
+  // printf("%s #%i %p\n", __func__, session->serial, session);
 }
 
 void
@@ -96,7 +96,7 @@ session_clear(MinnetSession* session, JSContext* ctx) {
 
   buffer_free(&session->send_buf, JS_GetRuntime(ctx));
 
-  //printf("%s #%i %p\n", __func__, session->serial, session);
+  // printf("%s #%i %p\n", __func__, session->serial, session);
 }
 
 JSValue
@@ -119,7 +119,7 @@ context_exception(MinnetContext* context, JSValue retval) {
     JSValue stack = JS_GetPropertyStr(context->js, exception, "stack");
     const char* err = JS_ToCString(context->js, exception);
     const char* stk = JS_ToCString(context->js, stack);
-    //printf("Got exception: %s\n%s\n", err, stk);
+    // printf("Got exception: %s\n%s\n", err, stk);
     JS_FreeCString(context->js, err);
     JS_FreeCString(context->js, stk);
     JS_FreeValue(context->js, stack);
@@ -565,7 +565,7 @@ minnet_get_sessions(JSContext* ctx, JSValueConst this_val) {
 
   list_for_each(el, &minnet_sockets) {
     struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
-    //printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
+    // printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
 
     JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
   }

@@ -131,9 +131,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         value = js_iterator_next(client->context.js, client->body, &next, &done, 0, 0);
         if(!js_is_nullish(value)) {
           JSBuffer b = js_buffer_new(client->context.js, value);
-          //printf("\x1b[2K\ryielded %p %zu\n", b.data, b.size);
+          // printf("\x1b[2K\ryielded %p %zu\n", b.data, b.size);
           buffer_append(&buf, b.data, b.size, client->context.js);
-          //printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_BYTES(&buf), buffer_HEAD(&buf));
+          // printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_BYTES(&buf), buffer_HEAD(&buf));
           js_buffer_free(&b, client->context.js);
         }
       }
@@ -141,7 +141,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       size = buf.write - buf.start;
       if((r = lws_write(wsi, buf.start, size, (enum lws_write_protocol)n)) != size)
         return 1;
-      //printf("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
+      // printf("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
       if(n != LWS_WRITE_HTTP_FINAL)
         lws_callback_on_writable(wsi);
       return 0;

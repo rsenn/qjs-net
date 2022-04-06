@@ -159,26 +159,26 @@ server_certificate(MinnetContext* context, JSValueConst options) {
 
   if(JS_IsString(context->crt)) {
     info->ssl_cert_filepath = js_tostring(ctx, context->crt);
-    //printf("server SSL certificate file: %s\n", info->ssl_cert_filepath);
+    // printf("server SSL certificate file: %s\n", info->ssl_cert_filepath);
   } else {
     info->server_ssl_cert_mem = js_toptrsize(ctx, &info->server_ssl_cert_mem_len, context->crt);
-    //printf("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
+    // printf("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
   }
 
   if(JS_IsString(context->key)) {
     info->ssl_private_key_filepath = js_tostring(ctx, context->key);
-    //printf("server SSL private key file: %s\n", info->ssl_private_key_filepath);
+    // printf("server SSL private key file: %s\n", info->ssl_private_key_filepath);
   } else {
     info->server_ssl_private_key_mem = js_toptrsize(ctx, &info->server_ssl_private_key_mem_len, context->key);
-    //printf("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
+    // printf("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
   }
 
   if(JS_IsString(context->ca)) {
     info->ssl_ca_filepath = js_tostring(ctx, context->ca);
-    //printf("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
+    // printf("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
   } else {
     info->server_ssl_ca_mem = js_toptrsize(ctx, &info->server_ssl_ca_mem_len, context->ca);
-    //printf("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
+    // printf("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
   }
 }
 
@@ -241,7 +241,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsUndefined(opt_tls)) {
 
     is_tls = JS_ToBool(ctx, opt_tls);
-    //printf("is_tls = %d\n", is_tls);
+    // printf("is_tls = %d\n", is_tls);
   }
 
   if(!JS_IsUndefined(opt_port)) {
@@ -330,7 +330,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!server_init(server))
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
 
-  lws_service_adjust_timeout(server->context.lws, 1, 0);
+  lws_service_adjust_timeout(server->context.lws, 5000, 0);
 
   if(!block)
     return ret;
