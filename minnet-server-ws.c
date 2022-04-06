@@ -3,8 +3,11 @@
 #include "minnet-request.h"
 #include "minnet-response.h"
 #include <assert.h>
+#include <libwebsockets.h>
 
 int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+
+char* lws_hdr_simple_ptr(struct lws*, int);
 
 int
 ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
@@ -69,8 +72,12 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         opaque = lws_opaque(wsi, ctx);
       assert(opaque);
 
-      if(!opaque->req)
-        opaque->req = request_fromwsi(ctx, wsi);
+      if(!opaque->req) {
+        MinnetURL url = {.protocol = protocol_string(PROTOCOL_WS)};
+        url_fromwsi(&url, wsi, ctx);
+        opaque->req = request_new(ctx, url, METHOD_GET);
+        //session->req_obj = minnet_request_wrap(ctx, opaque->req);
+      }
 
       // int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
       break;
@@ -176,6 +183,10 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       return 0;
     }
     case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL: {
+      return 0;
+    }
+    case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
+    case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;
     }
 

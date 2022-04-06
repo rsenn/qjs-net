@@ -2,6 +2,7 @@
 #include "minnet-websocket.h"
 #include "minnet-response.h"
 #include "jsutils.h"
+#include <libwebsockets.h>
 
 int
 http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {

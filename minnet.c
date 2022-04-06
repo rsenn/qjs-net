@@ -6,6 +6,7 @@
 #include "minnet-ringbuffer.h"
 #include "jsutils.h"
 #include "minnet-buffer.h"
+#include <libwebsockets.h>
 #include <assert.h>
 #include <errno.h>
 #include <string.h>

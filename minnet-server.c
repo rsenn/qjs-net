@@ -193,24 +193,24 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   struct TimerClosure* timer = server->context.timer;
 
   if(timer) {
-    printf("timeout %" PRIu32 "\n", timer->interval);
+    // printf("timeout %" PRIu32 "\n", timer->interval);
     uint32_t new_interval;
 
     do {
       new_interval = lws_service_adjust_timeout(server->context.lws, 15000, 0);
-      printf("new_interval %" PRIu32 "\n", new_interval);
 
       if(new_interval == 0)
         lws_service_tsi(server->context.lws, -1, 0);
     } while(new_interval == 0);
 
+    // printf("new_interval %" PRIu32 "\n", new_interval);
     timer->interval = new_interval;
 
     js_timer_restart(timer);
 
     return JS_FALSE;
   }
-  printf("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
+  // printf("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
 
   return JS_TRUE;
 }
@@ -512,6 +512,10 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
           JS_FreeValue(server->cb.fd.ctx, argv[2]);
         }
       }
+      return 0;
+    }
+    case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
+    case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;
     }
   }

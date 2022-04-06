@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <libgen.h>
 #include <assert.h>
+#include <libwebsockets.h>
 
 #include "jsutils.h"
 #include "minnet-websocket.h"
@@ -743,6 +744,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
              session->resp_obj = JS_UNDEFINED;
            }*/
       return -1;
+    }
+    case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
+    case LWS_CALLBACK_GET_THREAD_ID: {
+      return 0;
     }
     default: {
       minnet_lws_unhandled(__func__, reason);

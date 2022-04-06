@@ -80,7 +80,7 @@ static void* prev_ptr = 0;
 void
 opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
-  //printf("%s opaque=%p link=[%p, %p]\n", __func__, opaque, opaque->link.next, opaque->link.prev);
+  // printf("%s opaque=%p link=[%p, %p]\n", __func__, opaque, opaque->link.next, opaque->link.prev);
 
   prev_ptr = opaque;
 
