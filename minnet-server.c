@@ -22,7 +22,7 @@ static struct lws_protocols protocols[] = {
     {"proxy-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
-    LWS_PLUGIN_PROTOCOL_RAW_PROXY,
+    // LWS_PLUGIN_PROTOCOL_RAW_PROXY,
     {0},
 };
 
@@ -34,7 +34,7 @@ static struct lws_protocols protocols2[] = {
     {"proxy-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
     //  {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
-    LWS_PLUGIN_PROTOCOL_RAW_PROXY,
+    //  LWS_PLUGIN_PROTOCOL_RAW_PROXY,
     {0, 0},
 };
 
@@ -159,32 +159,60 @@ server_certificate(MinnetContext* context, JSValueConst options) {
 
   if(JS_IsString(context->crt)) {
     info->ssl_cert_filepath = js_tostring(ctx, context->crt);
-    //printf("server SSL certificate file: %s\n", info->ssl_cert_filepath);
+    // printf("server SSL certificate file: %s\n", info->ssl_cert_filepath);
   } else {
     info->server_ssl_cert_mem = js_toptrsize(ctx, &info->server_ssl_cert_mem_len, context->crt);
-    //printf("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
+    // printf("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
   }
 
   if(JS_IsString(context->key)) {
     info->ssl_private_key_filepath = js_tostring(ctx, context->key);
-    //printf("server SSL private key file: %s\n", info->ssl_private_key_filepath);
+    // printf("server SSL private key file: %s\n", info->ssl_private_key_filepath);
   } else {
     info->server_ssl_private_key_mem = js_toptrsize(ctx, &info->server_ssl_private_key_mem_len, context->key);
-    //printf("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
+    // printf("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
   }
 
   if(JS_IsString(context->ca)) {
     info->ssl_ca_filepath = js_tostring(ctx, context->ca);
-    //printf("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
+    // printf("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
   } else {
     info->server_ssl_ca_mem = js_toptrsize(ctx, &info->server_ssl_ca_mem_len, context->ca);
-    //printf("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
+    // printf("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
   }
 }
 
 static JSValue
 minnet_server_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   return JS_UNDEFINED;
+}
+
+static JSValue
+minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  MinnetServer* server = ptr;
+  struct TimerClosure* timer = server->context.timer;
+
+  if(timer) {
+    // printf("timeout %" PRIu32 "\n", timer->interval);
+    uint32_t new_interval;
+
+    do {
+      new_interval = lws_service_adjust_timeout(server->context.lws, 15000, 0);
+
+      if(new_interval == 0)
+        lws_service_tsi(server->context.lws, -1, 0);
+    } while(new_interval == 0);
+
+    // printf("new_interval %" PRIu32 "\n", new_interval);
+    timer->interval = new_interval;
+
+    js_timer_restart(timer);
+
+    return JS_FALSE;
+  }
+  // printf("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
+
+  return JS_TRUE;
 }
 
 JSValue
@@ -241,7 +269,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsUndefined(opt_tls)) {
 
     is_tls = JS_ToBool(ctx, opt_tls);
-    //printf("is_tls = %d\n", is_tls);
+    // printf("is_tls = %d\n", is_tls);
   }
 
   if(!JS_IsUndefined(opt_port)) {
@@ -330,7 +358,11 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!server_init(server))
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
 
-  lws_service_adjust_timeout(server->context.lws, 1, 0);
+  JSValue timer_cb = JS_NewCClosure(ctx, minnet_server_timeout, 4, 0, server, 0);
+  uint32_t interval = lws_service_adjust_timeout(server->context.lws, 15000, 0);
+  if(interval == 0)
+    interval = 10;
+  server->context.timer = js_timer_interval(ctx, timer_cb, interval);
 
   if(!block)
     return ret;
@@ -480,6 +512,10 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
           JS_FreeValue(server->cb.fd.ctx, argv[2]);
         }
       }
+      return 0;
+    }
+    case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
+    case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;
     }
   }

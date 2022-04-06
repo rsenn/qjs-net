@@ -6,6 +6,7 @@
 #include "minnet-ringbuffer.h"
 #include "jsutils.h"
 #include "minnet-buffer.h"
+#include <libwebsockets.h>
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
@@ -81,7 +82,7 @@ session_zero(MinnetSession* session) {
 
   // list_add(&session->link, &minnet_sessions);
 
-  //printf("%s #%i %p\n", __func__, session->serial, session);
+  // printf("%s #%i %p\n", __func__, session->serial, session);
 }
 
 void
@@ -96,18 +97,21 @@ session_clear(MinnetSession* session, JSContext* ctx) {
 
   buffer_free(&session->send_buf, JS_GetRuntime(ctx));
 
-  //printf("%s #%i %p\n", __func__, session->serial, session);
+  // printf("%s #%i %p\n", __func__, session->serial, session);
 }
 
 JSValue
-session_object(struct wsi_opaque_user_data* session, JSContext* ctx) {
+session_object(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
   JSValue ret;
   ret = JS_NewArray(ctx);
 
-  JS_SetPropertyUint32(ctx, ret, 0, session->serial ? JS_NewInt32(ctx, session->serial) : JS_NULL);
-  JS_SetPropertyUint32(ctx, ret, 1, session->ws ? minnet_ws_wrap(ctx, session->ws) : JS_NULL);
-  JS_SetPropertyUint32(ctx, ret, 2, session->req ? minnet_request_wrap(ctx, session->req) : JS_NULL);
-  JS_SetPropertyUint32(ctx, ret, 3, session->resp ? minnet_response_wrap(ctx, session->resp) : JS_NULL);
+  JS_SetPropertyUint32(ctx, ret, 0, opaque->serial ? JS_NewInt32(ctx, opaque->serial) : JS_NULL);
+
+  if(opaque->sess) {
+    JS_SetPropertyUint32(ctx, ret, 1, JS_DupValue(ctx, opaque->sess->ws_obj));
+    JS_SetPropertyUint32(ctx, ret, 2, JS_DupValue(ctx, opaque->sess->req_obj));
+    JS_SetPropertyUint32(ctx, ret, 3, JS_DupValue(ctx, opaque->sess->resp_obj));
+  }
   return ret;
 }
 
@@ -119,7 +123,7 @@ context_exception(MinnetContext* context, JSValue retval) {
     JSValue stack = JS_GetPropertyStr(context->js, exception, "stack");
     const char* err = JS_ToCString(context->js, exception);
     const char* stk = JS_ToCString(context->js, stack);
-    //printf("Got exception: %s\n%s\n", err, stk);
+    // printf("Got exception: %s\n%s\n", err, stk);
     JS_FreeCString(context->js, err);
     JS_FreeCString(context->js, stk);
     JS_FreeValue(context->js, stack);
@@ -535,26 +539,6 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi) {
   return JS_NewCClosure(ctx, minnet_io_handler, 1, events, closure, free_handler_closure);
 }
 
-/*void
-minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs* args, JSValue out[2]) {
-  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
-  int events = args->events & (POLLIN | POLLOUT);
-  assert(opaque);
-
-  if(!JS_IsObject(opaque->handlers[READ_HANDLER]) || !JS_IsObject(opaque->handlers[WRITE_HANDLER])) {
-    JSValue func = make_handler(ctx, args->fd, events, wsi);
-
-    for(int i = READ_HANDLER; i <= WRITE_HANDLER; i++) opaque->handlers[i] = js_function_bind_1(ctx, func, JS_NewInt32(ctx, i));
-    JS_FreeValue(ctx, func);
-  }
-
-  opaque->poll = (struct pollfd){args->fd, events, 0};
-
-  out[0] = (events & POLLIN) ? opaque->handlers[READ_HANDLER] : JS_NULL;
-  out[1] = (events & POLLOUT) ? opaque->handlers[WRITE_HANDLER] : JS_NULL;
-}
-
-*/
 JSValue
 minnet_get_sessions(JSContext* ctx, JSValueConst this_val) {
   struct list_head* el;
@@ -565,7 +549,7 @@ minnet_get_sessions(JSContext* ctx, JSValueConst this_val) {
 
   list_for_each(el, &minnet_sockets) {
     struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
-    //printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
+    // printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
 
     JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
   }

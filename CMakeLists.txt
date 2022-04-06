@@ -151,12 +151,13 @@ if(BUILD_LIBWEBSOCKETS)
 
     if(NOT OPENSSL_LIBRARIES)
 
-      include(FindOpenSSL)
+      find_package(OpenSSL REQUIRED)
+      # include(FindOpenSSL)
       #[[if(NOT PKG_CONFIG_FOUND)
         include(FindPkgConfig)
       endif(NOT PKG_CONFIG_FOUND)
       pkg_check_modules(OPENSSL openssl)
-      #find_package(OpenSSL REQUIRED)
+      #
       #pkg_search_module(OPENSSL openssl)
 ]]
 
@@ -292,8 +293,10 @@ macro(TARGET_LINK TARGET)
   set(OUTPUT_NAME ${ARGN})
   target_include_directories(${TARGET} PRIVATE ${LIBWEBSOCKETS_INCLUDE_DIR})
   set_target_properties(
-    ${TARGET} PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_RPATH}" BUILD_RPATH "${CMAKE_BUILD_RPATH}" COMPILE_FLAGS "-fvisibility=hidden" LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
-                         INTERFACE_LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}" PREFIX "")
+    ${TARGET}
+    PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_RPATH}" BUILD_RPATH "${CMAKE_BUILD_RPATH}" COMPILE_FLAGS "-fvisibility=hidden"
+               LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}" INTERFACE_LINK_DIRECTORIES
+                                                                                                             "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}" PREFIX "")
 
   if(OUTPUT_NAME)
     set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "${OUTPUT_NAME}")

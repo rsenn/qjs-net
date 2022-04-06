@@ -28,6 +28,13 @@ typedef union resolve_functions {
   };
 } ResolveFunctions;
 
+struct TimerClosure {
+  int ref_count;
+  uint32_t interval;
+  JSContext* ctx;
+  JSValueConst id, handler, callback;
+};
+
 JSValue vector2array(JSContext*, int, JSValueConst[]);
 void js_console_log(JSContext*, JSValueConst*, JSValueConst*);
 JSValue js_function_bound(JSContext*, JSValueConst, int, JSValueConst argv[], int magic, JSValueConst* func_data);
@@ -35,8 +42,8 @@ JSValue js_function_bind(JSContext*, JSValueConst, int, JSValueConst argv[]);
 JSValue js_function_bind_1(JSContext*, JSValueConst, JSValueConst);
 JSValue js_iterator_next(JSContext*, JSValueConst, JSValueConst*, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValueConst, JSValueConst, int flags);
-void js_buffer_from(JSContext*, JSBuffer*, JSValue);
-JSBuffer js_buffer_new(JSContext*, JSValue);
+void js_buffer_from(JSContext*, JSBuffer*, JSValueConst);
+JSBuffer js_buffer_new(JSContext*, JSValueConst);
 void js_buffer_to(JSBuffer, void**, size_t*);
 void js_buffer_to3(JSBuffer, const char**, void**, unsigned* plen);
 BOOL js_buffer_valid(const JSBuffer*);
@@ -49,6 +56,15 @@ JSAtom js_symbol_static_atom(JSContext*, const char*);
 JSValue js_symbol_static_value(JSContext*, const char*);
 JSValue js_symbol_ctor(JSContext*);
 JSValue js_global_get(JSContext*, const char*);
+JSValue js_global_os(JSContext*);
+JSValue js_os_get(JSContext*, const char*);
+JSValue js_timer_start(JSContext*, JSValueConst, uint32_t);
+void js_timer_cancel(JSContext*, JSValueConst);
+void js_timer_free(void*);
+JSValue js_timer_callback(JSContext*, JSValueConst, int, JSValueConst* argv, int magic, void* opaque);
+struct TimerClosure* js_timer_interval(JSContext*, JSValueConst, uint32_t);
+void js_timer_restart(struct TimerClosure*);
+void js_promise_free(JSContext*, ResolveFunctions*);
 char* js_tostringlen(JSContext*, size_t*, JSValueConst);
 char* js_tostring(JSContext*, JSValueConst);
 JSValue js_invoke(JSContext*, JSValueConst, const char*, int argc, JSValueConst argv[]);
@@ -58,12 +74,16 @@ JSValue js_promise_reject(JSContext*, ResolveFunctions*, JSValueConst);
 void js_promise_zero(ResolveFunctions*);
 BOOL js_promise_pending(ResolveFunctions const*);
 BOOL js_promise_done(ResolveFunctions const*);
-void js_promise_free(JSContext*, ResolveFunctions*);
-JSValue js_global_get(JSContext*, const char*);
 BOOL js_is_promise(JSContext*, JSValueConst);
 JSValue js_error_new(JSContext*, const char*, ...);
-uint8_t* js_toptrsize(JSContext*, unsigned int*, JSValue);
-BOOL js_get_propertystr_bool(JSContext*, JSValue, const char*);
+uint8_t* js_toptrsize(JSContext*, unsigned int*, JSValueConst);
+BOOL js_get_propertystr_bool(JSContext*, JSValueConst, const char*);
+struct list_head* js_module_list(JSContext*);
+JSModuleDef* js_module_at(JSContext*, int);
+JSModuleDef* js_module_find(JSContext*, JSAtom);
+JSModuleDef* js_module_find_s(JSContext*, const char*);
+void* js_module_export_find(JSModuleDef*, JSAtom);
+JSValue js_module_import_meta(JSContext*, const char*);
 
 static inline void
 js_clear(JSContext* ctx, const void** ptr) {

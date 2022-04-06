@@ -1,6 +1,10 @@
-#include "jsutils.h"
+#define _GNU_SOURCE
 #include <stdarg.h>
+#include <stddef.h>
+#include <string.h>
 #include <assert.h>
+
+#include "jsutils.h"
 
 JSValue
 vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
@@ -246,6 +250,90 @@ js_global_get(JSContext* ctx, const char* prop) {
   return ret;
 }
 
+JSValue
+js_global_os(JSContext* ctx) {
+  return js_global_get(ctx, "os");
+}
+
+JSValue
+js_os_get(JSContext* ctx, const char* prop) {
+  JSValue os_obj = js_global_os(ctx);
+  JSValue ret = JS_GetPropertyStr(ctx, os_obj, prop);
+  JS_FreeValue(ctx, os_obj);
+  return ret;
+}
+
+JSValue
+js_timer_start(JSContext* ctx, JSValueConst fn, uint32_t ms) {
+  JSValue set_timeout = js_os_get(ctx, "setTimeout");
+  JSValueConst args[2] = {fn, JS_MKVAL(JS_TAG_INT, ms)};
+  JSValue ret = JS_Call(ctx, set_timeout, JS_UNDEFINED, 2, args);
+  JS_FreeValue(ctx, set_timeout);
+  return ret;
+}
+
+void
+js_timer_cancel(JSContext* ctx, JSValueConst timer) {
+  JSValue clear_timeout = js_os_get(ctx, "clearTimeout");
+  JSValue ret = JS_Call(ctx, clear_timeout, JS_UNDEFINED, 1, &timer);
+  JS_FreeValue(ctx, clear_timeout);
+  JS_FreeValue(ctx, ret);
+}
+
+void
+js_timer_free(void* ptr) {
+  struct TimerClosure* closure = ptr;
+  JSContext* ctx;
+
+  if(--closure->ref_count == 0) {
+    JS_FreeValue(ctx, closure->id);
+    JS_FreeValue(ctx, closure->handler);
+    JS_FreeValue(ctx, closure->callback);
+
+    js_free(ctx, closure);
+  }
+}
+
+JSValue
+js_timer_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {
+  struct TimerClosure* closure = opaque;
+  JSValue ret;
+  JSValueConst args[] = {closure->id, closure->handler, closure->callback, JS_NewUint32(ctx, closure->interval)};
+
+  ret = JS_Call(ctx, closure->handler, this_val, countof(args), args);
+
+  if(!(JS_IsBool(ret) && !JS_ToBool(ctx, ret))) {
+    JS_FreeValue(ctx, closure->id);
+    closure->id = js_timer_start(ctx, closure->callback, closure->interval);
+  }
+
+  return ret;
+}
+
+struct TimerClosure*
+js_timer_interval(JSContext* ctx, JSValueConst fn, uint32_t ms) {
+  struct TimerClosure* closure;
+
+  if(!(closure = js_malloc(ctx, sizeof(struct TimerClosure))))
+    return 0;
+
+  closure->ref_count = 1;
+  closure->ctx = ctx;
+  closure->interval = ms;
+  closure->handler = JS_DupValue(ctx, fn);
+  closure->callback = JS_NewCClosure(ctx, js_timer_callback, 0, 0, closure, js_timer_free);
+  closure->id = js_timer_start(ctx, closure->callback, ms);
+
+  return closure;
+}
+
+void
+js_timer_restart(struct TimerClosure* closure) {
+  js_timer_cancel(closure->ctx, closure->id);
+  JS_FreeValue(closure->ctx, closure->id);
+  closure->id = js_timer_start(closure->ctx, closure->callback, closure->interval);
+}
+
 static inline void
 js_resolve_functions_zero(ResolveFunctions* funcs) {
   funcs->array[0] = JS_NULL;
@@ -379,5 +467,90 @@ js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str) {
     ret = JS_ToBool(ctx, value);
 
   JS_FreeValue(ctx, value);
+  return ret;
+}
+
+struct list_head*
+js_module_list(JSContext* ctx) {
+  void* tmp_opaque;
+  ptrdiff_t needle;
+  void** ptr;
+  tmp_opaque = JS_GetContextOpaque(ctx);
+  memset(&needle, 0xa5, sizeof(needle));
+  JS_SetContextOpaque(ctx, needle);
+
+  ptr = memmem(ctx, 1024, &needle, sizeof(needle));
+  printf("ctx = %p\n", ctx);
+  printf("&needle = %p\n", &needle);
+  printf("ptr = %p\n", ptr);
+  printf("ctx.user_opaque = %016zx\n", (char*)ptr - (char*)ctx);
+  JS_SetContextOpaque(ctx, tmp_opaque);
+
+  return ((struct list_head*)(ptr - 2)) - 1;
+}
+
+JSModuleDef*
+js_module_at(JSContext* ctx, int i) {
+  struct list_head *el, *list = js_module_list(ctx);
+
+  list_for_each(list, el) {
+    JSModuleDef* module = (char*)el - sizeof(JSAtom) * 2;
+
+    if(i-- == 0)
+      return module;
+  }
+  return 0;
+}
+
+JSModuleDef*
+js_module_find(JSContext* ctx, JSAtom name) {
+  struct list_head *el, *list = js_module_list(ctx);
+
+  list_for_each(el, list) {
+    JSModuleDef* module = (char*)el - sizeof(JSAtom) * 2;
+
+    if(((JSAtom*)module)[1] == name)
+      return module;
+  }
+  return 0;
+}
+
+JSModuleDef*
+js_module_find_s(JSContext* ctx, const char* name) {
+  JSAtom atom;
+  JSModuleDef* module;
+  atom = JS_NewAtom(ctx, name);
+  module = js_module_find(ctx, atom);
+  JS_FreeAtom(ctx, atom);
+  return module;
+}
+
+void*
+js_module_export_find(JSModuleDef* module, JSAtom name) {
+  void* export_entries = *(void**)((char*)module + sizeof(int) * 2 + sizeof(struct list_head) + sizeof(void*) + sizeof(int) * 2);
+  int export_entries_count = *(int*)((char*)module + sizeof(int) * 2 + sizeof(struct list_head) + sizeof(void*) + sizeof(int) * 2 + sizeof(void*));
+  static const size_t export_entry_size = sizeof(void*) * 2 + sizeof(int) * 2;
+  size_t i;
+
+  for(i = 0; i < export_entries_count; i++) {
+    void* entry = (char*)export_entries + export_entry_size * i;
+
+    JSAtom* export_name = (char*)entry + sizeof(void*) * 2 + sizeof(int) * 2;
+
+    if(*export_name == name)
+      return entry;
+  }
+
+  return 0;
+}
+
+JSValue
+js_module_import_meta(JSContext* ctx, const char* name) {
+  JSModuleDef* m;
+  JSValue ret = JS_UNDEFINED;
+
+  if((m = js_module_loader(ctx, name, 0))) {
+    ret = JS_GetImportMeta(ctx, m);
+  }
   return ret;
 }

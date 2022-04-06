@@ -1,6 +1,7 @@
 #include "minnet-ringbuffer.h"
 #include <quickjs.h>
 #include <assert.h>
+#include <libwebsockets.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

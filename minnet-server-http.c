@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <libgen.h>
 #include <assert.h>
+#include <libwebsockets.h>
 
 #include "jsutils.h"
 #include "minnet-websocket.h"
@@ -86,7 +87,8 @@ mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const c
 
   if((m = js_mallocz(ctx, sizeof(MinnetHttpMount)))) {
 
-    //printf("mount_create mnt=%-10s org=%-20s def=%-15s protocol=%-10s origin_protocol=%s\n", mountpoint, origin, def, pro, ((const char*[]){ "HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK", })[origin_proto]);
+    // printf("mount_create mnt=%-10s org=%-20s def=%-15s protocol=%-10s origin_protocol=%s\n", mountpoint, origin, def, pro, ((const char*[]){ "HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP",
+    // "REDIR_HTTPS", "CALLBACK", })[origin_proto]);
 
     m->lws.mountpoint = js_strdup(ctx, mountpoint);
     m->lws.origin = origin ? js_strdup(ctx, origin) : 0;
@@ -182,7 +184,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
         mnt++;
         len--;
       }
-      //printf("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+      // printf("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
 
       if((len == n || (n > len && (x[len] == '/' || x[len] == '?'))) && !strncmp(x, mnt, n)) {
         m = p;
@@ -205,7 +207,7 @@ mount_find_s(MinnetHttpMount* mounts, const char* x) {
     const char* mnt = p->mountpoint;
     size_t len = p->mountpoint_len;
 
-    //printf("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+    // printf("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
     if(len == n && !strncmp(x, mnt, n)) {
       m = p;
       break;
@@ -443,7 +445,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       lws_get_socket_fd(lws_get_network_wsi(wsi)),
       (int)len,
       in,
-      opaque->req ? url_string(&opaque->req->url) : 0,
+      opaque && opaque->req ? url_string(&opaque->req->url) : 0,
       session ? session->serial : 0);
 
   switch(reason) {
@@ -742,6 +744,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
              session->resp_obj = JS_UNDEFINED;
            }*/
       return -1;
+    }
+    case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
+    case LWS_CALLBACK_GET_THREAD_ID: {
+      return 0;
     }
     default: {
       minnet_lws_unhandled(__func__, reason);

@@ -1,6 +1,7 @@
 #include "minnet.h"
 #include <assert.h>
 #include <limits.h>
+#include <libwebsockets.h>
 
 #ifndef HAVE_STRLCPY
 size_t
@@ -366,6 +367,30 @@ url_fromvalue(MinnetURL* url, JSValueConst value, JSContext* ctx) {
   }
 
   return TRUE;
+}
+
+void
+url_fromwsi(MinnetURL* url, struct lws* wsi, JSContext* ctx) {
+  int len;
+  char* p;
+
+  if((len = lws_hdr_total_length(wsi, WSI_TOKEN_HOST))) {
+    url->host = js_malloc(ctx, len + 1);
+    lws_hdr_copy(wsi, url->host, len + 1, WSI_TOKEN_HOST);
+
+    while(--len >= 0 && isdigit(url->host[len]))
+      ;
+
+    if(url->host[len] == ':') {
+      url->port = atoi(&url->host[len + 1]);
+      url->host[len] = '\0';
+    }
+  }
+
+  if((len = lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI))) {
+    url->path = js_malloc(ctx, len + 1);
+    lws_hdr_copy(wsi, url->path, len + 1, WSI_TOKEN_GET_URI);
+  }
 }
 
 void
