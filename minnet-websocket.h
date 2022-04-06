@@ -31,19 +31,19 @@ typedef struct socket {
 
 extern int64_t ws_serial;
 
+MinnetWebsocket* ws_fromwsi(struct lws*, MinnetSession*, JSContext*);
 void opaque_free_rt(struct wsi_opaque_user_data*, JSRuntime*);
 void opaque_free(struct wsi_opaque_user_data*, JSContext*);
-JSValue minnet_ws_new(JSContext*, struct lws*);
-MinnetWebsocket* ws_new(struct lws*, JSContext*);
 void ws_clear_rt(MinnetWebsocket*, JSRuntime*);
 void ws_clear(MinnetWebsocket*, JSContext*);
 void ws_free_rt(MinnetWebsocket*, JSRuntime*);
 void ws_free(MinnetWebsocket*, JSContext*);
 MinnetWebsocket* ws_dup(MinnetWebsocket*);
+struct wsi_opaque_user_data* opaque_new(JSContext*);
 struct wsi_opaque_user_data* lws_opaque(struct lws*, JSContext*);
-JSValue minnet_ws_wrap(JSContext*, MinnetWebsocket*);
-JSValue minnet_ws_fromwsi(JSContext*, struct lws*);
-JSValue minnet_ws_constructor(JSContext*, JSValue, int, JSValue argv[]);
+JSValue minnet_ws_wrap(JSContext*, JSValueConst proto, MinnetWebsocket*);
+JSValue minnet_ws_fromwsi(JSContext*, struct lws*, MinnetSession*);
+JSValue minnet_ws_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
 
 extern THREAD_LOCAL JSClassID minnet_ws_class_id;
 extern THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
@@ -87,8 +87,8 @@ ws_session(MinnetWebsocket* ws) {
 
 static inline MinnetWebsocket*
 ws_from_wsi(struct lws* wsi) {
-  struct wsi_opaque_user_data* opaque;
-  return (opaque = lws_get_opaque_user_data(wsi)) ? opaque->ws : 0;
+  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+  return opaque ? opaque->ws : 0;
 }
 
 static inline MinnetWebsocket*

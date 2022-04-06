@@ -398,8 +398,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if(lws_is_http_callback(reason))
     return http_client_callback(wsi, reason, user, in, len);
 
-  if(client->context.js)
+  if(client->context.js) {
     opaque = lws_opaque(wsi, client->context.js);
+    opaque->sess = user;
+  }
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
@@ -491,7 +493,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         opaque->status = OPEN;
         if((ctx = client->on.connect.ctx)) {
 
-          client->session.ws_obj = minnet_ws_fromwsi(ctx, wsi);
+          client->session.ws_obj = minnet_ws_fromwsi(ctx, wsi, user);
 
           if(reason != LWS_CALLBACK_RAW_CONNECTED) {
             client->session.req_obj = minnet_request_wrap(ctx, client->request);

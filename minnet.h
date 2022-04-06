@@ -179,6 +179,7 @@ typedef struct context {
   BOOL exception;
   JSValue error;
   JSValue crt, key, ca;
+  struct TimerClosure* timer;
 } MinnetContext;
 
 extern THREAD_LOCAL int32_t minnet_log_level;

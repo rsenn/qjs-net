@@ -268,7 +268,7 @@ js_timer_start(JSContext* ctx, JSValueConst fn, uint32_t ms) {
   JSValue set_timeout = js_os_get(ctx, "setTimeout");
   JSValueConst args[2] = {fn, JS_MKVAL(JS_TAG_INT, ms)};
   JSValue ret = JS_Call(ctx, set_timeout, JS_UNDEFINED, 2, args);
-  JSFreeValue(ctx, set_timeout);
+  JS_FreeValue(ctx, set_timeout);
   return ret;
 }
 
@@ -276,8 +276,8 @@ void
 js_timer_cancel(JSContext* ctx, JSValueConst timer) {
   JSValue clear_timeout = js_os_get(ctx, "clearTimeout");
   JSValue ret = JS_Call(ctx, clear_timeout, JS_UNDEFINED, 1, &timer);
-  JSFreeValue(ctx, clear_timeout);
-  JSFreeValue(ctx, ret);
+  JS_FreeValue(ctx, clear_timeout);
+  JS_FreeValue(ctx, ret);
 }
 
 void
@@ -285,43 +285,53 @@ js_timer_free(void* ptr) {
   struct TimerClosure* closure = ptr;
   JSContext* ctx;
 
-  JS_FreeValue(ctx, closure->id);
-  JS_FreeValue(ctx, closure->handler);
-  JS_FreeValue(ctx, closure->callback);
+  if(--closure->ref_count == 0) {
+    JS_FreeValue(ctx, closure->id);
+    JS_FreeValue(ctx, closure->handler);
+    JS_FreeValue(ctx, closure->callback);
 
-  js_free(ctx, closure);
+    js_free(ctx, closure);
+  }
 }
 
 JSValue
 js_timer_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {
   struct TimerClosure* closure = opaque;
   JSValue ret;
-  ret = JS_Call(ctx, closure->handler, this_val, argc, argv);
-  
-  JS_FreeValue(ctx, closure->id);
-  closure->id = js_timer_start(ctx, closure->callback, closure->interval);
-  
+  JSValueConst args[] = {closure->id, closure->handler, closure->callback, JS_NewUint32(ctx, closure->interval)};
+
+  ret = JS_Call(ctx, closure->handler, this_val, countof(args), args);
+
+  if(!(JS_IsBool(ret) && !JS_ToBool(ctx, ret))) {
+    JS_FreeValue(ctx, closure->id);
+    closure->id = js_timer_start(ctx, closure->callback, closure->interval);
+  }
+
   return ret;
 }
 
 struct TimerClosure*
-js_os_interval(JSContext* ctx, JSValueConst fn, uint32_t ms) {
+js_timer_interval(JSContext* ctx, JSValueConst fn, uint32_t ms) {
   struct TimerClosure* closure;
-  JSValue callback, id_value;
 
   if(!(closure = js_malloc(ctx, sizeof(struct TimerClosure))))
     return 0;
 
+  closure->ref_count = 1;
   closure->ctx = ctx;
   closure->interval = ms;
   closure->handler = JS_DupValue(ctx, fn);
-
-  callback = JS_NewCClosure(ctx, js_timer_callback, 0, 0, closure, js_timer_free);
-
-  closure->id = js_timer_start(ctx, callback, ms);
-  closure->callback = callback;
+  closure->callback = JS_NewCClosure(ctx, js_timer_callback, 0, 0, closure, js_timer_free);
+  closure->id = js_timer_start(ctx, closure->callback, ms);
 
   return closure;
+}
+
+void
+js_timer_restart(struct TimerClosure* closure) {
+  js_timer_cancel(closure->ctx, closure->id);
+  JS_FreeValue(closure->ctx, closure->id);
+  closure->id = js_timer_start(closure->ctx, closure->callback, closure->interval);
 }
 
 static inline void

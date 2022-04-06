@@ -8,6 +8,7 @@
 #include <list.h>
 #include <quickjs-libc.h>
 #include <libwebsockets.h>
+#include <assert.h>
 
 #include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
 #include "minnet-plugin-broker.c"
@@ -22,7 +23,7 @@ static struct lws_protocols protocols[] = {
     {"proxy-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
-    LWS_PLUGIN_PROTOCOL_RAW_PROXY,
+    // LWS_PLUGIN_PROTOCOL_RAW_PROXY,
     {0},
 };
 
@@ -34,7 +35,7 @@ static struct lws_protocols protocols2[] = {
     {"proxy-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
     //  {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
-    LWS_PLUGIN_PROTOCOL_RAW_PROXY,
+    //  LWS_PLUGIN_PROTOCOL_RAW_PROXY,
     {0, 0},
 };
 
@@ -187,6 +188,34 @@ minnet_server_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return JS_UNDEFINED;
 }
 
+static JSValue
+minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  MinnetServer* server = ptr;
+  struct TimerClosure* timer = server->context.timer;
+
+  if(timer) {
+    printf("timeout %" PRIu32 "\n", timer->interval);
+    uint32_t new_interval;
+
+    do {
+      new_interval = lws_service_adjust_timeout(server->context.lws, 15000, 0);
+      printf("new_interval %" PRIu32 "\n", new_interval);
+
+      if(new_interval == 0)
+        lws_service_tsi(server->context.lws, -1, 0);
+    } while(new_interval == 0);
+
+    timer->interval = new_interval;
+
+    js_timer_restart(timer);
+
+    return JS_FALSE;
+  }
+  printf("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
+
+  return JS_TRUE;
+}
+
 JSValue
 minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   int argind = 0, a = 0;
@@ -330,7 +359,11 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!server_init(server))
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
 
-  lws_service_adjust_timeout(server->context.lws, 5000, 0);
+  JSValue timer_cb = JS_NewCClosure(ctx, minnet_server_timeout, 4, 0, server, 0);
+  uint32_t interval = lws_service_adjust_timeout(server->context.lws, 15000, 0);
+  if(interval == 0)
+    interval = 10;
+  server->context.timer = js_timer_interval(ctx, timer_cb, interval);
 
   if(!block)
     return ret;
@@ -434,6 +467,13 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
   MinnetSession* session = user;
   MinnetServer* server = /*session ? session->server :*/ lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
+  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+
+  if(!opaque && wsi && session && ctx) {
+    ws_fromwsi(wsi, session, ctx);
+    opaque = lws_get_opaque_user_data(wsi);
+    assert(opaque);
+  }
 
   // if(!lws_is_poll_callback(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
 
