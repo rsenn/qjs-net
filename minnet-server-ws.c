@@ -10,14 +10,8 @@ int
 ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetSession* session = user;
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
-  JSContext* ctx = server ? server->context.js : 0;
+  JSContext* ctx = server->context.js;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-
-  if(!opaque && wsi && session && ctx) {
-    ws_fromwsi(wsi, session, ctx);
-    opaque = lws_get_opaque_user_data(wsi);
-    assert(opaque);
-  }
 
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &server->cb.fd, in);
@@ -50,7 +44,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_WSI_CREATE: {
-      // opaque->ws = ws_fromwsi(wsi, ctx);
+      // opaque->ws = ws_new(wsi, ctx);
       return 0;
     }
 
@@ -71,6 +65,9 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         return -1;
 
       /*return http_server_callback(wsi, reason, user, in, len);*/
+      if(!opaque)
+        opaque = lws_opaque(wsi, ctx);
+      assert(opaque);
 
       if(!opaque->req)
         opaque->req = request_fromwsi(ctx, wsi);
@@ -80,6 +77,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_ESTABLISHED: {
+      // struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
       int status;
       status = lws_http_client_http_response(wsi);
       MinnetHttpMount* mount = 0;
@@ -105,15 +103,11 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       if(server->cb.connect.ctx) {
 
-        assert(session);
-        assert(JS_IsObject(session->ws_obj));
-        assert(opaque);
-        assert(opaque->ws);
-        /*  if(!JS_IsObject(session->ws_obj))
-            session->ws_obj = opaque->ws ? minnet_ws_wrap(ctx, opaque->ws) : minnet_ws_fromwsi(ctx, wsi, session);
+        if(!JS_IsObject(session->ws_obj))
+          session->ws_obj = minnet_ws_fromwsi(ctx, wsi);
 
-          if(!opaque->ws)
-            opaque->ws = minnet_ws_data(session->ws_obj);*/
+        if(!opaque->ws)
+          opaque->ws = minnet_ws_data(session->ws_obj);
 
         LOG("ws", "wsi#%" PRId64 " req=%p", opaque->serial, opaque->req);
         server_exception(server, minnet_emit_this(&server->cb.connect, session->ws_obj, 2, &session->ws_obj));

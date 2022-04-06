@@ -241,7 +241,7 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
 int
 http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* resp, JSContext* ctx) {
 
-  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int is_ssl = lws_is_ssl(wsi);
 
   lwsl_user("http " FG("198") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu", "RESPOND", opaque->serial, resp->status, resp->type, buffer_HEAD(&resp->body));
@@ -420,12 +420,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   JSContext* ctx = server ? server->context.js : 0;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 
-  if(!opaque && wsi && session && ctx) {
-    ws_fromwsi(wsi, session, ctx);
-    opaque = lws_get_opaque_user_data(wsi);
-    assert(opaque);
-  }
-
   if(lws_is_poll_callback(reason)) {
     assert(server);
     return fd_callback(wsi, reason, &server->cb.fd, in);
@@ -437,6 +431,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       session->h2 = is_h2(wsi);
     }
   }
+
+  if(!opaque && ctx)
+    opaque = lws_opaque(wsi, ctx);
+
+  assert(opaque);
 
   LOG("HTTP",
       "%s%sfd=%d in='%.*s' url=%s session#%d",

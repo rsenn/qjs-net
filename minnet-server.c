@@ -8,7 +8,6 @@
 #include <list.h>
 #include <quickjs-libc.h>
 #include <libwebsockets.h>
-#include <assert.h>
 
 #include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
 #include "minnet-plugin-broker.c"
@@ -467,13 +466,6 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
   MinnetSession* session = user;
   MinnetServer* server = /*session ? session->server :*/ lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
-  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-
-  if(!opaque && wsi && session && ctx) {
-    ws_fromwsi(wsi, session, ctx);
-    opaque = lws_get_opaque_user_data(wsi);
-    assert(opaque);
-  }
 
   // if(!lws_is_poll_callback(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
 
