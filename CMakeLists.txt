@@ -151,12 +151,13 @@ if(BUILD_LIBWEBSOCKETS)
 
     if(NOT OPENSSL_LIBRARIES)
 
-      include(FindOpenSSL)
+      find_package(OpenSSL REQUIRED)
+      # include(FindOpenSSL)
       #[[if(NOT PKG_CONFIG_FOUND)
         include(FindPkgConfig)
       endif(NOT PKG_CONFIG_FOUND)
       pkg_check_modules(OPENSSL openssl)
-      #find_package(OpenSSL REQUIRED)
+      #
       #pkg_search_module(OPENSSL openssl)
 ]]
 
