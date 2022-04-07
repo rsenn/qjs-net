@@ -393,7 +393,7 @@ headers_get(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
         lws_hdr_copy(wsi, hdr, len + 1, tok);
         hdr[len] = '\0';
 
-     printf("headers %i %.*s '%s'\n", tok, namelen, name, hdr);
+        printf("headers %i %.*s '%s'\n", tok, namelen, name, hdr);
 
         if(!headers->alloc)
           buffer_alloc(headers, 1024, ctx);
