@@ -76,7 +76,9 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         MinnetURL url = {.protocol = protocol_string(PROTOCOL_WS)};
         url_fromwsi(&url, wsi, ctx);
         opaque->req = request_new(ctx, url, METHOD_GET);
-        //session->req_obj = minnet_request_wrap(ctx, opaque->req);
+
+        headers_get(ctx, &opaque->req->headers, wsi);
+        // session->req_obj = minnet_request_wrap(ctx, opaque->req);
       }
 
       // int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
@@ -152,10 +154,10 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
-      fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));
+      // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));
 
       MinnetBuffer* buf = &session->send_buf;
-      fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s buf=%s\n", lws_callback_name(reason) + 13, buffer_escaped(buf, ctx));
+      // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s buf=%s\n", lws_callback_name(reason) + 13, buffer_escaped(buf, ctx));
 
       break;
     }
