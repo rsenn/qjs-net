@@ -242,7 +242,7 @@ macro(build_libwebsockets)
                -DLWS_WITH_SHARED:BOOL=OFF
                -DLWS_WITH_SOCKS5:BOOL=ON
                -DLWS_WITH_SPAWN:BOOL=OFF
-               -DLWS_WITH_SQLITE3:BOOL=ON
+               -DLWS_WITH_SQLITE3:BOOL=OFF
                -DLWS_WITH_STATIC:BOOL=ON
                -DLWS_WITH_STRUCT_JSON:BOOL=OFF
                -DLWS_WITH_STRUCT_SQLITE3:BOOL=OFF
