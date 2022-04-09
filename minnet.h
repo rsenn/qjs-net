@@ -198,10 +198,11 @@ void closure_free(void*);
 int minnet_lws_unhandled(const char*, int);
 JSValue headers_object(JSContext*, const void*, const void*);
 char* headers_atom(JSAtom, JSContext*);
-int headers_add(MinnetBuffer*, struct lws*, JSValue, JSContext* ctx);
+int headers_addobj(MinnetBuffer*, struct lws*, JSValue, JSContext* ctx);
 int headers_fromobj(MinnetBuffer*, JSValue, JSContext*);
 ssize_t headers_set(JSContext*, MinnetBuffer*, const char*, const char* value);
 int headers_get(JSContext*, MinnetBuffer*, struct lws*);
+size_t headers_write(uint8_t** in, int len, MinnetBuffer* buffer, struct lws* wsi);
 int fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
 int fd_callback(struct lws*, enum lws_callback_reasons, MinnetCallback*, struct lws_pollargs* args);
 void minnet_handlers(JSContext*, struct lws*, struct lws_pollargs, JSValue out[2]);
@@ -246,6 +247,42 @@ lws_is_http_callback(int reason) {
     case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
     case LWS_CALLBACK_HTTP_FILE_COMPLETION:
     case LWS_CALLBACK_HTTP_WRITEABLE: return TRUE;
+  }
+  return FALSE;
+}
+
+static inline BOOL
+lws_is_client_callback(int reason) {
+  switch(reason) {
+    case LWS_CALLBACK_CONNECTING:
+    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
+    case LWS_CALLBACK_CLIENT_CLOSED:
+    case LWS_CALLBACK_CLIENT_CONFIRM_EXTENSION_SUPPORTED:
+    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+    case LWS_CALLBACK_CLIENT_ESTABLISHED:
+    case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
+    case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL:
+    case LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL:
+    case LWS_CALLBACK_CLIENT_HTTP_REDIRECT:
+    case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
+    case LWS_CALLBACK_CLIENT_RECEIVE:
+    case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
+    case LWS_CALLBACK_CLIENT_WRITEABLE:
+    case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
+    case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
+    case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP:
+    case LWS_CALLBACK_MQTT_CLIENT_CLOSED:
+    case LWS_CALLBACK_MQTT_CLIENT_ESTABLISHED:
+    case LWS_CALLBACK_MQTT_CLIENT_RX:
+    case LWS_CALLBACK_MQTT_CLIENT_WRITEABLE:
+    case LWS_CALLBACK_MQTT_NEW_CLIENT_INSTANTIATED:
+    case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+    case LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION:
+    case LWS_CALLBACK_RECEIVE_CLIENT_HTTP:
+    case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ:
+    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
+    case LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL:
+    case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL: return TRUE;
   }
   return FALSE;
 }

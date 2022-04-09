@@ -87,13 +87,25 @@ mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const c
 
   if((m = js_mallocz(ctx, sizeof(MinnetHttpMount)))) {
 
-    // printf("mount_create mnt=%-10s org=%-20s def=%-15s protocol=%-10s origin_protocol=%s\n", mountpoint, origin, def, pro, ((const char*[]){ "HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP",
-    // "REDIR_HTTPS", "CALLBACK", })[origin_proto]);
+    printf("mount_create mnt=%-10s org=%-20s def=%-15s protocol=%-10s origin_protocol=%s\n",
+           mountpoint,
+           origin,
+           def,
+           pro,
+           ((const char*[]){
+               "HTTP",
+               "HTTPS",
+               "FILE",
+               "CGI",
+               "REDIR_HTTP",
+               "REDIR_HTTPS",
+               "CALLBACK",
+           })[origin_proto]);
 
     m->lws.mountpoint = js_strdup(ctx, mountpoint);
     m->lws.origin = origin ? js_strdup(ctx, origin) : 0;
     m->lws.def = def ? js_strdup(ctx, def) : 0;
-    m->lws.protocol = pro ? pro : js_strdup(ctx, origin_proto == LWSMPRO_CALLBACK ? "http" : "defprot");
+    m->lws.protocol = pro ? pro : js_strdup(ctx, /*origin_proto == LWSMPRO_CALLBACK ? "http" :*/ "defprot");
     m->lws.origin_protocol = origin_proto;
     m->lws.mountpoint_len = strlen(mountpoint);
   }
@@ -133,7 +145,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 
   const char* path = JS_ToCString(ctx, mnt);
 
-  // printf("mount_new '%s'\n", path);
+  printf("mount_new '%s'\n", path);
 
   if(JS_IsFunction(ctx, org)) {
     ret = mount_create(ctx, path, 0, 0, 0, LWSMPRO_CALLBACK);
@@ -449,6 +461,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       session ? session->serial : 0);
 
   switch(reason) {
+    case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: break;
+
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: {
       return 0;
@@ -526,7 +540,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       } /* else if(lws_http_transaction_completed(wsi)) {
          return -1;
        }
- */
+  */
       lws_callback_on_writable(wsi);
       return 0;
     }
@@ -655,8 +669,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_HTTP_WRITEABLE: {
       MinnetBuffer b = BUFFER(buf);
-      MinnetResponse* resp = minnet_response_data2(ctx, session->resp_obj);
+      MinnetResponse* resp; // = minnet_response_data2(ctx, session->resp_obj);
       BOOL done = FALSE;
+
+      if(!(resp = opaque->resp)) {
+        resp = opaque->resp = response_new(ctx);
+        session->resp_obj = minnet_response_wrap(ctx, resp);
+      }
 
       LOG("HTTP",
           "%smnt=%s remain=%td type=%s url.path=%s",
@@ -667,10 +686,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           resp ? resp->url.path : 0);
 
       if(JS_IsObject(session->generator)) {
-        JSValue ret = JS_UNDEFINED;
+        JSValue thisObj, ret = JS_UNDEFINED;
 
         while(!done) {
-          ret = js_iterator_next(ctx, session->generator, &session->next, &done, 0, 0);
+          ret = js_iterator_next(ctx, session->generator, &thisObj, &session->next, &done, 0, 0);
 
           if(JS_IsException(ret)) {
             JSValue exception = JS_GetException(ctx);

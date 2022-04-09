@@ -343,7 +343,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_HEADERS: {
-      ret = headers_object(ctx, &req->headers.start, &req->headers.write);
+      ret = headers_object(ctx, req->headers.start, req->headers.write);
       // ret = buffer_tostring(&req->headers, ctx);
       break;
     }

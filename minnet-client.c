@@ -71,7 +71,7 @@ close_reason(JSContext* ctx, const char* in, size_t len) {
   return JS_UNDEFINED;
 }
 
-static void
+void
 client_certificate(MinnetContext* context, JSValueConst options) {
   struct lws_context_creation_info* info = &context->info;
   JSContext* ctx = context->js;
@@ -82,17 +82,17 @@ client_certificate(MinnetContext* context, JSValueConst options) {
 
   if(JS_IsString(context->crt))
     info->client_ssl_cert_filepath = js_tostring(ctx, context->crt);
-  else
+  else if(JS_IsObject(context->crt))
     info->client_ssl_cert_mem = js_toptrsize(ctx, &info->client_ssl_cert_mem_len, context->crt);
 
   if(JS_IsString(context->key))
     info->client_ssl_private_key_filepath = js_tostring(ctx, context->key);
-  else
+  else if(JS_IsObject(context->key))
     info->client_ssl_key_mem = js_toptrsize(ctx, &info->client_ssl_key_mem_len, context->key);
 
   if(JS_IsString(context->ca))
     info->client_ssl_ca_filepath = js_tostring(ctx, context->ca);
-  else
+  else if(JS_IsObject(context->ca))
     info->client_ssl_ca_mem = js_toptrsize(ctx, &info->client_ssl_ca_mem_len, context->ca);
 }
 
@@ -102,8 +102,11 @@ client_free(MinnetClient* client) {
 
   if(--client->ref_count == 0) {
     JS_FreeValue(ctx, client->headers);
+    client->headers = JS_UNDEFINED;
     JS_FreeValue(ctx, client->body);
+    client->body = JS_UNDEFINED;
     JS_FreeValue(ctx, client->next);
+    client->next = JS_UNDEFINED;
 
     if(client->connect_info.method) {
       js_free(ctx, (void*)client->connect_info.method);
@@ -122,6 +125,7 @@ client_free(MinnetClient* client) {
 void
 client_zero(MinnetClient* client) {
   memset(client, 0, sizeof(MinnetClient));
+  client->ref_count = 1;
   client->headers = JS_NULL;
   client->body = JS_NULL;
   client->next = JS_NULL;
@@ -243,15 +247,21 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     block = JS_ToBool(ctx, value);
   JS_FreeValue(ctx, value);
 
-  value = JS_GetPropertyStr(ctx, options, "headers");
+  value = JS_GetPropertyStr(ctx, options, "body");
   if(!JS_IsUndefined(value))
-    client->headers = JS_DupValue(ctx, value);
+    client->body = JS_DupValue(ctx, value);
   JS_FreeValue(ctx, value);
 
-  if(JS_IsObject(client->headers)) {
-    headers_fromobj(&client->request->headers, client->headers, ctx);
-  }
+  /* value = JS_GetPropertyStr(ctx, options, "headers");
+   if(JS_IsObject(value)) {
+     client->headers = JS_DupValue(ctx, value);
+   }
+   JS_FreeValue(ctx, value);
 
+   if(JS_IsObject(client->headers)) {
+     headers_fromobj(&client->request->headers, client->headers, ctx);
+   }
+ */
   client->response = response_new(ctx);
   url_copy(&client->response->url, client->request->url, ctx);
 
@@ -320,6 +330,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   opaque = lws_opaque(client->wsi, client->context.js);
   opaque->binary = binary;
+  opaque->req = client->request;
+  opaque->resp = client->response;
 
   if(!block)
     return ret;
@@ -401,6 +413,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
   if(client->context.js)
     opaque = lws_opaque(wsi, client->context.js);
+
+  LOG("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in);
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
@@ -567,14 +581,14 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if(opaque && opaque->status >= CLOSING)
     ret = -1;
 
-  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu\n",
-            22 + (reason * 2),
-            lws_callback_name(reason) + 13,
-            lws_is_ssl(wsi),
-            len,
-            (int)MIN(len, 32),
-            (reason == LWS_CALLBACK_RAW_RX || reason == LWS_CALLBACK_CLIENT_RECEIVE || reason == LWS_CALLBACK_RECEIVE) ? 0 : (char*)in,
-            ret);
+  /*  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu\n",
+              22 + (reason * 2),
+              lws_callback_name(reason) + 13,
+              lws_is_ssl(wsi),
+              len,
+              (int)MIN(len, 32),
+              (reason == LWS_CALLBACK_RAW_RX || reason == LWS_CALLBACK_CLIENT_RECEIVE || reason == LWS_CALLBACK_RECEIVE) ? 0 : (char*)in,
+              ret);*/
 
   return ret;
 }

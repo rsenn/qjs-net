@@ -314,12 +314,19 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->error_document_404 = "/404.html";
   info->port = url.port;
   info->timeout_secs = 0;
+  info->options = 0;
+
+  // client_certificate(&server->context, options);
+
+  info->options |= LWS_SERVER_OPTION_PEER_CERT_NOT_REQUIRED | LWS_SERVER_OPTION_IGNORE_MISSING_CERT;
+  info->options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+  info->options |= LWS_SERVER_OPTION_DISABLE_IPV6;
+  info->options |= LWS_SERVER_OPTION_IGNORE_MISSING_CERT;
+  info->options |= LWS_SERVER_OPTION_CREATE_VHOST_SSL_CTX;
 
   if(is_tls) {
     server_certificate(&server->context, options);
 
-    info->options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-    info->options |= LWS_SERVER_OPTION_PEER_CERT_NOT_REQUIRED;
     // info->options |= LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS;
     info->options |= LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER;
     info->options |= LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;

@@ -59,7 +59,7 @@ js_function_bind_v(JSContext* ctx, JSValueConst func, ...) {
 }*/
 
 JSValue
-js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
+js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* thisObj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
   JSValue fn, result, done, value;
 
   if(!JS_IsObject(obj))
@@ -68,6 +68,14 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, 
   if(JS_IsObject(*next) && JS_IsFunction(ctx, *next)) {
     fn = *next;
   } else {
+    if(JS_IsFunction(ctx, obj)) {
+      JSValue tmp = JS_Call(ctx, obj, JS_UNDEFINED, 0, 0);
+      if(JS_IsObject(tmp)) {
+        JS_FreeValue(ctx, obj);
+        obj = tmp;
+      }
+    }
+
     fn = JS_GetPropertyStr(ctx, obj, "next");
 
     if(JS_IsUndefined(fn))
@@ -77,9 +85,11 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, 
       return JS_ThrowTypeError(ctx, "object.next is not a function");
 
     *next = fn;
+    if(thisObj)
+      *thisObj = JS_DupValue(ctx, obj);
   }
 
-  result = JS_Call(ctx, fn, obj, argc, argv);
+  result = JS_Call(ctx, fn, thisObj ? *thisObj : obj, argc, argv);
   // JS_FreeValue(ctx, fn);
 
   if(JS_IsException(result))
@@ -398,11 +408,15 @@ js_promise_create(JSContext* ctx, ResolveFunctions* funcs) {
 
 JSValue
 js_promise_resolve(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
+  if(js_is_nullish(funcs->array[0]))
+    return JS_UNDEFINED;
   return js_resolve_functions_call(ctx, funcs, 0, value);
 }
 
 JSValue
 js_promise_reject(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
+  if(js_is_nullish(funcs->array[1]))
+    return JS_UNDEFINED;
   return js_resolve_functions_call(ctx, funcs, 1, value);
 }
 

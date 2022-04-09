@@ -21,12 +21,28 @@ typedef struct input_buffer {
   JSValue value;
 } JSBuffer;
 
+
 typedef union resolve_functions {
   JSValue array[2];
   struct {
     JSValue resolve, reject;
   };
 } ResolveFunctions;
+
+typedef struct async_read {
+  struct list_head link;
+ ResolveFunctions promise;
+} AsyncRead;
+
+typedef struct value_item {
+  struct list_head link;
+ JSValue item;
+} ValueItem;
+
+typedef struct async_iterator {
+  JSContext*ctx;
+  struct list_head reads, values;
+} AsyncIterator;
 
 struct TimerClosure {
   int ref_count;
@@ -40,7 +56,7 @@ void js_console_log(JSContext*, JSValueConst*, JSValueConst*);
 JSValue js_function_bound(JSContext*, JSValueConst, int, JSValueConst argv[], int magic, JSValueConst* func_data);
 JSValue js_function_bind(JSContext*, JSValueConst, int, JSValueConst argv[]);
 JSValue js_function_bind_1(JSContext*, JSValueConst, JSValueConst);
-JSValue js_iterator_next(JSContext*, JSValueConst, JSValueConst*, BOOL* done_p, int argc, JSValueConst argv[]);
+JSValue js_iterator_next(JSContext*, JSValueConst, JSValueConst*, JSValueConst*, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValueConst, JSValueConst, int flags);
 void js_buffer_from(JSContext*, JSBuffer*, JSValueConst);
 JSBuffer js_buffer_new(JSContext*, JSValueConst);

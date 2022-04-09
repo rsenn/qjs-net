@@ -4,6 +4,7 @@
 #include "minnet-response.h"
 #include "minnet-websocket.h"
 #include "minnet-ringbuffer.h"
+#include "minnet-generator.h"
 #include "jsutils.h"
 #include "minnet-buffer.h"
 #include <libwebsockets.h>
@@ -261,6 +262,7 @@ headers_object(JSContext* ctx, const void* start, const void* e) {
   JSValue ret = JS_NewObject(ctx);
   size_t len, namelen, n;
   const uint8_t *x, *end;
+
   for(x = start, end = e; x < end; x += len + 1) {
     len = byte_chrs(x, end - x, "\r\n", 2);
     if(len > (n = byte_chr(x, len, ':'))) {
@@ -293,7 +295,7 @@ headers_atom(JSAtom atom, JSContext* ctx) {
 }
 
 int
-headers_add(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
+headers_addobj(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
 
@@ -323,6 +325,45 @@ headers_add(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* 
 
   js_free(ctx, tab);
   return 0;
+}
+
+size_t
+headers_write(uint8_t** in, int len, MinnetBuffer* buffer, struct lws* wsi) {
+  uint8_t *r = buffer->read, *w = buffer->write, *next, *start, *ptr, *end;
+
+  start = ptr = *in;
+  end = ptr + len;
+
+  while(r < w) {
+    size_t l = byte_chr(r, w - r, '\n');
+    size_t n, m = byte_chr(r, r + l, ':');
+    uint8_t* name = r;
+
+    next = r + l + 1;
+
+    n = m;
+    ++m;
+
+    while(r[m] && r[m] == ' ') ++m;
+
+    r += m;
+    l -= m;
+
+    // if(r + l < w)
+    while(l > 0 && (r[l - 1] == '\n' || r[l - 1] == '\r')) --l;
+    uint8_t tmp = name[n + 1];
+    name[n + 1] = '\0';
+
+    int ret = lws_add_http_header_by_name(wsi, name, r, l, &ptr, end);
+    name[n + 1] = tmp;
+
+    printf("name=%.*s value=%.*s lws_add_http_header_by_name() = %d\n", (int)n, name, (int)l, r, ret);
+
+    r = next;
+  }
+
+  *in = ptr;
+  return ptr - start;
 }
 
 int
@@ -692,7 +733,7 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Request", minnet_request_ctor);
 
-  // Add class Stream
+  // Add class Ringbuffer
   JS_NewClassID(&minnet_ringbuffer_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_ringbuffer_class_id, &minnet_ringbuffer_class);
@@ -700,11 +741,26 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   JS_SetPropertyFunctionList(ctx, minnet_ringbuffer_proto, minnet_ringbuffer_proto_funcs, minnet_ringbuffer_proto_funcs_size);
   JS_SetClassProto(ctx, minnet_ringbuffer_class_id, minnet_ringbuffer_proto);
 
-  minnet_ringbuffer_ctor = JS_NewCFunction2(ctx, minnet_ringbuffer_constructor, "MinnetRingBuffer", 0, JS_CFUNC_constructor, 0);
+  minnet_ringbuffer_ctor = JS_NewCFunction2(ctx, minnet_ringbuffer_constructor, "MinnetRingbuffer", 0, JS_CFUNC_constructor, 0);
   JS_SetConstructor(ctx, minnet_ringbuffer_ctor, minnet_ringbuffer_proto);
 
   if(m)
-    JS_SetModuleExport(ctx, m, "Stream", minnet_ringbuffer_ctor);
+    JS_SetModuleExport(ctx, m, "Ringbuffer", minnet_ringbuffer_ctor);
+
+
+  // Add class Generator
+  JS_NewClassID(&minnet_generator_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
+  minnet_generator_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, minnet_generator_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
+
+  minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_generator_ctor, minnet_generator_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
 
   // Add class URL
   minnet_url_init(ctx, m);
@@ -743,7 +799,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
     return NULL;
   JS_AddModuleExport(ctx, m, "Response");
   JS_AddModuleExport(ctx, m, "Request");
-  JS_AddModuleExport(ctx, m, "Stream");
+  JS_AddModuleExport(ctx, m, "Ringbuffer");
   JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExport(ctx, m, "default");

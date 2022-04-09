@@ -24,6 +24,16 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   LOG("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in, session ? session->serial : 0);
 
   switch(reason) {
+    case LWS_CALLBACK_CONNECTING: {
+      break;
+    }
+    case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
+      return 0;
+    }
+    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+    case LWS_CALLBACK_CHILD_CLOSING: {
+      break;
+    }
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
       if(!opaque->req)

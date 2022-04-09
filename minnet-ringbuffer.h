@@ -13,7 +13,7 @@ typedef struct ringbuffer {
 
   struct lws_ring* ring;
   pthread_mutex_t lock_ring; /* serialize access to the ring buffer */
-} MinnetRingBuffer;
+} MinnetRingbuffer;
 
 void ringbuffer_dump(struct ringbuffer const*);
 void ringbuffer_init(struct ringbuffer*, size_t, size_t, const char* type, size_t typelen);
@@ -47,7 +47,7 @@ ringbuffer_unlock(struct ringbuffer* strm) {
   return pthread_mutex_unlock(&strm->lock_ring);
 }
 
-static inline MinnetRingBuffer*
+static inline MinnetRingbuffer*
 minnet_ringbuffer_data(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_ringbuffer_class_id);
 }

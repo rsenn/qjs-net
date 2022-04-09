@@ -10,7 +10,7 @@ THREAD_LOCAL JSValue minnet_ringbuffer_proto, minnet_ringbuffer_ctor;
 
 void
 ringbuffer_dump(struct ringbuffer const* strm) {
-  /*  fprintf(stderr, "\nMinnetRingBuffer {\n\tref_count = %zu", strm->ref_count);
+  /*  fprintf(stderr, "\nMinnetRingbuffer {\n\tref_count = %zu", strm->ref_count);
     buffer_dump("buffer", &strm->buffer);
     fputs("\n}", stderr);
     fflush(stderr);*/
@@ -33,14 +33,14 @@ struct ringbuffer*
 ringbuffer_new(JSContext* ctx) {
   struct ringbuffer* strm;
 
-  if((strm = js_mallocz(ctx, sizeof(MinnetRingBuffer))))
+  if((strm = js_mallocz(ctx, sizeof(MinnetRingbuffer))))
     strm->ref_count = 1;
   return strm;
 }
 
 struct ringbuffer*
 ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
-  MinnetRingBuffer* strm;
+  MinnetRingbuffer* strm;
 
   if((strm = ringbuffer_new(ctx))) {
     const char* type = "application/binary";
@@ -91,7 +91,7 @@ ringbuffer_avail(struct ringbuffer* strm) {
 void
 ringbuffer_zero(struct ringbuffer* strm) {
   lws_ring_destroy(strm->ring);
-  memset(strm, 0, sizeof(MinnetRingBuffer));
+  memset(strm, 0, sizeof(MinnetRingbuffer));
 }
 
 void
@@ -103,7 +103,7 @@ ringbuffer_free(struct ringbuffer* strm, JSRuntime* rt) {
 JSValue
 minnet_ringbuffer_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
-  MinnetRingBuffer* strm;
+  MinnetRingbuffer* strm;
 
   if(!(strm = ringbuffer_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
@@ -184,7 +184,7 @@ enum { RINGBUFFER_TYPE, RINGBUFFER_LENGTH, RINGBUFFER_AVAIL, RINGBUFFER_BUFFER, 
 
 static JSValue
 minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
-  MinnetRingBuffer* strm;
+  MinnetRingbuffer* strm;
   if(!(strm = JS_GetOpaque2(ctx, this_val, minnet_ringbuffer_class_id)))
     return JS_EXCEPTION;
 
@@ -222,7 +222,7 @@ minnet_ringbuffer_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSVa
 
 static JSValue
 minnet_ringbuffer_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], BOOL* pdone, int magic) {
-  MinnetRingBuffer* strm;
+  MinnetRingbuffer* strm;
   JSValue ret = JS_UNDEFINED;
   size_t len;
   uint8_t* ptr;
@@ -252,7 +252,7 @@ minnet_ringbuffer_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
 static void
 minnet_ringbuffer_finalizer(JSRuntime* rt, JSValue val) {
-  MinnetRingBuffer* strm = JS_GetOpaque(val, minnet_ringbuffer_class_id);
+  MinnetRingbuffer* strm = JS_GetOpaque(val, minnet_ringbuffer_class_id);
   if(strm && --strm->ref_count == 0) {
 
     // buffer_free(&strm->buffer, rt);
@@ -262,7 +262,7 @@ minnet_ringbuffer_finalizer(JSRuntime* rt, JSValue val) {
 }
 
 JSClassDef minnet_ringbuffer_class = {
-    "MinnetRingBuffer",
+    "MinnetRingbuffer",
     .finalizer = minnet_ringbuffer_finalizer,
 };
 
@@ -273,7 +273,7 @@ const JSCFunctionListEntry minnet_ringbuffer_proto_funcs[] = {
     JS_ITERATOR_NEXT_DEF("next", 0, minnet_ringbuffer_next, 0),
     JS_CFUNC_DEF("[Symbol.iterator]", 0, minnet_ringbuffer_iterator),
     JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_ringbuffer_get, 0, RINGBUFFER_BUFFER, 0),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRingBuffer", JS_PROP_CONFIGURABLE),
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRingbuffer", JS_PROP_CONFIGURABLE),
 };
 
 const size_t minnet_ringbuffer_proto_funcs_size = countof(minnet_ringbuffer_proto_funcs);

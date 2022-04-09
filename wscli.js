@@ -8,6 +8,7 @@ import { Console } from 'console';
 import { quote } from 'util';
 
 const connections = new Set();
+let debug = 0;
 
 function GetOpt(options = {}, args) {
   let s, l;
@@ -156,7 +157,7 @@ class CLI extends REPL {
       //log('console.log:', args);
       //while(str.endsWith('\n')) str = str.slice(0, -1);
 
-      this.printStatus(args.map(inspect));
+      this.printStatus(args.map(arg => inspect(arg, console.options)));
     };
     this.runSync();
   }
@@ -177,7 +178,7 @@ class CLI extends REPL {
 
 function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
-  globalThis.console = new Console({ inspectOptions: { compact: 1, customInspect: true } });
+  globalThis.console = new Console({ inspectOptions: { depth: Infinity, compact: 1, customInspect: true } });
   let headers = [];
   let params = GetOpt(
     {
@@ -187,7 +188,7 @@ function main(...args) {
       connect: [false, null, 'c'],
       client: [false, null, 'C'],
       server: [false, null, 'S'],
-      debug: [false, null, 'x'],
+      debug: [false, () => ++debug, 'x'],
       address: [true, null, 'a'],
       port: [true, null, 'p'],
       method: [true, null, 'm'],
@@ -217,25 +218,18 @@ function main(...args) {
   console.log('headers', headers);
   function createWS(url, callbacks, listen = 0) {
     let urlObj = new URL(url);
+    console.log('createWS', { urlObj, url });
     let repl;
     let is_dns = false;
 
-    console.log('params.debug', params.debug);
-    net.setLog(net.LLL_USER | (((params.debug >= 2 ? net.LLL_DEBUG : net.LLL_WARN) << 1) - 1), (level, msg) => {
+    net.setLog(net.LLL_USER | (((debug ? net.LLL_INFO : net.LLL_NOTICE) << 1) - 1), (level, msg) => {
       let p =
         ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][
           level && Math.log2(level)
         ] ?? level + '';
-      //msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
-      /*
-      msg = quote(msg, "'");*/
-      msg = msg.replace(/(\r?\n)*$/, '');
+      //console.log('log', { p, level,msg });
 
-      if(!/POLL/.test(msg) /*&& /MINNET/.test(p)*/)
-        //if(!/^(\[|:|_|lws_)/.test(msg) || /MINNET/.test(p))
-        //if(params.debug && /(client|http|read|write)/i.test(msg))
-        //console.log(p.padEnd(8)+ msg);
-        repl.printStatus(p.padEnd(8) + msg);
+      std.puts(p.padEnd(8) + '\t' + msg + '\n');
     });
 
     const fn = [net.client, net.server][+listen];
@@ -246,15 +240,15 @@ function main(...args) {
       method,
       binary,
       block: false,
-      body: (function* () {
+      body: function* () {
         yield '{ "test": 1234 }';
-      })(),
+      },
       headers: {
         'user-agent': 'minnet',
-        ...Object.fromEntries(headers)
+        ...Object.fromEntries(headers),
         /*'Content-Type': 'application/json',
         'Content-Length': 1000*/
-        //'Connection': 'keep-alive',
+     'Connection': 'keep-alive',
         // Range: 'bytes=10-'
         //    'accept-encoding': 'br gzip',
       },
@@ -290,17 +284,22 @@ function main(...args) {
           }, 100);
         }
       },
-      onHttp(req, resp) {
+      async onHttp(req, resp) {
         console.log('onHttp', console.config({ compact: false }), { req, resp });
-        let text = resp.text();
-        text = text.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        console.log('request', req);
+        console.log('request.headers', req.headers);
+        console.log('response', resp);
+        console.log('response.headers', resp.headers);
+        let text = await resp.text();
+        console.log('onHttp', text);
+        /*text = text.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
         const { url } = resp;
         console.log('onHttp', url, { text });
 
-        /* let json =resp.json();
-        console.log('onHttp', { json }); */
+        let json = resp.json();
+        console.log('onHttp', { json });
         let buffer = resp.arrayBuffer();
-        console.log('onHttp', { buffer });
+        console.log('onHttp', { buffer });*/
       },
       onFd(fd, rd, wr) {
         //console.log('onFd', fd, rd, wr);
