@@ -8,17 +8,16 @@
 #include "minnet-buffer.h"
 
 typedef struct generator {
-  JSContext* ctx;
-  int ref_count;
-  AsyncIterator iterator;
   MinnetBuffer buffer;
+  AsyncIterator iterator;
+  JSContext* ctx;
 } MinnetGenerator;
 
 void generator_zero(struct generator*);
-void generator_free(struct generator*);
+void generator_free(struct generator**);
 struct generator* generator_new(JSContext*);
-struct generator* generator_dup(struct generator*);
 JSValue generator_next(MinnetGenerator*, JSContext*);
-JSValue minnet_generator_wrap(JSContext*, MinnetGenerator*);
+ssize_t generator_write(MinnetGenerator*, const void*, size_t);
+JSValue minnet_generator_wrap(JSContext*, MinnetGenerator**);
 
 #endif /* MINNET_GENERATOR_H */

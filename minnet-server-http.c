@@ -257,11 +257,11 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int is_ssl = lws_is_ssl(wsi);
 
-  lwsl_user("http " FG("198") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu", "RESPOND", opaque->serial, resp->status, resp->type, buffer_HEAD(&resp->body));
+  lwsl_user("http " FG("198") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu", "RESPOND", opaque->serial, resp->status, resp->type, buffer_HEAD(resp->body));
 
   // resp->read_only = TRUE;
 
-  if(lws_add_http_common_headers(wsi, resp->status, resp->type, is_ssl ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(&resp->body), &buf->write, buf->end)) {
+  if(lws_add_http_common_headers(wsi, resp->status, resp->type, is_ssl ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body), &buf->write, buf->end)) {
     return 1;
   }
   /*  {
@@ -353,10 +353,10 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
   if((fp = fopen(path, "rb"))) {
     size_t n = file_size(fp);
 
-    buffer_alloc(&resp->body, n, ctx);
+    buffer_alloc(resp->body, n, ctx);
 
-    if(fread(resp->body.write, n, 1, fp) == 1)
-      resp->body.write += n;
+    if(fread(resp->body->write, n, 1, fp) == 1)
+      resp->body->write += n;
 
     if(mime) {
       if(resp->type)
@@ -375,7 +375,7 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
     response_write(resp, body, strlen(body), ctx);
   }
 
-  lwsl_user("serve_file path=%s mount=%.*s length=%td", path, mount->lws.mountpoint_len, mount->lws.mountpoint, buffer_HEAD(&resp->body));
+  lwsl_user("serve_file path=%s mount=%.*s length=%td", path, mount->lws.mountpoint_len, mount->lws.mountpoint, buffer_HEAD(resp->body));
 
   return 0;
 }
@@ -388,10 +388,10 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
   ssize_t ret = 0;
 
   n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
-  /*  if(!buffer_BYTES(&resp->body) && is_h2(wsi)) buffer_append(&resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
+  /*  if(!buffer_BYTES(resp->body) && is_h2(wsi)) buffer_append(resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
 
-  if((remain = buffer_BYTES(&resp->body))) {
-    uint8_t* x = resp->body.read;
+  if((remain = buffer_BYTES(resp->body))) {
+    uint8_t* x = resp->body->read;
     size_t l = is_h2(wsi) ? (remain > 1024 ? 1024 : remain) : remain;
 
     if(l > 0) {
@@ -399,11 +399,11 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
       ret = lws_write(wsi, x, l, p);
       lwsl_user("lws_write wsi#%" PRIi64 " len=%zu final=%d ret=%zd", opaque->serial, l, p == LWS_WRITE_HTTP_FINAL, ret);
       if(ret > 0)
-        buffer_skip(&resp->body, ret);
+        buffer_skip(resp->body, ret);
     }
   }
 
-  remain = buffer_BYTES(&resp->body);
+  remain = buffer_BYTES(resp->body);
 
   lwsl_user("%s wsi#%" PRIi64 " done=%i remain=%zu final=%d", __func__, opaque->serial, done, remain, p == LWS_WRITE_HTTP_FINAL);
 
@@ -681,7 +681,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           "%smnt=%s remain=%td type=%s url.path=%s",
           session->h2 ? "h2, " : "",
           session->mount ? session->mount->mnt : 0,
-          resp ? buffer_BYTES(&resp->body) : 0,
+          resp ? buffer_BYTES(resp->body) : 0,
           resp ? resp->type : 0,
           resp ? resp->url.path : 0);
 
@@ -698,10 +698,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           } else if(!done) {
             JSBuffer out = js_buffer_new(ctx, ret);
             LOG("HTTP", "size=%zu", out.size);
-            buffer_append(&resp->body, out.data, out.size, ctx);
+            buffer_append(resp->body, out.data, out.size, ctx);
             js_buffer_free(&out, ctx);
           }
-          LOG("HTTP", "done=%i write=%zu", done, buffer_HEAD(&resp->body));
+          LOG("HTTP", "done=%i write=%zu", done, buffer_HEAD(resp->body));
 
           if(opaque->status == OPEN) {
             if(http_server_respond(wsi, &b, resp, ctx)) {
@@ -714,7 +714,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           }
         }
 
-      } else if(!buffer_HEAD(&resp->body)) {
+      } else if(!buffer_HEAD(resp->body)) {
         static int unhandled;
 
         if(!unhandled++)

@@ -6,7 +6,7 @@
  * This file is made available under the Creative Commons CC0 1.0
  * Universal Public Domain Dedication.
  *
- * This implements asynciterator_pop broker "broker", for systems that look like this
+ * This implements asynciterator_read broker "broker", for systems that look like this
  *
  * [ publisher  ws client ] <-> [ ws server  broker ws server ] <-> [ ws client subscriber ]
  *
@@ -19,7 +19,7 @@
  *
  * Any number of publishers and subscribers are supported.
  *
- * This example implements asynciterator_pop single ws server, using one ws protocol, that treats ws
+ * This example implements asynciterator_read single ws server, using one ws protocol, that treats ws
  * connections as being in publisher or subscriber mode according to the URL the ws
  * connection was made to.  ws connections to "/publisher" URL are understood to be
  * publishing data and to any other URL, subscribing.
@@ -61,7 +61,7 @@ typedef struct per_vhost_data__broker {
   struct lws_ring* ring; /* ringbuffer holding unsent messages */
 } MinnetBrokerPerVhostData;
 
-/* destroys the message when everyone has had asynciterator_pop copy of it */
+/* destroys the message when everyone has had asynciterator_read copy of it */
 
 static void
 broker_destroy_message(void* _msg) {

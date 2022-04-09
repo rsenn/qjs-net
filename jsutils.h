@@ -65,6 +65,7 @@ JSValue js_timer_callback(JSContext*, JSValueConst, int, JSValueConst* argv, int
 struct TimerClosure* js_timer_interval(JSContext*, JSValueConst, uint32_t);
 void js_timer_restart(struct TimerClosure*);
 void js_promise_free(JSContext*, ResolveFunctions*);
+void js_promise_free_rt(JSRuntime* rt, ResolveFunctions* funcs);
 char* js_tostringlen(JSContext*, size_t*, JSValueConst);
 char* js_tostring(JSContext*, JSValueConst);
 JSValue js_invoke(JSContext*, JSValueConst, const char*, int argc, JSValueConst argv[]);
@@ -179,11 +180,11 @@ typedef struct async_iterator {
   struct list_head reads /*, values*/;
 } AsyncIterator;
 
-void asynciterator_zero(struct async_iterator*);
-void asynciterator_clear(struct async_iterator*, JSRuntime*);
-struct async_iterator* asynciterator_new(JSContext*);
-JSValue asynciterator_await(struct async_iterator*, JSContext*);
-struct async_read* asynciterator_pop(struct async_iterator*, JSContext*);
-void asynciterator_push(struct async_iterator*, JSValueConst, JSContext*);
+void asynciterator_zero(AsyncIterator*);
+void asynciterator_clear(AsyncIterator*, JSRuntime*);
+AsyncIterator* asynciterator_new(JSContext*);
+JSValue asynciterator_yield(AsyncIterator*, JSContext*);
+AsyncRead* asynciterator_read(AsyncIterator*, JSContext*);
+BOOL asynciterator_push(AsyncIterator*, JSValueConst, JSContext*);
 
 #endif /* MINNET_JS_UTILS_H */

@@ -23,8 +23,8 @@ struct http_request;
 #define HIDDEN __attribute__((visibility("hidden")))
 #endif
 
-#define MAX(asynciterator_pop, b) ((asynciterator_pop) > (b) ? (asynciterator_pop) : (b))
-#define MIN(asynciterator_pop, b) ((asynciterator_pop) < (b) ? (asynciterator_pop) : (b))
+#define MAX(asynciterator_read, b) ((asynciterator_read) > (b) ? (asynciterator_read) : (b))
+#define MIN(asynciterator_read, b) ((asynciterator_read) < (b) ? (asynciterator_read) : (b))
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 #define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags) \
@@ -202,7 +202,7 @@ int headers_addobj(MinnetBuffer*, struct lws*, JSValue, JSContext* ctx);
 int headers_fromobj(MinnetBuffer*, JSValue, JSContext*);
 ssize_t headers_set(JSContext*, MinnetBuffer*, const char*, const char* value);
 int headers_get(JSContext*, MinnetBuffer*, struct lws*);
-size_t headers_write(uint8_t** in, int len, MinnetBuffer* buffer, struct lws* wsi);
+size_t headers_write(uint8_t** in, uint8_t* end, MinnetBuffer* buffer, struct lws* wsi);
 int fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
 int fd_callback(struct lws*, enum lws_callback_reasons, MinnetCallback*, struct lws_pollargs* args);
 void minnet_handlers(JSContext*, struct lws*, struct lws_pollargs, JSValue out[2]);

@@ -221,7 +221,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     context->info.user = client;
 
     if(!context->lws) {
-      client_certificate(&client->context, options);
+      //  client_certificate(&client->context, options);
 
       if(!(context->lws = lws_create_context(&context->info))) {
         lwsl_err("minnet-client: libwebsockets init failed\n");
@@ -264,6 +264,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
  */
   client->response = response_new(ctx);
   url_copy(&client->response->url, client->request->url, ctx);
+  client->response->generator = generator_new(ctx);
 
   proto = protocol_number(client->request->url.protocol);
 

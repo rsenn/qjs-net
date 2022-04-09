@@ -188,8 +188,7 @@ buffer_fromvalue(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
 
   if(input.data == 0) {
     ret = 0;
-  } else if(buffer_alloc(buf, input.size, ctx)) {
-    buffer_write(buf, input.data, input.size);
+  } else if(buffer_append(buf, input.data, input.size, ctx) == input.size) {
     ret = 1;
   }
 

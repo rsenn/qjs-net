@@ -229,6 +229,9 @@ function main(...args) {
         ] ?? level + '';
       //console.log('log', { p, level,msg });
 
+      if(/\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
+      msg = msg.replace(/\n/g, '\\n');
+
       std.puts(p.padEnd(8) + '\t' + msg + '\n');
     });
 
@@ -245,10 +248,8 @@ function main(...args) {
       },
       headers: {
         'user-agent': 'minnet',
-        ...Object.fromEntries(headers),
-        /*'Content-Type': 'application/json',
-        'Content-Length': 1000*/
-        Connection: 'keep-alive'
+        ...Object.fromEntries(headers)
+        //Connection: 'keep-alive'
         // Range: 'bytes=10-'
         //    'accept-encoding': 'br gzip',
       },

@@ -273,9 +273,11 @@ url_info(const MinnetURL url, struct lws_client_connect_info* info) {
   info->address = url.host;
 
   if(protocol_is_tls(proto)) {
-    info->ssl_connection = LCCSCF_USE_SSL | LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;
+    info->ssl_connection = LCCSCF_USE_SSL;
+    // info->ssl_connection |= LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;
     info->ssl_connection |= LCCSCF_ALLOW_SELFSIGNED;
     info->ssl_connection |= LCCSCF_ALLOW_INSECURE;
+    info->ssl_connection |= LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
   }
 
   info->path = url.path ? url.path : "/";
@@ -642,7 +644,7 @@ minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
   url_fromvalue(url, argv[0], ctx);
 
   if(!url_valid(*url))
-    return JS_ThrowTypeError(ctx, "Not asynciterator_pop valid URL");
+    return JS_ThrowTypeError(ctx, "Not asynciterator_read valid URL");
 
   return minnet_url_wrap(ctx, url);
 }

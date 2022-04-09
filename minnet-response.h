@@ -6,8 +6,9 @@
 #include <libwebsockets.h>
 #include "minnet.h"
 #include "minnet-buffer.h"
+#include "minnet-generator.h"
 
-//struct http_request;
+// struct http_request;
 
 typedef struct http_response {
   int ref_count;
@@ -17,7 +18,11 @@ typedef struct http_response {
   int status;
   char* status_text;
   BOOL ok;
-  MinnetBuffer headers, body;
+  MinnetBuffer headers;
+  union {
+    MinnetGenerator* generator;
+    MinnetBuffer* body;
+  };
 } MinnetResponse;
 
 void response_format(MinnetResponse const*, char*, size_t);

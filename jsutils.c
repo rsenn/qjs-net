@@ -82,7 +82,7 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* thisObj, JSValue* ne
       return JS_ThrowTypeError(ctx, "object does not have 'next' method");
 
     if(!JS_IsFunction(ctx, fn))
-      return JS_ThrowTypeError(ctx, "object.next is not asynciterator_pop function");
+      return JS_ThrowTypeError(ctx, "object.next is not asynciterator_read function");
 
     *next = fn;
     if(thisObj)
@@ -362,6 +362,13 @@ js_promise_free(JSContext* ctx, ResolveFunctions* funcs) {
   js_resolve_functions_zero(funcs);
 }
 
+void
+js_promise_free_rt(JSRuntime* rt, ResolveFunctions* funcs) {
+  JS_FreeValueRT(rt, funcs->array[0]);
+  JS_FreeValueRT(rt, funcs->array[1]);
+  js_resolve_functions_zero(funcs);
+}
+
 static inline JSValue
 js_resolve_functions_call(JSContext* ctx, ResolveFunctions* funcs, int index, JSValueConst arg) {
   JSValue ret = JS_UNDEFINED;
@@ -570,18 +577,18 @@ js_module_import_meta(JSContext* ctx, const char* name) {
 }
 
 void
-asynciterator_zero(struct async_iterator* it) {
+asynciterator_zero(AsyncIterator* it) {
   it->ctx = 0;
   init_list_head(&it->reads);
   //  init_list_head(&it->values);
 }
 
 void
-asynciterator_clear(struct async_iterator* it, JSRuntime* rt) {
+asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
   struct list_head *el, *next;
 
   list_for_each_safe(el, next, &it->reads) {
-    struct async_read* rd = list_entry(el, struct async_read, link);
+    AsyncRead* rd = list_entry(el, AsyncRead, link);
     js_promise_free_rt(rt, &rd->promise);
     js_free_rt(rt, rd);
   }
@@ -589,9 +596,9 @@ asynciterator_clear(struct async_iterator* it, JSRuntime* rt) {
   js_free_rt(rt, it);
 }
 
-struct async_iterator*
+AsyncIterator*
 asynciterator_new(JSContext* ctx) {
-  struct async_iterator* it;
+  AsyncIterator* it;
 
   if((it = js_malloc(ctx, sizeof(AsyncIterator)))) {
     asynciterator_zero(it);
@@ -601,31 +608,31 @@ asynciterator_new(JSContext* ctx) {
 }
 
 JSValue
-asynciterator_await(struct async_iterator* it, JSContext* ctx) {
-  struct async_read* rd;
+asynciterator_yield(AsyncIterator* it, JSContext* ctx) {
+  AsyncRead* rd;
   JSValue ret = JS_UNDEFINED;
 
-  if((rd = js_malloc(ctx, sizeof(struct async_read)))) {
+  if((rd = js_malloc(ctx, sizeof(AsyncRead)))) {
     list_add(&rd->link, &it->reads);
     ret = js_promise_create(ctx, &rd->promise);
   }
   return ret;
 }
 
-struct async_read*
-asynciterator_pop(struct async_iterator* it, JSContext* ctx) {
+AsyncRead*
+asynciterator_read(AsyncIterator* it, JSContext* ctx) {
   if(!list_empty(&it->reads)) {
-    struct async_read* rd = it->reads.prev;
+    AsyncRead* rd = it->reads.prev;
     list_del(&rd->link);
     return rd;
   }
   return 0;
 }
 
-void
-asynciterator_push(struct async_iterator* it, JSValueConst value, JSContext* ctx) {
-  if(!list_empty(&it->reads)) {
-    struct async_read* rd = it->reads.prev;
+BOOL
+asynciterator_push(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
+  AsyncRead* rd;
+  if((rd = asynciterator_read(it, ctx))) {
     JSValue obj = JS_NewObject(ctx);
 
     JS_SetPropertyStr(ctx, obj, "value", JS_DupValue(ctx, value));
@@ -634,7 +641,7 @@ asynciterator_push(struct async_iterator* it, JSValueConst value, JSContext* ctx
     list_del(&rd->link);
     js_promise_resolve(ctx, &rd->promise, obj);
     js_free(ctx, rd);
-    return rd;
+    return TRUE;
   }
-  return 0;
+  return FALSE;
 }

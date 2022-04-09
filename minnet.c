@@ -56,6 +56,43 @@ THREAD_LOCAL struct list_head minnet_sockets = {0, 0};
 static THREAD_LOCAL uint32_t session_serial = 0;
 // THREAD_LOCAL BOOL minnet_exception = FALSE;
 
+void
+minnet_log_callback(int level, const char* line) {
+  if(minnet_log_ctx) {
+    if(JS_IsFunction(minnet_log_ctx, minnet_log_cb)) {
+      size_t n = 0, len = strlen(line);
+
+      if(len > 0 && line[0] == '[') {
+        if((n = byte_chr(line, len, ']')) < len)
+          n++;
+        while(n < len && isspace(line[n])) n++;
+        if(n + 1 < len && line[n + 1] == ':')
+          n += 2;
+        while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
+      }
+      if(len > 0 && line[len - 1] == '\n')
+        len--;
+
+      JSValueConst argv[2] = {
+          JS_NewInt32(minnet_log_ctx, level),
+          JS_NewStringLen(minnet_log_ctx, line + n, len - n),
+      };
+      JSValue ret = JS_Call(minnet_log_ctx, minnet_log_cb, minnet_log_this, 2, argv);
+
+      if(JS_IsException(ret)) {
+        JSValue exception = JS_GetException(minnet_log_ctx);
+        JS_FreeValue(minnet_log_ctx, exception);
+      }
+
+      JS_FreeValue(minnet_log_ctx, argv[0]);
+      JS_FreeValue(minnet_log_ctx, argv[1]);
+      JS_FreeValue(minnet_log_ctx, ret);
+    } else {
+      js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log_cb);
+    }
+  }
+}
+
 int
 socket_geterror(int fd) {
   int e;
@@ -138,7 +175,10 @@ void
 context_clear(MinnetContext* context) {
   JSContext* ctx = context->js;
 
+  lws_set_log_level(0, 0);
+
   lws_context_destroy(context->lws);
+  lws_set_log_level(((unsigned)minnet_log_level & ((1u << LLL_COUNT) - 1)), minnet_log_callback);
 
   JS_FreeValue(ctx, context->crt);
   JS_FreeValue(ctx, context->key);
@@ -175,43 +215,6 @@ closure_free(void* ptr) {
         closure->free_func(closure->context);
 
       js_free(ctx, closure);
-    }
-  }
-}
-
-static void
-lws_log_callback(int level, const char* line) {
-  if(minnet_log_ctx) {
-    if(JS_IsFunction(minnet_log_ctx, minnet_log_cb)) {
-      size_t n = 0, len = strlen(line);
-
-      if(len > 0 && line[0] == '[') {
-        if((n = byte_chr(line, len, ']')) < len)
-          n++;
-        while(n < len && isspace(line[n])) n++;
-        if(n + 1 < len && line[n + 1] == ':')
-          n += 2;
-        while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
-      }
-      if(len > 0 && line[len - 1] == '\n')
-        len--;
-
-      JSValueConst argv[2] = {
-          JS_NewInt32(minnet_log_ctx, level),
-          JS_NewStringLen(minnet_log_ctx, line + n, len - n),
-      };
-      JSValue ret = JS_Call(minnet_log_ctx, minnet_log_cb, minnet_log_this, 2, argv);
-
-      if(JS_IsException(ret)) {
-        JSValue exception = JS_GetException(minnet_log_ctx);
-        JS_FreeValue(minnet_log_ctx, exception);
-      }
-
-      JS_FreeValue(minnet_log_ctx, argv[0]);
-      JS_FreeValue(minnet_log_ctx, argv[1]);
-      JS_FreeValue(minnet_log_ctx, ret);
-    } else {
-      js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log_cb);
     }
   }
 }
@@ -253,7 +256,7 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   }
 
   ret = set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
-  lws_set_log_level(((unsigned)minnet_log_level & ((1u << LLL_COUNT) - 1)), lws_log_callback);
+  lws_set_log_level(((unsigned)minnet_log_level & ((1u << LLL_COUNT) - 1)), minnet_log_callback);
   return ret;
 }
 
@@ -328,11 +331,10 @@ headers_addobj(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContex
 }
 
 size_t
-headers_write(uint8_t** in, int len, MinnetBuffer* buffer, struct lws* wsi) {
-  uint8_t *r = buffer->read, *w = buffer->write, *next, *start, *ptr, *end;
+headers_write(uint8_t** in, uint8_t* end, MinnetBuffer* buffer, struct lws* wsi) {
+  uint8_t *r = buffer->read, *w = buffer->write, *next, *start, *ptr;
 
   start = ptr = *in;
-  end = ptr + len;
 
   while(r < w) {
     size_t l = byte_chr(r, w - r, '\n');
@@ -806,7 +808,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
 
   minnet_log_ctx = ctx;
 
-  lws_set_log_level(minnet_log_level, lws_log_callback);
+  lws_set_log_level(minnet_log_level, minnet_log_callback);
 
   return m;
 }

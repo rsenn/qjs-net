@@ -53,7 +53,7 @@ static const struct lws_http_mount mount = {
     /* .cache_reusable */ 0,
     /* .cache_revalidate */ 0,
     /* .cache_intermediaries */ 0,
-    /* .origin_protocol */ LWSMPRO_FILE, /* files in asynciterator_pop dir */
+    /* .origin_protocol */ LWSMPRO_FILE, /* files in asynciterator_read dir */
     /* .mountpoint_len */ 1,             /* char count */
     /* .basic_auth_login_file */ NULL,
 };
@@ -217,7 +217,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
 JSValue
 minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  int argind = 0, asynciterator_pop = 0;
+  int argind = 0, asynciterator_read = 0;
   BOOL block = TRUE, is_tls = FALSE, is_h2 = TRUE;
   MinnetServer* server;
   MinnetURL url = {0};
@@ -374,7 +374,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!block)
     return ret;
 
-  while(asynciterator_pop >= 0) {
+  while(asynciterator_read >= 0) {
     if(!JS_IsNull(server->context.error)) {
       ret = JS_Throw(ctx, server->context.error);
       break;
@@ -383,7 +383,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     if(server->cb.fd.ctx)
       js_std_loop(ctx);
     else
-      asynciterator_pop = lws_service(server->context.lws, 20);
+      asynciterator_read = lws_service(server->context.lws, 20);
   }
 
   // lws_context_destroy(server->context.lws);
