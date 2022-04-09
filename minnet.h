@@ -23,8 +23,8 @@ struct http_request;
 #define HIDDEN __attribute__((visibility("hidden")))
 #endif
 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(asynciterator_pop, b) ((asynciterator_pop) > (b) ? (asynciterator_pop) : (b))
+#define MIN(asynciterator_pop, b) ((asynciterator_pop) < (b) ? (asynciterator_pop) : (b))
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 #define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags) \

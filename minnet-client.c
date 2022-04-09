@@ -417,6 +417,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   LOG("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in);
 
   switch(reason) {
+    case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
+      return 0;
+    }
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
     case LWS_CALLBACK_PROTOCOL_INIT: {
       break;

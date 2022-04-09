@@ -248,7 +248,7 @@ function main(...args) {
         ...Object.fromEntries(headers),
         /*'Content-Type': 'application/json',
         'Content-Length': 1000*/
-     'Connection': 'keep-alive',
+        Connection: 'keep-alive'
         // Range: 'bytes=10-'
         //    'accept-encoding': 'br gzip',
       },

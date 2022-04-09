@@ -82,7 +82,7 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* thisObj, JSValue* ne
       return JS_ThrowTypeError(ctx, "object does not have 'next' method");
 
     if(!JS_IsFunction(ctx, fn))
-      return JS_ThrowTypeError(ctx, "object.next is not a function");
+      return JS_ThrowTypeError(ctx, "object.next is not asynciterator_pop function");
 
     *next = fn;
     if(thisObj)
@@ -567,4 +567,74 @@ js_module_import_meta(JSContext* ctx, const char* name) {
     ret = JS_GetImportMeta(ctx, m);
   }
   return ret;
+}
+
+void
+asynciterator_zero(struct async_iterator* it) {
+  it->ctx = 0;
+  init_list_head(&it->reads);
+  //  init_list_head(&it->values);
+}
+
+void
+asynciterator_clear(struct async_iterator* it, JSRuntime* rt) {
+  struct list_head *el, *next;
+
+  list_for_each_safe(el, next, &it->reads) {
+    struct async_read* rd = list_entry(el, struct async_read, link);
+    js_promise_free_rt(rt, &rd->promise);
+    js_free_rt(rt, rd);
+  }
+
+  js_free_rt(rt, it);
+}
+
+struct async_iterator*
+asynciterator_new(JSContext* ctx) {
+  struct async_iterator* it;
+
+  if((it = js_malloc(ctx, sizeof(AsyncIterator)))) {
+    asynciterator_zero(it);
+    it->ctx = ctx;
+  }
+  return it;
+}
+
+JSValue
+asynciterator_await(struct async_iterator* it, JSContext* ctx) {
+  struct async_read* rd;
+  JSValue ret = JS_UNDEFINED;
+
+  if((rd = js_malloc(ctx, sizeof(struct async_read)))) {
+    list_add(&rd->link, &it->reads);
+    ret = js_promise_create(ctx, &rd->promise);
+  }
+  return ret;
+}
+
+struct async_read*
+asynciterator_pop(struct async_iterator* it, JSContext* ctx) {
+  if(!list_empty(&it->reads)) {
+    struct async_read* rd = it->reads.prev;
+    list_del(&rd->link);
+    return rd;
+  }
+  return 0;
+}
+
+void
+asynciterator_push(struct async_iterator* it, JSValueConst value, JSContext* ctx) {
+  if(!list_empty(&it->reads)) {
+    struct async_read* rd = it->reads.prev;
+    JSValue obj = JS_NewObject(ctx);
+
+    JS_SetPropertyStr(ctx, obj, "value", JS_DupValue(ctx, value));
+    JS_SetPropertyStr(ctx, obj, "done", JS_NewBool(ctx, FALSE));
+
+    list_del(&rd->link);
+    js_promise_resolve(ctx, &rd->promise, obj);
+    js_free(ctx, rd);
+    return rd;
+  }
+  return 0;
 }

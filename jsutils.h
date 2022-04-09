@@ -21,28 +21,12 @@ typedef struct input_buffer {
   JSValue value;
 } JSBuffer;
 
-
 typedef union resolve_functions {
   JSValue array[2];
   struct {
     JSValue resolve, reject;
   };
 } ResolveFunctions;
-
-typedef struct async_read {
-  struct list_head link;
- ResolveFunctions promise;
-} AsyncRead;
-
-typedef struct value_item {
-  struct list_head link;
- JSValue item;
-} ValueItem;
-
-typedef struct async_iterator {
-  JSContext*ctx;
-  struct list_head reads, values;
-} AsyncIterator;
 
 struct TimerClosure {
   int ref_count;
@@ -179,5 +163,27 @@ static inline const uint8_t*
 js_buffer_end(const JSBuffer* in) {
   return in->data + in->size;
 }
+
+typedef struct async_read {
+  struct list_head link;
+  ResolveFunctions promise;
+} AsyncRead;
+
+typedef struct value_item {
+  struct list_head link;
+  JSValue item;
+} ValueItem;
+
+typedef struct async_iterator {
+  JSContext* ctx;
+  struct list_head reads /*, values*/;
+} AsyncIterator;
+
+void asynciterator_zero(struct async_iterator*);
+void asynciterator_clear(struct async_iterator*, JSRuntime*);
+struct async_iterator* asynciterator_new(JSContext*);
+JSValue asynciterator_await(struct async_iterator*, JSContext*);
+struct async_read* asynciterator_pop(struct async_iterator*, JSContext*);
+void asynciterator_push(struct async_iterator*, JSValueConst, JSContext*);
 
 #endif /* MINNET_JS_UTILS_H */

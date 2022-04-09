@@ -747,7 +747,6 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Ringbuffer", minnet_ringbuffer_ctor);
 
-
   // Add class Generator
   JS_NewClassID(&minnet_generator_class_id);
 
