@@ -7,14 +7,7 @@
 #include "minnet.h"
 #include "minnet-buffer.h"
 
-struct http_request;
-
-/* class MinnetResponse */
-
-/*typedef struct http_header {
-  char *name, *value;
-  struct list_head link;
-} MinnetHttpHeader;*/
+//struct http_request;
 
 typedef struct http_response {
   int ref_count;

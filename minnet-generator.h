@@ -8,26 +8,17 @@
 #include "minnet-buffer.h"
 
 typedef struct generator {
+  JSContext* ctx;
   int ref_count;
   AsyncIterator iterator;
   MinnetBuffer buffer;
 } MinnetGenerator;
 
 void generator_zero(struct generator*);
-void generator_free(struct generator*, JSRuntime*);
+void generator_free(struct generator*);
 struct generator* generator_new(JSContext*);
-JSValue minnet_generator_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
-JSValue minnet_generator_wrap(JSContext*, struct generator*);
-
-extern JSClassDef minnet_generator_class;
-extern THREAD_LOCAL JSValue minnet_generator_proto, minnet_generator_ctor;
-extern THREAD_LOCAL JSClassID minnet_generator_class_id;
-extern const JSCFunctionListEntry minnet_generator_proto_funcs[];
-extern const size_t minnet_generator_proto_funcs_size;
-
-static inline MinnetGenerator*
-minnet_generator_data(JSContext* ctx, JSValueConst obj) {
-  return JS_GetOpaque2(ctx, obj, minnet_generator_class_id);
-}
+struct generator* generator_dup(struct generator*);
+JSValue generator_next(MinnetGenerator*, JSContext*);
+JSValue minnet_generator_wrap(JSContext*, MinnetGenerator*);
 
 #endif /* MINNET_GENERATOR_H */

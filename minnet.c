@@ -748,18 +748,18 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
     JS_SetModuleExport(ctx, m, "Ringbuffer", minnet_ringbuffer_ctor);
 
   // Add class Generator
-  JS_NewClassID(&minnet_generator_class_id);
+  /* JS_NewClassID(&minnet_generator_class_id);
 
-  JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
-  minnet_generator_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, minnet_generator_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
+   JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
+   minnet_generator_proto = JS_NewObject(ctx);
+   JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, minnet_generator_proto_funcs_size);
+   JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
 
-  minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_generator_ctor, minnet_generator_proto);
+   minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
+   JS_SetConstructor(ctx, minnet_generator_ctor, minnet_generator_proto);
 
-  if(m)
-    JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
+   if(m)
+     JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);*/
 
   // Add class URL
   minnet_url_init(ctx, m);
