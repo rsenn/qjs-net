@@ -334,8 +334,15 @@ char* fd_address(int, int (*fn)(int, struct sockaddr*, socklen_t*));
 char* fd_remote(int fd);
 char* fd_local(int fd);
 
+int lws_wsi_is_h2(struct lws* wsi);
+
+static inline int
+is_h2(struct lws* wsi) {
+  return lws_wsi_is_h2(wsi);
+}
+
 static inline char*
-lws_get_uri(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
+lws_get_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
   size_t len;
   char buf[1024];
 
@@ -347,26 +354,29 @@ lws_get_uri(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
   return js_strndup(ctx, buf, len);
 }
 
+char* lws_get_host(struct lws* wsi, JSContext* ctx);
+void lws_peer_cert(struct lws*);
+
 static inline char*
 minnet_uri_and_method(struct lws* wsi, JSContext* ctx, MinnetHttpMethod* method) {
   char* url;
 
-  if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_POST_URI))) {
+  if((url = lws_get_token(wsi, ctx, WSI_TOKEN_POST_URI))) {
     if(method)
       *method = METHOD_POST;
-  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI))) {
+  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_GET_URI))) {
     if(method)
       *method = METHOD_GET;
-  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_HEAD_URI))) {
+  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_HEAD_URI))) {
     if(method)
       *method = METHOD_HEAD;
-  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_OPTIONS_URI))) {
+  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_OPTIONS_URI))) {
     if(method)
       *method = METHOD_OPTIONS;
-  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_PATCH_URI))) {
+  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_PATCH_URI))) {
     if(method)
       *method = METHOD_PATCH;
-  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_PUT_URI))) {
+  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_PUT_URI))) {
     if(method)
       *method = METHOD_PUT;
   }

@@ -39,6 +39,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       if(!opaque->req)
         opaque->req = request_fromwsi(wsi, ctx);
 
+
       break;
 
     case LWS_CALLBACK_PROTOCOL_INIT: {
@@ -53,7 +54,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
-      return 0;
+          lws_peer_cert(wsi);
+  return 0;
     }
 
     case LWS_CALLBACK_WSI_CREATE: {
@@ -224,7 +226,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
   }
 
-  // lwsl_user("ws   " FG("%d") "%-38s" NC " fd=%d url='%s' in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), lws_get_uri(wsi, server->context.js, //
+  // lwsl_user("ws   " FG("%d") "%-38s" NC " fd=%d url='%s' in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), lws_get_token(wsi, server->context.js, //
   // WSI_TOKEN_GET_URI), (int)len, (char*)in);
 
   if(opaque && opaque->status >= CLOSING)

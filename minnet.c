@@ -857,6 +857,62 @@ lws_get_peer(struct lws* wsi, JSContext* ctx) {
 }
 
 char*
+lws_get_host(struct lws* wsi, JSContext* ctx) {
+  return lws_get_token(wsi, ctx, lws_wsi_is_h2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST);
+}
+
+void
+lws_peer_cert(struct lws* wsi) {
+  uint8_t buf[1280];
+  union lws_tls_cert_info_results* ci = (union lws_tls_cert_info_results*)buf;
+#if defined(LWS_HAVE_CTIME_R)
+  char date[32];
+#endif
+
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_COMMON_NAME, ci, sizeof(buf) - sizeof(*ci)))
+    lwsl_notice(" Peer Cert CN        : %s\n", ci->ns.name);
+
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_ISSUER_NAME, ci, sizeof(ci->ns.name)))
+    lwsl_notice(" Peer Cert issuer    : %s\n", ci->ns.name);
+
+#if defined(LWS_HAVE_CTIME_R)
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_VALIDITY_FROM, ci, 0))
+    lwsl_notice(" Peer Cert Valid from: %s", ctime_r(&ci->time, date));
+#else
+  lwsl_notice(" Peer Cert Valid from: %s", ctime(&ci->time));
+#endif
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_VALIDITY_TO, ci, 0))
+#if defined(LWS_HAVE_CTIME_R)
+    lwsl_notice(" Peer Cert Valid to  : %s", ctime_r(&ci->time, date));
+#else
+    lwsl_notice(" Peer Cert Valid to  : %s", ctime(&ci->time));
+#endif
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_USAGE, ci, 0))
+    lwsl_notice(" Peer Cert usage bits: 0x%x\n", ci->usage);
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_OPAQUE_PUBLIC_KEY, ci, sizeof(buf) - sizeof(*ci))) {
+    lwsl_notice(" Peer Cert public key:\n");
+    lwsl_hexdump_notice(ci->ns.name, (unsigned int)ci->ns.len);
+  }
+
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID, ci, 0)) {
+    lwsl_notice(" AUTHORITY_KEY_ID\n");
+    lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
+  }
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID_ISSUER, ci, 0)) {
+    lwsl_notice(" AUTHORITY_KEY_ID ISSUER\n");
+    lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
+  }
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID_SERIAL, ci, 0)) {
+    lwsl_notice(" AUTHORITY_KEY_ID SERIAL\n");
+    lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
+  }
+  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_SUBJECT_KEY_ID, ci, 0)) {
+    lwsl_notice(" AUTHORITY_KEY_ID SUBJECT_KEY_ID\n");
+    lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
+  }
+}
+
+char*
 fd_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
   const char* s = 0;
   union {

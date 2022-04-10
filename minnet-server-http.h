@@ -42,9 +42,4 @@ int http_server_respond(struct lws*, MinnetBuffer*, struct http_response*, JSCon
 int http_server_writable(struct lws*, struct http_response*, BOOL);
 int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
 
-static inline int
-is_h2(struct lws* wsi) {
-  return lws_get_network_wsi(wsi) != wsi;
-}
-
 #endif /* MINNET_SERVER_HTTP_H */
