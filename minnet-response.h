@@ -34,6 +34,12 @@ void response_clear(MinnetResponse*, JSContext*);
 void response_clear_rt(MinnetResponse*, JSRuntime*);
 void response_free(MinnetResponse*, JSContext*);
 void response_free_rt(MinnetResponse*, JSRuntime*);
+static inline MinnetGenerator*
+response_generator(MinnetResponse* resp, JSContext* ctx) {
+  if(!resp->generator)
+    resp->generator = generator_new(ctx);
+  return resp->generator;
+}
 MinnetResponse* response_new(JSContext*);
 JSValue minnet_response_new(JSContext*, MinnetURL, int, char* status_text, BOOL ok, const char* type);
 JSValue minnet_response_wrap(JSContext*, MinnetResponse*);

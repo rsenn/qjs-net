@@ -271,7 +271,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   struct curl_callback* callback_data = 0;
   int still_running = 1;
 
-  req = request_from(ctx, argc, argv);
+  req = request_from(argc, argv, ctx);
 
   JSValue resObj = JS_NewObjectClass(ctx, minnet_response_class_id);
   if(JS_IsException(resObj))

@@ -198,7 +198,7 @@ buffer_fromvalue(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
 
 JSValue
 buffer_tostring(MinnetBuffer const* buf, JSContext* ctx) {
-  return block_tostring(&buf->block, ctx);
+  return JS_NewStringLen(ctx, buf->start, buffer_HEAD(buf));
 }
 
 size_t

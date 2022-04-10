@@ -10,60 +10,6 @@ import { quote } from 'util';
 const connections = new Set();
 let debug = 0;
 
-function GetOpt(options = {}, args) {
-  let s, l;
-  let r = {};
-  let positional = (r['@'] = []);
-  if(!(options instanceof Array)) options = Object.entries(options);
-  const findOpt = a =>
-    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
-  let [, params] = options.find(o => o[0] == '@') || [];
-  if(typeof params == 'string') params = params.split(',');
-  for(let i = 0; i < args.length; i++) {
-    const a = args[i];
-    let o;
-    if(a[0] == '-') {
-      let n, v, x, y;
-      if(a[1] == '-') l = true;
-      else s = true;
-      x = s ? 1 : 2;
-      if(s) y = 2;
-      else if((y = a.indexOf('=')) == -1) y = a.length;
-      n = a.substring(x, y);
-      if((o = findOpt(n))) {
-        const [has_arg, handler] = o[1];
-        if(has_arg) {
-          if(a.length > y) v = a.substring(y + (a[y] == '='));
-          else v = args[++i];
-        } else {
-          v = true;
-        }
-        try {
-          handler(v, r[o[0]], options, r);
-        } catch(err) {}
-        r[o[0]] = v;
-        continue;
-      }
-    }
-    if(params.length) {
-      const p = params.shift();
-      if((o = findOpt(p))) {
-        const [, [, handler]] = o;
-        let v = a;
-        if(typeof handler == 'function')
-          try {
-            v = handler(v, r[o[0]], options, r);
-          } catch(err) {}
-        const n = o[0];
-        r[o[0]] = v;
-        continue;
-      }
-    }
-    r['@'] = [...(r['@'] ?? []), a];
-  }
-  return r;
-}
-
 function FromDomain(buffer) {
   let s = '',
     i = 0,
@@ -345,6 +291,62 @@ function main(...args) {
   }
 }
 
+
+function GetOpt(options = {}, args) {
+  let s, l;
+  let r = {};
+  let positional = (r['@'] = []);
+  if(!(options instanceof Array)) options = Object.entries(options);
+  const findOpt = a =>
+    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
+  let [, params] = options.find(o => o[0] == '@') || [];
+  if(typeof params == 'string') params = params.split(',');
+  for(let i = 0; i < args.length; i++) {
+    const a = args[i];
+    let o;
+    if(a[0] == '-') {
+      let n, v, x, y;
+      if(a[1] == '-') l = true;
+      else s = true;
+      x = s ? 1 : 2;
+      if(s) y = 2;
+      else if((y = a.indexOf('=')) == -1) y = a.length;
+      n = a.substring(x, y);
+      if((o = findOpt(n))) {
+        const [has_arg, handler] = o[1];
+        if(has_arg) {
+          if(a.length > y) v = a.substring(y + (a[y] == '='));
+          else v = args[++i];
+        } else {
+          v = true;
+        }
+        try {
+          handler(v, r[o[0]], options, r);
+        } catch(err) {}
+        r[o[0]] = v;
+        continue;
+      }
+    }
+    if(params.length) {
+      const p = params.shift();
+      if((o = findOpt(p))) {
+        const [, [, handler]] = o;
+        let v = a;
+        if(typeof handler == 'function')
+          try {
+            v = handler(v, r[o[0]], options, r);
+          } catch(err) {}
+        const n = o[0];
+        r[o[0]] = v;
+        continue;
+      }
+    }
+    r['@'] = [...(r['@'] ?? []), a];
+  }
+  return r;
+}
+
+
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
@@ -353,3 +355,4 @@ try {
 } finally {
   //console.log('SUCCESS');
 }
+

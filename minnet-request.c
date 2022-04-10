@@ -76,7 +76,7 @@ request_alloc(JSContext* ctx) {
 }
 
 MinnetRequest*
-request_new(JSContext* ctx, MinnetURL url, MinnetHttpMethod method) {
+request_new(MinnetURL url, MinnetHttpMethod method, JSContext* ctx) {
   MinnetRequest* req;
 
   if((req = request_alloc(ctx)))
@@ -92,7 +92,7 @@ request_dup(MinnetRequest* req) {
 }
 
 MinnetRequest*
-request_fromobj(JSContext* ctx, JSValueConst options) {
+request_fromobj(JSValueConst options, JSContext* ctx) {
   MinnetRequest* req;
   JSValue value;
   const char *url, *path, *method;
@@ -123,7 +123,7 @@ request_fromobj(JSContext* ctx, JSValueConst options) {
 }
 
 MinnetRequest*
-request_fromwsi(JSContext* ctx, struct lws* wsi) {
+request_fromwsi(struct lws* wsi, JSContext* ctx) {
   const char* uri;
   MinnetHttpMethod method = -1;
 
@@ -138,18 +138,18 @@ request_fromwsi(JSContext* ctx, struct lws* wsi) {
         url_parse(&url, name, ctx);
     }
 
-    return request_new(ctx, url, method);
+    return request_new(url, method, ctx);
   }
 
   return 0;
 }
 
 MinnetRequest*
-request_fromurl(JSContext* ctx, const char* uri) {
+request_fromurl(const char* uri, JSContext* ctx) {
   MinnetHttpMethod method = METHOD_GET;
   MinnetURL url = url_create(uri, ctx);
 
-  return request_new(ctx, url, method);
+  return request_new(url, method, ctx);
 }
 
 void
@@ -215,7 +215,7 @@ header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
 }
 
 MinnetRequest*
-request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
+request_from(int argc, JSValueConst argv[], JSContext* ctx) {
   MinnetRequest* req = 0;
   MinnetURL url = {0, 0, 0, 0};
 
@@ -225,7 +225,7 @@ request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
     url_fromvalue(&url, argv[0], ctx);
 
     if(url_valid(url))
-      req = request_new(ctx, url, METHOD_GET);
+      req = request_new(url, METHOD_GET, ctx);
   }
 
   if(req)
@@ -247,7 +247,7 @@ minnet_request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
   /* if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0])))
      req = request_dup(req);
    else*/
-  req = request_from(ctx, argc, argv);
+  req = request_from(argc, argv, ctx);
 
   return minnet_request_wrap(ctx, req);
 }
@@ -299,7 +299,7 @@ JSValue
 minnet_request_new(JSContext* ctx, MinnetURL url, enum http_method method) {
   MinnetRequest* req;
 
-  if(!(req = request_new(ctx, url, method)))
+  if(!(req = request_new(url, method, ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   return minnet_request_wrap(ctx, req);

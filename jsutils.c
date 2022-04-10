@@ -14,6 +14,31 @@ vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
   return ret;
 }
 
+JSValue
+js_object_constructor(JSContext* ctx, JSValueConst value) {
+  JSValue ctor = JS_UNDEFINED;
+  if(JS_IsObject(value))
+    ctor = JS_GetPropertyStr(ctx, value, "constructor");
+  return ctor;
+}
+
+char*
+js_object_classname(JSContext* ctx, JSValueConst value) {
+  JSValue proto = JS_UNDEFINED, ctor, str;
+  const char* name;
+  char* s = 0;
+  ctor = js_object_constructor(ctx, value);
+  if(!JS_IsFunction(ctx, ctor)) {
+    proto = JS_GetPrototype(ctx, value);
+    ctor = js_object_constructor(ctx, proto);
+  }
+  s = js_function_name(ctx, ctor);
+
+  JS_FreeValue(ctx, ctor);
+  JS_FreeValue(ctx, proto);
+  return s;
+}
+
 void
 js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
   JSValue global = JS_GetGlobalObject(ctx);
@@ -24,26 +49,42 @@ js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
 
 JSValue
 js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue* func_data) {
-  JSValue args[argc + magic];
-  int i, j;
-  for(i = 0; i < magic; i++) args[i] = func_data[i + 1];
-  for(j = 0; j < argc; j++) args[i++] = argv[j];
+  BOOL bind_this = !!(magic & JS_BIND_THIS);
+  int i = 0, k = 0, count = magic & ~(JS_BIND_THIS);
+  JSValue args[argc + count], fn;
 
-  return JS_Call(ctx, func_data[0], this_val, i, args);
+  fn = *func_data++;
+
+  if(bind_this)
+    this_val = func_data[i++];
+
+  for(; i < count; i++) args[k++] = func_data[i];
+
+  for(i = 0; i < argc; i++) args[k++] = argv[i];
+
+  return JS_Call(ctx, fn, this_val, k, args);
 }
 
 JSValue
-js_function_bind(JSContext* ctx, JSValueConst func, int argc, JSValueConst argv[]) {
+js_function_bind(JSContext* ctx, JSValueConst func, int flags, JSValueConst argv[]) {
+  BOOL bind_this = !!(flags & JS_BIND_THIS);
+  int i, argc = flags & ~(JS_BIND_THIS);
   JSValue data[argc + 1];
-  int i;
+
   data[0] = JS_DupValue(ctx, func);
   for(i = 0; i < argc; i++) data[i + 1] = JS_DupValue(ctx, argv[i]);
-  return JS_NewCFunctionData(ctx, js_function_bound, 0, argc, argc + 1, data);
+
+  return JS_NewCFunctionData(ctx, js_function_bound, 0, flags, argc + 1, data);
 }
 
 JSValue
 js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
   return js_function_bind(ctx, func, 1, &arg);
+}
+
+JSValue
+js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val) {
+  return js_function_bind(ctx, func, 1 | JS_BIND_THIS, &this_val);
 }
 
 /*JSValue
@@ -58,8 +99,36 @@ js_function_bind_v(JSContext* ctx, JSValueConst func, ...) {
   return js_function_bind(ctx, func, b.size / sizeof(JSValueConst), (JSValueConst*)b.buf);
 }*/
 
+const char*
+js_function_name(JSContext* ctx, JSValueConst value) {
+  JSValue str, name, args[2], idx;
+  const char* s = 0;
+  int32_t i = -1;
+  str = js_invoke(ctx, value, "toString", 0, 0);
+  args[0] = JS_NewString(ctx, "function ");
+  idx = js_invoke(ctx, str, "indexOf", 1, args);
+  JS_FreeValue(ctx, args[0]);
+  JS_ToInt32(ctx, &i, idx);
+  if(i != 0) {
+    JS_FreeValue(ctx, str);
+    return 0;
+  }
+  args[0] = JS_NewString(ctx, "(");
+  idx = js_invoke(ctx, str, "indexOf", 1, args);
+  JS_FreeValue(ctx, args[0]);
+  args[0] = JS_NewUint32(ctx, 9);
+  args[1] = idx;
+  name = js_invoke(ctx, str, "substring", 2, args);
+  JS_FreeValue(ctx, args[0]);
+  JS_FreeValue(ctx, args[1]);
+  JS_FreeValue(ctx, str);
+  s = JS_ToCString(ctx, name);
+  JS_FreeValue(ctx, name);
+  return s;
+}
+
 JSValue
-js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* thisObj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
+js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
   JSValue fn, result, done, value;
 
   if(!JS_IsObject(obj))
@@ -84,12 +153,14 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* thisObj, JSValue* ne
     if(!JS_IsFunction(ctx, fn))
       return JS_ThrowTypeError(ctx, "object.next is not asynciterator_read function");
 
-    *next = fn;
-    if(thisObj)
-      *thisObj = JS_DupValue(ctx, obj);
+    *next = js_function_bind_this(ctx, fn, obj);
+    /* if(thisObj)
+     *thisObj = JS_DupValue(ctx, obj);*/
+    JS_FreeValue(ctx, fn);
+    fn = *next;
   }
 
-  result = JS_Call(ctx, fn, thisObj ? *thisObj : obj, argc, argv);
+  result = JS_Call(ctx, fn, JS_UNDEFINED, argc, argv);
   // JS_FreeValue(ctx, fn);
 
   if(JS_IsException(result))
@@ -576,6 +647,39 @@ js_module_import_meta(JSContext* ctx, const char* name) {
   return ret;
 }
 
+void
+js_error_print(JSContext* ctx, JSValueConst error) {
+  const char *str = 0, *stack = 0;
+
+  if(JS_IsObject(error)) {
+    JSValue st = JS_GetPropertyStr(ctx, error, "stack");
+
+    if(!JS_IsUndefined(st))
+      stack = JS_ToCString(ctx, st);
+
+    JS_FreeValue(ctx, st);
+  }
+
+  fputs("Toplevel error:\n", stderr);
+
+  if(!JS_IsNull(error) && (str = JS_ToCString(ctx, error))) {
+    const char* type = JS_IsObject(error) ? js_object_classname(ctx, error) : js_value_typestr(ctx, error);
+    const char* exception = str;
+    size_t typelen = strlen(type);
+
+    if(!strncmp(exception, type, typelen) && exception[typelen] == ':') {
+      exception += typelen + 2;
+    }
+    fprintf(stderr, "%s: %s\n", type, exception);
+  }
+  if(stack)
+    fprintf(stderr, "Stack:\n%s\n", stack);
+  fflush(stderr);
+  if(stack)
+    JS_FreeCString(ctx, stack);
+  if(str)
+    JS_FreeCString(ctx, str);
+}
 void
 asynciterator_zero(AsyncIterator* it) {
   it->ctx = 0;

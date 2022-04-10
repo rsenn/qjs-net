@@ -185,7 +185,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   session_zero(&client->session);
 
-  client->request = request_from(ctx, argc, argv);
+  client->request = request_from(argc, argv, ctx);
 
   if(argc >= 2) {
 
@@ -415,7 +415,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if(client->context.js)
     opaque = lws_opaque(wsi, client->context.js);
 
-  LOG("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in);
+  LOGCB("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in);
 
   switch(reason) {
     case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {

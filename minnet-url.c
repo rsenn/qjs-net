@@ -389,9 +389,9 @@ url_fromwsi(MinnetURL* url, struct lws* wsi, JSContext* ctx) {
     }
   }
 
-  if((len = lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI))) {
-    url->path = js_malloc(ctx, len + 1);
-    lws_hdr_copy(wsi, url->path, len + 1, WSI_TOKEN_GET_URI);
+  if((p = minnet_uri_and_method(wsi, ctx, 0))) {
+    url->path = p;
+    // lws_hdr_copy(wsi, url->path, len + 1, WSI_TOKEN_GET_URI);
   }
 }
 

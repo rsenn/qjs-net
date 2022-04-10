@@ -15,7 +15,7 @@ typedef struct client_context {
   };
   struct lws* wsi;
   MinnetCallbacks on;
-  JSValue headers, body, thisObj, next;
+  JSValue headers, body, next;
   BOOL done;
   // MinnetURL url;
   MinnetSession session;

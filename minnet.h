@@ -71,7 +71,13 @@ struct http_request;
 #define BGC(c, str) BG(#c) str NC
 #define NC "\x1b[0m"
 
-#define LOG(name, fmt, args...) lwsl_user("%-5s" FG("%d") "%-38s" NC " wsi#%" PRId64 " " fmt "\n", (name), 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, args);
+#define LOG(name, fmt, args...) \
+  lwsl_user(/*"%s:%u: "*/ \
+            "%-5s" \
+            " " fmt "\n", /*__FILE__, __LINE__,*/ \
+            (name), \
+            args);
+#define LOGCB(name, fmt, args...) LOG((name), FG("%d") "%-38s" NC " wsi#%" PRId64 " " fmt "", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, args);
 
 #ifdef _Thread_local
 #define THREAD_LOCAL _Thread_local
@@ -133,7 +139,15 @@ struct http_mount;
 struct server_context;
 struct client_context;
 
-enum http_method { METHOD_GET = 0, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_CONNECT, METHOD_HEAD };
+enum http_method {
+  METHOD_GET = 0,
+  METHOD_POST,
+  METHOD_OPTIONS,
+  METHOD_PATCH,
+  METHOD_PUT,
+  METHOD_DELETE,
+  METHOD_HEAD,
+};
 
 typedef enum http_method MinnetHttpMethod;
 
@@ -297,13 +311,28 @@ byte_chr(const void* x, size_t len, char c) {
 }
 
 static inline size_t
-byte_chrs(const void* str, size_t len, const char needle[], size_t nl) {
+byte_chrs(const void* x, size_t len, const char needle[], size_t nl) {
   const char *s, *t;
-  for(s = str, t = str + len; s != t; s++)
+  for(s = x, t = (const char*)x + len; s != t; s++)
     if(byte_chr(needle, nl, *s) < nl)
       break;
-  return s - (const char*)str;
+  return s - (const char*)x;
 }
+
+static inline size_t
+byte_rchr(const void* x, size_t len, char needle) {
+  const char *s, *t;
+  for(s = x, t = (const char*)x + len; --t >= s;) {
+    if(*t == needle)
+      return (size_t)(t - s);
+  }
+  return len;
+}
+
+char* lws_get_peer(struct lws* wsi, JSContext* ctx);
+char* fd_address(int, int (*fn)(int, struct sockaddr*, socklen_t*));
+char* fd_remote(int fd);
+char* fd_local(int fd);
 
 static inline char*
 lws_get_uri(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
@@ -316,6 +345,33 @@ lws_get_uri(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
     return 0;
 
   return js_strndup(ctx, buf, len);
+}
+
+static inline char*
+minnet_uri_and_method(struct lws* wsi, JSContext* ctx, MinnetHttpMethod* method) {
+  char* url;
+
+  if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_POST_URI))) {
+    if(method)
+      *method = METHOD_POST;
+  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_GET_URI))) {
+    if(method)
+      *method = METHOD_GET;
+  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_HEAD_URI))) {
+    if(method)
+      *method = METHOD_HEAD;
+  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_OPTIONS_URI))) {
+    if(method)
+      *method = METHOD_OPTIONS;
+  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_PATCH_URI))) {
+    if(method)
+      *method = METHOD_PATCH;
+  } else if((url = lws_get_uri(wsi, ctx, WSI_TOKEN_PUT_URI))) {
+    if(method)
+      *method = METHOD_PUT;
+  }
+
+  return url;
 }
 
 #endif /* MINNET_H */

@@ -13,6 +13,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <arpa/inet.h>
 
 /*#ifdef _WIN32
 #include "poll.h"
@@ -56,26 +57,60 @@ THREAD_LOCAL struct list_head minnet_sockets = {0, 0};
 static THREAD_LOCAL uint32_t session_serial = 0;
 // THREAD_LOCAL BOOL minnet_exception = FALSE;
 
+static size_t
+skip_brackets(const char* line, size_t len) {
+  size_t n = 0;
+  if(len > 0 && line[0] == '[') {
+    if((n = byte_chr(line, len, ']')) < len)
+      n++;
+    while(n < len && isspace(line[n])) n++;
+    if(n + 1 < len && line[n + 1] == ':')
+      n += 2;
+    while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
+  }
+
+  return n;
+}
+
+static size_t
+skip_directory(const char* line, size_t len) {
+  if(line[0] == '/') {
+    size_t colon = byte_chr(line, len, ':');
+    size_t slash = byte_rchr(line, colon, '/');
+
+    if(slash < colon)
+      return slash + 1;
+  }
+
+  return 0;
+}
+
+static size_t
+strip_trailing_newline(const char* line, size_t* len_p) {
+  size_t len = *len_p;
+  while(len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) len--;
+  return *len_p = len;
+}
+
 void
 minnet_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
-    if(JS_IsFunction(minnet_log_ctx, minnet_log_cb)) {
-      size_t n = 0, len = strlen(line);
+    size_t n = 0, len = strlen(line);
 
-      if(len > 0 && line[0] == '[') {
-        if((n = byte_chr(line, len, ']')) < len)
-          n++;
-        while(n < len && isspace(line[n])) n++;
-        if(n + 1 < len && line[n + 1] == ':')
-          n += 2;
-        while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
-      }
-      if(len > 0 && line[len - 1] == '\n')
-        len--;
+    if(JS_IsFunction(minnet_log_ctx, minnet_log_cb)) {
+
+      n = skip_brackets(line, len);
+      line += n;
+      len -= n;
+      n = skip_directory(line, len);
+      line += n;
+      len -= n;
+
+      strip_trailing_newline(line, &len);
 
       JSValueConst argv[2] = {
           JS_NewInt32(minnet_log_ctx, level),
-          JS_NewStringLen(minnet_log_ctx, line + n, len - n),
+          JS_NewStringLen(minnet_log_ctx, line, len),
       };
       JSValue ret = JS_Call(minnet_log_ctx, minnet_log_cb, minnet_log_this, 2, argv);
 
@@ -432,7 +467,7 @@ headers_get(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
       const char* name;
 
       if((name = (const char*)lws_token_to_string(tok))) {
-        int namelen = byte_chr(name, strlen(name), ':');
+        int namelen = 1 + byte_chr(name + 1, strlen(name + 1), ':');
         lws_hdr_copy(wsi, hdr, len + 1, tok);
         hdr[len] = '\0';
 
@@ -672,7 +707,6 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_PROP_INT32_DEF("METHOD_PUT", METHOD_PUT, 0),
     JS_PROP_INT32_DEF("METHOD_PATCH", METHOD_PATCH, 0),
     JS_PROP_INT32_DEF("METHOD_DELETE", METHOD_DELETE, 0),
-    JS_PROP_INT32_DEF("METHOD_CONNECT", METHOD_CONNECT, 0),
     JS_PROP_INT32_DEF("METHOD_HEAD", METHOD_HEAD, 0),
 
     JS_PROP_INT32_DEF("LLL_ERR", LLL_ERR, 0),
@@ -811,6 +845,50 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   lws_set_log_level(minnet_log_level, minnet_log_callback);
 
   return m;
+}
+
+char*
+lws_get_peer(struct lws* wsi, JSContext* ctx) {
+  char buf[1024];
+
+  lws_get_peer_simple(wsi, buf, sizeof(buf) - 1);
+
+  return js_strdup(ctx, buf);
+}
+
+char*
+fd_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
+  const char* s = 0;
+  union {
+    struct sockaddr a;
+    struct sockaddr_in ai;
+    struct sockaddr_in6 ai6;
+  } sa;
+  socklen_t sl = sizeof(s);
+  uint16_t port;
+  static char addr[1024];
+
+  if(fn(fd, &sa.a, &sl) != -1) {
+    size_t i;
+    s = inet_ntop(sa.ai.sin_family, sa.ai.sin_family == AF_INET ? &sa.ai.sin_addr : &sa.ai6.sin6_addr, addr, sizeof(addr));
+    i = strlen(s);
+
+    switch(sa.ai.sin_family) {
+      case AF_INET: port = ntohs(sa.ai.sin_port); break;
+      case AF_INET6: port = ntohs(sa.ai6.sin6_port); break;
+    }
+    snprintf(&addr[i], sizeof(addr) - i, ":%u", port);
+  }
+
+  return (char*)s;
+}
+char*
+fd_remote(int fd) {
+  return fd_address(fd, &getpeername);
+}
+char*
+fd_local(int fd) {
+  return fd_address(fd, &getsockname);
 }
 
 const char*

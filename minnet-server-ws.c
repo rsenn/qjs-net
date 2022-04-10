@@ -21,7 +21,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   if(lws_is_http_callback(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
-  LOG("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in, session ? session->serial : 0);
+  LOGCB("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in, session ? session->serial : 0);
 
   switch(reason) {
     case LWS_CALLBACK_CONNECTING: {
@@ -37,7 +37,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
       if(!opaque->req)
-        opaque->req = request_fromwsi(ctx, wsi);
+        opaque->req = request_fromwsi(wsi, ctx);
 
       break;
 
@@ -74,25 +74,40 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
-      if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
-        return -1;
+      int ret = 0;
+      MinnetURL url = {.protocol = protocol_string(PROTOCOL_WS)};
+      url_fromwsi(&url, wsi, ctx);
 
-      /*return http_server_callback(wsi, reason, user, in, len);*/
-      if(!opaque)
-        opaque = lws_opaque(wsi, ctx);
-      assert(opaque);
+      if(!lws_is_ssl(wsi) && !strcmp(in, "h2c")) {
+        char* dest;
+        size_t destlen;
+        MinnetBuffer out = BUFFER_0();
+        url.protocol = protocol_string(PROTOCOL_HTTPS);
+        dest = url_format(url, ctx);
+        destlen = url_length(url);
 
-      if(!opaque->req) {
-        MinnetURL url = {.protocol = protocol_string(PROTOCOL_WS)};
-        url_fromwsi(&url, wsi, ctx);
-        opaque->req = request_new(ctx, url, METHOD_GET);
+        buffer_alloc(&out, 1024, ctx);
 
-        headers_get(ctx, &opaque->req->headers, wsi);
-        // session->req_obj = minnet_request_wrap(ctx, opaque->req);
+        if(lws_http_redirect(wsi, 308, dest, destlen, &out.write, out.end) < 0)
+          ret = -1;
+        else
+          ret = 1;
+
+        url_free(&url, ctx);
+        js_free(ctx, dest);
+        return ret;
       }
 
-      // int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
-      break;
+      if(!opaque)
+        opaque = lws_opaque(wsi, ctx);
+
+      if(!opaque->req) {
+        opaque->req = request_new(url, METHOD_GET, ctx);
+        headers_get(ctx, &opaque->req->headers, wsi);
+      } else {
+        url_free(&url, ctx);
+      }
+      return ret;
     }
 
     case LWS_CALLBACK_ESTABLISHED: {
@@ -103,7 +118,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       MinnetURL* url;
 
       if(!opaque->req)
-        opaque->req = request_fromwsi(ctx, wsi);
+        opaque->req = request_fromwsi(wsi, ctx);
 
       if(opaque->req) {
         url = &opaque->req->url;
@@ -128,7 +143,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         if(!opaque->ws)
           opaque->ws = minnet_ws_data(session->ws_obj);
 
-        LOG("ws", "wsi#%" PRId64 " req=%p", opaque->serial, opaque->req);
+        LOGCB("ws", "wsi#%" PRId64 " req=%p", opaque->serial, opaque->req);
         server_exception(server, minnet_emit_this(&server->cb.connect, session->ws_obj, 2, &session->ws_obj));
       }
       return 0;
@@ -149,7 +164,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
         opaque->status = CLOSING;
 
-        LOG("ws", "fd=%d, status=%d", lws_get_socket_fd(wsi), opaque->status);
+        LOGCB("ws", "fd=%d, status=%d", lws_get_socket_fd(wsi), opaque->status);
 
         if(ctx) {
           JSValue cb_argv[3] = {session->ws_obj, code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED, why};

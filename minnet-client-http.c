@@ -24,7 +24,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
 
   // lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
-  LOG("CLIENT-HTTP ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in);
+  LOGCB("CLIENT-HTTP ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in);
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {
@@ -35,14 +35,14 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(req) {
         MinnetURL url = {.protocol = protocol_string(PROTOCOL_HTTP)};
         url_fromwsi(&req->url, wsi, ctx);
-        // req = opaque->req = request_new(ctx, url, METHOD_GET);
+        // req = opaque->req = request_new(url, METHOD_GET, ctx);
 
         session->req_obj = minnet_request_wrap(ctx, opaque->req);
       }
-      if(!(resp = opaque->resp))
+
+      if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
 
-      {
         resp->generator = generator_new(ctx);
         resp->status = lws_http_client_http_response(wsi);
 
@@ -156,15 +156,19 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           break;
         if(JS_IsObject(client->body)) {
           while(!client->done) {
-            value = js_iterator_next(ctx, client->body, &client->thisObj, &client->next, &client->done, 0, 0);
+            value = js_iterator_next(ctx, client->body, &client->next, &client->done, 0, 0);
 
             printf("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), client->done);
 
-            if(!js_is_nullish(value)) {
+            if(JS_IsException(value)) {
+              JSValue exception = JS_GetException(ctx);
+              js_error_print(ctx, exception);
+              JS_Throw(ctx, exception);
+            } else if(!js_is_nullish(value)) {
               JSBuffer input = js_buffer_new(ctx, value);
               // js_std_dump_error(ctx);
 
-              // printf("\x1b[2K\ryielded %p %zu\n", b.data, b.size);
+              printf("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
               buffer_append(&buf, input.data, input.size, ctx);
               // printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_BYTES(&buf), buffer_HEAD(&buf));
               js_buffer_free(&input, ctx);

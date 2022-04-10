@@ -21,6 +21,9 @@ typedef struct input_buffer {
   JSValue value;
 } JSBuffer;
 
+#define JS_BUFFER(data, size, free) \
+  (JSBuffer) { (data), (size), (free), JS_UNDEFINED }
+
 typedef union resolve_functions {
   JSValue array[2];
   struct {
@@ -35,12 +38,17 @@ struct TimerClosure {
   JSValueConst id, handler, callback;
 };
 
+#define JS_BIND_THIS 0x8000
+
 JSValue vector2array(JSContext*, int, JSValueConst[]);
+JSValue js_object_constructor(JSContext* ctx, JSValueConst value);
 void js_console_log(JSContext*, JSValueConst*, JSValueConst*);
 JSValue js_function_bound(JSContext*, JSValueConst, int, JSValueConst argv[], int magic, JSValueConst* func_data);
 JSValue js_function_bind(JSContext*, JSValueConst, int, JSValueConst argv[]);
 JSValue js_function_bind_1(JSContext*, JSValueConst, JSValueConst);
-JSValue js_iterator_next(JSContext*, JSValueConst, JSValueConst*, JSValueConst*, BOOL* done_p, int argc, JSValueConst argv[]);
+JSValue js_function_bind_this(JSContext*, JSValueConst, JSValueConst);
+const char* js_function_name(JSContext*, JSValueConst);
+JSValue js_iterator_next(JSContext*, JSValueConst, JSValueConst* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValueConst, JSValueConst, int flags);
 void js_buffer_from(JSContext*, JSBuffer*, JSValueConst);
 JSBuffer js_buffer_new(JSContext*, JSValueConst);
@@ -65,7 +73,7 @@ JSValue js_timer_callback(JSContext*, JSValueConst, int, JSValueConst* argv, int
 struct TimerClosure* js_timer_interval(JSContext*, JSValueConst, uint32_t);
 void js_timer_restart(struct TimerClosure*);
 void js_promise_free(JSContext*, ResolveFunctions*);
-void js_promise_free_rt(JSRuntime* rt, ResolveFunctions* funcs);
+void js_promise_free_rt(JSRuntime*, ResolveFunctions*);
 char* js_tostringlen(JSContext*, size_t*, JSValueConst);
 char* js_tostring(JSContext*, JSValueConst);
 JSValue js_invoke(JSContext*, JSValueConst, const char*, int argc, JSValueConst argv[]);
@@ -85,6 +93,7 @@ JSModuleDef* js_module_find(JSContext*, JSAtom);
 JSModuleDef* js_module_find_s(JSContext*, const char*);
 void* js_module_export_find(JSModuleDef*, JSAtom);
 JSValue js_module_import_meta(JSContext*, const char*);
+void js_error_print(JSContext*, JSValueConst);
 
 static inline void
 js_clear(JSContext* ctx, const void** ptr) {

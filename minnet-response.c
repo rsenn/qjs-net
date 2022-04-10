@@ -227,7 +227,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case RESPONSE_BODYUSED: {
-      ret = JS_NewBool(ctx, buffer_SIZE(resp->body) > 0);
+      ret = JS_NewBool(ctx, resp->body ? buffer_SIZE(resp->body) > 0 : FALSE);
       break;
     }
   }
