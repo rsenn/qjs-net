@@ -511,7 +511,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       return 0;
     }
 
-    case LWS_CALLBACK_FILTER_HTTP_CONNECTION: break;
+    case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+      break;
+    }
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
       assert(!opaque->req);
 
