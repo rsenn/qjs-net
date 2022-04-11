@@ -663,7 +663,7 @@ js_error_print(JSContext* ctx, JSValueConst error) {
   fputs("Toplevel error:\n", stderr);
 
   if(!JS_IsNull(error) && (str = JS_ToCString(ctx, error))) {
-    const char* type = JS_IsObject(error) ? js_object_classname(ctx, error) : js_value_typestr(ctx, error);
+    const char* type = js_object_classname(ctx, error);
     const char* exception = str;
     size_t typelen = strlen(type);
 
