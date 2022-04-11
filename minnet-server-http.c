@@ -255,6 +255,7 @@ int
 http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* resp, JSContext* ctx) {
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int is_ssl = lws_is_ssl(wsi);
+  int is_h2 = lws_wsi_is_h2(wsi);
 
   LOG("HTTP-SERVER",
       FG("%d") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu",
@@ -268,7 +269,7 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
   // resp->read_only = TRUE;
   response_generator(resp, ctx);
 
-  if(lws_add_http_common_headers(wsi, resp->status, resp->type, is_ssl ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body), &buf->write, buf->end)) {
+  if(lws_add_http_common_headers(wsi, resp->status, resp->type, is_ssl || is_h2 ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body), &buf->write, buf->end)) {
     return 1;
   }
   /*  {
@@ -290,7 +291,7 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
         if(isspace(x[n]))
           n++;
 
-        lwsl_user("HTTP header %s = %.*s", prop, (int)(len - n), &x[n]);
+        printf("HTTP header %s = %.*s\n", prop, (int)(len - n), &x[n]);
 
         if((lws_add_http_header_by_name(wsi, (const unsigned char*)prop, (const unsigned char*)&x[n], len - n, &buf->write, buf->end)))
           JS_ThrowInternalError(ctx, "lws_add_http_header_by_name failed");
@@ -299,6 +300,7 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
     }
   }
   int ret = lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end);
+  printf("lws_finalize_write_http_header = %d\n", ret);
 
   /* {
      char* b = buffer_escaped(buf, ctx);
@@ -356,6 +358,7 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
     snprintf(disposition, sizeof(disposition), "attachment; filename=\"%s\"", basename(path));
     headers_set(ctx, &resp->headers, "Content-Disposition", disposition);
   }*/
+  response_generator(resp, ctx);
 
   if((fp = fopen(path, "rb"))) {
     size_t n = file_size(fp);
@@ -416,20 +419,15 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
 
   LOG("HTTP-SERVER", FG("%d") "%-38s" NC " wsi#%" PRIi64 " done=%i remain=%zu final=%d", 112, __func__ + 12, opaque->serial, done, remain, p == LWS_WRITE_HTTP_FINAL);
 
-  if(p == LWS_WRITE_HTTP_FINAL) {
+  if(p == LWS_WRITE_HTTP_FINAL || done) {
 
     if(lws_http_transaction_completed(wsi))
-      return -1;
+      return 1;
 
-    return 1;
-  } else if(remain > 0) {
-    /*
-     * HTTP/1.0 no keepalive: close network connection
-     * HTTP/1.1 or HTTP1.0 + KA: wait / process next transaction
-     * HTTP/2: ringbuffer ended, parent connection remains up
-     */
+    return 0;
+  }   
+
     lws_callback_on_writable(wsi);
-  }
 
   return 0;
 }
@@ -515,9 +513,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       break;
     }
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
-      assert(!opaque->req);
+      if(!opaque->req)
+        opaque->req = request_fromwsi(wsi, ctx);
 
-      opaque->req = request_fromwsi(wsi, ctx);
       opaque->status = OPEN;
 
       url_set_protocol(&opaque->req->url, lws_is_ssl(wsi) ? "https" : "http");
@@ -623,13 +621,15 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           LOGCB("HTTP", "serve_file FAIL %d", ret);
           JS_FreeValue(ctx, session->ws_obj);
           session->ws_obj = JS_NULL;
-          return 1;
+          lws_callback_on_writable(wsi);
+          return 0;
         }
         if((ret = http_server_respond(wsi, &b, resp, ctx))) {
           LOGCB("HTTP", "http_server_respond FAIL %d", ret);
           JS_FreeValue(ctx, session->ws_obj);
           session->ws_obj = JS_NULL;
-          return 1;
+          lws_callback_on_writable(wsi);
+          return 0;
         }
 
       } else if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
@@ -703,8 +703,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             done = TRUE;
           } else if(!done) {
             out = js_buffer_new(ctx, ret);
-            LOGCB("HTTP-WRITEABLE", "size=%zu, out='%.*s'", out.size, out.size > 255 ? 255 : out.size, out.size > 255 ? &out.data[out.size - 255] : out.data);
-            printf("\x1b[2K\ryielded %.*s %zu\n", (int)32, out.data, out.size);
+            LOGCB("HTTP-WRITEABLE", "size=%zu, out='%.*s'", out.size, (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data);
+            printf("\x1b[2K\ryielded %.*s %zu\n", (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data, out.size);
 
             if(!resp->generator)
               response_generator(resp, ctx);
@@ -728,16 +728,16 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         break;
       }
 
-      if(opaque->status == OPEN) {
-        if(http_server_respond(wsi, &b, resp, ctx)) {
-          JS_FreeValue(ctx, session->ws_obj);
-          session->ws_obj = JS_NULL;
+      /* if(opaque->status == OPEN) {
+         if(http_server_respond(wsi, &b, resp, ctx)) {
+           JS_FreeValue(ctx, session->ws_obj);
+           session->ws_obj = JS_NULL;
 
-          return 1;
-        }
-        opaque->status = CLOSING;
-      }
-
+           return 1;
+         }
+         opaque->status = CLOSING;
+       }
+ */
       if(http_server_writable(wsi, resp, done) == 1)
         return http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, user, in, len);
 
