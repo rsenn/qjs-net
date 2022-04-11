@@ -419,14 +419,15 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
 
   LOG("HTTP-SERVER", FG("%d") "%-38s" NC " wsi#%" PRIi64 " done=%i remain=%zu final=%d", 112, __func__ + 12, opaque->serial, done, remain, p == LWS_WRITE_HTTP_FINAL);
 
-  if(p == LWS_WRITE_HTTP_FINAL || done) {
+  if(p == LWS_WRITE_HTTP_FINAL || (done && remain == 0)) {
 
     if(lws_http_transaction_completed(wsi))
       return 1;
 
     return 0;
-  }   
+  }
 
+  if(remain > 0)
     lws_callback_on_writable(wsi);
 
   return 0;
