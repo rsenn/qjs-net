@@ -318,11 +318,14 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   // client_certificate(&server->context, options);
 
-  info->options |= LWS_SERVER_OPTION_PEER_CERT_NOT_REQUIRED | LWS_SERVER_OPTION_IGNORE_MISSING_CERT;
+  info->options |= LWS_SERVER_OPTION_PEER_CERT_NOT_REQUIRED;
   info->options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
   info->options |= LWS_SERVER_OPTION_DISABLE_IPV6;
-  info->options |= LWS_SERVER_OPTION_IGNORE_MISSING_CERT;
-  info->options |= LWS_SERVER_OPTION_CREATE_VHOST_SSL_CTX;
+  // info->options |= LWS_SERVER_OPTION_IGNORE_MISSING_CERT;
+
+  // info->options |= LWS_SERVER_OPTION_CREATE_VHOST_SSL_CTX;
+
+  info->options |= LWS_SERVER_OPTION_REQUIRE_VALID_OPENSSL_CLIENT_CERT;
 
   if(is_tls) {
     server_certificate(&server->context, options);
@@ -331,12 +334,13 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     info->options |= LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER;
     info->options |= LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
   }
+  client_certificate(&server->context, options);
 
   if(is_h2) {
     info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
     // info->options |= LWS_SERVER_OPTION_VH_H2_HALF_CLOSED_LONG_POLL;
   }
-  // info->options |= LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
+  info->options |= LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
 
   if(JS_IsArray(ctx, opt_mimetypes)) {
     MinnetVhostOptions *vopts, **vop = &server->mimetypes;

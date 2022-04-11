@@ -257,7 +257,7 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
   int is_ssl = lws_is_ssl(wsi);
   int is_h2 = lws_wsi_is_h2(wsi);
 
-  LOG("HTTP-SERVER",
+  LOG("SERVER-HTTP",
       FG("%d") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu",
       165,
       "http-server-respond",
@@ -397,7 +397,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
   size_t remain;
   ssize_t ret = 0;
 
-  LOG("HTTP-SERVER", FG("%d") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu", 112, __func__ + 12, opaque->serial, resp->status, resp->type, resp->body ? buffer_HEAD(resp->body) : 0);
+  LOG("SERVER-HTTP", FG("%d") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu", 112, __func__ + 12, opaque->serial, resp->status, resp->type, resp->body ? buffer_HEAD(resp->body) : 0);
 
   n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
   /*  if(!buffer_BYTES(resp->body) && is_h2(wsi)) buffer_append(resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
@@ -409,7 +409,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
     if(l > 0) {
       p = (remain - l) > 0 ? LWS_WRITE_HTTP : n;
       ret = lws_write(wsi, x, l, p);
-      LOG("HTTP-SERVER", FG("%d") "%-38s" NC " wsi#%" PRIi64 " len=%zu final=%d ret=%zd", 112, __func__ + 12, opaque->serial, l, p == LWS_WRITE_HTTP_FINAL, ret);
+      LOG("SERVER-HTTP", FG("%d") "%-38s" NC " wsi#%" PRIi64 " len=%zu final=%d ret=%zd", 112, __func__ + 12, opaque->serial, l, p == LWS_WRITE_HTTP_FINAL, ret);
       if(ret > 0)
         buffer_skip(resp->body, ret);
     }
@@ -417,7 +417,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
 
   remain = buffer_BYTES(resp->body);
 
-  LOG("HTTP-SERVER", FG("%d") "%-38s" NC " wsi#%" PRIi64 " done=%i remain=%zu final=%d", 112, __func__ + 12, opaque->serial, done, remain, p == LWS_WRITE_HTTP_FINAL);
+  LOG("SERVER-HTTP", FG("%d") "%-38s" NC " wsi#%" PRIi64 " done=%i remain=%zu final=%d", 112, __func__ + 12, opaque->serial, done, remain, p == LWS_WRITE_HTTP_FINAL);
 
   if(p == LWS_WRITE_HTTP_FINAL || (done && remain == 0)) {
 
