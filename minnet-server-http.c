@@ -159,7 +159,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
     size_t plen = dotslashslash ? dotslashslash - dest : 0;
     const char* origin = &dest[plen ? plen + 3 : 0];
     const char* index = JS_IsUndefined(def) ? 0 : JS_ToCString(ctx, def);
-    enum lws_mount_protocols proto = plen == 0 ? LWSMPRO_FILE : !strncmp(dest, "https", plen) ? LWSMPRO_HTTPS : LWSMPRO_HTTP;
+    enum lws_mount_protocols proto = plen == 0 ? LWSMPRO_CALLBACK : !strncmp(dest, "https", plen) ? LWSMPRO_HTTPS : LWSMPRO_HTTP;
 
     ret = mount_create(ctx, path, origin, index, protocol, proto);
 
@@ -632,6 +632,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           lws_callback_on_writable(wsi);
           return 0;
         }
+
+        server_exception(server, minnet_emit(&server->cb.http, 2, &session->req_obj));
 
       } else if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
 

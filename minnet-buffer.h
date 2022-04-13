@@ -72,13 +72,6 @@ typedef union byte_buffer {
 
 #define buffer_zero(b) memset((b), 0, sizeof(MinnetBuffer))
 
-void block_init(MinnetBytes*, uint8_t*, size_t);
-uint8_t* block_alloc(MinnetBytes*, size_t, JSContext*);
-uint8_t* block_realloc(MinnetBytes*, size_t, JSContext*);
-void block_free(MinnetBytes*, JSRuntime*);
-int block_fromarraybuffer(MinnetBytes*, JSValue, JSContext*);
-JSValue block_toarraybuffer(MinnetBytes*, JSContext*);
-JSValue block_tostring(MinnetBytes const*, JSContext*);
 void buffer_init(MinnetBuffer*, uint8_t*, size_t);
 uint8_t* buffer_alloc(MinnetBuffer*, size_t, JSContext*);
 ssize_t buffer_append(MinnetBuffer*, const void*, size_t, JSContext* ctx);
@@ -87,8 +80,8 @@ BOOL buffer_write(MinnetBuffer*, const void*, size_t);
 int buffer_vprintf(MinnetBuffer*, const char*, va_list);
 int buffer_printf(MinnetBuffer*, const char*, ...);
 uint8_t* buffer_realloc(MinnetBuffer*, size_t, JSContext*);
-int buffer_fromarraybuffer(MinnetBuffer*, JSValue, JSContext*);
-int buffer_fromvalue(MinnetBuffer*, JSValue, JSContext*);
+int buffer_fromarraybuffer(MinnetBuffer*, JSValueConst, JSContext*);
+int buffer_fromvalue(MinnetBuffer*, JSValueConst, JSContext*);
 JSValue buffer_tostring(MinnetBuffer const*, JSContext*);
 size_t buffer_escape(MinnetBuffer*, const void*, size_t, JSContext* ctx);
 char* buffer_escaped(MinnetBuffer const*, JSContext*);
