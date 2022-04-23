@@ -205,7 +205,23 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       // (int)MIN(len, 32), (char*)in);
       MinnetResponse* resp = opaque->resp;
 
+      if(!resp) {
+        resp = opaque->resp = response_new(ctx);
+
+        resp->generator = generator_new(ctx);
+        resp->status = lws_http_client_http_response(wsi);
+
+        session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
+      }
+      if(!JS_IsObject(session->resp_obj))
+        session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
+
       generator_write(resp->generator, in, len);
+
+      /*  if(!JS_IsObject(session->resp_obj))
+          session->resp_obj=minnet_response_wrap(ctx, resp);*/
+
+      client_exception(client, minnet_emit(&client->on.message, 2, &session->req_obj));
 
       // buffer_append(resp->body, in, len, ctx);
       return 0;
