@@ -69,6 +69,9 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
            opaque->ws = 0;
          }*/
       if((opaque = lws_get_opaque_user_data(wsi))) {
+        if(opaque->ws)
+          opaque->ws->lwsi = 0;
+
         lws_set_opaque_user_data(wsi, 0);
         opaque_free(opaque, ctx);
       }
