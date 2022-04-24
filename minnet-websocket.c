@@ -270,12 +270,12 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   len = buffer_BYTES(&buffer);
 
-  if((session = ws_session(ws))) {
+ /* if((session = ws_session(ws))) {
 
     buffer_append(&session->send_buf, buffer.read, len, ctx);
     lws_callback_on_writable(ws->lwsi);
 
-  } else {
+  } else*/ {
 
     m = lws_write(ws->lwsi, buffer.read, buffer_BYTES(&buffer), JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
 

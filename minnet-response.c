@@ -233,7 +233,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
     case RESPONSE_BODY: {
       if(resp->body && buffer_SIZE(resp->body)) {
 
-        if(!strncmp("text/", resp->type, 5))
+        if(resp->type && !strncmp("text/", resp->type, 5))
           ret = JS_NewStringLen(ctx, buffer_BEGIN(resp->body), buffer_SIZE(resp->body));
         else
           ret = JS_NewArrayBufferCopy(ctx, buffer_BEGIN(resp->body), buffer_SIZE(resp->body));
