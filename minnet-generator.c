@@ -22,7 +22,7 @@ generator_free(struct generator** gen_p) {
   if((gen = *gen_p)) {
     /*if(--gen->ref_count == 0) {*/
     asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
-    buffer_free(&gen->buffer, gen->ctx);
+    buffer_free(&gen->buffer, JS_GetRuntime(gen->ctx));
     js_free(gen->ctx, gen);
 
     *gen_p = 0;

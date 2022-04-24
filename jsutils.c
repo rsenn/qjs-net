@@ -32,7 +32,10 @@ js_object_classname(JSContext* ctx, JSValueConst value) {
     proto = JS_GetPrototype(ctx, value);
     ctor = js_object_constructor(ctx, proto);
   }
-  s = js_function_name(ctx, ctor);
+  if((name = js_function_name(ctx, ctor))) {
+    s = js_strdup(ctx, name);
+    JS_FreeCString(ctx, name);
+  }
 
   JS_FreeValue(ctx, ctor);
   JS_FreeValue(ctx, proto);
@@ -364,7 +367,7 @@ js_timer_cancel(JSContext* ctx, JSValueConst timer) {
 void
 js_timer_free(void* ptr) {
   struct TimerClosure* closure = ptr;
-  JSContext* ctx;
+  JSContext* ctx = closure->ctx;
 
   if(--closure->ref_count == 0) {
     JS_FreeValue(ctx, closure->id);
@@ -583,7 +586,7 @@ js_module_list(JSContext* ctx) {
 
 JSModuleDef*
 js_module_at(JSContext* ctx, int i) {
-  struct list_head *el, *list = js_module_list(ctx);
+  struct list_head *el = 0, *list = js_module_list(ctx);
 
   list_for_each(list, el) {
     JSModuleDef* module = (char*)el - sizeof(JSAtom) * 2;
@@ -635,6 +638,7 @@ js_module_export_find(JSModuleDef* module, JSAtom name) {
 
   return 0;
 }
+extern JSModuleDef* js_module_loader(JSContext* ctx, const char* module_name, void* opaque);
 
 JSValue
 js_module_import_meta(JSContext* ctx, const char* name) {
@@ -726,7 +730,7 @@ asynciterator_yield(AsyncIterator* it, JSContext* ctx) {
 AsyncRead*
 asynciterator_read(AsyncIterator* it, JSContext* ctx) {
   if(!list_empty(&it->reads)) {
-    AsyncRead* rd = it->reads.prev;
+    AsyncRead* rd = (AsyncRead*)it->reads.prev;
     list_del(&rd->link);
     return rd;
   }

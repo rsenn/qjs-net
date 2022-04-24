@@ -373,7 +373,7 @@ headers_write(uint8_t** in, uint8_t* end, MinnetBuffer* buffer, struct lws* wsi)
 
   while(r < w) {
     size_t l = byte_chr(r, w - r, '\n');
-    size_t n, m = byte_chr(r, r + l, ':');
+    size_t n, m = byte_chr(r, l, ':');
     uint8_t* name = r;
 
     next = r + l + 1;

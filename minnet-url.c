@@ -1,6 +1,8 @@
 #include "minnet.h"
 #include <assert.h>
 #include <limits.h>
+#include <ctype.h>
+#include <strings.h>
 #include <libwebsockets.h>
 
 #ifndef HAVE_STRLCPY

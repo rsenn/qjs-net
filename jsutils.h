@@ -98,7 +98,7 @@ void js_error_print(JSContext*, JSValueConst);
 static inline void
 js_clear(JSContext* ctx, const void** ptr) {
   if(*ptr)
-    js_free(ctx, *ptr);
+    js_free(ctx, (void*)*ptr);
   *ptr = 0;
 }
 
@@ -181,7 +181,7 @@ typedef struct async_read {
 
 typedef struct value_item {
   struct list_head link;
-  JSValue item;
+  JSValue value;
 } ValueItem;
 
 typedef struct async_iterator {

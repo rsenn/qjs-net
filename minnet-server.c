@@ -1,6 +1,7 @@
 #include "jsutils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
+#include "minnet-client.h"
 #include "minnet-server-http.h"
 #include "minnet-server-proxy.h"
 #include "minnet-response.h"

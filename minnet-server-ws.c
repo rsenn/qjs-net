@@ -1,6 +1,7 @@
 #include "minnet-server.h"
 #include "minnet-websocket.h"
 #include "minnet-request.h"
+#include "jsutils.h"
 #include "minnet-response.h"
 #include <assert.h>
 #include <libwebsockets.h>
@@ -182,8 +183,42 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_SERVER_WRITEABLE: {
       // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));
 
-      MinnetBuffer* buf = &session->send_buf;
+      /* MinnetBuffer* buf = &session->send_buf;*/
       // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s buf=%s\n", lws_callback_name(reason) + 13, buffer_escaped(buf, ctx));
+      //
+      ValueItem* item = 0;
+      struct list_head* el;
+
+      list_for_each(el, &opaque->ws->sendq) {
+        item = list_entry(el, ValueItem, link);
+
+        break;
+      }
+
+      if(item) {
+        //      MinnetBytes block={0};
+        JSBuffer buffer = {0};
+        int n;
+
+        js_buffer_from(ctx, &buffer, item->value);
+        n = buffer.size;
+
+        int ret = lws_write(wsi, buffer.data, buffer.size, JS_IsString(buffer.value) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
+
+        /*      if(!block_fromarraybuffer(&block,item->value,ctx)) {
+
+              }
+        */
+
+        // js_buffer_free(ctx, &buffer);
+
+        if(ret == n) {
+
+          list_del(&item->link);
+          JS_FreeValue(ctx, item->value);
+          js_free(ctx, item);
+        }
+      }
 
       break;
     }
