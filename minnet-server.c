@@ -266,6 +266,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
   JSValue opt_mimetypes = JS_GetPropertyStr(ctx, options, "mimetypes");
+  JSValue opt_error_document = JS_GetPropertyStr(ctx, options, "errorDocument");
 
   if(!JS_IsUndefined(opt_tls)) {
 
@@ -312,7 +313,12 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->protocols = protocols2;
   info->mounts = &mount;
   info->vhost_name = url_format((MinnetURL){.host = url.host, .port = url.port}, ctx);
-  info->error_document_404 = "/404.html";
+
+  if(JS_IsString(opt_error_document))
+    info->error_document_404 = js_tostring(ctx, opt_error_document);
+  else
+    info->error_document_404 = js_strdup(ctx, "/404.html");
+
   info->port = url.port;
   info->timeout_secs = 0;
   info->options = 0;
@@ -341,7 +347,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
     // info->options |= LWS_SERVER_OPTION_VH_H2_HALF_CLOSED_LONG_POLL;
   }
-  info->options |= LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
+  // info->options |= LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
 
   if(JS_IsArray(ctx, opt_mimetypes)) {
     MinnetVhostOptions *vopts, **vop = &server->mimetypes;

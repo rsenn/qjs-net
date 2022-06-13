@@ -301,6 +301,7 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
   }
   int ret = lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end);
   printf("lws_finalize_write_http_header = %d\n", ret);
+  printf("HTTP headers '%.*s'\n", (int)buffer_HEAD(buf), buf->start);
 
   /* {
      char* b = buffer_escaped(buf, ctx);
@@ -615,6 +616,14 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       request_dup(req);
 
       MinnetCallback* cb = &server->cb.http;
+      /*
+            if(cb && cb->ctx) {
+              JSValue resp = minnet_emit_this(cb, session->ws_obj, 2, args);
+
+              if(minnet_response_data(resp)) {
+
+              }
+            }*/
 
       if(mount && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
 
@@ -637,7 +646,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       } else if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
 
-        cb = &mount->callback;
+        if(mount->callback.ctx)
+          cb = &mount->callback;
 
         if(req->method == METHOD_GET /* || is_h2(wsi)*/) {
           resp = request_handler(session, cb);

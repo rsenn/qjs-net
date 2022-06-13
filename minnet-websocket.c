@@ -289,7 +289,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
       goto fail;
     }
 
-    len = buffer_BYTES(&buffer);
+    len = buffer_REMAIN(&buffer);
 
     if(ws && ws->lwsi) {
       if((session = ws_session(ws)) && *((char**)((char*)ws->lwsi)+1208)) {
@@ -300,7 +300,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
       } else {
 
-        m = lws_write(ws->lwsi, buffer.read, buffer_BYTES(&buffer), JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
+        m = lws_write(ws->lwsi, buffer.read, buffer_REMAIN(&buffer), JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
 
         if(m < len)
           ret = JS_ThrowInternalError(ctx, "lws write failed: %" PRIi64 "/%" PRIi64, m, len);

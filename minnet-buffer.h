@@ -61,7 +61,8 @@ typedef union byte_buffer {
   }
 
 #define buffer_AVAIL(b) (ptrdiff_t)((b)->end - (b)->write)
-#define buffer_BYTES(b) (ptrdiff_t)((b)->write - (b)->read)
+#define buffer_BYTES(b) (ptrdiff_t)((b)->write - (b)->start)
+#define buffer_REMAIN(b) (ptrdiff_t)((b)->write - (b)->read)
 #define buffer_HEAD(b) (size_t)((b)->write - (b)->start)
 #define buffer_TAIL(b) (size_t)((b)->read - (b)->start)
 #define buffer_ALLOC(b) (void*)((b)->alloc)

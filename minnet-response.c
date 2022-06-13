@@ -291,6 +291,18 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       buffer_fromvalue(resp->body, value, ctx);
       break;
     }
+    case RESPONSE_HEADERS: {
+      int n = headers_fromobj(&resp->headers, value, ctx);
+
+      if(n <= 0) {
+        ret = JS_ThrowTypeError(ctx, "Invalid headers object");
+      } else {
+        printf("minnet-response: %d headers added\n", n);
+        ret = JS_DupValue(ctx, value);
+      }
+
+      break;
+    }
   }
 
   JS_FreeCString(ctx, str);
@@ -397,7 +409,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("redirected", minnet_response_get, minnet_response_set, RESPONSE_REDIRECTED, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, 0, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, minnet_response_set, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_response_iterator),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),
 };
