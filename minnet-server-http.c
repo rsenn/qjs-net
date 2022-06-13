@@ -493,14 +493,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
         return -1;
 
-      if(!opaque->req) {
-        /*char* uri;
-        MinnetHttpMethod method;
-
-        uri = minnet_uri_and_method(ctx, wsi, &method);
-        if(uri)*/
-        opaque->req = request_fromwsi(wsi, ctx);
-      }
+      if(!opaque->req)
+         opaque->req = request_fromwsi(wsi, ctx);
 
       int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
 
@@ -519,7 +513,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       opaque->status = OPEN;
 
-      url_set_protocol(&opaque->req->url, lws_is_ssl(wsi) ? "https" : "http");
+      if(opaque->req)
+        url_set_protocol(&opaque->req->url, lws_is_ssl(wsi) ? "https" : "http");
 
       // LOGCB("HTTP", "url=%s", opaque->req ? url_string(&opaque->req->url) : 0);
       return 0;
