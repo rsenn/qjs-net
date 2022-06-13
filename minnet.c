@@ -451,6 +451,53 @@ headers_set(JSContext* ctx, MinnetBuffer* buffer, const char* name, const char* 
   return len;
 }
 
+ssize_t
+headers_findb(MinnetBuffer* buffer, const char* name, size_t namelen) {
+  uint8_t* ptr;
+  ssize_t ret = 0;
+
+  for(ptr = buffer->start; ptr < buffer->write;) {
+    size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
+
+    if(!strncasecmp(ptr, name, namelen) && ptr[namelen] == ':')
+      return ret;
+    while(isspace(ptr[len]) && ptr + len < buffer->write) ++len;
+    ptr += len;
+    ++ret;
+  }
+
+  return -1;
+}
+
+ssize_t
+headers_find(MinnetBuffer* buffer, const char* name) {
+  return headers_findb(buffer, name, strlen(name));
+}
+
+ssize_t
+headers_unsetb(MinnetBuffer* buffer, const char* name, size_t namelen) {
+  ssize_t pos;
+
+  if((pos = headers_findb(buffer, name, namelen)) >= 0) {
+    uint8_t* ptr = buffer->start + pos;
+    size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
+
+    while(isspace(buffer->start[len]) && buffer->start + len < buffer->write) ++len;
+
+    memcpy(ptr, ptr + len, buffer->write - (buffer->start + len));
+    buffer->write -= len;
+
+    if(buffer->write < buffer->end)
+      memset(buffer->write, 0, buffer->end - buffer->write);
+  }
+  return pos;
+}
+
+ssize_t
+headers_unset(MinnetBuffer* buffer, const char* name) {
+  return headers_unsetb(buffer, name, strlen(name));
+}
+
 int
 headers_get(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
   int tok, len, count = 0;
