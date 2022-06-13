@@ -266,31 +266,18 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
       resp->type,
       resp->body ? buffer_HEAD(resp->body) : 0);
 
-  printf("HTTP headers '%.*s'\n", (int)buffer_REMAIN(&resp->headers), (char*)resp->headers.start);
-
   // resp->read_only = TRUE;
   response_generator(resp, ctx);
 
-  ssize_t clen = is_ssl || is_h2 ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body);
-
-  if(lws_add_http_common_headers(wsi, resp->status, resp->type, clen, &buf->write, buf->end)) {
+  if(lws_add_http_common_headers(wsi, resp->status, resp->type, is_ssl || is_h2 ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body), &buf->write, buf->end)) {
     return 1;
   }
+  /*  {
+      char* b = buffer_escaped(buf, ctx);
 
-  /*{
-    size_t llen, nlen, n;
-    uint8_t *x, *end;
-
-    for(x = resp->headers.start, end = resp->headers.write; x < end; x += llen) {
-      llen = byte_chrs(x, end - x, "\r\n", 2);
-      while(isspace(x[llen])) ++llen;
-      nlen = byte_chr(x, llen, ':');
-
-      printf("HTTP header (1) '%.*s' : '%.*s'\n", (int)nlen, (char*)x);
-
-      headers_unsetb(&resp->headers, x, nlen);
-    }
-  } */
+      lwsl_user("lws_add_http_common_headers %td '%s'", buf->write - buf->start, b);
+      js_free(ctx, b);
+    }*/
 
   {
     size_t len, n;
@@ -304,7 +291,7 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
         if(isspace(x[n]))
           n++;
 
-        printf("HTTP header (2) '%s' : '%.*s'\n", prop, (int)(len - n), &x[n]);
+        //  printf("HTTP header %s = %.*s\n", prop, (int)(len - n), &x[n]);
 
         if((lws_add_http_header_by_name(wsi, (const unsigned char*)prop, (const unsigned char*)&x[n], len - n, &buf->write, buf->end)))
           JS_ThrowInternalError(ctx, "lws_add_http_header_by_name failed");
@@ -312,11 +299,10 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
       }
     }
   }
-
-  printf("HTTP headers '%.*s'\n", (int)(buf->write - buf->start), buf->start);
-
   int ret = lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end);
   printf("lws_finalize_write_http_header = %d\n", ret);
+
+  printf("HTTP headers '%.*s'\n", (int)buffer_HEAD(buf), buf->start);
 
   /* {
      char* b = buffer_escaped(buf, ctx);
@@ -660,22 +646,22 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
           if(cb && cb->ctx) {
             JSValue gen = minnet_emit_this(cb, session->ws_obj, 2, args);
-
             LOGCB("HTTP", "ret=%s", JS_ToCString(ctx, gen));
-
             if(js_is_iterator(ctx, gen)) {
-
               session->generator = gen;
               session->next = JS_UNDEFINED;
-
               lws_callback_on_writable(wsi);
+              break;
             }
-          } else {
+          } /*else {
 
             LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);
-            if(lws_http_transaction_completed(wsi))
+            if(lws_http_transaction_completed(wsi)) {
               ret = -1;
-          }
+              break;
+            }
+          }*/
+
           if(http_server_respond(wsi, &b, resp, ctx)) {
             JS_FreeValue(ctx, session->ws_obj);
             session->ws_obj = JS_NULL;
@@ -690,7 +676,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
            lws_callback_on_writable(wsi);*/
 
       JS_FreeValue(ctx, session->ws_obj);
-
+      if(lws_http_transaction_completed(wsi))
+        ret = -1;
       break;
     }
 
