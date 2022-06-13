@@ -29,6 +29,7 @@ void response_format(MinnetResponse const*, char*, size_t);
 char* response_dump(MinnetResponse const*);
 void response_init(MinnetResponse*, MinnetURL, int32_t, char* status_text, BOOL ok, char* type);
 MinnetResponse* response_dup(MinnetResponse*);
+MinnetResponse* response_redirect(MinnetResponse* resp, const char* location, JSContext* ctx);
 ssize_t response_write(MinnetResponse*, const void*, size_t, JSContext* ctx);
 void response_clear(MinnetResponse*, JSContext*);
 void response_clear_rt(MinnetResponse*, JSRuntime*);

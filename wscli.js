@@ -291,7 +291,6 @@ function main(...args) {
   }
 }
 
-
 function GetOpt(options = {}, args) {
   let s, l;
   let r = {};
@@ -346,7 +345,6 @@ function GetOpt(options = {}, args) {
   return r;
 }
 
-
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
@@ -355,4 +353,3 @@ try {
 } finally {
   //console.log('SUCCESS');
 }
-
