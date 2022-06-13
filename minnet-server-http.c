@@ -196,7 +196,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
         mnt++;
         len--;
       }
-      // printf("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+      printf("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
 
       if((len == n || (n > len && (x[len] == '/' || x[len] == '?'))) && !strncmp(x, mnt, n)) {
         m = p;
@@ -403,7 +403,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
   n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
   /*  if(!buffer_BYTES(resp->body) && is_h2(wsi)) buffer_append(resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
 
-  if((remain = buffer_BYTES(resp->body))) {
+  if((remain = buffer_REMAIN(resp->body))) {
     uint8_t* x = resp->body->read;
     size_t l = is_h2(wsi) ? (remain > 1024 ? 1024 : remain) : remain;
 
@@ -411,8 +411,8 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
       p = (remain - l) > 0 ? LWS_WRITE_HTTP : n;
       ret = lws_write(wsi, x, l, p);
       LOG("SERVER-HTTP", FG("%d") "%-38s" NC " wsi#%" PRIi64 " len=%zu final=%d ret=%zd", 112, __func__ + 12, opaque->serial, l, p == LWS_WRITE_HTTP_FINAL, ret);
-      if(ret > 0)
-        buffer_skip(resp->body, ret);
+
+      buffer_skip(resp->body, ret);
     }
   }
 
@@ -593,14 +593,17 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if((mount = session->mount)) {
         size_t mlen = strlen(mount->mnt);
         assert(!strncmp(url->path, mount->mnt, mlen));
-        assert(!strcmp(url->path + mlen, path));
 
-        LOGCB("HTTP",
-              "mount: mnt='%s', org='%s', pro='%s', origin_protocol='%s'\n",
-              mount->mnt,
-              mount->org,
-              mount->pro,
-              ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK"})[(uintptr_t)mount->lws.origin_protocol]);
+        if(!strcmp(url->path + mlen, path)) {
+          assert(!strcmp(url->path + mlen, path));
+
+          LOGCB("HTTP",
+                "mount: mnt='%s', org='%s', pro='%s', origin_protocol='%s'\n",
+                mount->mnt,
+                mount->org,
+                mount->pro,
+                ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK"})[(uintptr_t)mount->lws.origin_protocol]);
+        }
       }
 
       args[0] = session->req_obj = minnet_request_wrap(ctx, opaque->req);
@@ -625,7 +628,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               }
             }*/
 
-      if(mount && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
+      if(mount && !(mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->callback.ctx) &&
+         (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
 
         if((ret = serve_file(wsi, path, mount, resp, ctx))) {
           LOGCB("HTTP", "serve_file FAIL %d", ret);
