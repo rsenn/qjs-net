@@ -271,7 +271,13 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
   // resp->read_only = TRUE;
   response_generator(resp, ctx);
 
-  {
+  ssize_t clen = is_ssl || is_h2 ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body);
+
+  if(lws_add_http_common_headers(wsi, resp->status, resp->type, clen, &buf->write, buf->end)) {
+    return 1;
+  }
+
+  /*{
     size_t llen, nlen, n;
     uint8_t *x, *end;
 
@@ -284,13 +290,7 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
 
       headers_unsetb(&resp->headers, x, nlen);
     }
-  }
-  /*  {
-      char* b = buffer_escaped(buf, ctx);
-
-      lwsl_user("lws_add_http_common_headers %td '%s'", buf->write - buf->start, b);
-      js_free(ctx, b);
-    }*/
+  } */
 
   {
     size_t len, n;
@@ -311,12 +311,6 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
         js_free(ctx, (void*)prop);
       }
     }
-  }
-
-  ssize_t clen = is_ssl || is_h2 ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body);
-
-  if(lws_add_http_common_headers(wsi, resp->status, resp->type, clen, &buf->write, buf->end)) {
-    return 1;
   }
 
   int ret = lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end);
@@ -664,13 +658,16 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
           if(cb && cb->ctx) {
             JSValue gen = minnet_emit_this(cb, session->ws_obj, 2, args);
-            assert(js_is_iterator(ctx, gen));
-            LOGCB("HTTP", "gen=%s", JS_ToCString(ctx, gen));
 
-            session->generator = gen;
-            session->next = JS_UNDEFINED;
+            LOGCB("HTTP", "ret=%s", JS_ToCString(ctx, gen));
 
-            lws_callback_on_writable(wsi);
+            if(js_is_iterator(ctx, gen)) {
+
+              session->generator = gen;
+              session->next = JS_UNDEFINED;
+
+              lws_callback_on_writable(wsi);
+            }
           } else {
 
             LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);

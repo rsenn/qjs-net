@@ -341,7 +341,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
     // info->options |= LWS_SERVER_OPTION_VH_H2_HALF_CLOSED_LONG_POLL;
   }
-  info->options |= LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
+  // info->options |= LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
 
   if(JS_IsArray(ctx, opt_mimetypes)) {
     MinnetVhostOptions *vopts, **vop = &server->mimetypes;
