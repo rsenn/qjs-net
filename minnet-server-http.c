@@ -588,6 +588,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       session->h2 = is_h2(wsi);
 
       if((mount = session->mount)) {
+
+        if(mount->def && !strcmp(url->path, "/")) {
+          return lws_callback_http_dummy(wsi, reason, user, in, len);
+        }
+
         size_t mlen = strlen(mount->mnt);
         assert(!strncmp(url->path, mount->mnt, mlen));
         assert(!strcmp(url->path + mlen, path));
@@ -614,70 +619,91 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       MinnetCallback* cb = &server->cb.http;
 
-      if(mount && mount->lws.origin_protocol != LWSMPRO_CALLBACK && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
-
-        if((ret = serve_file(wsi, path, mount, resp, ctx))) {
-          LOGCB("HTTP", "serve_file FAIL %d", ret);
-          JS_FreeValue(ctx, session->ws_obj);
-          session->ws_obj = JS_NULL;
-          lws_callback_on_writable(wsi);
-          return 0;
-        }
-
-        if((ret = http_server_respond(wsi, &b, resp, ctx))) {
-          LOGCB("HTTP", "http_server_respond FAIL %d", ret);
-          JS_FreeValue(ctx, session->ws_obj);
-          session->ws_obj = JS_NULL;
-          lws_callback_on_writable(wsi);
-          return 0;
-        }
-
-        server_exception(server, minnet_emit(&server->cb.http, 2, &session->req_obj));
-
-      } else if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
-
-        cb = &mount->callback;
-
-        if(!cb || !cb->ctx)
-          cb = &server->cb.http;
-
-        if(req->method == METHOD_GET /* || is_h2(wsi)*/) {
-          resp = request_handler(session, cb);
-
-          if(cb && cb->ctx) {
-            JSValue gen = minnet_emit_this(cb, session->ws_obj, 2, args);
-            LOGCB("HTTP", "ret=%s", JS_ToCString(ctx, gen));
-            if(js_is_iterator(ctx, gen)) {
-              session->generator = gen;
-              session->next = JS_UNDEFINED;
-              lws_callback_on_writable(wsi);
-              break;
-            }
-          } /*else {
-
-            LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);
-            if(lws_http_transaction_completed(wsi)) {
-              ret = -1;
-              break;
-            }
-          }*/
-
-          if(http_server_respond(wsi, &b, resp, ctx)) {
-            JS_FreeValue(ctx, session->ws_obj);
-            session->ws_obj = JS_NULL;
-            //
+      if(mount) {
+        if(mount->def && !strcmp(req->url.path, "/")) {
+          /* if((ret = serve_file(wsi, path, mount, resp, ctx)))*/ {
+            /*  LOGCB("HTTP", "serve_file FAIL %d", ret);
+              JS_FreeValue(ctx, session->ws_obj);
+              session->ws_obj = JS_NULL;
+              lws_callback_on_writable(wsi);*/
+            ret = 0;
+            break;
           }
         }
-      } else {
-        LOGCB("HTTP", "NOT FOUND\tpath=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);
+
+        if(mount->lws.origin_protocol != LWSMPRO_CALLBACK && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
+
+          if((ret = serve_file(wsi, path, mount, resp, ctx))) {
+            LOGCB("HTTP", "serve_file FAIL %d", ret);
+            JS_FreeValue(ctx, session->ws_obj);
+            session->ws_obj = JS_NULL;
+            lws_callback_on_writable(wsi);
+            return 0;
+          }
+
+          if((ret = http_server_respond(wsi, &b, resp, ctx))) {
+            LOGCB("HTTP", "http_server_respond FAIL %d", ret);
+            JS_FreeValue(ctx, session->ws_obj);
+            session->ws_obj = JS_NULL;
+            lws_callback_on_writable(wsi);
+            return 0;
+          }
+
+          server_exception(server, minnet_emit(&server->cb.http, 2, &session->req_obj));
+        }
+
+        if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
+
+          cb = &mount->callback;
+
+          if(!cb || !cb->ctx)
+            cb = &server->cb.http;
+
+          if(req->method == METHOD_GET /* || is_h2(wsi)*/) {
+            resp = request_handler(session, cb);
+
+            if(cb && cb->ctx) {
+              JSValue gen = minnet_emit_this(cb, session->ws_obj, 2, args);
+
+              LOGCB("HTTP", "ret=%s", JS_ToCString(ctx, gen));
+              LOGCB("HTTP", "response.status=%d", resp->status);
+
+              if(js_is_iterator(ctx, gen)) {
+                session->generator = gen;
+                session->next = JS_UNDEFINED;
+              }
+
+              goto http_next;
+            } /*else {
+
+      LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);
+      if(lws_http_transaction_completed(wsi)) {
+        ret = -1;
         break;
+      }
+    }*/
+
+            if(http_server_respond(wsi, &b, resp, ctx)) {
+              JS_FreeValue(ctx, session->ws_obj);
+              session->ws_obj = JS_NULL;
+              //
+              goto http_next;
+            }
+          }
+        }
+
+        LOGCB("HTTP", "NOT FOUND\tpath=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);
       }
       /*   if(req->method == METHOD_GET || is_h2(wsi))
            lws_callback_on_writable(wsi);*/
 
       JS_FreeValue(ctx, session->ws_obj);
+    http_next:
       if(lws_http_transaction_completed(wsi))
         ret = -1;
+      else
+        lws_callback_on_writable(wsi);
+
       break;
     }
 
