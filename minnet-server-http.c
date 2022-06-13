@@ -266,6 +266,8 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
       resp->type,
       resp->body ? buffer_HEAD(resp->body) : 0);
 
+  printf("HTTP headers '%.*s'\n", (int)buffer_REMAIN(&resp->headers), buffer_HEAD(&resp->headers));
+
   // resp->read_only = TRUE;
   response_generator(resp, ctx);
 
@@ -400,9 +402,9 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
   LOG("SERVER-HTTP", FG("%d") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu", 112, __func__ + 12, opaque->serial, resp->status, resp->type, resp->body ? buffer_HEAD(resp->body) : 0);
 
   n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
-  /*  if(!buffer_BYTES(resp->body) && is_h2(wsi)) buffer_append(resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
+  /*  if(!buffer_REMAIN(resp->body) && is_h2(wsi)) buffer_append(resp->body, "\nXXXXXXXXXXXXXX", 1, ctx);*/
 
-  if((remain = buffer_BYTES(resp->body))) {
+  if((remain = buffer_REMAIN(resp->body))) {
     uint8_t* x = resp->body->read;
     size_t l = is_h2(wsi) ? (remain > 1024 ? 1024 : remain) : remain;
 
@@ -415,7 +417,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
     }
   }
 
-  remain = buffer_BYTES(resp->body);
+  remain = buffer_REMAIN(resp->body);
 
   LOG("SERVER-HTTP", FG("%d") "%-38s" NC " wsi#%" PRIi64 " done=%i remain=%zu final=%d", 112, __func__ + 12, opaque->serial, done, remain, p == LWS_WRITE_HTTP_FINAL);
 
@@ -494,7 +496,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         return -1;
 
       if(!opaque->req)
-         opaque->req = request_fromwsi(wsi, ctx);
+        opaque->req = request_fromwsi(wsi, ctx);
 
       int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
 
@@ -611,7 +613,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       MinnetCallback* cb = &server->cb.http;
 
-      if(mount && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
+      if(mount && mount->lws.origin_protocol != LWSMPRO_CALLBACK && (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin))) {
 
         if((ret = serve_file(wsi, path, mount, resp, ctx))) {
           LOGCB("HTTP", "serve_file FAIL %d", ret);
@@ -620,6 +622,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           lws_callback_on_writable(wsi);
           return 0;
         }
+
         if((ret = http_server_respond(wsi, &b, resp, ctx))) {
           LOGCB("HTTP", "http_server_respond FAIL %d", ret);
           JS_FreeValue(ctx, session->ws_obj);
@@ -653,7 +656,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           if(http_server_respond(wsi, &b, resp, ctx)) {
             JS_FreeValue(ctx, session->ws_obj);
             session->ws_obj = JS_NULL;
-            return 1;
+            lws_callback_on_writable(wsi);
+            return 0;
           }
         }
       } else {
@@ -682,7 +686,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             "%smnt=%s remain=%td type=%s url.path=%s",
             session->h2 ? "h2, " : "",
             session->mount ? session->mount->mnt : 0,
-            resp && resp->body ? buffer_BYTES(resp->body) : 0,
+            resp && resp->body ? buffer_REMAIN(resp->body) : 0,
             resp ? resp->type : 0,
             resp ? resp->url.path : 0);
 

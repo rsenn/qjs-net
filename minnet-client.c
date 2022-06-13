@@ -528,7 +528,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
       MinnetBuffer* buf = &client->session.send_buf;
-      int ret, size = buffer_BYTES(buf);
+      int ret, size = buffer_REMAIN(buf);
 
       if((ret = lws_write(wsi, buf->read, size, LWS_WRITE_TEXT)) != size) {
         lwsl_err("sending message failed: %d < %d\n", ret, size);

@@ -170,7 +170,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
               printf("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
               buffer_append(&buf, input.data, input.size, ctx);
-              // printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_BYTES(&buf), buffer_HEAD(&buf));
+              // printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
               js_buffer_free(&input, ctx);
             }
 

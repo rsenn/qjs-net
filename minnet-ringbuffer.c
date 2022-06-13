@@ -230,7 +230,7 @@ minnet_ringbuffer_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   if(!(strm = minnet_ringbuffer_data(ctx, this_val)))
     return JS_EXCEPTION;
   /*
-    len = buffer_BYTES(&strm->buffer);
+    len = buffer_REMAIN(&strm->buffer);
     ptr = strm->buffer.read;
 
     if(argc >= 1) {

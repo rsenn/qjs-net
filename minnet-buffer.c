@@ -205,7 +205,7 @@ size_t
 buffer_escape(MinnetBuffer* buf, const void* x, size_t len, JSContext* ctx) {
   const uint8_t *ptr, *end;
 
-  size_t prev = buffer_BYTES(buf);
+  size_t prev = buffer_REMAIN(buf);
 
   for(ptr = x, end = (const uint8_t*)x + len; ptr < end; ptr++) {
     char c = *ptr;
@@ -264,14 +264,14 @@ buffer_escape(MinnetBuffer* buf, const void* x, size_t len, JSContext* ctx) {
       default: buffer_putchar(buf, c); break;
     }
   }
-  return buffer_BYTES(buf) - prev;
+  return buffer_REMAIN(buf) - prev;
 }
 
 char*
 buffer_escaped(MinnetBuffer const* buf, JSContext* ctx) {
   char* ptr;
   MinnetBuffer out;
-  size_t size = buffer_BYTES(buf) * 4;
+  size_t size = buffer_REMAIN(buf) * 4;
 
   size = (size + 8) & (~7);
 
@@ -280,7 +280,7 @@ buffer_escaped(MinnetBuffer const* buf, JSContext* ctx) {
 
   out = BUFFER_N(ptr, size - 1);
 
-  ptr[buffer_escape(&out, buf->read, buffer_BYTES(buf), ctx)] = '\0';
+  ptr[buffer_escape(&out, buf->read, buffer_REMAIN(buf), ctx)] = '\0';
 
   return ptr;
 }
