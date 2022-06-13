@@ -313,6 +313,8 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
     }
   }
 
+  printf("HTTP headers '%.*s'\n", (int)(buf->write - buf->start), buf->start);
+
   int ret = lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end);
   printf("lws_finalize_write_http_header = %d\n", ret);
 
