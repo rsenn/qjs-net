@@ -306,7 +306,9 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       if(n <= 0) {
         ret = JS_ThrowTypeError(ctx, "Invalid headers object");
       } else {
+#ifdef DEBUG_OUTPUT
         printf("minnet-response: %d headers added\n", n);
+#endif
         ret = JS_DupValue(ctx, value);
       }
 

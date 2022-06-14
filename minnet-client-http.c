@@ -158,7 +158,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           while(!client->done) {
             value = js_iterator_next(ctx, client->body, &client->next, &client->done, 0, 0);
 
-            printf("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), client->done);
+            // printf("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), client->done);
 
             if(JS_IsException(value)) {
               JSValue exception = JS_GetException(ctx);
@@ -181,7 +181,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         size = buf.write - buf.start;
         if((r = lws_write(wsi, buf.start, size, (enum lws_write_protocol)n)) != size)
           return 1;
-        printf("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
+        // printf("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
         if(n != LWS_WRITE_HTTP_FINAL)
           lws_callback_on_writable(wsi);
       }

@@ -86,6 +86,7 @@ mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const c
   MinnetHttpMount* m;
 
   if((m = js_mallocz(ctx, sizeof(MinnetHttpMount)))) {
+#ifdef DEBUG_OUTPUT
 
     printf("mount_create mnt=%-10s org=%-20s def=%-15s protocol=%-10s origin_protocol=%s\n",
            mountpoint,
@@ -101,7 +102,7 @@ mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const c
                "REDIR_HTTPS",
                "CALLBACK",
            })[origin_proto]);
-
+#endif
     m->lws.mountpoint = js_strdup(ctx, mountpoint);
     m->lws.origin = origin ? js_strdup(ctx, origin) : 0;
     m->lws.def = def ? js_strdup(ctx, def) : 0;
@@ -145,8 +146,9 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 
   const char* path = JS_ToCString(ctx, mnt);
 
+#ifdef DEBUG_OUTPUT
   printf("mount_new '%s'\n", path);
-
+#endif
   if(JS_IsFunction(ctx, org)) {
     ret = mount_create(ctx, path, 0, 0, 0, LWSMPRO_CALLBACK);
 
@@ -196,7 +198,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
         mnt++;
         len--;
       }
-      printf("mount_find i=%d x='%.*s' '%.*s'\n", i++, (int)n, x, (int)len, mnt);
+      // printf("mount_find i=%d x='%.*s' '%.*s'\n", i++, (int)n, x, (int)len, mnt);
 
       if((len == n || (n > len && (x[len] == '/' || x[len] == '?'))) && !strncmp(x, mnt, n)) {
         m = p;
@@ -207,9 +209,10 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
       }
     }
   }
+#ifdef DEBUG_OUTPUT
   if(m)
     printf("mount_find org=%s mnt=%s cb.ctx=%p\n", ((struct http_mount*)m)->org, ((struct http_mount*)m)->mnt, ((struct http_mount*)m)->callback.ctx);
-
+#endif
   return (struct http_mount*)m;
 }
 
@@ -294,8 +297,9 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
         if(isspace(x[n]))
           n++;
 
+#ifdef DEBUG_OUTPUT
         printf("HTTP header %s = %.*s\n", prop, (int)(len - n), &x[n]);
-
+#endif
         if((lws_add_http_header_by_name(wsi, (const unsigned char*)prop, (const unsigned char*)&x[n], len - n, &buf->write, buf->end)))
           JS_ThrowInternalError(ctx, "lws_add_http_header_by_name failed");
         js_free(ctx, (void*)prop);
@@ -303,9 +307,11 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
     }
   }
   int ret = lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end);
-  printf("lws_finalize_write_http_header = %d\n", ret);
-  printf("HTTP headers '%.*s'\n", (int)buffer_HEAD(buf), buf->start);
 
+#ifdef DEBUG_OUTPUT
+
+  printf("HTTP headers '%.*s'\n", (int)buffer_HEAD(buf), buf->start);
+#endif
   /* {
      char* b = buffer_escaped(buf, ctx);
      lwsl_user("lws_finalize_write_http_header '%s' %td ret=%d", b, buf->write - buf->start, ret);
@@ -354,7 +360,9 @@ serve_file(struct lws* wsi, const char* path, struct http_mount* mount, struct h
   FILE* fp;
   const char* mime = lws_get_mimetype(path, &mount->lws);
 
+#ifdef DEBUG_OUTPUT
   printf("serve_file path=%s mount=%s\n", path, mount->mnt);
+#endif
 
   if(path[0] == '\0') {
     path = mount->def;
@@ -621,7 +629,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       args[0] = session->req_obj = minnet_request_wrap(ctx, opaque->req);
 
       if(!JS_IsObject(args[1]))
-        args[1] = minnet_response_new(ctx, *url, opaque->req->method == METHOD_POST ? 201 : 200, 0, TRUE, "text/html");
+        args[1] = minnet_response_new(ctx, *url, /*opaque->req->method == METHOD_POST ? 201 :*/ 200, 0, TRUE, "text/html");
 
       MinnetRequest* req = opaque->req;
       MinnetResponse* resp = opaque->resp = minnet_response_data2(ctx, args[1]);
@@ -752,8 +760,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           } else if(!done) {
             out = js_buffer_new(ctx, ret);
             LOGCB("HTTP-WRITEABLE", "size=%zu, out='%.*s'", out.size, (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data);
+#ifdef DEBUG_OUTPUT
             printf("\x1b[2K\ryielded %.*s %zu\n", (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data, out.size);
-
+#endif
             if(!resp->generator)
               response_generator(resp, ctx);
 
