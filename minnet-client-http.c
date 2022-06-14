@@ -89,7 +89,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       size_t n = headers_write(&buf.write, buf.end, &req->headers, wsi);
 
-      printf("APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
+      // printf("APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
       *(uint8_t**)in += n;
 
       if(method_number(client->connect_info.method) == METHOD_POST && !lws_http_is_redirected_to_get(wsi)) {

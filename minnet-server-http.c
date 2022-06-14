@@ -664,8 +664,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
 
         if(cb && cb->ctx) {
-          // if(req->method == METHOD_GET /* || is_h2(wsi)*/)
-          {
+          if(req->method == METHOD_GET /* || is_h2(wsi)*/) {
             resp = request_handler(session, cb);
 
             JSValue gen = minnet_emit_this(cb, session->ws_obj, 2, args);
@@ -741,7 +740,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         session->next = JS_UNDEFINED;
 
-        printf("LWS_CALLBACK_HTTP_WRITEABLE", JS_ToCString(ctx, session->generator));
+        // printf("LWS_CALLBACK_HTTP_WRITEABLE: %s\n", JS_ToCString(ctx, session->generator));
 
         while(!done) {
           ret = js_iterator_next(ctx, session->generator, &session->next, &done, 0, 0);
