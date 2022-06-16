@@ -314,7 +314,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   {
     wsi2 = lws_client_connect_via_info(&client->connect_info);
   }
-  fprintf(stderr, "client->wsi = %p, wsi2 = %p\n", client->wsi, wsi2);
+  // fprintf(stderr, "client->wsi = %p, wsi2 = %p\n", client->wsi, wsi2);
 
   if(!client->wsi /*&& !wsi2*/) {
     if(!block) {

@@ -105,6 +105,15 @@ response_new(JSContext* ctx) {
   return resp;
 }
 
+MinnetResponse*
+response_redirect(MinnetResponse* resp, const char* location, JSContext* ctx) {
+
+  resp->status = 302;
+  // url_parse(&resp->url, location, ctx);
+  headers_set(ctx, &resp->headers, "Location", location);
+  return resp;
+}
+
 JSValue
 minnet_response_new(JSContext* ctx, MinnetURL url, int status, char* status_text, BOOL ok, const char* type) {
   MinnetResponse* resp;
@@ -297,7 +306,9 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       if(n <= 0) {
         ret = JS_ThrowTypeError(ctx, "Invalid headers object");
       } else {
+#ifdef DEBUG_OUTPUT
         printf("minnet-response: %d headers added\n", n);
+#endif
         ret = JS_DupValue(ctx, value);
       }
 

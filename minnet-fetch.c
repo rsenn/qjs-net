@@ -236,7 +236,7 @@ handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socket
         sock->wantwrite = TRUE;
       if(action != CURL_POLL_OUT)
         sock->wantread = TRUE;
-      fprintf(stderr, "handle_socket sock=%d, wantwrite=%d, wantread=%d\n", sock->sockfd, sock->wantwrite, sock->wantread);
+      // fprintf(stderr, "handle_socket sock=%d, wantwrite=%d, wantread=%d\n", sock->sockfd, sock->wantwrite, sock->wantread);
 
       break;
     case CURL_POLL_REMOVE:
