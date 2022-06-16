@@ -530,7 +530,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-      break;
+           LOGCB("HTTP",  "in=%.*s", (int)len);
+ break;
     }
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
       if(!opaque->req)
@@ -688,7 +689,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               LOGCB("HTTP", "gen=%s", JS_ToCString(ctx, gen));
             }
           }
-        }
+        } 
 
         /*     LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);
            if(lws_http_transaction_completed(wsi))
