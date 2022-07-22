@@ -757,7 +757,7 @@ asynciterator_read(AsyncIterator* it, JSContext* ctx) {
   return 0;
 }
 
-BOOL
+int64_t
 asynciterator_push(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   AsyncRead* rd;
   if((rd = asynciterator_read(it, ctx))) {
@@ -766,10 +766,11 @@ asynciterator_push(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
     JS_SetPropertyStr(ctx, obj, "value", JS_DupValue(ctx, value));
     JS_SetPropertyStr(ctx, obj, "done", JS_NewBool(ctx, FALSE));
 
-    list_del(&rd->link);
+    // list_del(&rd->link)
+
     js_promise_resolve(ctx, &rd->promise, obj);
     js_free(ctx, rd);
-    return TRUE;
+    return 1;
   }
-  return FALSE;
+  return 0;
 }

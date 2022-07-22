@@ -185,6 +185,7 @@ typedef struct async_read {
 typedef struct value_item {
   struct list_head link;
   JSValue value;
+  int64_t id;
 } ValueItem;
 
 typedef struct async_iterator {
@@ -197,6 +198,6 @@ void asynciterator_clear(AsyncIterator*, JSRuntime*);
 AsyncIterator* asynciterator_new(JSContext*);
 JSValue asynciterator_yield(AsyncIterator*, JSContext*);
 AsyncRead* asynciterator_read(AsyncIterator*, JSContext*);
-BOOL asynciterator_push(AsyncIterator*, JSValueConst, JSContext*);
+int64_t asynciterator_push(AsyncIterator*, JSValueConst, JSContext*);
 
 #endif /* MINNET_JS_UTILS_H */

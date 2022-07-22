@@ -88,6 +88,7 @@ size_t buffer_escape(MinnetBuffer*, const void*, size_t, JSContext* ctx);
 char* buffer_escaped(MinnetBuffer const*, JSContext*);
 void buffer_finalizer(JSRuntime*, void*, void*);
 JSValue buffer_toarraybuffer(MinnetBuffer*, JSContext*);
+JSValue buffer_toarraybuffer_size(MinnetBuffer* buf, size_t* sz, JSContext* ctx);
 void buffer_dump(const char*, MinnetBuffer const*);
 BOOL buffer_clone(MinnetBuffer*, const MinnetBuffer*, JSContext*);
 uint8_t* buffer_skip(MinnetBuffer*, size_t);

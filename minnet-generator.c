@@ -14,6 +14,8 @@ generator_zero(struct generator* gen) {
   gen->buffer = BUFFER_0();
   asynciterator_zero(&gen->iterator);
   gen->ref_count = 0;
+  gen->bytes_written = 0;
+  gen->bytes_read = 0;
 }
 
 void
@@ -51,10 +53,13 @@ generator_next(MinnetGenerator* gen, JSContext* ctx) {
   ret = asynciterator_yield(&gen->iterator, ctx);
 
   if(buffer_HEAD(&gen->buffer)) {
-    JSValue value = buffer_toarraybuffer(&gen->buffer, ctx);
+    size_t len;
+    int64_t bytes;
+    JSValue value = buffer_toarraybuffer_size(&gen->buffer, &len, ctx);
     gen->buffer = BUFFER_0();
 
-    asynciterator_push(&gen->iterator, value, ctx);
+    if((bytes = asynciterator_push(&gen->iterator, value, ctx)) > 0)
+      gen->bytes_read += bytes;
   }
 
   return ret;
@@ -66,10 +71,15 @@ generator_write(MinnetGenerator* gen, const void* data, size_t len) {
 
   if(!list_empty(&gen->iterator.reads)) {
     JSValue buf = JS_NewArrayBufferCopy(gen->ctx, data, len);
-    if(asynciterator_push(&gen->iterator, buf, gen->ctx))
-      ret = len;
+    int64_t bytes = asynciterator_push(&gen->iterator, buf, gen->ctx);
+
+    if((ret = bytes) > 0)
+      gen->bytes_read += bytes;
+
   } else {
     ret = buffer_append(&gen->buffer, data, len, gen->ctx);
+    if(ret > 0)
+      gen->bytes_written += ret;
   }
 
   return ret;
@@ -91,6 +101,8 @@ minnet_generator_wrap(JSContext* ctx, MinnetGenerator** gen_p) {
 
   if(!*gen_p)
     *gen_p = generator_new(ctx);
+  else
+    ++(*gen_p)->ref_count;
 
   JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
 

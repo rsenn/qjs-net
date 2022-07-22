@@ -296,6 +296,14 @@ buffer_toarraybuffer(MinnetBuffer* buf, JSContext* ctx) {
   return block_toarraybuffer(&moved.block, ctx);
 }
 
+JSValue
+buffer_toarraybuffer_size(MinnetBuffer* buf, size_t* sz, JSContext* ctx) {
+  MinnetBuffer moved = buffer_move(buf);
+  if(sz)
+    *sz = block_SIZE(&moved.block);
+  return block_toarraybuffer(&moved.block, ctx);
+}
+
 void
 buffer_dump(const char* n, MinnetBuffer const* buf) {
   fprintf(stderr, "%s\t{ write = %td, read = %td, size = %td }\n", n, buf->write - buf->start, buf->read - buf->start, buf->end - buf->start);

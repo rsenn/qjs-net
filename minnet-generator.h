@@ -11,6 +11,7 @@ typedef struct generator {
   MinnetBuffer buffer;
   AsyncIterator iterator;
   JSContext* ctx;
+  uint64_t bytes_written, bytes_read;
   int ref_count;
 } MinnetGenerator;
 
