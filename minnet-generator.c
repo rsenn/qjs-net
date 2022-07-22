@@ -68,19 +68,24 @@ generator_next(MinnetGenerator* gen, JSContext* ctx) {
 ssize_t
 generator_write(MinnetGenerator* gen, const void* data, size_t len) {
   ssize_t ret = -1;
+  if(list_empty(&gen->iterator.reads))
+    return generator_queue(gen, data, len);
 
-  if(!list_empty(&gen->iterator.reads)) {
-    JSValue buf = JS_NewArrayBufferCopy(gen->ctx, data, len);
-    int64_t bytes = asynciterator_push(&gen->iterator, buf, gen->ctx);
+  JSValue buf = JS_NewArrayBufferCopy(gen->ctx, data, len);
+  int64_t bytes = asynciterator_push(&gen->iterator, buf, gen->ctx);
 
-    if((ret = bytes) > 0)
-      gen->bytes_read += bytes;
+  if((ret = bytes) > 0)
+    gen->bytes_read += bytes;
 
-  } else {
-    ret = buffer_append(&gen->buffer, data, len, gen->ctx);
-    if(ret > 0)
-      gen->bytes_written += ret;
-  }
+  return ret;
+}
+
+ssize_t
+generator_queue(MinnetGenerator* gen, const void* data, size_t len) {
+  ssize_t ret;
+
+  if((ret = buffer_append(&gen->buffer, data, len, gen->ctx)) > 0)
+    gen->bytes_written += ret;
 
   return ret;
 }
