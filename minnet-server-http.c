@@ -623,9 +623,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       } /* else if(lws_http_transaction_completed(wsi)) {
          return -1;
        }
+
   */
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
-      fprintf(stderr, "POST body: %p\n", req->body);
+      if(req->body && cb->ctx) {
+        fprintf(stderr, "POST body: %p\n", req->body);
+        generator_close(req->body, cb->ctx);
+      }
       lws_callback_on_writable(wsi);
       return 0;
     }

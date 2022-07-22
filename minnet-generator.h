@@ -21,6 +21,7 @@ struct generator* generator_new(JSContext*);
 JSValue generator_next(MinnetGenerator*, JSContext*);
 ssize_t generator_queue(MinnetGenerator*, const void*, size_t);
 ssize_t generator_write(MinnetGenerator*, const void*, size_t);
+BOOL generator_close(MinnetGenerator*, JSContext* ctx);
 JSValue minnet_generator_wrap(JSContext*, MinnetGenerator**);
 
 #endif /* MINNET_GENERATOR_H */

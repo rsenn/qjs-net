@@ -80,6 +80,11 @@ generator_write(MinnetGenerator* gen, const void* data, size_t len) {
   return ret;
 }
 
+BOOL
+generator_close(MinnetGenerator* gen, JSContext* ctx) {
+  return asynciterator_stop(&gen->iterator, JS_UNDEFINED, ctx);
+}
+
 ssize_t
 generator_queue(MinnetGenerator* gen, const void* data, size_t len) {
   ssize_t ret;

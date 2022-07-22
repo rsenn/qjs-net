@@ -190,7 +190,8 @@ typedef struct value_item {
 
 typedef struct async_iterator {
   JSContext* ctx;
-  struct list_head reads /*, values*/;
+  struct list_head reads;
+  BOOL closed, closing;
 } AsyncIterator;
 
 void asynciterator_zero(AsyncIterator*);
@@ -199,5 +200,10 @@ AsyncIterator* asynciterator_new(JSContext*);
 JSValue asynciterator_yield(AsyncIterator*, JSContext*);
 AsyncRead* asynciterator_read(AsyncIterator*, JSContext*);
 int64_t asynciterator_push(AsyncIterator*, JSValueConst, JSContext*);
+int64_t asynciterator_stop(AsyncIterator*, JSValueConst, JSContext*);
+
+JSValue asynciterator_obj(JSValueConst value, BOOL done, JSContext*);
+
+int64_t asynciterator_next(AsyncIterator* it, JSValueConst obj, JSContext* ctx);
 
 #endif /* MINNET_JS_UTILS_H */

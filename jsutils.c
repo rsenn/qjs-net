@@ -704,9 +704,12 @@ js_error_print(JSContext* ctx, JSValueConst error) {
   if(str)
     JS_FreeCString(ctx, str);
 }
+
 void
 asynciterator_zero(AsyncIterator* it) {
   it->ctx = 0;
+  it->closed = FALSE;
+  it->closing = FALSE;
   init_list_head(&it->reads);
   //  init_list_head(&it->values);
 }
@@ -743,6 +746,16 @@ asynciterator_yield(AsyncIterator* it, JSContext* ctx) {
   if((rd = js_malloc(ctx, sizeof(AsyncRead)))) {
     list_add(&rd->link, &it->reads);
     ret = js_promise_create(ctx, &rd->promise);
+
+    if(it->closing) {
+      JSValue obj = asynciterator_obj(JS_UNDEFINED, TRUE, ctx);
+
+      js_promise_resolve(ctx, &rd->promise, obj);
+      it->closing = FALSE;
+      it->closed = TRUE;
+      list_del(&rd->link);
+      js_free(ctx, rd);
+    }
   }
   return ret;
 }
@@ -761,16 +774,45 @@ int64_t
 asynciterator_push(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   AsyncRead* rd;
   if((rd = asynciterator_read(it, ctx))) {
-    JSValue obj = JS_NewObject(ctx);
+    JSValue obj = asynciterator_obj(value, FALSE, ctx);
 
-    JS_SetPropertyStr(ctx, obj, "value", JS_DupValue(ctx, value));
-    JS_SetPropertyStr(ctx, obj, "done", JS_NewBool(ctx, FALSE));
-
-    // list_del(&rd->link)
-
-    js_promise_resolve(ctx, &rd->promise, obj);
-    js_free(ctx, rd);
-    return 1;
+    return asynciterator_next(it, obj, ctx);
   }
   return 0;
+}
+
+int64_t
+asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
+  int64_t ret = 0;
+  AsyncRead* rd;
+  if((rd = asynciterator_read(it, ctx))) {
+    JSValue obj = asynciterator_obj(value, TRUE, ctx);
+    if((ret = asynciterator_next(it, obj, ctx)))
+      it->closed = TRUE;
+  } else {
+    it->closing = TRUE;
+  }
+  return ret;
+}
+
+int64_t
+asynciterator_next(AsyncIterator* it, JSValueConst obj, JSContext* ctx) {
+  int64_t ret = 0;
+  AsyncRead* rd;
+  if((rd = asynciterator_read(it, ctx))) {
+    js_promise_resolve(ctx, &rd->promise, obj);
+    js_free(ctx, rd);
+    ret = 1;
+  }
+  return ret;
+}
+
+JSValue
+asynciterator_obj(JSValueConst value, BOOL done, JSContext* ctx) {
+  JSValue obj = JS_NewObject(ctx);
+
+  JS_SetPropertyStr(ctx, obj, "value", JS_DupValue(ctx, value));
+  JS_SetPropertyStr(ctx, obj, "done", JS_NewBool(ctx, done));
+
+  return obj;
 }
