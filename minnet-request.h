@@ -3,8 +3,9 @@
 
 #include <quickjs.h>
 #include <cutils.h>
+#include "jsutils.h"
 #include "minnet.h"
-#include "minnet-buffer.h"
+#include "minnet-generator.h"
 
 struct socket;
 struct http_response;
@@ -17,7 +18,8 @@ typedef struct http_request {
   BOOL read_only;
   enum http_method method;
   MinnetURL url;
-  MinnetBuffer headers, body;
+  MinnetBuffer headers;
+  MinnetGenerator* body;
 } MinnetRequest;
 
 void request_format(MinnetRequest const*, char*, size_t, JSContext* ctx);

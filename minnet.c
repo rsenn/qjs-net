@@ -666,7 +666,7 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi) {
 }
 
 JSValue
-minnet_get_sessions(JSContext* ctx, JSValueConst this_val) {
+minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct list_head* el;
   JSValue ret;
   uint32_t i = 0;

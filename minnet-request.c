@@ -64,6 +64,7 @@ request_init(MinnetRequest* req, MinnetURL url, enum http_method method) {
 
   req->url = url;
   req->method = method;
+  req->body = 0;
 }
 
 MinnetRequest*
@@ -156,21 +157,23 @@ void
 request_zero(MinnetRequest* req) {
   memset(req, 0, sizeof(MinnetRequest));
   req->headers = BUFFER_0();
-  req->body = BUFFER_0();
+  req->body = 0;
 }
 
 void
 request_clear(MinnetRequest* req, JSContext* ctx) {
   url_free(&req->url, ctx);
   buffer_free(&req->headers, JS_GetRuntime(ctx));
-  buffer_free(&req->body, JS_GetRuntime(ctx));
+  if(req->body)
+    generator_free(&req->body);
 }
 
 void
 request_clear_rt(MinnetRequest* req, JSRuntime* rt) {
   url_free_rt(&req->url, rt);
   buffer_free(&req->headers, rt);
-  buffer_free(&req->body, rt);
+  if(req->body)
+    generator_free(&req->body);
 }
 
 void
@@ -348,23 +351,23 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_ARRAYBUFFER: {
-      ret = buffer_HEAD(&req->body) ? buffer_toarraybuffer(&req->body, ctx) : JS_NULL;
+      // q ret = buffer_HEAD(&req->body) ? buffer_toarraybuffer(&req->body, ctx) : JS_NULL;
       break;
     }
     case REQUEST_TEXT: {
-      ret = buffer_HEAD(&req->body) ? buffer_tostring(&req->body, ctx) : JS_NULL;
+      // ret = buffer_HEAD(&req->body) ? buffer_tostring(&req->body, ctx) : JS_NULL;
       break;
     }
     case REQUEST_BODY: {
-      if(buffer_HEAD(&req->body)) {
-        size_t typelen;
-        const char* type = header_get(ctx, &typelen, &req->headers, "content-type");
+      ret = minnet_generator_wrap(ctx, &req->body); /* if(buffer_HEAD(&req->body)  {
+            size_t typelen;
+            const char* type = header_get(ctx, &typelen, &req->headers, "content-type");
 
-        ret = buffer_tostring(&req->body, ctx);
-        //  ret = minnet_ringbuffer_new(ctx, type, typelen, block_BEGIN(&req->body), buffer_HEAD(&req->body));
-      } else {
-        ret = JS_NULL;
-      }
+            ret = buffer_tostring(&req->body, ctx);
+            //  ret = minnet_ringbuffer_new(ctx, type, typelen, block_BEGIN(&req->body), buffer_HEAD(&req->body));
+          }  else {
+            ret = JS_NULL;
+          }*/
       break;
     }
   }

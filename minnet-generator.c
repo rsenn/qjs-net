@@ -89,7 +89,7 @@ minnet_generator_wrap(JSContext* ctx, MinnetGenerator** gen_p) {
   if(!*gen_p)
     *gen_p = generator_new(ctx);
 
-  JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, gen_p, generator_free));
+  JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
 
   return ret;
 }

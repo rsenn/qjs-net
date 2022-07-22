@@ -50,10 +50,30 @@ vhost_options_new(JSContext* ctx, JSValueConst vhost_option) {
 }
 
 MinnetVhostOptions*
+vhost_options_fromentries(JSContext* ctx, JSValueConst arr) {
+  uint32_t i, len = js_get_propertystr_uint32(ctx, arr, "length");
+  MinnetVhostOptions *vo = 0, **voptr = &vo;
+
+  for(i = 0; i < len; i++) {
+    JSValue val = JS_GetPropertyUint32(ctx, arr, i);
+
+    *voptr = vhost_options_new(ctx, val);
+    voptr = &(*voptr)->next;
+
+    JS_FreeValue(ctx, val);
+  }
+
+  return vo;
+}
+
+MinnetVhostOptions*
 vhost_options_fromobj(JSContext* ctx, JSValueConst obj) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
   MinnetVhostOptions *vo = 0, **voptr = &vo;
+
+  if(JS_IsArray(ctx, obj))
+    return vhost_options_fromentries(ctx, obj);
 
   if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
     return 0;
@@ -74,6 +94,18 @@ vhost_options_fromobj(JSContext* ctx, JSValueConst obj) {
   js_free(ctx, tab);
 
   return vo;
+}
+
+void
+vhost_options_dump(MinnetVhostOptions* vo) {
+
+  uint32_t i = 0;
+  while(vo) {
+    i++;
+    fprintf(stderr, "option %u %s = %s\n", i, vo->name, vo->value);
+
+    vo = vo->next;
+  }
 }
 
 void
@@ -505,15 +537,16 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   assert(opaque);
 
-  LOGCB("HTTP",
-        "%s%sfd=%d in='%.*s' url=%s session#%d",
-        is_h2(wsi) ? "h2, " : "",
-        lws_is_ssl(wsi) ? "ssl, " : "",
-        lws_get_socket_fd(lws_get_network_wsi(wsi)),
-        (int)len,
-        in,
-        opaque && opaque->req ? url_string(&opaque->req->url) : 0,
-        session ? session->serial : 0);
+  if(reason != LWS_CALLBACK_HTTP_BODY)
+    LOGCB("HTTP",
+          "%s%sfd=%d in='%.*s' url=%s session#%d",
+          is_h2(wsi) ? "h2, " : "",
+          lws_is_ssl(wsi) ? "ssl, " : "",
+          lws_get_socket_fd(lws_get_network_wsi(wsi)),
+          (int)len,
+          in,
+          opaque && opaque->req ? url_string(&opaque->req->url) : 0,
+          session ? session->serial : 0);
 
   switch(reason) {
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: break;
@@ -558,7 +591,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-      LOGCB("HTTP", "in=%.*s", (int)len);
+      LOGCB("HTTP", "in=%.*s", (int)len, in);
       break;
     }
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
@@ -591,6 +624,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
          return -1;
        }
   */
+      MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
+      fprintf(stderr, "POST body: %p\n", req->body);
       lws_callback_on_writable(wsi);
       return 0;
     }
@@ -598,13 +633,20 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_BODY: {
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
 
-      LOGCB("HTTP", "%slen: %zu, size: %zu", is_h2(wsi) ? "h2, " : "", len, buffer_HEAD(&req->body));
+      // LOGCB("HTTP", "%slen: %zu, size: %zu", is_h2(wsi) ? "h2, " : "", len, buffer_HEAD(&req->body));
 
       if(len) {
-        buffer_append(&req->body, in, len, ctx);
+        if(!req->body)
+          req->body = generator_new(ctx);
 
-        js_dump_string(in, len, 80);
-        puts("");
+        generator_write(req->body, in, len);
+
+        // buffer_append(&req->body, in, len, ctx);
+
+        // fprintf(stderr, "POST buffer: %zu\n", len);
+        //
+        /* js_dump_string(in, len, 80);
+         puts("");*/
       }
       return 0;
     }

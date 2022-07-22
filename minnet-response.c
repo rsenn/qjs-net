@@ -193,7 +193,7 @@ minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   clone->type = js_strdup(ctx, resp->type);
 
   buffer_clone(&clone->headers, &resp->headers, ctx);
-  buffer_clone(&clone->body, resp->body, ctx);
+  buffer_clone(clone->body, resp->body, ctx);
 
   return minnet_response_wrap(ctx, clone);
 }

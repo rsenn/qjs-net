@@ -72,10 +72,9 @@ struct http_request;
 #define NC "\x1b[0m"
 
 #define LOG(name, fmt, args...) \
-  lwsl_user(/*"%s:%u: "*/ \
-            "%-5s" \
-            " " fmt "\n", /*__FILE__, __LINE__,*/ \
-            (name), \
+  lwsl_user("%-5s" \
+            " " fmt "\n", \
+            (char*)(name), \
             args);
 #define LOGCB(name, fmt, args...) LOG((name), FG("%d") "%-38s" NC " wsi#%" PRId64 " " fmt "", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, args);
 

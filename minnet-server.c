@@ -116,7 +116,7 @@ void
 server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
   JSContext* ctx = server->context.js;
   struct lws_context_creation_info* info = &server->context.info;
-  MinnetHttpMount** m = &info->mounts;
+  MinnetHttpMount** m = (MinnetHttpMount**)&info->mounts;
 
   *m = 0;
 
@@ -373,11 +373,14 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
   MinnetVhostOptions* vhopt = vhost_options_create(ctx, "lws-deaddrop", "");
-  info->pvo = vhopt;
+  info->pvo = &vhopt->lws;
 
   if(!JS_IsUndefined(opt_options)) {
 
     vhopt->options = vhost_options_fromobj(ctx, opt_options);
+
+    fprintf(stderr, "vhost options:\n");
+    vhost_options_dump(vhopt->options);
   }
 
   server_mounts(server, opt_mounts);

@@ -87,6 +87,8 @@ BOOL js_is_promise(JSContext*, JSValueConst);
 JSValue js_error_new(JSContext*, const char*, ...);
 uint8_t* js_toptrsize(JSContext*, unsigned int*, JSValueConst);
 BOOL js_get_propertystr_bool(JSContext*, JSValueConst, const char*);
+int64_t js_get_propertystr_int64(JSContext*, JSValueConst, const char*);
+uint32_t js_get_propertystr_uint32(JSContext*, JSValueConst, const char*);
 struct list_head* js_module_list(JSContext*);
 JSModuleDef* js_module_at(JSContext*, int);
 JSModuleDef* js_module_find(JSContext*, JSAtom);
@@ -96,7 +98,8 @@ JSValue js_module_import_meta(JSContext*, const char*);
 void js_error_print(JSContext*, JSValueConst);
 
 static inline void
-js_clear(JSContext* ctx, const void** ptr) {
+js_clear(JSContext* ctx, const void* arg) {
+  const void** ptr = (const void**)arg;
   if(*ptr)
     js_free(ctx, (void*)*ptr);
   *ptr = 0;

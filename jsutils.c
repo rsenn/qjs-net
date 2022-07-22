@@ -565,6 +565,26 @@ js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str) {
   return ret;
 }
 
+int64_t
+js_get_propertystr_int64(JSContext* ctx, JSValueConst obj, const char* str) {
+  int64_t ret = 0;
+  JSValue value;
+  value = JS_GetPropertyStr(ctx, obj, str);
+  JS_ToInt64(ctx, &ret, value);
+  JS_FreeValue(ctx, value);
+  return ret;
+}
+
+uint32_t
+js_get_propertystr_uint32(JSContext* ctx, JSValueConst obj, const char* str) {
+  uint32_t ret = 0;
+  JSValue value;
+  value = JS_GetPropertyStr(ctx, obj, str);
+  JS_ToUint32(ctx, &ret, value);
+  JS_FreeValue(ctx, value);
+  return ret;
+}
+
 struct list_head*
 js_module_list(JSContext* ctx) {
   void* tmp_opaque;
@@ -572,7 +592,7 @@ js_module_list(JSContext* ctx) {
   void** ptr;
   tmp_opaque = JS_GetContextOpaque(ctx);
   memset(&needle, 0xa5, sizeof(needle));
-  JS_SetContextOpaque(ctx, needle);
+  JS_SetContextOpaque(ctx, (void*)needle);
 
   ptr = memmem(ctx, 1024, &needle, sizeof(needle));
   printf("ctx = %p\n", ctx);
@@ -589,7 +609,7 @@ js_module_at(JSContext* ctx, int i) {
   struct list_head *el = 0, *list = js_module_list(ctx);
 
   list_for_each(list, el) {
-    JSModuleDef* module = (char*)el - sizeof(JSAtom) * 2;
+    JSModuleDef* module = (void*)((char*)el - sizeof(JSAtom) * 2);
 
     if(i-- == 0)
       return module;
@@ -602,7 +622,7 @@ js_module_find(JSContext* ctx, JSAtom name) {
   struct list_head *el, *list = js_module_list(ctx);
 
   list_for_each(el, list) {
-    JSModuleDef* module = (char*)el - sizeof(JSAtom) * 2;
+    JSModuleDef* module = (void*)((char*)el - sizeof(JSAtom) * 2);
 
     if(((JSAtom*)module)[1] == name)
       return module;
@@ -630,7 +650,7 @@ js_module_export_find(JSModuleDef* module, JSAtom name) {
   for(i = 0; i < export_entries_count; i++) {
     void* entry = (char*)export_entries + export_entry_size * i;
 
-    JSAtom* export_name = (char*)entry + sizeof(void*) * 2 + sizeof(int) * 2;
+    JSAtom* export_name = (JSAtom*)(char*)entry + sizeof(void*) * 2 + sizeof(int) * 2;
 
     if(*export_name == name)
       return entry;
