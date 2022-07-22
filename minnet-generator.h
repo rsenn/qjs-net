@@ -11,7 +11,10 @@ typedef struct generator {
   MinnetBuffer buffer;
   union {
     AsyncIterator iterator;
-    JSContext* ctx;
+    struct {
+      JSContext* ctx;
+      BOOL closed, closing;
+    };
   };
   uint64_t bytes_written, bytes_read;
   int ref_count;

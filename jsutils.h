@@ -190,8 +190,8 @@ typedef struct value_item {
 
 typedef struct async_iterator {
   JSContext* ctx;
-  struct list_head reads;
   BOOL closed, closing;
+  struct list_head reads;
 } AsyncIterator;
 
 void asynciterator_zero(AsyncIterator*);
@@ -200,11 +200,8 @@ AsyncIterator* asynciterator_new(JSContext*);
 JSValue asynciterator_next(AsyncIterator*, JSContext*);
 BOOL asynciterator_yield(AsyncIterator*, JSValueConst, JSContext*);
 BOOL asynciterator_stop(AsyncIterator*, JSValueConst, JSContext*);
-
 JSValue asynciterator_obj(JSValueConst value, BOOL done, JSContext*);
-
 BOOL asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx);
-
 BOOL asynciterator_check_closing(AsyncIterator* it, JSContext* ctx);
 int asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx);
 

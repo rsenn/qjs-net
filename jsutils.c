@@ -752,7 +752,9 @@ asynciterator_next(AsyncIterator* it, JSContext* ctx) {
     list_add(&rd->link, &it->reads);
     ret = js_promise_create(ctx, &rd->promise);
   }
+
   asynciterator_check_closing(it, ctx);
+
   return ret;
 }
 
