@@ -206,4 +206,6 @@ JSValue asynciterator_obj(JSValueConst value, BOOL done, JSContext*);
 
 int64_t asynciterator_next(AsyncIterator* it, JSValueConst obj, JSContext* ctx);
 
+int asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx);
+
 #endif /* MINNET_JS_UTILS_H */

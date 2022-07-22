@@ -748,13 +748,9 @@ asynciterator_yield(AsyncIterator* it, JSContext* ctx) {
     ret = js_promise_create(ctx, &rd->promise);
 
     if(it->closing) {
-      JSValue obj = asynciterator_obj(JS_UNDEFINED, TRUE, ctx);
-
-      js_promise_resolve(ctx, &rd->promise, obj);
+      asynciterator_stop(it, JS_UNDEFINED, ctx);
       it->closing = FALSE;
       it->closed = TRUE;
-      list_del(&rd->link);
-      js_free(ctx, rd);
     }
   }
   return ret;
@@ -781,14 +777,33 @@ asynciterator_push(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   return 0;
 }
 
+int
+asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
+  int ret = 0;
+  AsyncRead* rd;
+  struct list_head *el, *next;
+  while((rd = asynciterator_read(it, ctx))) {
+
+    js_promise_reject(ctx, &rd->promise, value);
+    list_del(&rd->link);
+    js_free(ctx, rd);
+    ret++;
+  }
+
+  return ret;
+}
+
 int64_t
+
 asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   int64_t ret = 0;
   AsyncRead* rd;
   if((rd = asynciterator_read(it, ctx))) {
     JSValue obj = asynciterator_obj(value, TRUE, ctx);
-    if((ret = asynciterator_next(it, obj, ctx)))
-      it->closed = TRUE;
+    asynciterator_next(it, obj, ctx);
+    it->closed = TRUE;
+
+    asynciterator_reject_all(it, JS_NULL, ctx);
   } else {
     it->closing = TRUE;
   }
