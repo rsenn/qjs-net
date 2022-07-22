@@ -13,6 +13,7 @@ void
 generator_zero(struct generator* gen) {
   gen->buffer = BUFFER_0();
   asynciterator_zero(&gen->iterator);
+  gen->ref_count = 0;
 }
 
 void
@@ -20,12 +21,13 @@ generator_free(struct generator** gen_p) {
   struct generator* gen;
 
   if((gen = *gen_p)) {
-    /*if(--gen->ref_count == 0) {*/
-    asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
-    buffer_free(&gen->buffer, JS_GetRuntime(gen->ctx));
-    js_free(gen->ctx, gen);
+    if(--gen->ref_count == 0) {
+      asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
+      buffer_free(&gen->buffer, JS_GetRuntime(gen->ctx));
+      js_free(gen->ctx, gen);
 
-    *gen_p = 0;
+      *gen_p = 0;
+    }
   }
 }
 
@@ -36,6 +38,7 @@ generator_new(JSContext* ctx) {
   if((gen = js_malloc(ctx, sizeof(MinnetGenerator)))) {
     generator_zero(gen);
     gen->ctx = ctx;
+    gen->ref_count = 1;
     // gen->iterator.ctx = ctx;
   }
   return gen;
