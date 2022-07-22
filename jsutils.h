@@ -197,15 +197,15 @@ typedef struct async_iterator {
 void asynciterator_zero(AsyncIterator*);
 void asynciterator_clear(AsyncIterator*, JSRuntime*);
 AsyncIterator* asynciterator_new(JSContext*);
-JSValue asynciterator_yield(AsyncIterator*, JSContext*);
-AsyncRead* asynciterator_read(AsyncIterator*, JSContext*);
-int64_t asynciterator_push(AsyncIterator*, JSValueConst, JSContext*);
-int64_t asynciterator_stop(AsyncIterator*, JSValueConst, JSContext*);
+JSValue asynciterator_next(AsyncIterator*, JSContext*);
+BOOL asynciterator_yield(AsyncIterator*, JSValueConst, JSContext*);
+BOOL asynciterator_stop(AsyncIterator*, JSValueConst, JSContext*);
 
 JSValue asynciterator_obj(JSValueConst value, BOOL done, JSContext*);
 
-int64_t asynciterator_next(AsyncIterator* it, JSValueConst obj, JSContext* ctx);
+BOOL asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx);
 
+BOOL asynciterator_check_closing(AsyncIterator* it, JSContext* ctx);
 int asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx);
 
 #endif /* MINNET_JS_UTILS_H */

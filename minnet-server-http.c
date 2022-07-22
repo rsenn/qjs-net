@@ -610,6 +610,20 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       break;
     }
 
+    case LWS_CALLBACK_HTTP_BODY: {
+      MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
+
+      // LOGCB("HTTP", "%slen: %zu, size: %zu", is_h2(wsi) ? "h2, " : "", len, buffer_HEAD(&req->body));
+
+      if(len) {
+        if(!req->body)
+          req->body = generator_new(ctx);
+
+        generator_write(req->body, in, len);
+      }
+      return 0;
+    }
+
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
       MinnetCallback* cb = session->mount ? &session->mount->callback : 0;
       MinnetBuffer b = BUFFER(buf);
@@ -626,35 +640,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   */
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
-      if(req->body && cb->ctx) {
+      if(req->body && ctx) {
         fprintf(stderr, "POST body: %p\n", req->body);
-        generator_close(req->body, cb->ctx);
+        generator_close(req->body, ctx);
       }
       lws_callback_on_writable(wsi);
       return 0;
     }
-
-    case LWS_CALLBACK_HTTP_BODY: {
-      MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
-
-      // LOGCB("HTTP", "%slen: %zu, size: %zu", is_h2(wsi) ? "h2, " : "", len, buffer_HEAD(&req->body));
-
-      if(len) {
-        if(!req->body)
-          req->body = generator_new(ctx);
-
-        generator_write(req->body, in, len);
-
-        // buffer_append(&req->body, in, len, ctx);
-
-        // fprintf(stderr, "POST buffer: %zu\n", len);
-        //
-        /* js_dump_string(in, len, 80);
-         puts("");*/
-      }
-      return 0;
-    }
-
     case LWS_CALLBACK_HTTP: {
       MinnetURL* url = &opaque->req->url;
       MinnetHttpMount* mount;

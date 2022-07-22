@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include "jsutils.h"
+static AsyncRead* asynciterator_shift(AsyncIterator*, JSContext*);
 
 JSValue
 vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
@@ -154,7 +155,7 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, 
       return JS_ThrowTypeError(ctx, "object does not have 'next' method");
 
     if(!JS_IsFunction(ctx, fn))
-      return JS_ThrowTypeError(ctx, "object.next is not asynciterator_read function");
+      return JS_ThrowTypeError(ctx, "object.next is not asynciterator_shift function");
 
     *next = js_function_bind_this(ctx, fn, obj);
     /* if(thisObj)
@@ -720,11 +721,12 @@ asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
 
   list_for_each_safe(el, next, &it->reads) {
     AsyncRead* rd = list_entry(el, AsyncRead, link);
+    list_del(&rd->link);
     js_promise_free_rt(rt, &rd->promise);
     js_free_rt(rt, rd);
   }
 
-  js_free_rt(rt, it);
+  // js_free_rt(rt, it);
 }
 
 AsyncIterator*
@@ -739,25 +741,36 @@ asynciterator_new(JSContext* ctx) {
 }
 
 JSValue
-asynciterator_yield(AsyncIterator* it, JSContext* ctx) {
+asynciterator_next(AsyncIterator* it, JSContext* ctx) {
   AsyncRead* rd;
   JSValue ret = JS_UNDEFINED;
+
+  if(it->closed)
+    return JS_ThrowInternalError(ctx, "%s: iterator closed", __func__);
 
   if((rd = js_malloc(ctx, sizeof(AsyncRead)))) {
     list_add(&rd->link, &it->reads);
     ret = js_promise_create(ctx, &rd->promise);
-
-    if(it->closing) {
-      asynciterator_stop(it, JS_UNDEFINED, ctx);
-      it->closing = FALSE;
-      it->closed = TRUE;
-    }
   }
+  asynciterator_check_closing(it, ctx);
   return ret;
 }
 
-AsyncRead*
-asynciterator_read(AsyncIterator* it, JSContext* ctx) {
+BOOL
+asynciterator_check_closing(AsyncIterator* it, JSContext* ctx) {
+
+  if(it->closing) {
+    asynciterator_stop(it, JS_UNDEFINED, ctx);
+    it->closing = FALSE;
+    it->closed = TRUE;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static AsyncRead*
+asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
   if(!list_empty(&it->reads)) {
     AsyncRead* rd = (AsyncRead*)it->reads.prev;
     list_del(&rd->link);
@@ -766,15 +779,14 @@ asynciterator_read(AsyncIterator* it, JSContext* ctx) {
   return 0;
 }
 
-int64_t
-asynciterator_push(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
-  AsyncRead* rd;
-  if((rd = asynciterator_read(it, ctx))) {
+BOOL
+asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
+  if(!list_empty(&it->reads)) {
     JSValue obj = asynciterator_obj(value, FALSE, ctx);
 
-    return asynciterator_next(it, obj, ctx);
+    return asynciterator_emplace(it, obj, ctx);
   }
-  return 0;
+  return FALSE;
 }
 
 int
@@ -782,7 +794,7 @@ asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx) 
   int ret = 0;
   AsyncRead* rd;
   struct list_head *el, *next;
-  while((rd = asynciterator_read(it, ctx))) {
+  while((rd = asynciterator_shift(it, ctx))) {
 
     js_promise_reject(ctx, &rd->promise, value);
     list_del(&rd->link);
@@ -793,33 +805,33 @@ asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx) 
   return ret;
 }
 
-int64_t
-
+BOOL
 asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
-  int64_t ret = 0;
-  AsyncRead* rd;
-  if((rd = asynciterator_read(it, ctx))) {
+  BOOL ret = FALSE;
+
+  if(!list_empty(&it->reads)) {
     JSValue obj = asynciterator_obj(value, TRUE, ctx);
-    asynciterator_next(it, obj, ctx);
+    asynciterator_emplace(it, obj, ctx);
     it->closed = TRUE;
 
     asynciterator_reject_all(it, JS_NULL, ctx);
   } else {
     it->closing = TRUE;
   }
+  if(it->closed)
+    ret = TRUE;
   return ret;
 }
 
-int64_t
-asynciterator_next(AsyncIterator* it, JSValueConst obj, JSContext* ctx) {
-  int64_t ret = 0;
+BOOL
+asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx) {
   AsyncRead* rd;
-  if((rd = asynciterator_read(it, ctx))) {
+  if((rd = asynciterator_shift(it, ctx))) {
     js_promise_resolve(ctx, &rd->promise, obj);
     js_free(ctx, rd);
-    ret = 1;
+    return TRUE;
   }
-  return ret;
+  return FALSE;
 }
 
 JSValue

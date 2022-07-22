@@ -165,7 +165,7 @@ request_clear(MinnetRequest* req, JSContext* ctx) {
   url_free(&req->url, ctx);
   buffer_free(&req->headers, JS_GetRuntime(ctx));
   if(req->body)
-    generator_free(&req->body);
+    generator_destroy(&req->body);
 }
 
 void
@@ -173,7 +173,7 @@ request_clear_rt(MinnetRequest* req, JSRuntime* rt) {
   url_free_rt(&req->url, rt);
   buffer_free(&req->headers, rt);
   if(req->body)
-    generator_free(&req->body);
+    generator_destroy(&req->body);
 }
 
 void
@@ -359,7 +359,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_BODY: {
-      ret = minnet_generator_wrap(ctx, &req->body); /* if(buffer_HEAD(&req->body)  {
+      ret = minnet_generator_create(ctx, &req->body); /* if(buffer_HEAD(&req->body)  {
             size_t typelen;
             const char* type = header_get(ctx, &typelen, &req->headers, "content-type");
 

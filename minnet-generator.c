@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <libwebsockets.h>
 
-#define MIN(asynciterator_read, b) ((asynciterator_read) < (b) ? (asynciterator_read) : (b))
+#define MIN(asynciterator_shift, b) ((asynciterator_shift) < (b) ? (asynciterator_shift) : (b))
 
 THREAD_LOCAL JSClassID minnet_generator_class_id;
 THREAD_LOCAL JSValue minnet_generator_proto, minnet_generator_ctor;
@@ -19,18 +19,24 @@ generator_zero(struct generator* gen) {
 }
 
 void
-generator_free(struct generator** gen_p) {
+generator_destroy(struct generator** gen_p) {
   struct generator* gen;
 
   if((gen = *gen_p)) {
-    if(--gen->ref_count == 0) {
-      asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
-      buffer_free(&gen->buffer, JS_GetRuntime(gen->ctx));
-      js_free(gen->ctx, gen);
-
+    if(generator_free(gen))
       *gen_p = 0;
-    }
   }
+}
+
+BOOL
+generator_free(struct generator* gen) {
+  if(--gen->ref_count == 0) {
+    asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
+    buffer_free(&gen->buffer, JS_GetRuntime(gen->ctx));
+    js_free(gen->ctx, gen);
+    return TRUE;
+  }
+  return FALSE;
 }
 
 struct generator*
@@ -50,7 +56,7 @@ JSValue
 generator_next(MinnetGenerator* gen, JSContext* ctx) {
   JSValue ret = JS_UNDEFINED;
 
-  ret = asynciterator_yield(&gen->iterator, ctx);
+  ret = asynciterator_next(&gen->iterator, ctx);
 
   if(buffer_HEAD(&gen->buffer)) {
     size_t len;
@@ -58,8 +64,8 @@ generator_next(MinnetGenerator* gen, JSContext* ctx) {
     JSValue value = buffer_toarraybuffer_size(&gen->buffer, &len, ctx);
     gen->buffer = BUFFER_0();
 
-    if((bytes = asynciterator_push(&gen->iterator, value, ctx)) > 0)
-      gen->bytes_read += bytes;
+    asynciterator_yield(&gen->iterator, value, ctx);
+    gen->bytes_read += len;
   }
 
   return ret;
@@ -72,10 +78,10 @@ generator_write(MinnetGenerator* gen, const void* data, size_t len) {
     return generator_queue(gen, data, len);
 
   JSValue buf = JS_NewArrayBufferCopy(gen->ctx, data, len);
-  int64_t bytes = asynciterator_push(&gen->iterator, buf, gen->ctx);
 
-  if((ret = bytes) > 0)
-    gen->bytes_read += bytes;
+  asynciterator_yield(&gen->iterator, buf, gen->ctx);
+  gen->bytes_written += len;
+  gen->bytes_read += len;
 
   return ret;
 }
@@ -90,7 +96,7 @@ generator_queue(MinnetGenerator* gen, const void* data, size_t len) {
   ssize_t ret;
 
   if((ret = buffer_append(&gen->buffer, data, len, gen->ctx)) > 0)
-    gen->bytes_written += ret;
+    gen->bytes_written += len;
 
   return ret;
 }
@@ -106,15 +112,27 @@ minnet_generator_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 }
 
 JSValue
-minnet_generator_wrap(JSContext* ctx, MinnetGenerator** gen_p) {
+minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
   JSValue ret = JS_NewObject(ctx);
 
   if(!*gen_p)
     *gen_p = generator_new(ctx);
   else
-    ++(*gen_p)->ref_count;
+    generator_dup(*gen_p);
 
   JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
 
   return ret;
 }
+/*
+JSValue
+minnet_generator_wrap(JSContext* ctx, MinnetGenerator* gen) {
+  JSValue ret = JS_NewObject(ctx);
+
+    ++gen->ref_count;
+
+  JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
+
+  return ret;
+}
+*/

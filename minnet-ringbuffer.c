@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <libwebsockets.h>
 
-#define MIN(asynciterator_read, b) ((asynciterator_read) < (b) ? (asynciterator_read) : (b))
+#define MIN(asynciterator_shift, b) ((asynciterator_shift) < (b) ? (asynciterator_shift) : (b))
 
 THREAD_LOCAL JSClassID minnet_ringbuffer_class_id;
 THREAD_LOCAL JSValue minnet_ringbuffer_proto, minnet_ringbuffer_ctor;

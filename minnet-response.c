@@ -329,7 +329,7 @@ minnet_response_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValu
     return JS_EXCEPTION;
 
   if(resp->generator)
-    ret = minnet_generator_wrap(ctx, &resp->generator);
+    ret = minnet_generator_create(ctx, &resp->generator);
 
   return ret;
 }
