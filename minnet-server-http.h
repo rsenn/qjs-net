@@ -30,6 +30,7 @@ typedef struct http_mount {
 
 MinnetVhostOptions* vhost_options_create(JSContext*, const char*, const char*);
 MinnetVhostOptions* vhost_options_new(JSContext*, JSValue);
+MinnetVhostOptions* vhost_options_fromobj(JSContext* ctx, JSValueConst obj);
 void vhost_options_free_list(JSContext*, MinnetVhostOptions*);
 void vhost_options_free(JSContext*, MinnetVhostOptions*);
 MinnetHttpMount* mount_create(JSContext*, const char*, const char*, const char* def, const char* pro, enum lws_mount_protocols origin_proto);

@@ -11,6 +11,7 @@
 #include <libwebsockets.h>
 
 #include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
+#include "libwebsockets/plugins/deaddrop/protocol_lws_deaddrop.c"
 #include "minnet-plugin-broker.c"
 
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
@@ -23,6 +24,7 @@ static struct lws_protocols protocols[] = {
     {"proxy-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
+    LWS_PLUGIN_PROTOCOL_DEADDROP,
     // LWS_PLUGIN_PROTOCOL_RAW_PROXY,
     {0},
 };

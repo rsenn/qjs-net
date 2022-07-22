@@ -49,6 +49,33 @@ vhost_options_new(JSContext* ctx, JSValueConst vhost_option) {
   return vo;
 }
 
+MinnetVhostOptions*
+vhost_options_fromobj(JSContext* ctx, JSValueConst obj) {
+  JSPropertyEnum* tab;
+  uint32_t tab_len, i;
+  MinnetVhostOptions *vo = 0, **voptr = &vo;
+
+  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
+    return 0;
+
+  for(i = 0; i < tab_len; i++) {
+    JSAtom prop = tab[i].atom;
+    const char* name = JS_AtomToCString(ctx, prop);
+    JSValue val = JS_GetProperty(ctx, obj, prop);
+    const char* value = JS_ToCString(ctx, val);
+    JS_FreeValue(ctx, val);
+
+    *voptr = vhost_options_create(ctx, name, value);
+    voptr = &(*voptr)->next;
+
+    JS_FreeCString(ctx, name);
+    JS_FreeCString(ctx, value);
+  }
+  js_free(ctx, tab);
+
+  return vo;
+}
+
 void
 vhost_options_free_list(JSContext* ctx, MinnetVhostOptions* vo) {
   MinnetVhostOptions* next;
@@ -117,13 +144,14 @@ mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const c
 MinnetHttpMount*
 mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
   MinnetHttpMount* ret;
-  JSValue mnt = JS_UNDEFINED, org = JS_UNDEFINED, def = JS_UNDEFINED, pro = JS_UNDEFINED;
+  JSValue mnt = JS_UNDEFINED, org = JS_UNDEFINED, def = JS_UNDEFINED, pro = JS_UNDEFINED, opt = JS_UNDEFINED;
 
   if(JS_IsArray(ctx, obj)) {
     mnt = JS_GetPropertyUint32(ctx, obj, 0);
     org = JS_GetPropertyUint32(ctx, obj, 1);
     def = JS_GetPropertyUint32(ctx, obj, 2);
     pro = JS_GetPropertyUint32(ctx, obj, 3);
+    opt = JS_GetPropertyUint32(ctx, obj, 4);
   } else if(JS_IsFunction(ctx, obj)) {
 
     if(!key) {
@@ -530,8 +558,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-           LOGCB("HTTP",  "in=%.*s", (int)len);
- break;
+      LOGCB("HTTP", "in=%.*s", (int)len);
+      break;
     }
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
       if(!opaque->req)
@@ -689,7 +717,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               LOGCB("HTTP", "gen=%s", JS_ToCString(ctx, gen));
             }
           }
-        } 
+        }
 
         /*     LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);
            if(lws_http_transaction_completed(wsi))
