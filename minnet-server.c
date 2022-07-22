@@ -269,6 +269,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
   JSValue opt_mimetypes = JS_GetPropertyStr(ctx, options, "mimetypes");
   JSValue opt_error_document = JS_GetPropertyStr(ctx, options, "errorDocument");
+  JSValue opt_options = JS_GetPropertyStr(ctx, options, "options");
 
   if(!JS_IsUndefined(opt_tls)) {
 
@@ -371,7 +372,13 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-  // info->mounts = 0;
+  MinnetVhostOptions* vhopt = vhost_options_create(ctx, "lws-deaddrop", "");
+  info->pvo = vhopt;
+
+  if(!JS_IsUndefined(opt_options)) {
+
+    vhopt->options = vhost_options_fromobj(ctx, opt_options);
+  }
 
   server_mounts(server, opt_mounts);
 
