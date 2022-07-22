@@ -537,16 +537,16 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   assert(opaque);
 
-  if(reason != LWS_CALLBACK_HTTP_BODY)
-    LOGCB("HTTP",
-          "%s%sfd=%d in='%.*s' url=%s session#%d",
-          is_h2(wsi) ? "h2, " : "",
-          lws_is_ssl(wsi) ? "ssl, " : "",
-          lws_get_socket_fd(lws_get_network_wsi(wsi)),
-          (int)len,
-          in,
-          opaque && opaque->req ? url_string(&opaque->req->url) : 0,
-          session ? session->serial : 0);
+  // if(reason != LWS_CALLBACK_HTTP_BODY)
+  LOGCB("HTTP",
+        "%s%sfd=%d in='%.*s' url=%s session#%d",
+        is_h2(wsi) ? "h2, " : "",
+        lws_is_ssl(wsi) ? "ssl, " : "",
+        lws_get_socket_fd(lws_get_network_wsi(wsi)),
+        (int)len,
+        in,
+        opaque && opaque->req ? url_string(&opaque->req->url) : 0,
+        session ? session->serial : 0);
 
   switch(reason) {
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: break;
