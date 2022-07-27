@@ -4,7 +4,6 @@
         {
             "file_exclude_patterns":
             [
-                "*.htm*",
                 ".git*",
                 "*.xz",
                 "*.txz",

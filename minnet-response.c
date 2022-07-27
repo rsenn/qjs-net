@@ -3,6 +3,7 @@
 #include "minnet-buffer.h"
 #include "jsutils.h"
 #include <cutils.h>
+#include <assert.h>
 
 THREAD_LOCAL JSClassID minnet_response_class_id;
 THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
@@ -49,6 +50,7 @@ response_dup(MinnetResponse* resp) {
 
 ssize_t
 response_write(MinnetResponse* resp, const void* x, size_t n, JSContext* ctx) {
+  assert(resp->body);
   return buffer_append(resp->body, x, n, ctx);
 }
 

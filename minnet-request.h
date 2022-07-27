@@ -20,6 +20,7 @@ typedef struct http_request {
   MinnetURL url;
   MinnetBuffer headers;
   MinnetGenerator* body;
+  struct lws_spa* spa;
 } MinnetRequest;
 
 void request_format(MinnetRequest const*, char*, size_t, JSContext* ctx);
