@@ -112,7 +112,7 @@ static const JSCFunctionListEntry minnet_generator_funcs[1] = {
 
 static JSValue
 minnet_generator_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {
-  MinnetGenerator* gen = *(MinnetGenerator**)opaque;
+  MinnetGenerator* gen = (MinnetGenerator*)opaque;
   JSValue ret = JS_UNDEFINED;
 
   ret = generator_next(gen, ctx);
@@ -129,7 +129,7 @@ minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
   else
     generator_dup(*gen_p);
 
-  JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
+  JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, *gen_p, (void*)&generator_free));
   JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
 
   return ret;
