@@ -383,26 +383,6 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
   return 0;
 }
 
-static MinnetResponse*
-request_handler(MinnetSession* session, MinnetCallback* cb) {
-  MinnetResponse* resp = minnet_response_data2(cb->ctx, session->resp_obj);
-
-  if(cb && cb->ctx) {
-    JSValue ret = minnet_emit_this(cb, session->ws_obj, 2, session->args);
-    lwsl_user("request_handler ret=%s", JS_ToCString(cb->ctx, ret));
-    if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
-      JS_FreeValue(cb->ctx, session->args[1]);
-      session->args[1] = ret;
-      resp = minnet_response_data2(cb->ctx, ret);
-    } else {
-      JS_FreeValue(cb->ctx, ret);
-    }
-  }
-  lwsl_user("request_handler %s", response_dump(resp));
-
-  return resp;
-}
-
 static size_t
 file_size(FILE* fp) {
   long pos = ftell(fp);
@@ -582,7 +562,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         opaque->req = request_fromwsi(wsi, ctx);
       }
 
-      int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
+      int num_hdr = headers_tostring(ctx, &opaque->req->headers, wsi);
 
       LOGCB("HTTP", "fd=%i, num_hdr=%i", lws_get_socket_fd(lws_get_network_wsi(wsi)), num_hdr);
 
@@ -627,7 +607,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
       MinnetCallback* cb = session->mount ? &session->mount->callback : 0;
       MinnetBuffer b = BUFFER(buf);
-      MinnetResponse* resp = request_handler(session, cb);
+      MinnetResponse* resp = session_response(session, cb);
 
       if(cb && cb->ctx) {
         JSValue ret = minnet_emit_this(cb, session->ws_obj, 2, session->args);
@@ -661,7 +641,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       LOGCB("HTTP", "mountpoint='%.*s' path='%s'", (int)mountpoint_len, url->path, path);
 
       if(!opaque->req->headers.write) {
-        int num_hdr = headers_get(ctx, &opaque->req->headers, wsi);
+        int num_hdr = headers_tostring(ctx, &opaque->req->headers, wsi);
       }
       /*
             if(!opaque->req->path[0])
@@ -740,7 +720,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         if(cb && cb->ctx) {
           if(req->method == METHOD_GET /* || is_h2(wsi)*/) {
-            resp = request_handler(session, cb);
+            resp = session_response(session, cb);
 
             JSValue gen = minnet_emit_this(cb, session->ws_obj, 2, args);
             if(js_is_iterator(ctx, gen)) {

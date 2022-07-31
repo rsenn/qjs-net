@@ -168,6 +168,8 @@ typedef struct session_data {
   struct server_context* server;
   struct client_context* client;
   MinnetBuffer send_buf;
+  BOOL in_body;
+  struct lws_spa* spa;
 } MinnetSession;
 
 typedef struct callbacks {
@@ -203,6 +205,7 @@ extern THREAD_LOCAL struct list_head minnet_sockets;
 int socket_geterror(int);
 void session_zero(MinnetSession*);
 void session_clear(MinnetSession*, JSContext*);
+struct http_response* session_response(MinnetSession* session, MinnetCallback* cb);
 BOOL context_exception(MinnetContext*, JSValue);
 void context_clear(MinnetContext*);
 MinnetClosure* closure_new(JSContext*);
@@ -217,9 +220,10 @@ int headers_fromobj(MinnetBuffer*, JSValueConst, JSContext*);
 ssize_t headers_set(JSContext*, MinnetBuffer*, const char*, const char* value);
 ssize_t headers_findb(MinnetBuffer*, const char*, size_t);
 ssize_t headers_find(MinnetBuffer*, const char*);
+char* headers_at(MinnetBuffer* buffer, size_t* lenptr, size_t index);
 ssize_t headers_unsetb(MinnetBuffer*, const char*, size_t);
 ssize_t headers_unset(MinnetBuffer*, const char*);
-int headers_get(JSContext*, MinnetBuffer*, struct lws*);
+int headers_tostring(JSContext*, MinnetBuffer*, struct lws*);
 int fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
 int fd_callback(struct lws*, enum lws_callback_reasons, MinnetCallback*, struct lws_pollargs* args);
 void minnet_handlers(JSContext*, struct lws*, struct lws_pollargs, JSValue out[2]);

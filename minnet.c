@@ -173,6 +173,26 @@ session_clear(MinnetSession* session, JSContext* ctx) {
   // printf("%s #%i %p\n", __func__, session->serial, session);
 }
 
+struct http_response*
+session_response(MinnetSession* session, MinnetCallback* cb) {
+  MinnetResponse* resp = minnet_response_data2(cb->ctx, session->resp_obj);
+
+  if(cb && cb->ctx) {
+    JSValue ret = minnet_emit_this(cb, session->ws_obj, 2, session->args);
+    lwsl_user("session_response ret=%s", JS_ToCString(cb->ctx, ret));
+    if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
+      JS_FreeValue(cb->ctx, session->args[1]);
+      session->args[1] = ret;
+      resp = minnet_response_data2(cb->ctx, ret);
+    } else {
+      JS_FreeValue(cb->ctx, ret);
+    }
+  }
+  lwsl_user("session_response %s", response_dump(resp));
+
+  return resp;
+}
+
 JSValue
 session_object(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
   JSValue ret;
@@ -460,6 +480,8 @@ headers_findb(MinnetBuffer* buffer, const char* name, size_t namelen) {
   for(ptr = buffer->start; ptr < buffer->write;) {
     size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
 
+    printf("%s %.*s\n", __func__, (int)len, (char*)ptr);
+
     if(!strncasecmp(ptr, name, namelen) && ptr[namelen] == ':')
       return ret;
     while(isspace(ptr[len]) && ptr + len < buffer->write) ++len;
@@ -468,6 +490,24 @@ headers_findb(MinnetBuffer* buffer, const char* name, size_t namelen) {
   }
 
   return -1;
+}
+
+char*
+headers_at(MinnetBuffer* buffer, size_t* lenptr, size_t index) {
+  uint8_t* ptr;
+  size_t i = 0;
+  for(ptr = buffer->start; ptr < buffer->write;) {
+    size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
+    if(i == index) {
+      if(lenptr)
+        *lenptr = len;
+      return (char*)ptr;
+    }
+    while(isspace(ptr[len]) && ptr + len < buffer->write) ++len;
+    ptr += len;
+    ++i;
+  }
+  return 0;
 }
 
 ssize_t
@@ -500,7 +540,7 @@ headers_unset(MinnetBuffer* buffer, const char* name) {
 }
 
 int
-headers_get(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
+headers_tostring(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
   int tok, len, count = 0;
 
   if(!headers->start)

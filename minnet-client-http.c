@@ -46,7 +46,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         resp->generator = generator_new(ctx);
         resp->status = lws_http_client_http_response(wsi);
 
-        headers_get(ctx, &opaque->resp->headers, wsi);
+        headers_tostring(ctx, &opaque->resp->headers, wsi);
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
       }
       /*    if(js_is_nullish(session->req_obj))
@@ -122,7 +122,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
       int status;
-      headers_get(ctx, &opaque->resp->headers, wsi);
+      headers_tostring(ctx, &opaque->resp->headers, wsi);
 
       opaque->resp->status = status = lws_http_client_http_response(wsi);
 
@@ -229,7 +229,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
       MinnetResponse* resp = client->response;
-      // headers_get(ctx, &resp->headers, wsi);
+      // headers_tostring(ctx, &resp->headers, wsi);
       if(client->on.http.ctx) {
         int32_t result = -1;
         JSValue ret;
