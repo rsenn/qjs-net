@@ -706,6 +706,32 @@ js_error_print(JSContext* ctx, JSValueConst error) {
     JS_FreeCString(ctx, str);
 }
 
+int64_t
+js_array_length(JSContext* ctx, JSValueConst array) {
+  int64_t len = -1;
+  /*if(js_is_array(ctx, array) || js_is_typedarray(array)|| js_is_array_like(ctx, array))*/ {
+    JSValue length = JS_GetPropertyStr(ctx, array, "length");
+    if(JS_IsNumber(length))
+      JS_ToInt64(ctx, &len, length);
+    JS_FreeValue(ctx, length);
+  }
+  return len;
+}
+
+char**
+js_array_to_argv(JSContext* ctx, int* argcp, JSValueConst array) {
+  int i, len = js_array_length(ctx, array);
+  char** ret = js_mallocz(ctx, sizeof(char*) * (len + 1));
+  for(i = 0; i < len; i++) {
+    JSValue item = JS_GetPropertyUint32(ctx, array, i);
+    ret[i] = js_tostring(ctx, item);
+    JS_FreeValue(ctx, item);
+  }
+  if(argcp)
+    *argcp = len;
+  return ret;
+}
+
 void
 asynciterator_zero(AsyncIterator* it) {
   it->ctx = 0;

@@ -251,6 +251,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL: {
       return 0;
     }
+    case LWS_CALLBACK_VHOST_CERT_AGING:
     case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
     case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;

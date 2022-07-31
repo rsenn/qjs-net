@@ -23,8 +23,8 @@ struct http_request;
 #define HIDDEN __attribute__((visibility("hidden")))
 #endif
 
-#define MAX(asynciterator_shift, b) ((asynciterator_shift) > (b) ? (asynciterator_shift) : (b))
-#define MIN(asynciterator_shift, b) ((asynciterator_shift) < (b) ? (asynciterator_shift) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 #define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags) \
@@ -221,6 +221,8 @@ ssize_t headers_set(JSContext*, MinnetBuffer*, const char*, const char* value);
 ssize_t headers_findb(MinnetBuffer*, const char*, size_t);
 ssize_t headers_find(MinnetBuffer*, const char*);
 char* headers_at(MinnetBuffer* buffer, size_t* lenptr, size_t index);
+char* headers_get(MinnetBuffer*, size_t*, const char*);
+ssize_t headers_copy(MinnetBuffer*, char*, size_t, const char* name);
 ssize_t headers_unsetb(MinnetBuffer*, const char*, size_t);
 ssize_t headers_unset(MinnetBuffer*, const char*);
 int headers_tostring(JSContext*, MinnetBuffer*, struct lws*);
@@ -334,6 +336,22 @@ byte_rchr(const void* x, size_t len, char needle) {
       return (size_t)(t - s);
   }
   return len;
+}
+
+static inline size_t
+scan_whitenskip(const char* s, size_t limit) {
+  const char* t = s;
+  const char* u = t + limit;
+  while(t < u && isspace(*t)) ++t;
+  return (size_t)(t - s);
+}
+
+static inline size_t
+scan_nonwhitenskip(const char* s, size_t limit) {
+  const char* t = s;
+  const char* u = t + limit;
+  while(t < u && !isspace(*t)) ++t;
+  return (size_t)(t - s);
 }
 
 char* lws_get_peer(struct lws* wsi, JSContext* ctx);

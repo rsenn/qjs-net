@@ -96,6 +96,8 @@ JSModuleDef* js_module_find_s(JSContext*, const char*);
 void* js_module_export_find(JSModuleDef*, JSAtom);
 JSValue js_module_import_meta(JSContext*, const char*);
 void js_error_print(JSContext*, JSValueConst);
+int64_t js_array_length(JSContext*, JSValueConst);
+char** js_array_to_argv(JSContext*, int*, JSValueConst);
 
 static inline void
 js_clear(JSContext* ctx, const void* arg) {

@@ -5,6 +5,7 @@
 #include "minnet-websocket.h"
 #include "minnet-ringbuffer.h"
 #include "minnet-generator.h"
+#include "minnet-form-parser.h"
 #include "jsutils.h"
 #include "minnet-buffer.h"
 #include <libwebsockets.h>
@@ -510,6 +511,43 @@ headers_at(MinnetBuffer* buffer, size_t* lenptr, size_t index) {
   return 0;
 }
 
+char*
+headers_get(MinnetBuffer* buffer, size_t* lenptr, const char* name) {
+  ssize_t index;
+
+  if((index = headers_find(buffer, name)) != -1) {
+    size_t l, n;
+    char* ret = headers_at(buffer, &l, index);
+    n = scan_nonwhitenskip(ret, l);
+    ret += n;
+    l -= n;
+    n = scan_whitenskip(ret, l);
+    ret += n;
+    l -= n;
+    if(lenptr)
+      *lenptr = l;
+    return ret;
+  }
+
+  return 0;
+}
+
+ssize_t
+headers_copy(MinnetBuffer* buffer, char* dest, size_t sz, const char* name) {
+  ssize_t ret = -1;
+  char* hdr;
+  size_t len;
+
+  if((hdr = headers_get(buffer, &len, name))) {
+    len = MIN(len, sz);
+
+    strncpy(dest, hdr, len);
+    return len;
+  }
+
+  return -1;
+}
+
 ssize_t
 headers_find(MinnetBuffer* buffer, const char* name) {
   return headers_findb(buffer, name, strlen(name));
@@ -904,6 +942,20 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
 
   if(m)
     JS_SetModuleExport(ctx, m, "Socket", minnet_ws_ctor);
+
+  // Add class FormParser
+  JS_NewClassID(&minnet_form_parser_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_form_parser_class_id, &minnet_form_parser_class);
+  minnet_form_parser_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_form_parser_proto, minnet_form_parser_proto_funcs, minnet_form_parser_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_form_parser_class_id, minnet_form_parser_proto);
+
+  minnet_form_parser_ctor = JS_NewCFunction2(ctx, minnet_form_parser_constructor, "MinnetFormParser", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_form_parser_ctor, minnet_form_parser_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "FormParser", minnet_form_parser_ctor);
 
   {
     JSValue minnet_default = JS_NewObject(ctx);

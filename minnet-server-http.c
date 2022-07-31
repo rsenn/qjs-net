@@ -593,7 +593,17 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_BODY: {
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
 
-      // LOGCB("HTTP", "%slen: %zu, size: %zu", is_h2(wsi) ? "h2, " : "", len, buffer_HEAD(&req->body));
+      LOGCB("HTTP", "%slen: %zu", is_h2(wsi) ? "h2, " : "", len);
+
+      if(!session->in_body) {
+        char type[64];
+
+        if(headers_copy(&req->headers, type, sizeof(type), "content-type") > 0) {
+          LOGCB("HTTP", "type: %s", type);
+
+          if(!strncmp(type, "multipart/form-data", 19)) {}
+        }
+      }
 
       if(len) {
         if(!req->body)
@@ -880,6 +890,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
            }*/
       return -1;
     }
+    case LWS_CALLBACK_VHOST_CERT_AGING:
     case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
     case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;
