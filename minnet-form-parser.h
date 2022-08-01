@@ -33,10 +33,10 @@ size_t form_parser_param_count(MinnetFormParser*);
 int form_parser_param_index(MinnetFormParser*, const char*);
 BOOL form_parser_param_exists(MinnetFormParser*, const char*);
 int form_parser_process(MinnetFormParser*, const void*, size_t);
-JSValue minnet_form_parser_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
-JSValue minnet_form_parser_new(JSContext*, MinnetWebsocket*, int, const char* const* param_names, size_t chunk_size);
-JSValue minnet_form_parser_wrap(JSContext*, MinnetFormParser*);
-JSValue minnet_form_parser_call(JSContext*, JSValueConst, JSValueConst, int argc, JSValueConst argv[], int flags);
+JSValueConst minnet_form_parser_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
+JSValueConst minnet_form_parser_new(JSContext*, MinnetWebsocket*, int, const char* const* param_names, size_t chunk_size);
+JSValueConst minnet_form_parser_wrap(JSContext*, MinnetFormParser*);
+JSValueConst minnet_form_parser_call(JSContext*, JSValueConst, JSValueConst, int argc, JSValueConst argv[], int flags);
 
 extern THREAD_LOCAL JSValue minnet_form_parser_proto, minnet_form_parser_ctor;
 extern THREAD_LOCAL JSClassID minnet_form_parser_class_id;
