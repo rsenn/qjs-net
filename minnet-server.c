@@ -493,9 +493,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
 int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetSession* session = user;
   MinnetServer* server = /*session ? session->server :*/ lws_context_user(lws_get_context(wsi));
-  JSContext* ctx = server->context.js;
 
   // if(!lws_is_poll_callback(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
 

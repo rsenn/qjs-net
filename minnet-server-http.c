@@ -688,7 +688,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
         if(req->body && ctx) {
-          //fprintf(stderr, "POST body: %p\n", req->body);
+          // fprintf(stderr, "POST body: %p\n", req->body);
           generator_close(req->body, ctx);
         }
       }
@@ -720,7 +720,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, path, 0);
       if(url->path && !session->mount)
         if(!(session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, url->path, mountpoint_len)))
-          session->mount = ((MinnetHttpMount*)server->context.info.mounts, url->path, 0);
+          session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, url->path, 0);
 
       session->h2 = is_h2(wsi);
 

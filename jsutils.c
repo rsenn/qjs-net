@@ -26,7 +26,7 @@ js_object_constructor(JSContext* ctx, JSValueConst value) {
 
 char*
 js_object_classname(JSContext* ctx, JSValueConst value) {
-  JSValue proto = JS_UNDEFINED, ctor, str;
+  JSValue proto = JS_UNDEFINED, ctor;
   const char* name;
   char* s = 0;
   ctor = js_object_constructor(ctx, value);
@@ -72,7 +72,6 @@ js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
 
 JSValue
 js_function_bind(JSContext* ctx, JSValueConst func, int flags, JSValueConst argv[]) {
-  BOOL bind_this = !!(flags & JS_BIND_THIS);
   int i, argc = flags & ~(JS_BIND_THIS);
   JSValue data[argc + 1];
 
@@ -734,7 +733,7 @@ js_array_to_argv(JSContext* ctx, int* argcp, JSValueConst array) {
 }
 
 JSValue
-js_argv_to_array(JSContext* ctx, char** argv) {
+js_argv_to_array(JSContext* ctx, const char* const* argv) {
   JSValue ret = JS_NewArray(ctx);
   if(argv) {
     size_t i;
@@ -750,7 +749,8 @@ js_atom_is_index(JSContext* ctx, int64_t* pval, JSAtom atom) {
   int64_t index;
 
   if(atom & (1U << 31)) {
-    *pval = atom & (~(1U << 31));
+    if(pval)
+      *pval = atom & (~(1U << 31));
     return TRUE;
   }
 
@@ -769,7 +769,8 @@ js_atom_is_index(JSContext* ctx, int64_t* pval, JSAtom atom) {
   }
 
   if(ret == TRUE)
-    *pval = index;
+    if(pval)
+      *pval = index;
 
   return ret;
 }
@@ -876,9 +877,8 @@ int
 asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   int ret = 0;
   AsyncRead* rd;
-  struct list_head *el, *next;
-  while((rd = asynciterator_shift(it, ctx))) {
 
+  while((rd = asynciterator_shift(it, ctx))) {
     js_promise_reject(ctx, &rd->promise, value);
     list_del(&rd->link);
     js_free(ctx, rd);

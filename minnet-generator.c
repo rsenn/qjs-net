@@ -4,8 +4,6 @@
 #include <assert.h>
 #include <libwebsockets.h>
 
-#define MIN(asynciterator_shift, b) ((asynciterator_shift) < (b) ? (asynciterator_shift) : (b))
-
 THREAD_LOCAL JSClassID minnet_generator_class_id;
 THREAD_LOCAL JSValue minnet_generator_proto, minnet_generator_ctor;
 

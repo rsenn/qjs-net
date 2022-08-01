@@ -98,6 +98,9 @@ request_fromobj(JSValueConst options, JSContext* ctx) {
   JSValue value;
   const char *url, *path, *method;
 
+  if(!(req = request_alloc(ctx)))
+    return req;
+
   value = JS_GetPropertyStr(ctx, options, "url");
   url = JS_ToCString(ctx, value);
   JS_FreeValue(ctx, value);

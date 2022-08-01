@@ -23,7 +23,7 @@ form_parser_callback(void* data, const char* name, const char* filename, char* b
     case LWS_UFS_FINAL_CONTENT: {
       cb = &fp->cb.content;
       if(cb->ctx && len > 0)
-        args[1] = JS_NewArrayBufferCopy(cb->ctx, buf, len);
+        args[1] = JS_NewArrayBufferCopy(cb->ctx, (uint8_t*)buf, len);
       break;
     }
     case LWS_UFS_OPEN: {
@@ -49,6 +49,8 @@ form_parser_callback(void* data, const char* name, const char* filename, char* b
     JS_FreeValue(cb->ctx, args[0]);
     JS_FreeValue(cb->ctx, args[1]);
   }
+
+  return 0;
 }
 
 void
@@ -108,7 +110,7 @@ form_parser_clear(MinnetFormParser* fp, JSContext* ctx) {
   }
 
   if(fp->spa_create_info.param_names) {
-    js_free(ctx, fp->spa_create_info.param_names);
+    js_free(ctx, (void*)fp->spa_create_info.param_names);
   }
   memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
 
@@ -126,7 +128,7 @@ form_parser_clear_rt(MinnetFormParser* fp, JSRuntime* rt) {
   }
 
   if(fp->spa_create_info.param_names) {
-    js_free_rt(rt, fp->spa_create_info.param_names);
+    js_free_rt(rt, (void*)fp->spa_create_info.param_names);
   }
   memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
 
@@ -138,7 +140,7 @@ form_parser_clear_rt(MinnetFormParser* fp, JSRuntime* rt) {
 void
 form_parser_free(MinnetFormParser* fp, JSContext* ctx) {
   if(--fp->ref_count == 0) {
-    ws_free(ctx, fp->ws);
+    ws_free(fp->ws, ctx);
     form_parser_clear(fp, ctx);
     js_free(ctx, fp);
   }
@@ -147,7 +149,7 @@ form_parser_free(MinnetFormParser* fp, JSContext* ctx) {
 void
 form_parser_free_rt(MinnetFormParser* fp, JSRuntime* rt) {
   if(--fp->ref_count == 0) {
-    ws_free_rt(rt, fp->ws);
+    ws_free_rt(fp->ws, rt);
     form_parser_clear_rt(fp, rt);
     js_free_rt(rt, fp);
   }
@@ -245,7 +247,7 @@ minnet_form_parser_constructor(JSContext* ctx, JSValueConst new_target, int argc
     }
   }
 
-  form_parser_init(fp, ws, param_count, param_names, chunk_size);
+  form_parser_init(fp, ws, param_count, (const char* const*)param_names, chunk_size);
 
   {
     struct wsi_opaque_user_data* opaque = ws_opaque(ws);
@@ -495,7 +497,7 @@ static int
 minnet_form_parser_define_own_property(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValueConst val, JSValueConst getter, JSValueConst setter, int flags) {
   // MinnetFormParser* fp = minnet_form_parser_data2(ctx, this_obj);
 
-  if(js_atom_is_index(ctx, &index, prop)) {
+  if(js_atom_is_index(ctx, NULL, prop)) {
     return TRUE;
   } else if(js_atom_is_length(ctx, prop)) {
     return TRUE;
@@ -524,7 +526,7 @@ minnet_form_parser_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this
     if(buf.data == 0)
       return JS_ThrowInternalError(ctx, "argument 1 must be String or ArrayBuffer");
 
-    ret = JS_NewInt32(ctx, form_parser_process(fp->spa, buf.data, buf.size));
+    ret = JS_NewInt32(ctx, form_parser_process(fp, buf.data, buf.size));
 
     js_buffer_free(&buf, ctx);
   }

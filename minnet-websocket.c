@@ -123,7 +123,6 @@ ws_clear_rt(MinnetWebsocket* ws, JSRuntime* rt) {
     struct wsi_opaque_user_data* opaque;
 
     if((opaque = lws_get_opaque_user_data(wsi))) {
-      int status = opaque->status;
       lws_set_opaque_user_data(wsi, 0);
       opaque_free_rt(opaque, rt);
 
@@ -253,11 +252,7 @@ minnet_ws_fromwsi(JSContext* ctx, struct lws* wsi) {
 static JSValue
 minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
-  int64_t m, len;
-  MinnetSession* session;
   JSValue ret = JS_UNDEFINED;
-  // struct wsi_opaque_user_data* opaque;
-  MinnetBuffer buffer = BUFFER_0();
 
   if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;

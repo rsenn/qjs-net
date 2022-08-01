@@ -101,7 +101,7 @@ url_copy(MinnetURL* url, const MinnetURL other, JSContext* ctx) {
   url->port = other.port;
 }
 
-static char*
+static inline char*
 url_string(MinnetURL const* url) {
   static char buf[4096];
 

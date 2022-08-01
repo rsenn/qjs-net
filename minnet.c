@@ -483,7 +483,7 @@ headers_findb(MinnetBuffer* buffer, const char* name, size_t namelen) {
 
     printf("%s %.*s\n", __func__, (int)len, (char*)ptr);
 
-    if(!strncasecmp(ptr, name, namelen) && ptr[namelen] == ':')
+    if(!strncasecmp((const char*)ptr, name, namelen) && ptr[namelen] == ':')
       return ret;
     while(isspace(ptr[len]) && ptr + len < buffer->write) ++len;
     ptr += len;
@@ -534,7 +534,6 @@ headers_get(MinnetBuffer* buffer, size_t* lenptr, const char* name) {
 
 ssize_t
 headers_copy(MinnetBuffer* buffer, char* dest, size_t sz, const char* name) {
-  ssize_t ret = -1;
   char* hdr;
   size_t len;
 
@@ -1066,7 +1065,7 @@ fd_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
 
   if(fn(fd, &sa.a, &sl) != -1) {
     size_t i;
-    s = inet_ntop(sa.ai.sin_family, sa.ai.sin_family == AF_INET ? &sa.ai.sin_addr : &sa.ai6.sin6_addr, addr, sizeof(addr));
+    s = inet_ntop(sa.ai.sin_family, sa.ai.sin_family == AF_INET ? (void*)&sa.ai.sin_addr : (void*)&sa.ai6.sin6_addr, addr, sizeof(addr));
     i = strlen(s);
 
     switch(sa.ai.sin_family) {

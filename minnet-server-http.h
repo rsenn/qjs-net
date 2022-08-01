@@ -43,6 +43,7 @@ void mount_fromvalue(JSContext* ctx, MinnetHttpMount** m, JSValueConst opt_mount
 void mount_free(JSContext*, MinnetHttpMount const*);
 int http_server_respond(struct lws*, MinnetBuffer*, struct http_response*, JSContext* ctx, MinnetSession* session);
 int http_server_writable(struct lws*, struct http_response*, BOOL);
+int http_server_generate(JSContext*, MinnetSession*, struct http_response*, BOOL* done_p);
 int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
 
 #endif /* MINNET_SERVER_HTTP_H */

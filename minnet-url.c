@@ -671,7 +671,7 @@ minnet_url_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
     dbuf_printf(&dbuf, colors ? " \x1b[1;33m%s\x1b[0m" : " %s", str);
     js_free(ctx, str);
   }
-  ret = JS_NewStringLen(ctx, dbuf.buf, dbuf.size);
+  ret = JS_NewStringLen(ctx, (const char*)dbuf.buf, dbuf.size);
   dbuf_free(&dbuf);
 
   JS_FreeValue(ctx, options);

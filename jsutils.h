@@ -98,7 +98,7 @@ JSValue js_module_import_meta(JSContext*, const char*);
 void js_error_print(JSContext*, JSValueConst);
 int64_t js_array_length(JSContext*, JSValueConst);
 char** js_array_to_argv(JSContext*, int*, JSValueConst);
-JSValue js_argv_to_array(JSContext* ctx, char** argv);
+JSValue js_argv_to_array(JSContext* ctx, const char* const* argv);
 BOOL js_atom_is_index(JSContext* ctx, int64_t* pval, JSAtom atom);
 BOOL js_atom_is_string(JSContext* ctx, JSAtom atom, const char* other);
 BOOL js_atom_is_length(JSContext* ctx, JSAtom atom);
