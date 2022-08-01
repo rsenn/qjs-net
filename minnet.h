@@ -4,6 +4,7 @@
 #include <cutils.h>
 #include <quickjs.h>
 #include <libwebsockets.h>
+#include <ctype.h>
 #include "jsutils.h"
 
 union byte_buffer;
