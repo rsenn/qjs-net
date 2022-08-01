@@ -174,7 +174,6 @@ typedef struct session_data {
   struct server_context* server;
   struct client_context* client;
   MinnetBuffer send_buf;
-  BOOL in_body;
 } MinnetSession;
 
 typedef struct callbacks {

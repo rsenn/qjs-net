@@ -231,7 +231,7 @@ function main(...args) {
           }, 100);
         }
       },
-      async onHttp(req, resp) {
+      async onHttp(ws, req, resp) {
         console.log('onHttp', console.config({ compact: false }), { req, resp });
         console.log('request', req);
         console.log('request.headers', req.headers);

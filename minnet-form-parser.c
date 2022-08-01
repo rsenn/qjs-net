@@ -59,7 +59,7 @@ form_parser_init(MinnetFormParser* fp, MinnetWebsocket* ws, int nparams, const c
   fp->ws = ws_dup(ws);
   fp->spa_create_info.count_params = nparams;
   fp->spa_create_info.param_names = param_names;
-  fp->spa_create_info.max_storage = chunk_size + 1; 
+  fp->spa_create_info.max_storage = chunk_size + 1;
   fp->spa_create_info.opt_cb = &form_parser_callback;
   fp->spa_create_info.opt_data = fp;
 

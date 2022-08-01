@@ -35,10 +35,10 @@ export default function Client(url, options, debug) {
 
       onError ? onError(ws, error) : (console.log('onError', { ws, error }), exit(error));
     },
-    onHttp(req, rsp) {
+    onHttp(ws, req, rsp) {
       const { url, method, headers } = req;
 
-      return onHttp ? onHttp(req, rsp) : (console.log('\x1b[38;5;82monHttp\x1b[0m', { url, method, headers }), rsp);
+      return onHttp ? onHttp(ws, req, rsp) : (console.log('\x1b[38;5;82monHttp\x1b[0m', { url, method, headers }), rsp);
     },
     onFd(fd, rd, wr) {
       setReadHandler(fd, rd);

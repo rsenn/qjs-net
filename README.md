@@ -14,17 +14,17 @@ Requirements:
 To use `minnet-quickjs` in your QuickJS project, run following commands:
 ```bash
 cd your_project_dir
-git clone https://github.com/khanhas/minnet-quickjs
-cd minnet-quickjs
+git clone https://github.com/rsenn/qjs-net
+cd qjs-net
 make
 ```
 
 In your JS script:
 ```javascript
-import * as minnet from "./minnet-quickjs/minnet.so"
+import * as minnet from "net"
 ```
 
-### `minnet.server(options)`: Create a WebSocket server and listen to host:port.  
+### `minnet.server(options)`: Create a WebSocket server and listen to host:port.
 `options`: an object with following properties:
 - `port`: *number*, *optional*, *default = `7981`*
 - `host`: *string*, *optional*, *default = `"localhost"`*
@@ -57,7 +57,7 @@ onPong: (client_socket, data) => {
 }
 ```
 
-### `minnet.client(options)`: Create a WebSocket client and connect to a server.  
+### `minnet.client(options)`: Create a WebSocket client and connect to a server.
 `options`: an object with following properties:
 - `port`: *number*, *optional*, *default = `7981`*
 - `host`: *string*, *optional*, *default = `"localhost"`*

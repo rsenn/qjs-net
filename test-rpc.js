@@ -257,7 +257,7 @@ function main(...args) {
 
         return callbacks.onClose(ws, req);
       },
-      onHttp(req, rsp) {
+      onHttp(ws, req, rsp) {
         const { url, method, headers } = req;
         console.log('\x1b[38;5;33monHttp\x1b[0m [\n  ', req, ',\n  ', rsp, '\n]');
         return rsp;

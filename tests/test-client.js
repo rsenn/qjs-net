@@ -62,7 +62,7 @@ function main(...args) {
           stdout.flush();
           // ws.close(1000);
         },
-        onHttp(req, resp) {
+        onHttp(ws, req, resp) {
           console.log('onHttp', { req, resp });
 
           let body = resp.text();

@@ -19,7 +19,7 @@ function TestClient(url) {
       console.log('onError', { ws, error });
       exit(1);
     },
-    onHttp(req, resp) {
+    onHttp(ws, req, resp) {
       console.log('onHttp', { req, resp });
 
       let file = loadFile('.' + req.path);
