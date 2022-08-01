@@ -732,6 +732,60 @@ js_array_to_argv(JSContext* ctx, int* argcp, JSValueConst array) {
   return ret;
 }
 
+JSValue
+js_argv_to_array(JSContext* ctx, char** argv) {
+  JSValue ret = JS_NewArray(ctx);
+  if(argv) {
+    size_t i;
+    for(i = 0; argv[i]; i++) JS_SetPropertyUint32(ctx, ret, i, JS_NewString(ctx, argv[i]));
+  }
+  return ret;
+}
+
+BOOL
+js_atom_is_index(JSContext* ctx, int64_t* pval, JSAtom atom) {
+  JSValue value;
+  BOOL ret = FALSE;
+  int64_t index;
+
+  if(atom & (1U << 31)) {
+    *pval = atom & (~(1U << 31));
+    return TRUE;
+  }
+
+  value = JS_AtomToValue(ctx, atom);
+
+  if(JS_IsNumber(value)) {
+    JS_ToInt64(ctx, &index, value);
+    ret = TRUE;
+  } else if(JS_IsString(value)) {
+    const char* s = JS_ToCString(ctx, value);
+    if(s[0] == '-' && isdigit(s[s[0] == '-'])) {
+      index = atoi(s);
+      ret = TRUE;
+    }
+    JS_FreeCString(ctx, s);
+  }
+
+  if(ret == TRUE)
+    *pval = index;
+
+  return ret;
+}
+
+BOOL
+js_atom_is_string(JSContext* ctx, JSAtom atom, const char* other) {
+  const char* str = JS_AtomToCString(ctx, atom);
+  BOOL ret = !strcmp(str, other);
+  JS_FreeCString(ctx, str);
+  return ret;
+}
+
+BOOL
+js_atom_is_length(JSContext* ctx, JSAtom atom) {
+  return js_atom_is_string(ctx, atom, "length");
+}
+
 void
 asynciterator_zero(AsyncIterator* it) {
   it->ctx = 0;

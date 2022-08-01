@@ -781,11 +781,10 @@ minnet_emit_this(const struct ws_callback* cb, JSValueConst this_obj, int argc, 
   JSValue ret = JS_UNDEFINED;
 
   if(cb->ctx) {
-    size_t len;
-    const char* str;
-    str = JS_ToCStringLen(cb->ctx, &len, cb->func_obj);
+    /*size_t len;
+    const char* str  = JS_ToCStringLen(cb->ctx, &len, cb->func_obj);
     // printf("emit %s [%d] \"%.*s\"\n", cb->name, argc, (int)((const char*)memchr(str, '{', len) - str), str);
-    JS_FreeCString(cb->ctx, str);
+    JS_FreeCString(cb->ctx, str);*/
 
     ret = JS_Call(cb->ctx, cb->func_obj, this_obj, argc, argv);
   }
@@ -976,6 +975,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Request");
   JS_AddModuleExport(ctx, m, "Ringbuffer");
   JS_AddModuleExport(ctx, m, "Socket");
+  JS_AddModuleExport(ctx, m, "FormParser");
   JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExport(ctx, m, "default");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));

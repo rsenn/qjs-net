@@ -59,6 +59,12 @@ struct http_request;
     JS_FreeValue(ctx, cb_ptr.func_obj); \
   } while(0);
 
+#define FREECB_RT(cb_ptr) \
+  do { \
+    JS_FreeValueRT(rt, cb_ptr.this_obj); \
+    JS_FreeValueRT(rt, cb_ptr.func_obj); \
+  } while(0);
+
 #define ADD(ptr, inst, member) \
   do { \
     (*(ptr)) = (inst); \
@@ -169,7 +175,6 @@ typedef struct session_data {
   struct client_context* client;
   MinnetBuffer send_buf;
   BOOL in_body;
-  struct lws_spa* spa;
 } MinnetSession;
 
 typedef struct callbacks {

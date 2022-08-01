@@ -17,6 +17,9 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   JSContext* ctx = server->context.js;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 
+  if(!opaque && ctx)
+    opaque = lws_opaque(wsi, ctx);
+
   if(lws_is_poll_callback(reason))
     return fd_callback(wsi, reason, &server->cb.fd, in);
   if(lws_is_http_callback(reason))
@@ -55,11 +58,15 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
       lws_peer_cert(wsi);
+      if(!opaque->ws)
+        opaque->ws = ws_new(wsi, ctx);
       return 0;
     }
 
     case LWS_CALLBACK_WSI_CREATE: {
-      // opaque->ws = ws_new(wsi, ctx);
+      /* opaque->ws = ws_new(wsi, ctx);*/
+      /*      if(session)
+              session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);*/
       return 0;
     }
 

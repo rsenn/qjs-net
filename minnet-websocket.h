@@ -64,6 +64,7 @@ struct wsi_opaque_user_data {
   int error;
   BOOL binary;
   struct list_head link;
+  struct form_parser* form_parser;
 };
 
 static inline struct session_data*
