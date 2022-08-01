@@ -457,10 +457,17 @@ minnet_form_parser_get_property(JSContext* ctx, JSValueConst obj, JSAtom prop, J
 }
 
 static int
-minnet_form_parser_set_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueConst value, JSValueConst receiver, int flags) {
-  MinnetFormParser* fp = minnet_form_parser_data2(ctx, obj);
+minnet_form_parser_define_own_property(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValueConst val, JSValueConst getter, JSValueConst setter, int flags) {
+  //MinnetFormParser* fp = minnet_form_parser_data2(ctx, this_obj);
 
-  return FALSE;
+  if(js_atom_is_index(ctx, &index, prop)) {
+    return TRUE;
+  } else if(js_atom_is_length(ctx, prop)) {
+    return TRUE;
+  }
+
+  /* run the default define own property */
+  return JS_DefineProperty(ctx, this_obj, prop, val, getter, setter, flags | JS_PROP_NO_EXOTIC);
 }
 
 JSValue
@@ -492,8 +499,9 @@ minnet_form_parser_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this
 static JSClassExoticMethods minnet_form_parser_exotic_methods = {
     .get_own_property = minnet_form_parser_get_own_property,
     .get_own_property_names = minnet_form_parser_get_own_property_names,
-    .has_property = minnet_form_parser_has_property,
-    .get_property = minnet_form_parser_get_property,
+    //.has_property = minnet_form_parser_has_property,
+    .define_own_property = minnet_form_parser_define_own_property,
+    //.get_property = minnet_form_parser_get_property,
     //.set_property = minnet_form_parser_set_property,
 };
 JSClassDef minnet_form_parser_class = {
