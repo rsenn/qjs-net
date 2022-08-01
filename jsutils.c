@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include "jsutils.h"
 static AsyncRead* asynciterator_shift(AsyncIterator*, JSContext*);
