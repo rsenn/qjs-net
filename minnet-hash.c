@@ -1,0 +1,139 @@
+#define _GNU_SOURCE
+#include <quickjs.h>
+#include <cutils.h>
+#include "minnet-hash.h"
+#include "jsutils.h"
+#include <ctype.h>
+#include <strings.h>
+#include <libwebsockets.h>
+
+THREAD_LOCAL JSClassID minnet_hash_class_id;
+THREAD_LOCAL JSValue minnet_hash_proto, minnet_hash_ctor;
+
+enum { HASH_PARAMS, HASH_SOCKET, HASH_ON_OPEN, HASH_ON_CONTENT, HASH_ON_CLOSE };
+
+MinnetHash*
+hash_alloc(JSContext* ctx) {
+  MinnetHash* ret;
+
+  ret = js_mallocz(ctx, sizeof(MinnetHash));
+  ret->ref_count = 1;
+  return ret;
+}
+
+
+void
+hash_free(MinnetHash* h, JSContext* ctx) {
+  if(--h->ref_count == 0) 
+    js_free(ctx, h);
+  
+}
+
+void
+hash_free_rt(MinnetHash* h, JSRuntime* rt) {
+  if(--h->ref_count == 0) 
+    js_free_rt(rt, h);
+  
+}
+ 
+JSValue
+minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+  JSValue proto, obj;
+  MinnetHash* h;
+
+  if(!(h = hash_alloc(ctx)))
+    return JS_ThrowOutOfMemory(ctx);
+
+  /* using new_target to get the prototype is necessary when the class is extended. */
+  proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+  if(JS_IsException(proto))
+    proto = JS_DupValue(ctx, minnet_hash_proto);
+
+  obj = JS_NewObjectProtoClass(ctx, proto, minnet_hash_class_id);
+  JS_FreeValue(ctx, proto);
+  if(JS_IsException(obj))
+    goto fail;
+ 
+  JS_SetOpaque(obj, h);
+
+  return obj;
+
+fail:
+  js_free(ctx, h);
+  JS_FreeValue(ctx, obj);
+  return JS_EXCEPTION;
+}
+ 
+static JSValue
+minnet_hash_get(JSContext* ctx, JSValueConst this_val, int magic) {
+  MinnetHash* h;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(h = minnet_hash_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+ 
+  }
+  return ret;
+}
+
+static JSValue
+minnet_hash_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+  MinnetHash* h;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(h = minnet_hash_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+ }
+
+  return ret;
+}
+
+static void
+minnet_hash_finalizer(JSRuntime* rt, JSValue val) {
+  MinnetHash* h;
+
+  if((h = minnet_hash_data(val)))
+    hash_free_rt(h, rt);
+}
+ 
+JSValue
+minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags) {
+  MinnetHash* h = minnet_hash_data2(ctx, func_obj);
+  JSValue ret = JS_UNDEFINED;
+
+  if(argc < 1)
+    return JS_ThrowInternalError(ctx, "argument 1 must be String, ArrayBuffer or null");
+
+  if(JS_IsNull(argv[0])) {
+    ret = JS_NewInt32(ctx, lws_spa_finalize(h->spa));
+
+  } else {
+    JSBuffer buf;
+
+    js_buffer_from(ctx, &buf, argv[0]);
+
+    if(buf.data == 0)
+      return JS_ThrowInternalError(ctx, "argument 1 must be String or ArrayBuffer");
+
+    ret = JS_NewInt32(ctx, lws_genhash_update(&h->lws, buf.data, buf.size));
+
+    js_buffer_free(&buf, ctx);
+  }
+  return ret;
+}
+ 
+JSClassDef minnet_hash_class = {
+    "MinnetHash",
+    .finalizer = minnet_hash_finalizer,
+    .call = &minnet_hash_call,
+};
+
+const JSCFunctionListEntry minnet_hash_proto_funcs[] = {
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetHash", JS_PROP_CONFIGURABLE),
+};
+
+const size_t minnet_hash_proto_funcs_size = countof(minnet_hash_proto_funcs);

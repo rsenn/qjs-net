@@ -6,6 +6,7 @@
 #include "minnet-ringbuffer.h"
 #include "minnet-generator.h"
 #include "minnet-form-parser.h"
+#include "minnet-hash.h"
 #include "jsutils.h"
 #include "minnet-buffer.h"
 #include <libwebsockets.h>
@@ -954,6 +955,21 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
 
   if(m)
     JS_SetModuleExport(ctx, m, "FormParser", minnet_form_parser_ctor);
+
+  // Add class Hash
+  JS_NewClassID(&minnet_hash_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_hash_class_id, &minnet_hash_class);
+  minnet_hash_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_hash_proto, minnet_hash_proto_funcs, minnet_hash_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_hash_class_id, minnet_hash_proto);
+
+  minnet_hash_ctor = JS_NewCFunction2(ctx, minnet_hash_constructor, "MinnetHash", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_hash_ctor, minnet_hash_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Hash", minnet_hash_ctor);
+
 
   {
     JSValue minnet_default = JS_NewObject(ctx);
