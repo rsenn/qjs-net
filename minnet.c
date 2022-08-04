@@ -966,10 +966,10 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
 
   minnet_hash_ctor = JS_NewCFunction2(ctx, minnet_hash_constructor, "MinnetHash", 0, JS_CFUNC_constructor, 0);
   JS_SetConstructor(ctx, minnet_hash_ctor, minnet_hash_proto);
+  JS_SetPropertyFunctionList(ctx, minnet_hash_ctor, minnet_hash_static_funcs, minnet_hash_static_funcs_size);
 
   if(m)
     JS_SetModuleExport(ctx, m, "Hash", minnet_hash_ctor);
-
 
   {
     JSValue minnet_default = JS_NewObject(ctx);
@@ -991,6 +991,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Ringbuffer");
   JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExport(ctx, m, "FormParser");
+  JS_AddModuleExport(ctx, m, "Hash");
   JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExport(ctx, m, "default");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));

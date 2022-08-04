@@ -1,11 +1,6 @@
 #define _GNU_SOURCE
-#include <quickjs.h>
-#include <cutils.h>
+#include "minnet.h"
 #include "minnet-hash.h"
-#include "jsutils.h"
-#include <ctype.h>
-#include <strings.h>
-#include <libwebsockets.h>
 
 THREAD_LOCAL JSClassID minnet_hash_class_id;
 THREAD_LOCAL JSValue minnet_hash_proto, minnet_hash_ctor;
@@ -21,21 +16,18 @@ hash_alloc(JSContext* ctx) {
   return ret;
 }
 
-
 void
 hash_free(MinnetHash* h, JSContext* ctx) {
-  if(--h->ref_count == 0) 
+  if(--h->ref_count == 0)
     js_free(ctx, h);
-  
 }
 
 void
 hash_free_rt(MinnetHash* h, JSRuntime* rt) {
-  if(--h->ref_count == 0) 
+  if(--h->ref_count == 0)
     js_free_rt(rt, h);
-  
 }
- 
+
 JSValue
 minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
@@ -53,7 +45,7 @@ minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSVal
   JS_FreeValue(ctx, proto);
   if(JS_IsException(obj))
     goto fail;
- 
+
   JS_SetOpaque(obj, h);
 
   return obj;
@@ -63,7 +55,7 @@ fail:
   JS_FreeValue(ctx, obj);
   return JS_EXCEPTION;
 }
- 
+
 static JSValue
 minnet_hash_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetHash* h;
@@ -72,9 +64,7 @@ minnet_hash_get(JSContext* ctx, JSValueConst this_val, int magic) {
   if(!(h = minnet_hash_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  switch(magic) {
- 
-  }
+  switch(magic) {}
   return ret;
 }
 
@@ -86,8 +76,7 @@ minnet_hash_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int m
   if(!(h = minnet_hash_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  switch(magic) {
- }
+  switch(magic) {}
 
   return ret;
 }
@@ -99,7 +88,7 @@ minnet_hash_finalizer(JSRuntime* rt, JSValue val) {
   if((h = minnet_hash_data(val)))
     hash_free_rt(h, rt);
 }
- 
+
 JSValue
 minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags) {
   MinnetHash* h = minnet_hash_data2(ctx, func_obj);
@@ -109,7 +98,7 @@ minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, i
     return JS_ThrowInternalError(ctx, "argument 1 must be String, ArrayBuffer or null");
 
   if(JS_IsNull(argv[0])) {
-    ret = JS_NewInt32(ctx, lws_spa_finalize(h->spa));
+  //  ret = JS_NewInt32(ctx, lws_spa_finalize(h->spa));
 
   } else {
     JSBuffer buf;
@@ -125,7 +114,7 @@ minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, i
   }
   return ret;
 }
- 
+
 JSClassDef minnet_hash_class = {
     "MinnetHash",
     .finalizer = minnet_hash_finalizer,
@@ -136,4 +125,13 @@ const JSCFunctionListEntry minnet_hash_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetHash", JS_PROP_CONFIGURABLE),
 };
 
+const JSCFunctionListEntry minnet_hash_static_funcs[] = {
+    JS_PROP_INT32_DEF("TYPE_MD5 ", LWS_GENHASH_TYPE_MD5, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("TYPE_SHA1 ", LWS_GENHASH_TYPE_SHA1, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("TYPE_SHA256 ", LWS_GENHASH_TYPE_SHA256, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("TYPE_SHA384 ", LWS_GENHASH_TYPE_SHA384, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("TYPE_SHA512 ", LWS_GENHASH_TYPE_SHA512, JS_PROP_ENUMERABLE),
+};
+
 const size_t minnet_hash_proto_funcs_size = countof(minnet_hash_proto_funcs);
+const size_t minnet_hash_static_funcs_size = countof(minnet_hash_static_funcs);
