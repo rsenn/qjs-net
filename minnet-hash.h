@@ -6,6 +6,7 @@
 
 typedef struct hash {
   struct lws_genhash_ctx lws;
+  int type;
   int ref_count;
 } MinnetHash;
 

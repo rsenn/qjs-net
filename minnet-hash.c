@@ -32,6 +32,7 @@ JSValue
 minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetHash* h;
+  int32_t type = -1;
 
   if(!(h = hash_alloc(ctx)))
     return JS_ThrowOutOfMemory(ctx);
@@ -45,6 +46,19 @@ minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSVal
   JS_FreeValue(ctx, proto);
   if(JS_IsException(obj))
     goto fail;
+
+  if(argc >= 1)
+    JS_ToInt32(ctx, &type, argv[0]);
+
+  if(type < LWS_GENHASH_TYPE_MD5 || type > LWS_GENHASH_TYPE_SHA256) {
+    JS_ThrowInternalError(ctx, "argument 1 must be one of Hash.TYPE_*");
+    goto fail;
+  }
+
+  if(lws_genhash_init(&h->lws, type)) {
+    JS_ThrowInternalError(ctx, "failed to initialize lws_genhash_ctx");
+    goto fail;
+  }
 
   JS_SetOpaque(obj, h);
 
@@ -94,11 +108,18 @@ minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, i
   MinnetHash* h = minnet_hash_data2(ctx, func_obj);
   JSValue ret = JS_UNDEFINED;
 
-  if(argc < 1)
-    return JS_ThrowInternalError(ctx, "argument 1 must be String, ArrayBuffer or null");
+  /* if(argc < 1)
+     return JS_ThrowInternalError(ctx, "argument 1 must be String, ArrayBuffer or null");*/
 
-  if(JS_IsNull(argv[0])) {
-  //  ret = JS_NewInt32(ctx, lws_spa_finalize(h->spa));
+  if(argc < 1 || js_is_nullish(argv[0])) {
+    size_t bytes = lws_genhash_size(h->lws.type);
+    uint8_t digest[bytes];
+
+    if(!lws_genhash_destroy(&h->lws, digest)) {
+      ret = JS_NewArrayBufferCopy(ctx, digest, bytes);
+    }
+
+    //  ret = JS_NewInt32(ctx, lws_spa_finalize(h->spa));
 
   } else {
     JSBuffer buf;
@@ -126,11 +147,11 @@ const JSCFunctionListEntry minnet_hash_proto_funcs[] = {
 };
 
 const JSCFunctionListEntry minnet_hash_static_funcs[] = {
-    JS_PROP_INT32_DEF("TYPE_MD5 ", LWS_GENHASH_TYPE_MD5, JS_PROP_ENUMERABLE),
-    JS_PROP_INT32_DEF("TYPE_SHA1 ", LWS_GENHASH_TYPE_SHA1, JS_PROP_ENUMERABLE),
-    JS_PROP_INT32_DEF("TYPE_SHA256 ", LWS_GENHASH_TYPE_SHA256, JS_PROP_ENUMERABLE),
-    JS_PROP_INT32_DEF("TYPE_SHA384 ", LWS_GENHASH_TYPE_SHA384, JS_PROP_ENUMERABLE),
-    JS_PROP_INT32_DEF("TYPE_SHA512 ", LWS_GENHASH_TYPE_SHA512, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("TYPE_MD5", LWS_GENHASH_TYPE_MD5, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("TYPE_SHA1", LWS_GENHASH_TYPE_SHA1, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("TYPE_SHA256", LWS_GENHASH_TYPE_SHA256, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("TYPE_SHA384", LWS_GENHASH_TYPE_SHA384, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("TYPE_SHA512", LWS_GENHASH_TYPE_SHA512, JS_PROP_ENUMERABLE),
 };
 
 const size_t minnet_hash_proto_funcs_size = countof(minnet_hash_proto_funcs);
