@@ -653,16 +653,16 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_BODY: {
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
 
+      session->in_body = TRUE;
+
       LOGCB("HTTP", "%slen: %zu", is_h2(wsi) ? "h2, " : "", len);
 
       if(len) {
         if(opaque->form_parser) {
           form_parser_process(opaque->form_parser, in, len);
-
         } else {
           if(!req->body)
             req->body = generator_new(ctx);
-
           generator_write(req->body, in, len);
         }
       }
@@ -670,6 +670,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
+      MinnetBuffer b = BUFFER(buf);
+
+      session->in_body = FALSE;
+
+      LOGCB("HTTP", "%slen: %zu", is_h2(wsi) ? "h2, " : "", len);
 
       if(opaque->form_parser) {
         lws_spa_finalize(opaque->form_parser->spa);
@@ -691,6 +696,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           // fprintf(stderr, "POST body: %p\n", req->body);
           generator_close(req->body, ctx);
         }
+      }
+
+      if(http_server_respond(wsi, &b, opaque->resp, ctx, session)) {
+        JS_FreeValue(ctx, session->ws_obj);
+        session->ws_obj = JS_NULL;
+        return 1;
       }
 
       lws_callback_on_writable(wsi);
@@ -820,13 +831,17 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(server->cb.http.ctx) {
         cb = &server->cb.http;
+
         JSValue val = minnet_emit_this(cb, session->ws_obj, 3, args);
       }
 
-      if((ret = http_server_respond(wsi, &b, resp, ctx, session))) {
-        JS_FreeValue(ctx, session->ws_obj);
-        session->ws_obj = JS_NULL;
-        return 1;
+      if(!(req->method != METHOD_GET && is_h2(wsi))) {
+
+        if((ret = http_server_respond(wsi, &b, resp, ctx, session))) {
+          JS_FreeValue(ctx, session->ws_obj);
+          session->ws_obj = JS_NULL;
+          return 1;
+        }
       }
 
       goto http_exit;
@@ -836,8 +851,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               server_exception(server, minnet_emit(cb, 2, &session->req_obj));*/
 
     http_exit:
-      if(req->method == METHOD_GET || is_h2(wsi))
-        lws_callback_on_writable(wsi);
+      if(!(req->method != METHOD_GET && is_h2(wsi)))
+        if(req->method == METHOD_GET || is_h2(wsi))
+          lws_callback_on_writable(wsi);
 
       JS_FreeValue(ctx, session->ws_obj);
 
@@ -845,6 +861,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP_WRITEABLE: {
+
+      if(session->in_body)
+        return 0;
+
       MinnetResponse* resp;
       BOOL done = FALSE;
 

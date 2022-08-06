@@ -64,7 +64,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_WSI_CREATE: {
-      /* opaque->ws = ws_new(wsi, ctx);*/
+      if(!opaque->ws)
+        opaque->ws = ws_new(wsi, ctx);
       /*      if(session)
               session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);*/
       return 0;

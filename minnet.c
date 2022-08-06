@@ -791,6 +791,11 @@ minnet_emit_this(const struct ws_callback* cb, JSValueConst this_obj, int argc, 
     ret = JS_Call(cb->ctx, cb->func_obj, this_obj, argc, argv);
   }
 
+  if(JS_IsException(ret)) {
+    JSValue exception = JS_GetException(cb->ctx);
+    js_error_print(cb->ctx, exception);
+    ret = JS_Throw(cb->ctx, exception);
+  }
   /*if(JS_IsException(ret))
     minnet_exception = TRUE; */
 
