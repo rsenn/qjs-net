@@ -581,7 +581,7 @@ js_error_print(JSContext* ctx, JSValueConst error) {
       lwsl_err("%zu: %.*s", pos++, (int)len, &stack[i]);
       i += len;
 
-       i += scan_charsetnskip(&stack[i], "\r\n", end - i);
+      i += scan_charsetnskip(&stack[i], "\r\n", end - i);
     }
   }
   if(stack)

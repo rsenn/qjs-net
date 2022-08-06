@@ -76,4 +76,17 @@ scan_charsetnskip(const char* s, const char* charset, size_t limit) {
   return (size_t)(t - s);
 }
 
+static inline unsigned
+uint_pow(unsigned base, unsigned degree) {
+  unsigned result = 1;
+  unsigned term = base;
+  while(degree) {
+    if(degree & 1)
+      result *= term;
+    term *= term;
+    degree = degree >> 1;
+  }
+  return result;
+}
+
 #endif /* MINNET_UTILS_H */
