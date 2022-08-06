@@ -207,11 +207,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       if(item) {
         //      MinnetBytes block={0};
-        JSBuffer buffer = {0};
-        int n;
-
-        js_buffer_from(ctx, &buffer, item->value);
-        n = buffer.size;
+        JSBuffer buffer = js_input_buffer(ctx, item->value);
+        int n = buffer.size;
 
         int ret = lws_write(wsi, buffer.data, buffer.size, JS_IsString(buffer.value) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
 
