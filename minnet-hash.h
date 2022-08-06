@@ -8,6 +8,8 @@ typedef struct hash {
   struct lws_genhash_ctx lws;
   int type;
   int ref_count;
+  uint32_t size;
+  uint8_t digest[0];
 } MinnetHash;
 
 JSValueConst minnet_hash_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);

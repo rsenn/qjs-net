@@ -5,14 +5,19 @@
 THREAD_LOCAL JSClassID minnet_hash_class_id;
 THREAD_LOCAL JSValue minnet_hash_proto, minnet_hash_ctor;
 
-enum { HASH_PARAMS, HASH_SOCKET, HASH_ON_OPEN, HASH_ON_CONTENT, HASH_ON_CLOSE };
+enum { HASH_VALUEOF, HASH_TOSTRING, HASH_TYPE, HASH_SIZE };
+
+static char hash_hexdigits[] = "0123456789abcdef";
 
 MinnetHash*
-hash_alloc(JSContext* ctx) {
+hash_alloc(JSContext* ctx, enum lws_genhash_types type) {
   MinnetHash* ret;
+  size_t bytes = lws_genhash_size(type);
 
-  ret = js_mallocz(ctx, sizeof(MinnetHash));
+  ret = js_mallocz(ctx, sizeof(MinnetHash) + bytes);
   ret->ref_count = 1;
+  ret->size = bytes;
+  ret->type = type;
   return ret;
 }
 
@@ -31,11 +36,8 @@ hash_free_rt(MinnetHash* h, JSRuntime* rt) {
 JSValue
 minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
-  MinnetHash* h;
+  MinnetHash* h = NULL;
   int32_t type = -1;
-
-  if(!(h = hash_alloc(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
 
   /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");
@@ -55,6 +57,11 @@ minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSVal
     goto fail;
   }
 
+  if(!(h = hash_alloc(ctx, type))) {
+    JS_ThrowOutOfMemory(ctx);
+    goto fail;
+  }
+
   if(lws_genhash_init(&h->lws, type)) {
     JS_ThrowInternalError(ctx, "failed to initialize lws_genhash_ctx");
     goto fail;
@@ -65,9 +72,38 @@ minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSVal
   return obj;
 
 fail:
-  js_free(ctx, h);
+  if(h)
+    js_free(ctx, h);
   JS_FreeValue(ctx, obj);
   return JS_EXCEPTION;
+}
+
+static JSValue
+minnet_hash_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  MinnetHash* h;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(h = minnet_hash_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case HASH_VALUEOF: {
+      ret = JS_NewArrayBufferCopy(ctx, h->digest, h->size);
+      break;
+    }
+    case HASH_TOSTRING: {
+      unsigned i;
+      char buf[h->size * 2];
+      for(i = 0; i < h->size; i++) {
+        buf[(i << 1)] = hash_hexdigits[h->digest[i] >> 4];
+        buf[(i << 1) + 1] = hash_hexdigits[h->digest[i] & 0x0f];
+      }
+      ret = JS_NewStringLen(ctx, buf, h->size * 2);
+      break;
+    }
+  }
+
+  return ret;
 }
 
 static JSValue
@@ -78,7 +114,16 @@ minnet_hash_get(JSContext* ctx, JSValueConst this_val, int magic) {
   if(!(h = minnet_hash_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  switch(magic) {}
+  switch(magic) {
+    case HASH_TYPE: {
+      ret = JS_NewInt32(ctx, h->type);
+      break;
+    }
+    case HASH_SIZE: {
+      ret = JS_NewUint32(ctx, h->size);
+      break;
+    }
+  }
   return ret;
 }
 
@@ -112,12 +157,9 @@ minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, i
      return JS_ThrowInternalError(ctx, "argument 1 must be String, ArrayBuffer or null");*/
 
   if(argc < 1 || js_is_nullish(argv[0])) {
-    size_t bytes = lws_genhash_size(h->lws.type);
-    uint8_t digest[bytes];
 
-    if(!lws_genhash_destroy(&h->lws, digest)) {
-      ret = JS_NewArrayBufferCopy(ctx, digest, bytes);
-    }
+    if(!lws_genhash_destroy(&h->lws, h->digest))
+      ret = JS_NewArrayBufferCopy(ctx, h->digest, h->size);
 
     //  ret = JS_NewInt32(ctx, lws_spa_finalize(h->spa));
 
@@ -143,6 +185,10 @@ JSClassDef minnet_hash_class = {
 };
 
 const JSCFunctionListEntry minnet_hash_proto_funcs[] = {
+    JS_PROP_CFUNC_MAGIC_DEF("valueOf", 0, minnet_hash_method, HASH_VALUEOF),
+    JS_PROP_CFUNC_MAGIC_DEF("toString", 0, minnet_hash_method, HASH_TOSTRING),
+    JS_CGETSET_MAGIC_DEF("type", minnet_response_get, 0, HASH_TYPE),
+    JS_CGETSET_MAGIC_DEF("size", minnet_response_get, 0, HASH_SIZE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetHash", JS_PROP_CONFIGURABLE),
 };
 
