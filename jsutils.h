@@ -4,6 +4,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include <list.h>
+#include "utils.h"
 
 typedef struct JSThreadState {
   struct list_head os_rw_handlers;
@@ -14,15 +15,27 @@ typedef struct JSThreadState {
   void *recv_pipe, *send_pipe;
 } JSThreadState;
 
+typedef struct offset_length {
+  int64_t offset, length;
+} OffsetLength;
+
 typedef struct input_buffer {
   uint8_t* data;
   size_t size;
+  size_t pos;
   void (*free)(JSRuntime*, void* opaque, void* ptr);
   JSValue value;
+  OffsetLength range;
 } JSBuffer;
 
+#define JS_BUFFER_DEFAULT() JS_BUFFER(0, 0, &js_buffer_free_default)
+
+#define JS_BUFFER_0(free) JS_BUFFER(0, 0, (free))
+
 #define JS_BUFFER(data, size, free) \
-  (JSBuffer) { (data), (size), (free), JS_UNDEFINED }
+  (JSBuffer) { \
+    (data), (size), 0, (free), JS_UNDEFINED, { 0, -1 } \
+  }
 
 typedef union resolve_functions {
   JSValue array[2];
@@ -38,70 +51,134 @@ struct TimerClosure {
   JSValueConst id, handler, callback;
 };
 
+static inline void
+ol_init(OffsetLength* ol) {
+  ol->offset = 0;
+  ol->length = INT64_MAX;
+}
+
+static inline BOOL
+ol_is_default(const OffsetLength* ol) {
+  return ol->offset == 0 && ol->length == INT64_MAX;
+}
+
+static inline uint8_t*
+ol_data(const OffsetLength* ol, const void* x) {
+  return (uint8_t*)x + ol->offset;
+}
+
+static inline size_t
+ol_size(const OffsetLength* ol, size_t n) {
+  return MIN(ol->length, n - ol->offset);
+}
+
+/*static inline MemoryBlock
+ol_block(const OffsetLength* ol, const void* x, size_t n) {
+  return (MemoryBlock){ol_data(ol, x), ol_size(ol, n)};
+}*/
+
+/*static inline PointerRange
+ol_range(const OffsetLength* ol, const void* x, size_t n) {
+  MemoryBlock mb = offset_block(ol, x, n);
+  return range_from(&mb);
+}*/
+
+static inline OffsetLength
+ol_slice(const OffsetLength ol, int64_t start, int64_t end) {
+  if(start < 0)
+    start = ol.length + (start % ol.length);
+  else if(start > ol.length)
+    start = ol.length;
+  if(end < 0)
+    end = ol.length + (end % ol.length);
+  else if(end > ol.length)
+    end = ol.length;
+
+  return (OffsetLength){start, end - start};
+}
+
+static inline OffsetLength
+ol_offset(const OffsetLength* ol, const OffsetLength* by) {
+  OffsetLength ret;
+  ret.offset = ol->offset + by->offset;
+  ret.length = MIN(by->length, ol->length - by->offset);
+  return ret;
+}
+
 #define JS_BIND_THIS 0x8000
 
-JSValue vector2array(JSContext*, int, JSValueConst[]);
+JSValue vector2array(JSContext* ctx, int argc, JSValueConst argv[]);
 JSValue js_object_constructor(JSContext* ctx, JSValueConst value);
-void js_console_log(JSContext*, JSValueConst*, JSValueConst*);
-JSValue js_function_bound(JSContext*, JSValueConst, int, JSValueConst argv[], int magic, JSValueConst* func_data);
-JSValue js_function_bind(JSContext*, JSValueConst, int, JSValueConst argv[]);
-JSValue js_function_bind_1(JSContext*, JSValueConst, JSValueConst);
-JSValue js_function_bind_this(JSContext*, JSValueConst, JSValueConst);
-const char* js_function_name(JSContext*, JSValueConst);
-JSValue js_iterator_next(JSContext*, JSValueConst, JSValueConst* next, BOOL* done_p, int argc, JSValueConst argv[]);
-int js_copy_properties(JSContext*, JSValueConst, JSValueConst, int flags);
-void js_buffer_from(JSContext*, JSBuffer*, JSValueConst);
-JSBuffer js_buffer_new(JSContext*, JSValueConst);
-void js_buffer_to(JSBuffer, void**, size_t*);
-void js_buffer_to3(JSBuffer, const char**, void**, unsigned* plen);
-BOOL js_buffer_valid(const JSBuffer*);
-JSBuffer js_buffer_clone(const JSBuffer*, JSContext*);
-void js_buffer_dump(const JSBuffer*, DynBuf*);
-void js_buffer_free(JSBuffer*, JSContext*);
-BOOL js_is_iterable(JSContext*, JSValueConst);
-BOOL js_is_iterator(JSContext*, JSValueConst);
-JSAtom js_symbol_static_atom(JSContext*, const char*);
-JSValue js_symbol_static_value(JSContext*, const char*);
-JSValue js_symbol_ctor(JSContext*);
-JSValue js_global_get(JSContext*, const char*);
-JSValue js_global_os(JSContext*);
-JSValue js_os_get(JSContext*, const char*);
-JSValue js_timer_start(JSContext*, JSValueConst, uint32_t);
-void js_timer_cancel(JSContext*, JSValueConst);
-void js_timer_free(void*);
-JSValue js_timer_callback(JSContext*, JSValueConst, int, JSValueConst* argv, int magic, void* opaque);
-struct TimerClosure* js_timer_interval(JSContext*, JSValueConst, uint32_t);
-void js_timer_restart(struct TimerClosure*);
-void js_promise_free(JSContext*, ResolveFunctions*);
-void js_promise_free_rt(JSRuntime*, ResolveFunctions*);
-char* js_tostringlen(JSContext*, size_t*, JSValueConst);
-char* js_tostring(JSContext*, JSValueConst);
-JSValue js_invoke(JSContext*, JSValueConst, const char*, int argc, JSValueConst argv[]);
-JSValue js_promise_create(JSContext*, ResolveFunctions*);
-JSValue js_promise_resolve(JSContext*, ResolveFunctions*, JSValueConst);
-JSValue js_promise_reject(JSContext*, ResolveFunctions*, JSValueConst);
-void js_promise_zero(ResolveFunctions*);
-BOOL js_promise_pending(ResolveFunctions const*);
-BOOL js_promise_done(ResolveFunctions const*);
-BOOL js_is_promise(JSContext*, JSValueConst);
-JSValue js_error_new(JSContext*, const char*, ...);
-uint8_t* js_toptrsize(JSContext*, unsigned int*, JSValueConst);
-BOOL js_get_propertystr_bool(JSContext*, JSValueConst, const char*);
-int64_t js_get_propertystr_int64(JSContext*, JSValueConst, const char*);
-uint32_t js_get_propertystr_uint32(JSContext*, JSValueConst, const char*);
-struct list_head* js_module_list(JSContext*);
-JSModuleDef* js_module_at(JSContext*, int);
-JSModuleDef* js_module_find(JSContext*, JSAtom);
-JSModuleDef* js_module_find_s(JSContext*, const char*);
-void* js_module_export_find(JSModuleDef*, JSAtom);
-JSValue js_module_import_meta(JSContext*, const char*);
-void js_error_print(JSContext*, JSValueConst);
-int64_t js_array_length(JSContext*, JSValueConst);
-char** js_array_to_argv(JSContext*, int*, JSValueConst);
+char* js_object_classname(JSContext* ctx, JSValueConst value);
+void js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log);
+JSValue js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue* func_data);
+JSValue js_function_bind(JSContext* ctx, JSValueConst func, int flags, JSValueConst argv[]);
+JSValue js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg);
+JSValue js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val);
+const char* js_function_name(JSContext* ctx, JSValueConst value);
+JSValue js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
+int js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags);
+void js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
+JSBuffer js_buffer_new(JSContext* ctx, JSValueConst value);
+void js_buffer_to(JSBuffer buf, void** pptr, size_t* plen);
+void js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen);
+BOOL js_buffer_valid(const JSBuffer* in);
+JSBuffer js_buffer_clone(const JSBuffer* in, JSContext* ctx);
+void js_buffer_dump(const JSBuffer* in, DynBuf* db);
+void js_buffer_free(JSBuffer* in, JSContext* ctx);
+BOOL js_is_iterable(JSContext* ctx, JSValueConst obj);
+BOOL js_is_iterator(JSContext* ctx, JSValueConst obj);
+JSAtom js_symbol_static_atom(JSContext* ctx, const char* name);
+JSValue js_symbol_static_value(JSContext* ctx, const char* name);
+JSValue js_symbol_ctor(JSContext* ctx);
+JSValue js_global_get(JSContext* ctx, const char* prop);
+JSValue js_global_os(JSContext* ctx);
+JSValue js_os_get(JSContext* ctx, const char* prop);
+JSValue js_timer_start(JSContext* ctx, JSValueConst fn, uint32_t ms);
+void js_timer_cancel(JSContext* ctx, JSValueConst timer);
+void js_timer_free(void* ptr);
+JSValue js_timer_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValue* argv, int magic, void* opaque);
+struct TimerClosure* js_timer_interval(JSContext* ctx, JSValueConst fn, uint32_t ms);
+void js_timer_restart(struct TimerClosure* closure);
+void js_promise_free(JSContext* ctx, ResolveFunctions* funcs);
+void js_promise_free_rt(JSRuntime* rt, ResolveFunctions* funcs);
+char* js_tostringlen(JSContext* ctx, size_t* lenp, JSValueConst value);
+char* js_tostring(JSContext* ctx, JSValueConst value);
+JSValue js_invoke(JSContext* ctx, JSValueConst this_obj, const char* method, int argc, JSValueConst argv[]);
+JSValue js_promise_create(JSContext* ctx, ResolveFunctions* funcs);
+JSValue js_promise_resolve(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value);
+JSValue js_promise_reject(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value);
+void js_promise_zero(ResolveFunctions* funcs);
+BOOL js_promise_pending(ResolveFunctions const* funcs);
+BOOL js_promise_done(ResolveFunctions const* funcs);
+BOOL js_is_promise(JSContext* ctx, JSValueConst value);
+JSValue js_error_new(JSContext* ctx, const char* fmt, ...);
+uint8_t* js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value);
+BOOL js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str);
+int64_t js_get_propertystr_int64(JSContext* ctx, JSValueConst obj, const char* str);
+uint32_t js_get_propertystr_uint32(JSContext* ctx, JSValueConst obj, const char* str);
+BOOL js_has_propertystr(JSContext* ctx, JSValueConst obj, const char* str);
+struct list_head* js_module_list(JSContext* ctx);
+JSModuleDef* js_module_at(JSContext* ctx, int i);
+JSModuleDef* js_module_find(JSContext* ctx, JSAtom name);
+JSModuleDef* js_module_find_s(JSContext* ctx, const char* name);
+void* js_module_export_find(JSModuleDef* module, JSAtom name);
+JSValue js_module_import_meta(JSContext* ctx, const char* name);
+void js_error_print(JSContext* ctx, JSValueConst error);
+int64_t js_array_length(JSContext* ctx, JSValueConst array);
+char** js_array_to_argv(JSContext* ctx, int* argcp, JSValueConst array);
+int64_t js_arraybuffer_length(JSContext* ctx, JSValueConst buffer);
+int js_offset_length(JSContext* ctx, int64_t size, int argc, JSValueConst argv[], OffsetLength* off_len_p);
 JSValue js_argv_to_array(JSContext* ctx, const char* const* argv);
 BOOL js_atom_is_index(JSContext* ctx, int64_t* pval, JSAtom atom);
 BOOL js_atom_is_string(JSContext* ctx, JSAtom atom, const char* other);
 BOOL js_atom_is_length(JSContext* ctx, JSAtom atom);
+JSBuffer js_input_buffer(JSContext* ctx, JSValueConst value);
+JSBuffer js_input_chars(JSContext* ctx, JSValueConst value);
+JSBuffer js_input_args(JSContext* ctx, int argc, JSValueConst argv[]);
+BOOL js_is_arraybuffer(JSContext* ctx, JSValueConst value);
+BOOL js_is_dataview(JSContext* ctx, JSValueConst value);
+BOOL js_is_typedarray(JSContext* ctx, JSValueConst value);
 
 static inline void
 js_clear(JSContext* ctx, const void* arg) {
@@ -200,15 +277,15 @@ typedef struct async_iterator {
   struct list_head reads;
 } AsyncIterator;
 
-void asynciterator_zero(AsyncIterator*);
-void asynciterator_clear(AsyncIterator*, JSRuntime*);
-AsyncIterator* asynciterator_new(JSContext*);
-JSValue asynciterator_next(AsyncIterator*, JSContext*);
-BOOL asynciterator_yield(AsyncIterator*, JSValueConst, JSContext*);
-BOOL asynciterator_stop(AsyncIterator*, JSValueConst, JSContext*);
-JSValue asynciterator_obj(JSValueConst value, BOOL done, JSContext*);
-BOOL asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx);
+void asynciterator_zero(AsyncIterator* it);
+void asynciterator_clear(AsyncIterator* it, JSRuntime* rt);
+AsyncIterator* asynciterator_new(JSContext* ctx);
+JSValue asynciterator_next(AsyncIterator* it, JSContext* ctx);
 BOOL asynciterator_check_closing(AsyncIterator* it, JSContext* ctx);
+BOOL asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx);
 int asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx);
+BOOL asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx);
+BOOL asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx);
+JSValue asynciterator_obj(JSValueConst value, BOOL done, JSContext* ctx);
 
 #endif /* MINNET_JS_UTILS_H */

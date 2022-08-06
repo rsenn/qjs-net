@@ -4,8 +4,9 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
-
 #include "jsutils.h"
+#include "minnet.h"
+
 static AsyncRead* asynciterator_shift(AsyncIterator*, JSContext*);
 
 JSValue
@@ -193,12 +194,14 @@ js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags
   return i;
 }
 
-void
+/*void
 js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
   buf->data = 0;
   buf->size = 0;
+  buf->pos = 0;
   buf->free = &js_buffer_free_default;
   buf->value = JS_UNDEFINED;
+  buf->range = (OffsetLength){0,-1};
 
   if(JS_IsString(value)) {
     buf->data = (uint8_t*)JS_ToCStringLen(ctx, &buf->size, value);
@@ -206,11 +209,15 @@ js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
   } else if((buf->data = JS_GetArrayBuffer(ctx, &buf->size, value))) {
     buf->value = JS_DupValue(ctx, value);
   }
+}*/
+void
+js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
+  *buf = js_input_buffer(ctx, value);
 }
 
 JSBuffer
 js_buffer_new(JSContext* ctx, JSValueConst value) {
-  JSBuffer ret = {0, 0, &js_buffer_free_default, JS_UNDEFINED};
+  JSBuffer ret = {0, 0, 0, &js_buffer_free_default, JS_UNDEFINED, {0, -1}};
   ret.free = &js_buffer_free_default;
 
   if(JS_IsString(value)) {
@@ -249,14 +256,10 @@ js_buffer_valid(const JSBuffer* in) {
 
 JSBuffer
 js_buffer_clone(const JSBuffer* in, JSContext* ctx) {
-  JSBuffer ret;
-
-  js_buffer_from(ctx, &ret, in->value);
-
-  /*  ret.size = in->size;
-   ret.free = in->free;*/
-
-  return ret;
+  JSBuffer buf = js_input_buffer(ctx, in->value);
+  buf.pos = in->pos;
+  buf.range = in->range;
+  return buf;
 }
 
 void
@@ -543,6 +546,50 @@ js_error_new(JSContext* ctx, const char* fmt, ...) {
   return err;
 }
 
+void
+js_error_print(JSContext* ctx, JSValueConst error) {
+  const char *str = 0, *stack = 0;
+
+  if(JS_IsObject(error)) {
+    JSValue st = JS_GetPropertyStr(ctx, error, "stack");
+
+    if(!JS_IsUndefined(st))
+      stack = JS_ToCString(ctx, st);
+
+    JS_FreeValue(ctx, st);
+  }
+
+  // lwsl_err("Toplevel error:");
+
+  if(!JS_IsNull(error) && (str = JS_ToCString(ctx, error))) {
+    const char* type = js_object_classname(ctx, error);
+    const char* exception = str;
+    size_t typelen = strlen(type);
+
+    if(!strncmp(exception, type, typelen) && exception[typelen] == ':') {
+      exception += typelen + 2;
+    }
+    lwsl_err("Exception %s: %s", type, exception);
+  }
+  if(stack) {
+    size_t pos = 0, i = 0, len, end = strlen(stack);
+    lwsl_err("Stack:");
+
+    while(i < end) {
+      len = byte_chrs(&stack[i], end - i, "\r\n", 2);
+
+      lwsl_err("%zu: %.*s", pos++, (int)len, &stack[i]);
+      i += len;
+
+       i += scan_charsetnskip(&stack[i], "\r\n", end - i);
+    }
+  }
+  if(stack)
+    JS_FreeCString(ctx, stack);
+  if(str)
+    JS_FreeCString(ctx, str);
+}
+
 uint8_t*
 js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value) {
   size_t n = 0;
@@ -586,6 +633,14 @@ js_get_propertystr_uint32(JSContext* ctx, JSValueConst obj, const char* str) {
   return ret;
 }
 
+BOOL
+js_has_propertystr(JSContext* ctx, JSValueConst obj, const char* str) {
+  JSAtom prop = JS_NewAtom(ctx, str);
+  BOOL ret = JS_HasProperty(ctx, obj, prop);
+  JS_FreeAtom(ctx, prop);
+  return ret;
+}
+
 struct list_head*
 js_module_list(JSContext* ctx) {
   void* tmp_opaque;
@@ -596,10 +651,10 @@ js_module_list(JSContext* ctx) {
   JS_SetContextOpaque(ctx, (void*)needle);
 
   ptr = memmem(ctx, 1024, &needle, sizeof(needle));
-  printf("ctx = %p\n", ctx);
-  printf("&needle = %p\n", &needle);
-  printf("ptr = %p\n", ptr);
-  printf("ctx.user_opaque = %016zx\n", (char*)ptr - (char*)ctx);
+  /*  printf("ctx = %p\n", ctx);
+    printf("&needle = %p\n", &needle);
+    printf("ptr = %p\n", ptr);
+    printf("ctx.user_opaque = %016zx\n", (char*)ptr - (char*)ctx);*/
   JS_SetContextOpaque(ctx, tmp_opaque);
 
   return ((struct list_head*)(ptr - 2)) - 1;
@@ -672,40 +727,6 @@ js_module_import_meta(JSContext* ctx, const char* name) {
   return ret;
 }
 
-void
-js_error_print(JSContext* ctx, JSValueConst error) {
-  const char *str = 0, *stack = 0;
-
-  if(JS_IsObject(error)) {
-    JSValue st = JS_GetPropertyStr(ctx, error, "stack");
-
-    if(!JS_IsUndefined(st))
-      stack = JS_ToCString(ctx, st);
-
-    JS_FreeValue(ctx, st);
-  }
-
-  fputs("Toplevel error:\n", stderr);
-
-  if(!JS_IsNull(error) && (str = JS_ToCString(ctx, error))) {
-    const char* type = js_object_classname(ctx, error);
-    const char* exception = str;
-    size_t typelen = strlen(type);
-
-    if(!strncmp(exception, type, typelen) && exception[typelen] == ':') {
-      exception += typelen + 2;
-    }
-    fprintf(stderr, "%s: %s\n", type, exception);
-  }
-  if(stack)
-    fprintf(stderr, "Stack:\n%s\n", stack);
-  fflush(stderr);
-  if(stack)
-    JS_FreeCString(ctx, stack);
-  if(str)
-    JS_FreeCString(ctx, str);
-}
-
 int64_t
 js_array_length(JSContext* ctx, JSValueConst array) {
   int64_t len = -1;
@@ -729,6 +750,44 @@ js_array_to_argv(JSContext* ctx, int* argcp, JSValueConst array) {
   }
   if(argcp)
     *argcp = len;
+  return ret;
+}
+
+int64_t
+js_arraybuffer_length(JSContext* ctx, JSValueConst buffer) {
+  uint8_t* ptr;
+  size_t len;
+
+  if(JS_GetArrayBuffer(ctx, &len, buffer))
+    return len;
+  return -1;
+}
+
+int
+js_offset_length(JSContext* ctx, int64_t size, int argc, JSValueConst argv[], OffsetLength* off_len_p) {
+  int ret = 0;
+  int64_t off = 0, len = size;
+
+  if(argc >= 1 && JS_IsNumber(argv[0]))
+    if(!JS_ToInt64(ctx, &off, argv[0]))
+      ret = 1;
+
+  if(argc >= 2 && JS_IsNumber(argv[1]))
+    if(!JS_ToInt64(ctx, &len, argv[1]))
+      ret = 2;
+
+  if(size)
+    off = ((off % size) + size) % size;
+
+  if(len >= 0)
+    len = MIN(len, size - off);
+  else
+    len = size - off;
+
+  if(off_len_p) {
+    off_len_p->offset = off;
+    off_len_p->length = len;
+  }
   return ret;
 }
 
@@ -786,6 +845,115 @@ js_atom_is_string(JSContext* ctx, JSAtom atom, const char* other) {
 BOOL
 js_atom_is_length(JSContext* ctx, JSAtom atom) {
   return js_atom_is_string(ctx, atom, "length");
+}
+
+JSBuffer
+js_input_buffer(JSContext* ctx, JSValueConst value) {
+  JSBuffer ret = {0, 0, 0, &js_buffer_free_default, JS_UNDEFINED};
+  int64_t offset = 0, length = INT64_MAX;
+
+  ol_init(&ret.range);
+
+  if(js_is_typedarray(ctx, value) || js_is_dataview(ctx, value)) {
+    JSValue arraybuf, byteoffs, bytelen;
+    arraybuf = JS_GetPropertyStr(ctx, value, "buffer");
+    bytelen = JS_GetPropertyStr(ctx, value, "byteLength");
+    if(JS_IsNumber(bytelen))
+      JS_ToInt64(ctx, &length, bytelen);
+    JS_FreeValue(ctx, bytelen);
+    byteoffs = JS_GetPropertyStr(ctx, value, "byteOffset");
+    if(JS_IsNumber(byteoffs))
+      JS_ToInt64(ctx, &offset, byteoffs);
+    JS_FreeValue(ctx, byteoffs);
+    value = arraybuf;
+  }
+
+  if(js_is_arraybuffer(ctx, value)) {
+    ret.value = JS_DupValue(ctx, value);
+    ret.data = JS_GetArrayBuffer(ctx, &ret.size, ret.value);
+  } else {
+    ret.value = JS_EXCEPTION;
+    // JS_ThrowTypeError(ctx, "Invalid type for input buffer");
+  }
+
+  if(offset < 0)
+    ret.range.offset = ret.size + offset % ret.size;
+  else if(offset > ret.size)
+    ret.range.offset = ret.size;
+  else
+    ret.range.offset = offset;
+
+  if(length >= 0 && length < ret.size)
+    ret.range.length = length;
+
+  return ret;
+}
+
+#undef free
+
+JSBuffer
+js_input_chars(JSContext* ctx, JSValueConst value) {
+  JSBuffer ret = JS_BUFFER_DEFAULT();
+  // int64_t offset = 0, length = INT64_MAX;
+
+  ol_init(&ret.range);
+
+  if(JS_IsString(value)) {
+    ret.data = (uint8_t*)JS_ToCStringLen(ctx, &ret.size, value);
+    ret.value = JS_DupValue(ctx, value);
+    ret.free = &js_buffer_free_default;
+  } else {
+    ret = js_input_buffer(ctx, value);
+  }
+
+  return ret;
+}
+
+JSBuffer
+js_input_args(JSContext* ctx, int argc, JSValueConst argv[]) {
+  JSBuffer input = js_input_chars(ctx, argv[0]);
+
+  if(argc > 1)
+    js_offset_length(ctx, input.size, argc - 1, argv + 1, &input.range);
+
+  return input;
+}
+
+BOOL
+js_is_arraybuffer(JSContext* ctx, JSValueConst value) {
+  if(JS_IsObject(value)) {
+    size_t len;
+    return JS_GetArrayBuffer(ctx, &len, value) != NULL;
+  }
+  return FALSE;
+}
+
+BOOL
+js_is_dataview(JSContext* ctx, JSValueConst value) {
+  if(JS_IsObject(value)) {
+    JSAtom atoms[] = {
+        JS_NewAtom(ctx, "byteLength"),
+        JS_NewAtom(ctx, "byteOffset"),
+        JS_NewAtom(ctx, "buffer"),
+    };
+    unsigned i;
+    BOOL ret = TRUE;
+
+    for(i = 0; i < countof(atoms); i++) {
+      if(!JS_HasProperty(ctx, value, atoms[i])) {
+        ret = FALSE;
+        break;
+      }
+    }
+
+    return ret;
+  }
+  return FALSE;
+}
+
+BOOL
+js_is_typedarray(JSContext* ctx, JSValueConst value) {
+  return js_is_dataview(ctx, value) && js_has_propertystr(ctx, value, "BYTES_PER_ELEMENT");
 }
 
 void

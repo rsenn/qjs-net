@@ -38,7 +38,7 @@ int
 callback_proxy_ws_server(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);
 
-  LOG("PROXY-WS-SERVER", "in=%.*s len=%d", (int)len, (char*)in, len);
+  LOG("PROXY-WS-SERVER", "in=%.*s len=%d", (int)len, (char*)in, (int)len);
 
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED: {
@@ -147,7 +147,7 @@ callback_proxy_raw_client(struct lws* wsi, enum lws_callback_reasons reason, voi
   proxy_msg_t* msg;
   uint8_t* data;
   int m, asynciterator_shift;
-  LOG("PROXY-RAW-CLIENT", "in=%.*s len=%d", (int)len, (char*)in, len);
+  LOG("PROXY-RAW-CLIENT", "in=%.*s len=%d", (int)len, (char*)in, (int)len);
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:

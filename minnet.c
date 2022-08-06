@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "minnet-server.h"
 #include "minnet-client.h"
 #include "minnet-request.h"
@@ -13,6 +14,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <strings.h>
 #include <ctype.h>
 #include <sys/time.h>
 #include <arpa/inet.h>

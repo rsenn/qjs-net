@@ -4,11 +4,14 @@
 #include <quickjs.h>
 #include <libwebsockets.h>
 
-typedef struct hash {
-  struct lws_genhash_ctx lws;
-  int type;
-  int ref_count;
-  uint32_t size;
+typedef struct hash_hmac {
+  union {
+    struct lws_genhash_ctx hash;
+    struct lws_genhmac_ctx hmac;
+  } lws;
+  uint8_t type;
+  // uint32_t size;
+  BOOL hmac : 1, initialized : 1, finalized : 1;
   uint8_t digest[0];
 } MinnetHash;
 

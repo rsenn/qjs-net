@@ -415,7 +415,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if(client->context.js)
     opaque = lws_opaque(wsi, client->context.js);
 
-  LOGCB("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, in);
+  LOGCB("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {

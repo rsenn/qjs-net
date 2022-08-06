@@ -39,12 +39,15 @@ form_parser_callback(void* data, const char* name, const char* filename, char* b
   }
 
   if(cb && cb->ctx) {
-    // JSValue form_parser = minnet_form_parser_wrap(cb->ctx, fp);
+    JSValue ret;
 
     if(name)
       args[0] = JS_NewString(cb->ctx, name);
 
-    minnet_emit(cb, 2, args);
+    ret = minnet_emit(cb, 2, args);
+
+    if(JS_IsException(ret))
+      js_error_print(cb->ctx, fp->exception = JS_GetException(cb->ctx));
 
     JS_FreeValue(cb->ctx, args[0]);
     JS_FreeValue(cb->ctx, args[1]);
@@ -66,6 +69,7 @@ form_parser_init(MinnetFormParser* fp, MinnetWebsocket* ws, int nparams, const c
   fp->spa_create_info.opt_data = fp;
 
   fp->spa = lws_spa_create_via_info(ws->lwsi, &fp->spa_create_info);
+  fp->exception = JS_NULL;
 }
 
 MinnetFormParser*
@@ -195,7 +199,9 @@ form_parser_param_exists(MinnetFormParser* fp, const char* name) {
 
 int
 form_parser_process(MinnetFormParser* fp, const void* data, size_t len) {
-  return lws_spa_process(fp->spa, data, len);
+  int retval = lws_spa_process(fp->spa, data, len);
+
+  return retval;
 }
 
 JSValue
@@ -529,6 +535,11 @@ minnet_form_parser_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this
     ret = JS_NewInt32(ctx, form_parser_process(fp, buf.data, buf.size));
 
     js_buffer_free(&buf, ctx);
+  }
+  if(!JS_IsNull(fp->exception)) {
+
+    JS_Throw(ctx, fp->exception);
+    ret = JS_EXCEPTION;
   }
   return ret;
 }

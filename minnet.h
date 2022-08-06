@@ -4,7 +4,6 @@
 #include <cutils.h>
 #include <quickjs.h>
 #include <libwebsockets.h>
-#include <ctype.h>
 #include "jsutils.h"
 
 union byte_buffer;
@@ -16,18 +15,6 @@ struct http_request;
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 
-#if defined(_WIN32) || defined(__MINGW32__)
-#define VISIBLE __declspec(dllexport)
-#define HIDDEN
-#else
-#define VISIBLE __attribute__((visibility("default")))
-#define HIDDEN __attribute__((visibility("hidden")))
-#endif
-
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-
-#define countof(x) (sizeof(x) / sizeof((x)[0]))
 #define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags) \
   { \
     .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET_MAGIC, .magic = magic_num, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} } \
@@ -313,50 +300,6 @@ lws_is_client_callback(int reason) {
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL: return TRUE;
   }
   return FALSE;
-}
-
-static inline size_t
-byte_chr(const void* x, size_t len, char c) {
-  const char *s, *t, *str = x;
-  for(s = str, t = s + len; s < t; ++s)
-    if(*s == c)
-      break;
-  return s - str;
-}
-
-static inline size_t
-byte_chrs(const void* x, size_t len, const char needle[], size_t nl) {
-  const char *s, *t;
-  for(s = x, t = (const char*)x + len; s != t; s++)
-    if(byte_chr(needle, nl, *s) < nl)
-      break;
-  return s - (const char*)x;
-}
-
-static inline size_t
-byte_rchr(const void* x, size_t len, char needle) {
-  const char *s, *t;
-  for(s = x, t = (const char*)x + len; --t >= s;) {
-    if(*t == needle)
-      return (size_t)(t - s);
-  }
-  return len;
-}
-
-static inline size_t
-scan_whitenskip(const char* s, size_t limit) {
-  const char* t = s;
-  const char* u = t + limit;
-  while(t < u && isspace(*t)) ++t;
-  return (size_t)(t - s);
-}
-
-static inline size_t
-scan_nonwhitenskip(const char* s, size_t limit) {
-  const char* t = s;
-  const char* u = t + limit;
-  while(t < u && !isspace(*t)) ++t;
-  return (size_t)(t - s);
 }
 
 char* lws_get_peer(struct lws* wsi, JSContext* ctx);

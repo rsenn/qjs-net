@@ -590,7 +590,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         lws_is_ssl(wsi) ? "ssl, " : "",
         lws_get_socket_fd(lws_get_network_wsi(wsi)),
         (int)MIN(32, len),
-        in,
+        (char*)in,
         opaque && opaque->req ? url_string(&opaque->req->url) : 0,
         session ? session->serial : 0);
 
@@ -631,7 +631,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-      LOGCB("HTTP", "in=%.*s", (int)len, in);
+      LOGCB("HTTP", "in=%.*s", (int)len, (char*)in);
       break;
     }
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
