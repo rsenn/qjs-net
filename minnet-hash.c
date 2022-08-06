@@ -364,10 +364,9 @@ static JSClassExoticMethods minnet_hash_exotic_methods = {
     .get_own_property = minnet_hash_get_own_property,
     .get_own_property_names = minnet_hash_get_own_property_names,
     .has_property = minnet_hash_has_property,
-    //.define_own_property = minnet_hash_define_own_property,
     .get_property = minnet_hash_get_property,
-    //.set_property = minnet_hash_set_property,
 };
+
 JSClassDef minnet_hash_class = {
     "MinnetHash",
     .finalizer = minnet_hash_finalizer,
