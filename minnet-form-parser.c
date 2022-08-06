@@ -547,7 +547,7 @@ minnet_form_parser_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this
 static JSClassExoticMethods minnet_form_parser_exotic_methods = {
     .get_own_property = minnet_form_parser_get_own_property,
     .get_own_property_names = minnet_form_parser_get_own_property_names,
-    //.has_property = minnet_form_parser_has_property,
+    .has_property = minnet_form_parser_has_property,
     .define_own_property = minnet_form_parser_define_own_property,
     //.get_property = minnet_form_parser_get_property,
     //.set_property = minnet_form_parser_set_property,

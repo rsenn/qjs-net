@@ -97,7 +97,7 @@ buffer_alloc(MinnetBuffer* buf, size_t size, JSContext* ctx) {
 
 ssize_t
 buffer_append(MinnetBuffer* buf, const void* x, size_t n, JSContext* ctx) {
-  if((size_t)buffer_AVAIL(buf) < n) {
+  if((size_t)buffer_AVAIL(buf) < n + 1) {
     if(!buffer_realloc(buf, buffer_HEAD(buf) + n + 1, ctx))
       return -1;
   }
@@ -184,7 +184,7 @@ buffer_fromarraybuffer(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
 int
 buffer_fromvalue(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
   int ret = -1;
-  JSBuffer input = js_buffer_new(ctx, value);
+  JSBuffer input = js_input_chars(ctx, value);
 
   if(input.data == 0 || input.size == 0) {
     ret = 0;

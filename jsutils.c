@@ -212,7 +212,7 @@ js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
 }*/
 void
 js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
-  *buf = js_input_buffer(ctx, value);
+  *buf = js_input_chars(ctx, value);
 }
 
 JSBuffer
