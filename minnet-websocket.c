@@ -39,10 +39,8 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
   JSValue ws_obj;
 
-  if(!(ws = ws_new(wsi, ctx))) {
-    JS_FreeValue(ctx, ws_obj);
+  if(!(ws = ws_new(wsi, ctx)))
     return JS_ThrowOutOfMemory(ctx);
-  }
 
   ws_obj = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
 

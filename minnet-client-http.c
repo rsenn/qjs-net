@@ -33,9 +33,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetResponse* resp;
 
       if(req) {
-        MinnetURL url = {.protocol = protocol_string(PROTOCOL_HTTP)};
         url_fromwsi(&req->url, wsi, ctx);
-        // req = opaque->req = request_new(url, METHOD_GET, ctx);
 
         session->req_obj = minnet_request_wrap(ctx, opaque->req);
       }
@@ -228,8 +226,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
-      MinnetResponse* resp = client->response;
-      // headers_tostring(ctx, &resp->headers, wsi);
+      // MinnetResponse* resp = client->response;
+      //  headers_tostring(ctx, &resp->headers, wsi);
       if(client->on.http.ctx) {
         int32_t result = -1;
         JSValue ret;

@@ -75,7 +75,7 @@ hash_tostring(MinnetHash* h, int bits_per_char) {
     unsigned remain = 8 - shift_right;
     uint8_t value = byte >> shift_right;
     if(remain < bits_per_char) {
-      value |= h->digest[bitpos >> 3 + 1] << remain;
+      value |= h->digest[(bitpos >> 3) + 1] << remain;
     }
 
     dbuf_putc(&dbuf, hash_hexdigits[value & mask]);
@@ -270,14 +270,13 @@ minnet_hash_finalizer(JSRuntime* rt, JSValue val) {
 
 JSValue
 minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags) {
-  MinnetHash* h = minnet_hash_data2(ctx, func_obj);
+  /*MinnetHash* h = minnet_hash_data2(ctx, func_obj);*/
   return minnet_hash_method(ctx, func_obj, argc, argv, (argc < 1 || js_is_nullish(argv[0])) ? HASH_FINALIZE : HASH_UPDATE);
 }
 
 static int
 minnet_hash_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSValueConst obj, JSAtom prop) {
   MinnetHash* h = minnet_hash_data2(ctx, obj);
-  JSValue value = JS_UNDEFINED;
   int64_t index;
 
   if(js_atom_is_index(ctx, &index, prop)) {
@@ -342,7 +341,6 @@ minnet_hash_get_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueC
   MinnetHash* h = minnet_hash_data2(ctx, obj);
   JSValue value = JS_UNDEFINED;
   int64_t index;
-  int32_t entry;
 
   if(js_atom_is_index(ctx, &index, prop)) {
     if(h->finalized && index >= 0 && index < hash_size(h)) {

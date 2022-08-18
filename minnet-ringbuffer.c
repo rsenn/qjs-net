@@ -222,8 +222,6 @@ static JSValue
 minnet_ringbuffer_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], BOOL* pdone, int magic) {
   MinnetRingbuffer* strm;
   JSValue ret = JS_UNDEFINED;
-  size_t len;
-  uint8_t* ptr;
 
   if(!(strm = minnet_ringbuffer_data(ctx, this_val)))
     return JS_EXCEPTION;

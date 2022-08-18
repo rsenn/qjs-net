@@ -179,6 +179,7 @@ JSBuffer js_input_args(JSContext* ctx, int argc, JSValueConst argv[]);
 BOOL js_is_arraybuffer(JSContext* ctx, JSValueConst value);
 BOOL js_is_dataview(JSContext* ctx, JSValueConst value);
 BOOL js_is_typedarray(JSContext* ctx, JSValueConst value);
+BOOL js_is_generator(JSContext* ctx, JSValueConst value);
 
 static inline void
 js_clear(JSContext* ctx, const void* arg) {

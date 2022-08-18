@@ -28,7 +28,7 @@ void form_parser_clear(MinnetFormParser*, JSContext*);
 void form_parser_clear_rt(MinnetFormParser*, JSRuntime*);
 void form_parser_free(MinnetFormParser*, JSContext*);
 void form_parser_free_rt(MinnetFormParser*, JSRuntime*);
-char* form_parser_param_name(MinnetFormParser*, int);
+const char* form_parser_param_name(MinnetFormParser*, int);
 BOOL form_parser_param_valid(MinnetFormParser*, int);
 size_t form_parser_param_count(MinnetFormParser*);
 int form_parser_param_index(MinnetFormParser*, const char*);

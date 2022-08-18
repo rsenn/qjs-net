@@ -195,7 +195,7 @@ request_free_rt(MinnetRequest* req, JSRuntime* rt) {
   }
 }
 
-static const char*
+/*static const char*
 header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
   size_t len, namelen = strlen(name);
   uint8_t *x, *end;
@@ -203,8 +203,6 @@ header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
   for(x = buf->start, end = buf->write; x < end; x += len + 1) {
     len = byte_chr(x, end - x, '\n');
 
-    /*   if(namelen >= len)
-         continue;*/
     if(byte_chr(x, len, ':') != namelen || strncasecmp(name, (const char*)x, namelen))
       continue;
 
@@ -218,7 +216,7 @@ header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
     return (const char*)x + namelen;
   }
   return 0;
-}
+}*/
 
 MinnetRequest*
 request_from(int argc, JSValueConst argv[], JSContext* ctx) {

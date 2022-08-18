@@ -755,11 +755,11 @@ js_array_to_argv(JSContext* ctx, int* argcp, JSValueConst array) {
 
 int64_t
 js_arraybuffer_length(JSContext* ctx, JSValueConst buffer) {
-  uint8_t* ptr;
   size_t len;
 
   if(JS_GetArrayBuffer(ctx, &len, buffer))
     return len;
+
   return -1;
 }
 
@@ -954,6 +954,23 @@ js_is_dataview(JSContext* ctx, JSValueConst value) {
 BOOL
 js_is_typedarray(JSContext* ctx, JSValueConst value) {
   return js_is_dataview(ctx, value) && js_has_propertystr(ctx, value, "BYTES_PER_ELEMENT");
+}
+
+BOOL
+js_is_generator(JSContext* ctx, JSValueConst value) {
+  const char* str;
+  BOOL ret = FALSE;
+  if((str = JS_ToCString(ctx, value))) {
+    const char* s = str;
+    if(!strncmp(s, "function ", 9))
+      s += 9;
+
+    if(*s == '*')
+      ret = TRUE;
+
+    JS_FreeCString(ctx, str);
+  }
+  return ret;
 }
 
 void

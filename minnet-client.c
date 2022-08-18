@@ -289,6 +289,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
       break;
     }
+    default: {
+      break;
+    }
   }
 
 #ifdef DEBUG_OUTPUT
@@ -504,8 +507,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_CONNECTED: {
       if(opaque->status < OPEN) {
         JSContext* ctx;
-        int status;
-        status = lws_http_client_http_response(wsi);
+        /* int status;
+         status = lws_http_client_http_response(wsi);*/
 
         opaque->status = OPEN;
         if((ctx = client->on.connect.ctx)) {

@@ -58,7 +58,6 @@ generator_next(MinnetGenerator* gen, JSContext* ctx) {
 
   if(buffer_HEAD(&gen->buffer)) {
     size_t len;
-    int64_t bytes;
     JSValue value = buffer_toarraybuffer_size(&gen->buffer, &len, ctx);
     gen->buffer = BUFFER_0();
 

@@ -325,6 +325,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->port = url.port;
   info->timeout_secs = 0;
   info->options = 0;
+  info->extensions = extensions;
 
   // client_certificate(&server->context, options);
 
@@ -545,6 +546,9 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
     case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
     case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;
+    }
+    default: {
+      break;
     }
   }
 

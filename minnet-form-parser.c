@@ -58,7 +58,6 @@ form_parser_callback(void* data, const char* name, const char* filename, char* b
 
 void
 form_parser_init(MinnetFormParser* fp, MinnetWebsocket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
-  MinnetSession* session;
 
   memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
   fp->ws = ws_dup(ws);
@@ -159,7 +158,7 @@ form_parser_free_rt(MinnetFormParser* fp, JSRuntime* rt) {
   }
 }
 
-char*
+const char*
 form_parser_param_name(MinnetFormParser* fp, int index) {
   if(index >= 0 && index < fp->spa_create_info.count_params) {
     return fp->spa_create_info.param_names[index];
@@ -211,7 +210,6 @@ minnet_form_parser_constructor(JSContext* ctx, JSValueConst new_target, int argc
   MinnetWebsocket* ws;
   char** param_names;
   int param_count;
-  BOOL got_url = FALSE;
   uint64_t chunk_size = 1024;
 
   if(!(fp = form_parser_alloc(ctx)))
@@ -379,13 +377,9 @@ minnet_form_parser_finalizer(JSRuntime* rt, JSValue val) {
 static int
 minnet_form_parser_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSValueConst obj, JSAtom prop) {
   MinnetFormParser* fp = minnet_form_parser_data2(ctx, obj);
-
-  JSValue value = JS_UNDEFINED;
   int64_t index;
 
   if(js_atom_is_index(ctx, &index, prop)) {
-    char* param_name;
-
     if(form_parser_param_valid(fp, index)) {
 
       pdesc->flags = JS_PROP_ENUMERABLE;
@@ -468,11 +462,8 @@ minnet_form_parser_get_property(JSContext* ctx, JSValueConst obj, JSAtom prop, J
   MinnetFormParser* fp = minnet_form_parser_data2(ctx, obj);
   JSValue value = JS_UNDEFINED;
   int64_t index;
-  int32_t entry;
 
   if(js_atom_is_index(ctx, &index, prop)) {
-    char* param_name;
-
     if(form_parser_param_valid(fp, index)) {
 
       value = JS_NewString(ctx, form_parser_param_name(fp, index));
@@ -549,7 +540,7 @@ static JSClassExoticMethods minnet_form_parser_exotic_methods = {
     .get_own_property_names = minnet_form_parser_get_own_property_names,
     .has_property = minnet_form_parser_has_property,
     .define_own_property = minnet_form_parser_define_own_property,
-    //.get_property = minnet_form_parser_get_property,
+    .get_property = minnet_form_parser_get_property,
     //.set_property = minnet_form_parser_set_property,
 };
 JSClassDef minnet_form_parser_class = {

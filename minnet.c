@@ -415,7 +415,7 @@ headers_write(uint8_t** in, uint8_t* end, MinnetBuffer* buffer, struct lws* wsi)
     uint8_t tmp = name[n + 1];
     name[n + 1] = '\0';
 
-    int ret = lws_add_http_header_by_name(wsi, name, r, l, &ptr, end);
+    /*int ret = */ lws_add_http_header_by_name(wsi, name, r, l, &ptr, end);
     name[n + 1] = tmp;
 
 #ifdef DEBUG_OUTPUT

@@ -414,6 +414,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_response_method, RESPONSE_ARRAYBUFFER),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
     JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
+    JS_CFUNC_DEF("clone", 0, minnet_response_clone),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("statusText", minnet_response_get, minnet_response_set, RESPONSE_STATUSTEXT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("bodyUsed", minnet_response_get, 0, RESPONSE_BODYUSED, JS_PROP_ENUMERABLE),
