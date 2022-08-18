@@ -240,11 +240,13 @@ minnet_form_parser_constructor(JSContext* ctx, JSValueConst new_target, int argc
     JSValue cb_content = JS_GetPropertyStr(ctx, argv[2], "onContent");
     JSValue cb_open = JS_GetPropertyStr(ctx, argv[2], "onOpen");
     JSValue cb_close = JS_GetPropertyStr(ctx, argv[2], "onClose");
+    JSValue cb_finalize = JS_GetPropertyStr(ctx, argv[2], "onFinalize");
     JSValue opt_chunksz = JS_GetPropertyStr(ctx, argv[2], "chunkSize");
 
     GETCB(cb_content, fp->cb.content)
     GETCB(cb_open, fp->cb.open)
     GETCB(cb_close, fp->cb.close)
+    GETCB(cb_finalize, fp->cb.finalize)
 
     if(JS_IsNumber(opt_chunksz)) {
       JS_ToIndex(ctx, &chunk_size, opt_chunksz);

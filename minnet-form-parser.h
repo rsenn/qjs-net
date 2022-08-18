@@ -14,7 +14,7 @@ typedef struct form_parser {
   struct lwsac* lwsac_head;
   MinnetWebsocket* ws;
   struct {
-    MinnetCallback content, open, close;
+    MinnetCallback content, open, close, finalize;
   } cb;
   JSValue exception;
 } MinnetFormParser;

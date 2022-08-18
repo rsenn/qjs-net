@@ -677,6 +677,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(opaque->form_parser) {
         lws_spa_finalize(opaque->form_parser->spa);
+        if(opaque->form_parser->cb.finalize.ctx) {
+          JSValue ret = minnet_emit(&opaque->form_parser->cb.finalize, 0, 0);
+          JS_FreeValue(opaque->form_parser->cb.finalize.ctx, ret);
+        }
 
       } else {
         MinnetCallback* cb = session->mount ? &session->mount->callback : 0;

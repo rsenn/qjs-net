@@ -255,6 +255,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
+  // assert(ws->lwsi);
   if(ws->lwsi == 0 || ((size_t)ws->lwsi) >> 4 == 0xfffffffffffffff)
     return ret;
 
