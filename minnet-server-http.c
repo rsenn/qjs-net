@@ -665,6 +665,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           generator_write(req->body, in, len);
         }
       }
+
+      if(server->cb.read.ctx) {
+        JSValue args[] = {JS_NewStringLen(server->cb.read.ctx, in, len)};
+        JSValue ret = minnet_emit_this(&server->cb.read, session->req_obj, countof(args), args);
+        JS_FreeValue(server->cb.read.ctx, ret);
+      }
+
       return 0;
     }
 
@@ -681,8 +688,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           JSValue ret = minnet_emit(&opaque->form_parser->cb.finalize, 0, 0);
           JS_FreeValue(opaque->form_parser->cb.finalize.ctx, ret);
         }
+      }
 
-      } else {
+      {
         MinnetCallback* cb = session->mount ? &session->mount->callback : 0;
 
         if(cb && cb->ctx) {
@@ -697,6 +705,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           // fprintf(stderr, "POST body: %p\n", req->body);
           generator_close(req->body, ctx);
         }
+      }
+
+      if(server->cb.post.ctx) {
+        JSValue args[] = {opaque->binary ? buffer_toarraybuffer(&opaque->req->body->buffer, server->cb.post.ctx) : buffer_tostring(&opaque->req->body->buffer, server->cb.post.ctx)};
+        JSValue ret = minnet_emit_this(&server->cb.post, session->req_obj, countof(args), args);
+        JS_FreeValue(server->cb.post.ctx, ret);
       }
 
       if(http_server_respond(wsi, &b, opaque->resp, ctx, session)) {
@@ -830,7 +844,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         }*/
       }
 
-      if(server->cb.http.ctx) {
+      if(req->method != METHOD_POST && server->cb.http.ctx) {
         cb = &server->cb.http;
 
         JSValue val = minnet_emit_this(cb, session->ws_obj, 3, args);
@@ -857,7 +871,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if(req->method == METHOD_GET || is_h2(wsi))
           lws_callback_on_writable(wsi);
 
-      JS_FreeValue(ctx, session->ws_obj);
+      /*JS_FreeValue(ctx, session->ws_obj);
+      session->ws_obj=JS_NULL;*/
 
       return 0;
     }

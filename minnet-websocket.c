@@ -76,9 +76,9 @@ ws_new(struct lws* wsi, JSContext* ctx) {
   return ws;
 }
 static void* prev_ptr = 0;
-
+ 
 void
-opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
+opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
   // printf("%s opaque=%p link=[%p, %p]\n", __func__, opaque, opaque->link.next, opaque->link.prev);
 
@@ -102,13 +102,28 @@ opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
   assert(opaque->link.next);
   list_del(&opaque->link);
+}
 
-  js_free_rt(rt, opaque);
+void
+opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
+  opaque_clear_rt(opaque, rt);
+
+  if(--opaque->ref_count == 0)
+    js_free_rt(rt, opaque);
+}
+
+void
+opaque_clear(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
+  opaque_clear_rt(opaque, JS_GetRuntime(ctx));
 }
 
 void
 opaque_free(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
-  opaque_free_rt(opaque, JS_GetRuntime(ctx));
+  opaque_clear(opaque, ctx);
+
+  if(--opaque->ref_count == 0)
+
+    js_free(ctx, opaque);
 }
 
 void
@@ -164,6 +179,7 @@ opaque_new(JSContext* ctx) {
   if((opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data)))) {
     opaque->serial = ++ws_serial;
     opaque->status = CONNECTING;
+    opaque->ref_count = 1;
 
     list_add(&opaque->link, &minnet_sockets);
   }
@@ -261,18 +277,26 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   if(argc == 0)
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
+  /*
+    ValueItem* item;
 
-  ValueItem* item;
+    if(!(item = js_mallocz(ctx, sizeof(ValueItem))))
+      return JS_ThrowOutOfMemory(ctx);
 
-  if(!(item = js_mallocz(ctx, sizeof(ValueItem))))
-    return JS_ThrowOutOfMemory(ctx);
+    item->value = JS_DupValue(ctx, argv[0]);
 
-  item->value = JS_DupValue(ctx, argv[0]);
+    list_add(&item->link, &ws->sendq);
+  */
+  {
+    JSBuffer buffer = js_input_args(ctx, argc, argv);
 
-  list_add(&item->link, &ws->sendq);
+    if(!ws->sendq)
+      ws->sendq = ringbuffer_new(ctx);
 
-  lws_callback_on_writable(ws->lwsi);
+    ringbuffer_insert(ws->sendq, buffer.data, buffer.size);
 
+    lws_callback_on_writable(ws->lwsi);
+  }
   /*
 
     if(!(m = buffer_fromvalue(&buffer, argv[0], ctx)))

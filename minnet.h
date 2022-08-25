@@ -165,7 +165,7 @@ typedef struct session_data {
 } MinnetSession;
 
 typedef struct callbacks {
-  MinnetCallback message, connect, close, pong, fd, http;
+  MinnetCallback message, connect, close, pong, fd, http, read, post;
 } MinnetCallbacks;
 
 static inline void

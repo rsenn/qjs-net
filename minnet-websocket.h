@@ -14,6 +14,7 @@ struct pollfd {
 #endif
 
 #include "minnet.h"
+#include "minnet-ringbuffer.h"
 #include <quickjs.h>
 
 struct lws;
@@ -27,7 +28,7 @@ typedef struct socket {
   int ref_count;
   struct lws* lwsi;
   // struct wsi_opaque_user_data* opaque;
-  struct list_head sendq;
+  MinnetRingbuffer* sendq;
 } MinnetWebsocket;
 
 extern int64_t ws_serial;
@@ -53,6 +54,7 @@ extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_static_func
 extern const size_t minnet_ws_proto_funcs_size, minnet_ws_static_funcs_size, minnet_ws_proto_defs_size;
 
 struct wsi_opaque_user_data {
+  int ref_count;
   struct socket* ws;
   struct http_request* req;
   struct http_response* resp;
@@ -66,6 +68,12 @@ struct wsi_opaque_user_data {
   struct list_head link;
   struct form_parser* form_parser;
 };
+
+static inline struct wsi_opaque_user_data*
+opaque_dup(struct wsi_opaque_user_data* opaque) {
+  opaque->ref_count++;
+  return opaque;
+}
 
 static inline struct session_data*
 lws_session(struct lws* wsi) {

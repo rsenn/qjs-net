@@ -266,6 +266,8 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
   JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
+  JSValue opt_on_read = JS_GetPropertyStr(ctx, options, "onRead");
+  JSValue opt_on_post = JS_GetPropertyStr(ctx, options, "onPost");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
   JSValue opt_mimetypes = JS_GetPropertyStr(ctx, options, "mimetypes");
   JSValue opt_error_document = JS_GetPropertyStr(ctx, options, "errorDocument");
@@ -310,6 +312,8 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCB(opt_on_message, server->cb.message)
   GETCB(opt_on_fd, server->cb.fd)
   GETCB(opt_on_http, server->cb.http)
+  GETCB(opt_on_read, server->cb.read)
+  GETCB(opt_on_post, server->cb.post)
 
   for(int i = 0; i < countof(protocols); i++) protocols[i].user = ctx;
 
