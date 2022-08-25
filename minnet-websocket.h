@@ -28,7 +28,7 @@ typedef struct socket {
   int ref_count;
   struct lws* lwsi;
   // struct wsi_opaque_user_data* opaque;
-  MinnetRingbuffer* sendq;
+  MinnetRingbuffer sendq;
 } MinnetWebsocket;
 
 extern int64_t ws_serial;

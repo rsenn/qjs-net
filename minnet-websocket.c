@@ -61,9 +61,8 @@ ws_new(struct lws* wsi, JSContext* ctx) {
     return 0;
 
   ws->lwsi = wsi;
-  ws->ref_count = 1;
-
-  init_list_head(&ws->sendq);
+  ws->ref_count = 2;
+  ringbuffer_init2(&ws->sendq, sizeof(MinnetBytes), 65536 * 2);
 
   if((opaque = lws_opaque(wsi, ctx))) {
     opaque->ws = ws;
@@ -76,7 +75,7 @@ ws_new(struct lws* wsi, JSContext* ctx) {
   return ws;
 }
 static void* prev_ptr = 0;
- 
+
 void
 opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
@@ -143,6 +142,8 @@ ws_clear_rt(MinnetWebsocket* ws, JSRuntime* rt) {
           lws_close_free_wsi(wsi, LWS_CLOSE_STATUS_NOSTATUS, __func__);*/
     }
   }
+
+  ringbuffer_zero(&ws->sendq);
 }
 
 void
@@ -277,60 +278,14 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   if(argc == 0)
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
-  /*
-    ValueItem* item;
-
-    if(!(item = js_mallocz(ctx, sizeof(ValueItem))))
-      return JS_ThrowOutOfMemory(ctx);
-
-    item->value = JS_DupValue(ctx, argv[0]);
-
-    list_add(&item->link, &ws->sendq);
-  */
   {
-    JSBuffer buffer = js_input_args(ctx, argc, argv);
+    JSBuffer jsbuf = js_input_args(ctx, argc, argv);
+    MinnetBytes buffer = block_fromjs(jsbuf);
 
-    if(!ws->sendq)
-      ws->sendq = ringbuffer_new(ctx);
-
-    ringbuffer_insert(ws->sendq, buffer.data, buffer.size);
+    ringbuffer_insert(&ws->sendq, &buffer, 1);
 
     lws_callback_on_writable(ws->lwsi);
   }
-  /*
-
-    if(!(m = buffer_fromvalue(&buffer, argv[0], ctx)))
-      return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
-
-    if(m < 0) {
-      ret = JS_ThrowOutOfMemory(ctx);
-      goto fail;
-    }
-
-    len = buffer_REMAIN(&buffer);
-
-    if(ws && ws->lwsi) {
-      if((session = ws_session(ws)) && *((char**)((char*)ws->lwsi)+1208)) {
-
-        buffer_append(&session->send_buf, buffer.read, len, ctx);
-
-        lws_callback_on_writable(ws->lwsi);
-
-      } else {
-
-        m = lws_write(ws->lwsi, buffer.read, buffer_REMAIN(&buffer), JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
-
-        if(m < len)
-          ret = JS_ThrowInternalError(ctx, "lws write failed: %" PRIi64 "/%" PRIi64, m, len);
-        else
-          ret = JS_NewInt64(ctx, m);
-      }
-    } else {
-      ret = JS_ThrowInternalError(ctx, "No ws-lwsi");
-    }
-
-  fail:
-    buffer_free(&buffer, JS_GetRuntime(ctx));*/
 
   return ret;
 }
@@ -628,8 +583,6 @@ minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValue
    }*/
 
   JS_SetOpaque(obj, ws);
-
-  init_list_head(&ws->sendq);
 
   if(ws->lwsi) {
     struct wsi_opaque_user_data* opaque = opaque_new(ctx);

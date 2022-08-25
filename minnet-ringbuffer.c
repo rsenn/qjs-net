@@ -2,6 +2,7 @@
 #include <quickjs.h>
 #include <assert.h>
 #include <libwebsockets.h>
+#include <pthread.h>
 
 THREAD_LOCAL JSClassID minnet_ringbuffer_class_id;
 THREAD_LOCAL JSValue minnet_ringbuffer_proto, minnet_ringbuffer_ctor;
@@ -25,6 +26,8 @@ ringbuffer_init(struct ringbuffer* strm, size_t element_len, size_t count, const
     pstrcpy(strm->type, MIN(typelen + 1, sizeof(strm->type)), type);
 
   strm->ring = lws_ring_create(element_len, count, ringbuffer_destroy_element);
+
+  pthread_mutex_init(&strm->lock_ring, 0);
 }
 
 struct ringbuffer*
@@ -33,39 +36,63 @@ ringbuffer_new(JSContext* ctx) {
 
   if((strm = js_mallocz(ctx, sizeof(MinnetRingbuffer))))
     strm->ref_count = 1;
+
   return strm;
+}
+
+void
+ringbuffer_init2(struct ringbuffer* strm, size_t element_len, size_t count) {
+
+  const char* type = "application/binary";
+  ringbuffer_init(strm, element_len, count, type, strlen(type));
 }
 
 struct ringbuffer*
 ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
   MinnetRingbuffer* strm;
 
-  if((strm = ringbuffer_new(ctx))) {
-    const char* type = "application/binary";
-    ringbuffer_init(strm, element_len, count, type, strlen(type));
-  }
+  if((strm = ringbuffer_new(ctx)))
+
+    ringbuffer_init2(strm, element_len, count);
+
   return strm;
 }
 
 size_t
 ringbuffer_insert(struct ringbuffer* strm, const void* ptr, size_t n) {
+  size_t ret;
   assert(strm->ring);
 
-  return lws_ring_insert(strm->ring, ptr, n);
+  pthread_mutex_lock(&strm->lock_ring);
+
+  ret = lws_ring_insert(strm->ring, ptr, n);
+  pthread_mutex_unlock(&strm->lock_ring);
+
+  return ret;
 }
 
 size_t
 ringbuffer_consume(struct ringbuffer* strm, void* ptr, size_t n) {
+  size_t ret;
   assert(strm->ring);
+  pthread_mutex_lock(&strm->lock_ring);
 
-  return lws_ring_consume(strm->ring, 0, ptr, n);
+  ret = lws_ring_consume(strm->ring, 0, ptr, n);
+
+  pthread_mutex_unlock(&strm->lock_ring);
+  return ret;
 }
 
 size_t
 ringbuffer_skip(struct ringbuffer* strm, size_t n) {
+  size_t ret;
   assert(strm->ring);
+  pthread_mutex_lock(&strm->lock_ring);
 
-  return lws_ring_consume(strm->ring, 0, 0, n);
+  ret = lws_ring_consume(strm->ring, 0, 0, n);
+
+  pthread_mutex_unlock(&strm->lock_ring);
+  return ret;
 }
 
 const void*
@@ -94,7 +121,7 @@ ringbuffer_zero(struct ringbuffer* strm) {
 
 void
 ringbuffer_free(struct ringbuffer* strm, JSRuntime* rt) {
-  lws_ring_destroy(strm->ring);
+  ringbuffer_zero(strm);
   js_free_rt(rt, strm);
 }
 

@@ -4,6 +4,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "minnet.h"
+#include "minnet-buffer.h"
 #include <libwebsockets.h>
 #include <pthread.h>
 
@@ -18,6 +19,7 @@ typedef struct ringbuffer {
 void ringbuffer_dump(struct ringbuffer const*);
 void ringbuffer_init(struct ringbuffer*, size_t, size_t, const char* type, size_t typelen);
 struct ringbuffer* ringbuffer_new(JSContext*);
+void ringbuffer_init2(struct ringbuffer*, size_t, size_t);
 struct ringbuffer* ringbuffer_new2(size_t, size_t, JSContext*);
 size_t ringbuffer_insert(struct ringbuffer*, const void*, size_t);
 size_t ringbuffer_consume(struct ringbuffer*, void*, size_t);
@@ -27,7 +29,7 @@ size_t ringbuffer_size(struct ringbuffer*);
 size_t ringbuffer_avail(struct ringbuffer*);
 void ringbuffer_zero(struct ringbuffer*);
 void ringbuffer_free(struct ringbuffer*, JSRuntime*);
-JSValue minnet_ringbuffer_constructor(JSContext*, JSValue, int, JSValue argv[]);
+JSValue minnet_ringbuffer_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
 JSValue minnet_ringbuffer_new(JSContext*, const char*, size_t, const void* x, size_t n);
 JSValue minnet_ringbuffer_wrap(JSContext*, struct ringbuffer*);
 

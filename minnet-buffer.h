@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <quickjs.h>
 #include <cutils.h>
+#include "jsutils.h"
 
 typedef struct byte_block {
   uint8_t* start;
@@ -24,6 +25,11 @@ void block_free(MinnetBytes*, JSRuntime*);
 int block_fromarraybuffer(MinnetBytes*, JSValue, JSContext*);
 JSValue block_toarraybuffer(MinnetBytes*, JSContext*);
 JSValue block_tostring(MinnetBytes const*, JSContext*);
+static inline MinnetBytes
+block_fromjs(JSBuffer buf) {
+  MinnetBytes ret = {buf.data, buf.data + buf.size};
+  return ret;
+}
 
 static inline uint8_t*
 block_grow(MinnetBytes* blk, size_t size, JSContext* ctx) {
