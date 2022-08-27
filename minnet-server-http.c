@@ -654,7 +654,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       session->in_body = TRUE;
 
-      LOGCB("HTTP", "%slen: %zu", is_h2(wsi) ? "h2, " : "", len);
+      LOGCB("HTTP", "%slen: %zu parser: %p", is_h2(wsi) ? "h2, " : "", len, opaque->form_parser);
 
       if(len) {
         if(opaque->form_parser) {
@@ -668,7 +668,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(server->cb.read.ctx) {
         JSValue args[] = {JS_NewStringLen(server->cb.read.ctx, in, len)};
-        JSValue ret = minnet_emit_this(&server->cb.read, session->req_obj, countof(args), args);
+        JSValue ret = server_exception(server, minnet_emit_this(&server->cb.read, session->req_obj, countof(args), args));
         JS_FreeValue(server->cb.read.ctx, ret);
       }
 
@@ -685,7 +685,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(opaque->form_parser) {
         lws_spa_finalize(opaque->form_parser->spa);
         if(opaque->form_parser->cb.finalize.ctx) {
-          JSValue ret = minnet_emit(&opaque->form_parser->cb.finalize, 0, 0);
+          JSValue ret = server_exception(server, minnet_emit(&opaque->form_parser->cb.finalize, 0, 0));
           JS_FreeValue(opaque->form_parser->cb.finalize.ctx, ret);
         }
       }
@@ -694,7 +694,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         MinnetCallback* cb = session->mount ? &session->mount->callback : 0;
 
         if(cb && cb->ctx) {
-          JSValue ret = minnet_emit_this(cb, session->ws_obj, 2, session->args);
+          JSValue ret = server_exception(server, minnet_emit_this(cb, session->ws_obj, 2, session->args));
 
           assert(js_is_iterator(ctx, ret));
           session->generator = ret;
@@ -709,7 +709,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(server->cb.post.ctx) {
         JSValue args[] = {opaque->binary ? buffer_toarraybuffer(&opaque->req->body->buffer, server->cb.post.ctx) : buffer_tostring(&opaque->req->body->buffer, server->cb.post.ctx)};
-        JSValue ret = minnet_emit_this(&server->cb.post, session->req_obj, countof(args), args);
+        JSValue ret = server_exception(server, minnet_emit_this(&server->cb.post, session->req_obj, countof(args), args));
         JS_FreeValue(server->cb.post.ctx, ret);
       }
 
@@ -820,7 +820,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           if(req->method == METHOD_GET /* || is_h2(wsi)*/) {
             resp = session_response(session, cb);
 
-            JSValue gen = minnet_emit_this(cb, session->ws_obj, 2, &args[1]);
+            JSValue gen = server_exception(server, minnet_emit_this(cb, session->ws_obj, 2, &args[1]));
             if(js_is_iterator(ctx, gen)) {
               assert(js_is_iterator(ctx, gen));
               LOGCB("HTTP(5)", "gen=%s", JS_ToCString(ctx, gen));
@@ -844,10 +844,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         }*/
       }
 
-      if(req->method != METHOD_POST && server->cb.http.ctx) {
+      if(/*req->method != METHOD_POST &&*/ server->cb.http.ctx) {
         cb = &server->cb.http;
 
-        JSValue val = minnet_emit_this(cb, session->ws_obj, 3, args);
+        JSValue val = server_exception(server, minnet_emit_this(cb, session->ws_obj, 3, args));
         JS_FreeValue(ctx, val);
       }
 

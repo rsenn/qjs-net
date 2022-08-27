@@ -10,7 +10,7 @@
 THREAD_LOCAL JSClassID minnet_form_parser_class_id;
 THREAD_LOCAL JSValue minnet_form_parser_proto, minnet_form_parser_ctor;
 
-enum { FORM_PARSER_PARAMS, FORM_PARSER_SOCKET, FORM_PARSER_ON_OPEN, FORM_PARSER_ON_CONTENT, FORM_PARSER_ON_CLOSE };
+enum { FORM_PARSER_PARAMS, FORM_PARSER_SOCKET, FORM_PARSER_READ, FORM_PARSER_ON_OPEN, FORM_PARSER_ON_CONTENT, FORM_PARSER_ON_CLOSE, FORM_PARSER_ON_FINALIZE };
 
 static int
 form_parser_callback(void* data, const char* name, const char* filename, char* buf, int len, enum lws_spa_fileupload_states state) {
@@ -199,7 +199,7 @@ form_parser_param_exists(MinnetFormParser* fp, const char* name) {
 int
 form_parser_process(MinnetFormParser* fp, const void* data, size_t len) {
   int retval = lws_spa_process(fp->spa, data, len);
-
+  fp->read += len;
   return retval;
 }
 
@@ -234,6 +234,8 @@ minnet_form_parser_constructor(JSContext* ctx, JSValueConst new_target, int argc
     goto fail;
   }
 
+  JS_SetOpaque(obj, fp);
+
   if(argc >= 3 && JS_IsObject(argv[2])) {
     JSValue this_val = obj;
 
@@ -247,6 +249,11 @@ minnet_form_parser_constructor(JSContext* ctx, JSValueConst new_target, int argc
     GETCB(cb_open, fp->cb.open)
     GETCB(cb_close, fp->cb.close)
     GETCB(cb_finalize, fp->cb.finalize)
+
+    JS_SetPropertyStr(ctx, obj, "oncontent", fp->cb.content.func_obj);
+    JS_SetPropertyStr(ctx, obj, "onopen", fp->cb.open.func_obj);
+    JS_SetPropertyStr(ctx, obj, "onclose", fp->cb.close.func_obj);
+    JS_SetPropertyStr(ctx, obj, "onfinalize", fp->cb.finalize.func_obj);
 
     if(JS_IsNumber(opt_chunksz)) {
       JS_ToIndex(ctx, &chunk_size, opt_chunksz);
@@ -262,8 +269,6 @@ minnet_form_parser_constructor(JSContext* ctx, JSValueConst new_target, int argc
       form_parser_free(opaque->form_parser, ctx);
     opaque->form_parser = fp;
   }
-
-  JS_SetOpaque(obj, fp);
 
   return obj;
 
@@ -313,6 +318,10 @@ minnet_form_parser_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = minnet_ws_wrap(ctx, fp->ws);
       break;
     }
+    case FORM_PARSER_READ: {
+      ret = JS_NewUint32(ctx, fp->read);
+      break;
+    }
     case FORM_PARSER_ON_OPEN: {
       ret = JS_DupValue(ctx, fp->cb.open.func_obj);
       break;
@@ -323,6 +332,10 @@ minnet_form_parser_get(JSContext* ctx, JSValueConst this_val, int magic) {
     }
     case FORM_PARSER_ON_CLOSE: {
       ret = JS_DupValue(ctx, fp->cb.close.func_obj);
+      break;
+    }
+    case FORM_PARSER_ON_FINALIZE: {
+      ret = JS_DupValue(ctx, fp->cb.finalize.func_obj);
       break;
     }
   }
@@ -363,6 +376,14 @@ minnet_form_parser_set(JSContext* ctx, JSValueConst this_val, JSValueConst value
       fp->cb.close.this_obj = JS_DupValue(ctx, this_val);
       break;
     }
+    case FORM_PARSER_ON_FINALIZE: {
+      JS_FreeValue(ctx, fp->cb.finalize.func_obj);
+      JS_FreeValue(ctx, fp->cb.finalize.this_obj);
+      fp->cb.finalize.ctx = ctx;
+      fp->cb.finalize.func_obj = JS_DupValue(ctx, value);
+      fp->cb.finalize.this_obj = JS_DupValue(ctx, this_val);
+      break;
+    }
   }
 
   return ret;
@@ -401,12 +422,15 @@ minnet_form_parser_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc,
     BOOL ret = FALSE;
     int index;
 
-    if((index = form_parser_param_index(fp, str)) != -1) {
-      ret = TRUE;
-      pdesc->flags = JS_PROP_ENUMERABLE;
-      pdesc->value = JS_NewStringLen(ctx, lws_spa_get_string(fp->spa, index), lws_spa_get_length(fp->spa, index));
-      pdesc->getter = JS_UNDEFINED;
-      pdesc->setter = JS_UNDEFINED;
+    if(strncmp(str, "on", 2)) {
+
+      if((index = form_parser_param_index(fp, str)) != -1) {
+        ret = TRUE;
+        pdesc->flags = JS_PROP_ENUMERABLE;
+        pdesc->value = JS_NewStringLen(ctx, lws_spa_get_string(fp->spa, index), lws_spa_get_length(fp->spa, index));
+        pdesc->getter = JS_UNDEFINED;
+        pdesc->setter = JS_UNDEFINED;
+      }
     }
 
     JS_FreeCString(ctx, str);
@@ -555,6 +579,11 @@ JSClassDef minnet_form_parser_class = {
 const JSCFunctionListEntry minnet_form_parser_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_form_parser_get, minnet_form_parser_set, FORM_PARSER_SOCKET, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("params", minnet_form_parser_get, minnet_form_parser_set, FORM_PARSER_PARAMS, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("read", minnet_form_parser_get, 0, FORM_PARSER_READ, 0),
+    /* JS_CGETSET_MAGIC_FLAGS_DEF("onclose", minnet_form_parser_get, 0, FORM_PARSER_ON_CLOSE, 0),
+     JS_CGETSET_MAGIC_FLAGS_DEF("onopen", minnet_form_parser_get, 0, FORM_PARSER_ON_OPEN , 0),
+     JS_CGETSET_MAGIC_FLAGS_DEF("oncontent", minnet_form_parser_get, 0, FORM_PARSER_ON_CONTENT , 0),
+     JS_CGETSET_MAGIC_FLAGS_DEF("onfinalize", minnet_form_parser_get, 0, FORM_PARSER_ON_FINALIZE , 0),*/
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetFormParser", JS_PROP_CONFIGURABLE),
 };
 

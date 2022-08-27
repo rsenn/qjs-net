@@ -231,11 +231,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(client->on.http.ctx) {
         int32_t result = -1;
         JSValue ret;
-        ret = minnet_emit(&client->on.http, 2, &session->req_obj);
-        if(!client_exception(client, ret)) {
-          if(JS_IsNumber(ret))
-            JS_ToInt32(client->on.http.ctx, &result, ret);
-        }
+        ret = client_exception(client, minnet_emit(&client->on.http, 2, &session->req_obj));
+        if(JS_IsNumber(ret))
+          JS_ToInt32(client->on.http.ctx, &result, ret);
         lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
 
         return result;
