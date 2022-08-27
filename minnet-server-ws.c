@@ -3,6 +3,7 @@
 #include "minnet-request.h"
 #include "jsutils.h"
 #include "minnet-response.h"
+#include <alloca.h>
 #include <assert.h>
 #include <libwebsockets.h>
 
@@ -81,7 +82,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
           opaque->ws->lwsi = 0;
 
         lws_set_opaque_user_data(wsi, 0);
-        opaque_free(opaque, ctx);
+        // opaque_free(opaque, ctx);
       }
       return 0;
     }
@@ -195,38 +196,14 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
       // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));
+      if(&opaque->ws->sendq) {
+        size_t size;
 
-      /* MinnetBuffer* buf = &session->send_buf;*/
-      // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s buf=%s\n", lws_callback_name(reason) + 13, buffer_escaped(buf, ctx));
-      //
-      ValueItem* item = 0;
-      struct list_head* el;
-
-      list_for_each(el, &opaque->ws->sendq) {
-        item = list_entry(el, ValueItem, link);
-
-        break;
-      }
-
-      if(item) {
-        //      MinnetBytes block={0};
-        JSBuffer buffer = js_input_chars(ctx, item->value);
-        int n = buffer.size;
-
-        int ret = lws_write(wsi, buffer.data, buffer.size, JS_IsString(buffer.value) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
-
-        /*      if(!block_fromarraybuffer(&block,item->value,ctx)) {
-
-              }
-        */
-
-        // js_buffer_free(ctx, &buffer);
-
-        if(ret == n) {
-
-          list_del(&item->link);
-          JS_FreeValue(ctx, item->value);
-          js_free(ctx, item);
+        while((size = ringbuffer_size(&opaque->ws->sendq))) {
+          MinnetBuffer buf;
+          ringbuffer_consume(&opaque->ws->sendq, &buf, 1);
+          int ret = lws_write(wsi, buf.start, buf.end - buf.start, opaque->binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
+          // printf("writable bytes=%zx size=%zx ret=%d\n", buffer_BYTES(&buf), size, ret);
         }
       }
 
@@ -262,7 +239,9 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;
     }
-
+    case LWS_CALLBACK_CONFIRM_EXTENSION_OKAY: {
+      return 0;
+    }
     default: {
       // printf("ws_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
       minnet_lws_unhandled(__func__, reason);

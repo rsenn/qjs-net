@@ -61,9 +61,8 @@ ws_new(struct lws* wsi, JSContext* ctx) {
     return 0;
 
   ws->lwsi = wsi;
-  ws->ref_count = 1;
-
-  init_list_head(&ws->sendq);
+  ws->ref_count = 2;
+  ringbuffer_init2(&ws->sendq, sizeof(MinnetBytes), 65536 * 2);
 
   if((opaque = lws_opaque(wsi, ctx))) {
     opaque->ws = ws;
@@ -78,7 +77,7 @@ ws_new(struct lws* wsi, JSContext* ctx) {
 static void* prev_ptr = 0;
 
 void
-opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
+opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
   // printf("%s opaque=%p link=[%p, %p]\n", __func__, opaque, opaque->link.next, opaque->link.prev);
 
@@ -102,13 +101,28 @@ opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
   assert(opaque->link.next);
   list_del(&opaque->link);
+}
 
-  js_free_rt(rt, opaque);
+void
+opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
+  opaque_clear_rt(opaque, rt);
+
+  if(--opaque->ref_count == 0)
+    js_free_rt(rt, opaque);
+}
+
+void
+opaque_clear(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
+  opaque_clear_rt(opaque, JS_GetRuntime(ctx));
 }
 
 void
 opaque_free(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
-  opaque_free_rt(opaque, JS_GetRuntime(ctx));
+  opaque_clear(opaque, ctx);
+
+  if(--opaque->ref_count == 0)
+
+    js_free(ctx, opaque);
 }
 
 void
@@ -128,6 +142,8 @@ ws_clear_rt(MinnetWebsocket* ws, JSRuntime* rt) {
           lws_close_free_wsi(wsi, LWS_CLOSE_STATUS_NOSTATUS, __func__);*/
     }
   }
+
+  ringbuffer_zero(&ws->sendq);
 }
 
 void
@@ -164,6 +180,7 @@ opaque_new(JSContext* ctx) {
   if((opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data)))) {
     opaque->serial = ++ws_serial;
     opaque->status = CONNECTING;
+    opaque->ref_count = 1;
 
     list_add(&opaque->link, &minnet_sockets);
   }
@@ -261,52 +278,14 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   if(argc == 0)
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
+  {
+    JSBuffer jsbuf = js_input_args(ctx, argc, argv);
+    MinnetBytes buffer = block_fromjs(jsbuf);
 
-  ValueItem* item;
+    ringbuffer_insert(&ws->sendq, &buffer, 1);
 
-  if(!(item = js_mallocz(ctx, sizeof(ValueItem))))
-    return JS_ThrowOutOfMemory(ctx);
-
-  item->value = JS_DupValue(ctx, argv[0]);
-
-  list_add(&item->link, &ws->sendq);
-
-  lws_callback_on_writable(ws->lwsi);
-
-  /*
-
-    if(!(m = buffer_fromvalue(&buffer, argv[0], ctx)))
-      return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
-
-    if(m < 0) {
-      ret = JS_ThrowOutOfMemory(ctx);
-      goto fail;
-    }
-
-    len = buffer_REMAIN(&buffer);
-
-    if(ws && ws->lwsi) {
-      if((session = ws_session(ws)) && *((char**)((char*)ws->lwsi)+1208)) {
-
-        buffer_append(&session->send_buf, buffer.read, len, ctx);
-
-        lws_callback_on_writable(ws->lwsi);
-
-      } else {
-
-        m = lws_write(ws->lwsi, buffer.read, buffer_REMAIN(&buffer), JS_IsString(argv[0]) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY);
-
-        if(m < len)
-          ret = JS_ThrowInternalError(ctx, "lws write failed: %" PRIi64 "/%" PRIi64, m, len);
-        else
-          ret = JS_NewInt64(ctx, m);
-      }
-    } else {
-      ret = JS_ThrowInternalError(ctx, "No ws-lwsi");
-    }
-
-  fail:
-    buffer_free(&buffer, JS_GetRuntime(ctx));*/
+    lws_callback_on_writable(ws->lwsi);
+  }
 
   return ret;
 }
@@ -604,8 +583,6 @@ minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValue
    }*/
 
   JS_SetOpaque(obj, ws);
-
-  init_list_head(&ws->sendq);
 
   if(ws->lwsi) {
     struct wsi_opaque_user_data* opaque = opaque_new(ctx);

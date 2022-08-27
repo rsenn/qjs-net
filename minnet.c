@@ -212,7 +212,7 @@ session_object(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
   return ret;
 }
 
-BOOL
+JSValue
 context_exception(MinnetContext* context, JSValue retval) {
   if(JS_IsException(retval)) {
     context->exception = TRUE;
@@ -220,14 +220,14 @@ context_exception(MinnetContext* context, JSValue retval) {
     JSValue stack = JS_GetPropertyStr(context->js, exception, "stack");
     const char* err = JS_ToCString(context->js, exception);
     const char* stk = JS_ToCString(context->js, stack);
-    // printf("Got exception: %s\n%s\n", err, stk);
+    printf("Got exception: %s\n%s\n", err, stk);
     JS_FreeCString(context->js, err);
     JS_FreeCString(context->js, stk);
     JS_FreeValue(context->js, stack);
     JS_Throw(context->js, exception);
   }
 
-  return context->exception;
+  return retval;
 }
 
 void

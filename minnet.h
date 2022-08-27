@@ -165,7 +165,7 @@ typedef struct session_data {
 } MinnetSession;
 
 typedef struct callbacks {
-  MinnetCallback message, connect, close, pong, fd, http;
+  MinnetCallback message, connect, close, pong, fd, http, read, post;
 } MinnetCallbacks;
 
 static inline void
@@ -198,7 +198,7 @@ int socket_geterror(int);
 void session_zero(MinnetSession*);
 void session_clear(MinnetSession*, JSContext*);
 struct http_response* session_response(MinnetSession* session, MinnetCallback* cb);
-BOOL context_exception(MinnetContext*, JSValue);
+JSValue context_exception(MinnetContext*, JSValue);
 void context_clear(MinnetContext*);
 MinnetClosure* closure_new(JSContext*);
 MinnetClosure* closure_dup(MinnetClosure*);

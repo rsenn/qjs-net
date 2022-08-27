@@ -482,10 +482,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
             cb_argv[3] = JS_NewInt32(ctx, err);
           }
 
-          ret = minnet_emit(&client->on.close, argc, cb_argv);
-          if(!client_exception(client, ret))
-            if(JS_IsNumber(ret))
-              JS_ToInt32(ctx, &result, ret);
+          ret = client_exception(client, minnet_emit(&client->on.close, argc, cb_argv));
+          if(JS_IsNumber(ret))
+            JS_ToInt32(ctx, &result, ret);
           JS_FreeValue(ctx, ret);
           JS_FreeValue(ctx, cb_argv[1]);
           JS_FreeValue(ctx, cb_argv[2]);
