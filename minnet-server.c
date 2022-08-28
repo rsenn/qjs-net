@@ -329,7 +329,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->port = url.port;
   info->timeout_secs = 0;
   info->options = 0;
-  info->extensions = extensions;
+  // info->extensions = extensions;
 
   // client_certificate(&server->context, options);
 
