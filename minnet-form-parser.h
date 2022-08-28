@@ -18,6 +18,7 @@ typedef struct form_parser {
   } cb;
   JSValue exception;
   size_t read;
+  JSValue filename;
 } MinnetFormParser;
 
 void form_parser_init(MinnetFormParser*, MinnetWebsocket*, int, const char* const* param_names, size_t chunk_size);
