@@ -716,7 +716,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(http_server_respond(wsi, &b, opaque->resp, ctx, session)) {
         JS_FreeValue(ctx, session->ws_obj);
         session->ws_obj = JS_NULL;
-        return 1;
+        // return 1;
       }
 
       lws_callback_on_writable(wsi);
@@ -805,13 +805,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
            LOGCB("HTTP", "http_server_respond FAIL %d", ret);
            JS_FreeValue(ctx, session->ws_obj);
            session->ws_obj = JS_NULL;
-           lws_callback_on_writable(wsi);
-           return 0;
-         }
-
-        // if(ret == 0)
-           lws_callback_on_writable(wsi);
-           return 0;*/
+            return 0;
+         }*/
       }
 
       if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {

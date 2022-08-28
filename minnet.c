@@ -716,6 +716,9 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
     if(p->revents & (POLLERR | POLLHUP))
       closure->opaque->error = errno;
 
+    /*if(x.revents & POLLOUT)
+      if(x.revents & POLLIN)
+        x.revents &= ~(POLLOUT);*/
     // errno = 0;
 
     ret = JS_NewInt32(ctx, lws_service_fd(lws_get_context(closure->lwsi), &x));
