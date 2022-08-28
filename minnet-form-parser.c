@@ -22,18 +22,48 @@ form_parser_callback(void* data, const char* name, const char* filename, char* b
     case LWS_UFS_CONTENT:
     case LWS_UFS_FINAL_CONTENT: {
       cb = &fp->cb.content;
-      if(cb->ctx && len > 0)
-        args[1] = JS_NewArrayBufferCopy(cb->ctx, (uint8_t*)buf, len);
+      if(cb->ctx) {
+        if(len > 0)
+          args[1] = JS_NewArrayBufferCopy(cb->ctx, (uint8_t*)buf, len);
+      }
       break;
     }
     case LWS_UFS_OPEN: {
       cb = &fp->cb.open;
-      if(cb->ctx && filename)
-        args[1] = JS_NewString(cb->ctx, filename);
+      if(cb->ctx) {
+        if(!JS_IsUndefined(fp->file)) {
+          if(fp->cb.close.ctx) {
+            args[1] = fp->file;
+            JSValue ret = minnet_emit(&fp->cb.close, 2, args);
+            JS_FreeValue(cb->ctx, ret);
+          }
+          JS_FreeValue(cb->ctx, fp->file);
+          fp->file = JS_UNDEFINED;
+        }
+        if(filename) {
+          fp->file = JS_NewString(cb->ctx, filename);
+          args[1] = JS_DupValue(cb->ctx, fp->file);
+        }
+        if(!JS_IsUndefined(fp->name)) {
+
+          JS_FreeValue(cb->ctx, fp->name);
+          fp->name = JS_UNDEFINED;
+        }
+        if(name) {
+          fp->name = JS_NewString(cb->ctx, name);
+        }
+      }
       break;
     }
     case LWS_UFS_CLOSE: {
       cb = &fp->cb.close;
+      if(cb->ctx) {
+        // args[0] = JS_DupValue(cb->ctx, fp->name);
+        if(!JS_IsUndefined(fp->file))
+          args[1] = JS_DupValue(cb->ctx, fp->file);
+        JS_FreeValue(cb->ctx, fp->file);
+        fp->file = JS_UNDEFINED;
+      }
       break;
     }
   }
@@ -41,8 +71,11 @@ form_parser_callback(void* data, const char* name, const char* filename, char* b
   if(cb && cb->ctx) {
     JSValue ret;
 
-    if(name)
-      args[0] = JS_NewString(cb->ctx, name);
+    /*  if(JS_IsUndefined(fp->name) && name)
+          args[0] = JS_NewString(cb->ctx, name);
+        else*/
+    if(JS_IsUndefined(fp->name))
+      args[0] = JS_DupValue(cb->ctx, fp->name);
 
     ret = minnet_emit(cb, 2, args);
 
@@ -69,6 +102,8 @@ form_parser_init(MinnetFormParser* fp, MinnetWebsocket* ws, int nparams, const c
 
   fp->spa = lws_spa_create_via_info(ws->lwsi, &fp->spa_create_info);
   fp->exception = JS_NULL;
+  fp->name = JS_UNDEFINED;
+  fp->file = JS_UNDEFINED;
 }
 
 MinnetFormParser*
