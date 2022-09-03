@@ -12,6 +12,16 @@
 #define HIDDEN __attribute__((visibility("hidden")))
 #endif
 
+#ifdef _Thread_local
+#define THREAD_LOCAL _Thread_local
+#elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_CC) || defined(__IBMCPP__)
+#define THREAD_LOCAL __thread
+#elif defined(_WIN32)
+#define THREAD_LOCAL __declspec(thread)
+#else
+#error No TLS implementation found.
+#endif
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

@@ -1,9 +1,9 @@
-#include "minnet.h"
+#include "minnet-url.h"
+#include "jsutils.h"
 #include <assert.h>
 #include <limits.h>
 #include <ctype.h>
 #include <strings.h>
-#include <libwebsockets.h>
 
 #ifndef HAVE_STRLCPY
 size_t

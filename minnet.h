@@ -9,29 +9,6 @@
 union byte_buffer;
 struct http_request;
 
-#ifdef JS_SHARED_LIBRARY
-#define JS_INIT_MODULE js_init_module
-#else
-#define JS_INIT_MODULE js_init_module_minnet
-#endif
-
-#define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags) \
-  { \
-    .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET_MAGIC, .magic = magic_num, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} } \
-  }
-#define JS_CGETSET_FLAGS_DEF(prop_name, fgetter, fsetter, flags) \
-  { \
-    .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} } \
-  }
-
-#define JS_INDEX_STRING_DEF(index, cstr) \
-  { \
-    .name = #index, .prop_flags = JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, .def_type = JS_DEF_PROP_STRING, .magic = 0, .u = {.str = cstr } \
-  }
-#define JS_CFUNC_FLAGS_DEF(prop_name, length, func1, flags) \
-  { \
-    .name = prop_name, .prop_flags = (flags), .def_type = JS_DEF_CFUNC, .magic = 0, .u = {.func = {length, JS_CFUNC_generic, {.generic = func1}} } \
-  }
 #define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
 
 #define ADD(ptr, inst, member) \
@@ -53,18 +30,8 @@ struct http_request;
             args);
 #define LOGCB(name, fmt, args...) LOG((name), FG("%d") "%-38s" NC " wsi#%" PRId64 " " fmt "", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, args);
 
-#ifdef _Thread_local
-#define THREAD_LOCAL _Thread_local
-#elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_CC) || defined(__IBMCPP__)
-#define THREAD_LOCAL __thread
-#elif defined(_WIN32)
-#define THREAD_LOCAL __declspec(thread)
-#else
-#error No TLS implementation found.
-#endif
-
-#include "minnet-buffer.h"
-#include "minnet-url.h"
+/*#include "minnet-buffer.h"
+#include "minnet-url.h"*/
 
 enum { READ_HANDLER = 0, WRITE_HANDLER };
 enum http_method;
@@ -109,8 +76,7 @@ enum http_method {
 };
 
 typedef enum http_method MinnetHttpMethod;
- 
- 
+
 typedef struct context {
   int ref_count;
   JSContext* js;
@@ -134,20 +100,7 @@ MinnetClosure* closure_new(JSContext*);
 MinnetClosure* closure_dup(MinnetClosure*);
 void closure_free(void*);
 int minnet_lws_unhandled(const char*, int);
-JSValue headers_object(JSContext*, const void*, const void*);
-char* headers_atom(JSAtom, JSContext*);
-int headers_addobj(MinnetBuffer*, struct lws*, JSValueConst, JSContext* ctx);
-size_t headers_write(uint8_t**, uint8_t*, MinnetBuffer*, struct lws* wsi);
-int headers_fromobj(MinnetBuffer*, JSValueConst, JSContext*);
-ssize_t headers_set(JSContext*, MinnetBuffer*, const char*, const char* value);
-ssize_t headers_findb(MinnetBuffer*, const char*, size_t);
-ssize_t headers_find(MinnetBuffer*, const char*);
-char* headers_at(MinnetBuffer* buffer, size_t* lenptr, size_t index);
-char* headers_get(MinnetBuffer*, size_t*, const char*);
-ssize_t headers_copy(MinnetBuffer*, char*, size_t, const char* name);
-ssize_t headers_unsetb(MinnetBuffer*, const char*, size_t);
-ssize_t headers_unset(MinnetBuffer*, const char*);
-int headers_tostring(JSContext*, MinnetBuffer*, struct lws*);
+
 void minnet_handlers(JSContext*, struct lws*, struct lws_pollargs, JSValue out[2]);
 void value_dump(JSContext*, const char*, JSValue const*);
 JSModuleDef* js_init_module_minnet(JSContext*, const char*);

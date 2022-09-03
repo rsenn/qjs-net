@@ -4,7 +4,7 @@
 #include <quickjs.h>
 #include <list.h>
 #include <libwebsockets.h>
-#include "minnet.h"
+#include "minnet-url.h"
 #include "minnet-buffer.h"
 #include "minnet-generator.h"
 

@@ -2,6 +2,7 @@
 #include "minnet-response.h"
 #include "minnet-buffer.h"
 #include "jsutils.h"
+#include "headers.h"
 #include <cutils.h>
 #include <assert.h>
 

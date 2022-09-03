@@ -6,6 +6,30 @@
 #include <list.h>
 #include "utils.h"
 
+#ifdef JS_SHARED_LIBRARY
+#define JS_INIT_MODULE js_init_module
+#else
+#define JS_INIT_MODULE js_init_module_minnet
+#endif
+
+#define JS_CGETSET_MAGIC_FLAGS_DEF(prop_name, fgetter, fsetter, magic_num, flags) \
+  { \
+    .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET_MAGIC, .magic = magic_num, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} } \
+  }
+#define JS_CGETSET_FLAGS_DEF(prop_name, fgetter, fsetter, flags) \
+  { \
+    .name = prop_name, .prop_flags = flags, .def_type = JS_DEF_CGETSET, .u = {.getset = {.get = {.getter_magic = fgetter}, .set = {.setter_magic = fsetter}} } \
+  }
+
+#define JS_INDEX_STRING_DEF(index, cstr) \
+  { \
+    .name = #index, .prop_flags = JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, .def_type = JS_DEF_PROP_STRING, .magic = 0, .u = {.str = cstr } \
+  }
+#define JS_CFUNC_FLAGS_DEF(prop_name, length, func1, flags) \
+  { \
+    .name = prop_name, .prop_flags = (flags), .def_type = JS_DEF_CFUNC, .magic = 0, .u = {.func = {length, JS_CFUNC_generic, {.generic = func1}} } \
+  }
+
 typedef struct JSThreadState {
   struct list_head os_rw_handlers;
   struct list_head os_signal_handlers;
