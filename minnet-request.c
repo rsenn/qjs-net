@@ -130,6 +130,7 @@ MinnetRequest*
 request_fromwsi(struct lws* wsi, JSContext* ctx) {
   const char* uri;
   MinnetHttpMethod method = -1;
+  MinnetRequest* ret = 0;
 
   if((uri = minnet_uri_and_method(wsi, ctx, &method))) {
     MinnetURL url = url_create(uri, ctx);
@@ -142,10 +143,19 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
         url_parse(&url, name, ctx);
     }
 
-    return request_new(url, method, ctx);
+    ret = request_new(url, method, ctx);
   }
 
-  return 0;
+  if(ret) {
+    if(minnet_num_queries(wsi) > 0) {
+      ret->query = JS_NewObject(ctx);
+      minnet_query_object(wsi, ctx, ret->query);
+    } else {
+      ret->query = JS_NULL;
+    }
+  }
+
+  return ret;
 }
 
 MinnetRequest*

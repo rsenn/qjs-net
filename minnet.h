@@ -314,18 +314,14 @@ is_h2(struct lws* wsi) {
   return lws_wsi_is_h2(wsi);
 }
 
-static inline char*
-lws_get_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
-  size_t len;
-  char buf[1024];
-
-  if((len = lws_hdr_copy(wsi, buf, sizeof(buf) - 1, token)) > 0)
-    buf[len] = '\0';
-  else
-    return 0;
-
-  return js_strndup(ctx, buf, len);
+char* lws_get_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token);
+int lws_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, DynBuf* db);
+int lws_num_fragments(struct lws* wsi, enum lws_token_indexes token);
+static inline int
+minnet_num_queries(struct lws* wsi) {
+  return lws_num_fragments(wsi, WSI_TOKEN_HTTP_URI_ARGS);
 }
+int minnet_query_object(struct lws* wsi, JSContext* ctx, JSValueConst obj);
 
 char* lws_get_host(struct lws* wsi, JSContext* ctx);
 void lws_peer_cert(struct lws*);

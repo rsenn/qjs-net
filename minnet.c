@@ -1104,13 +1104,85 @@ fd_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
 
   return (char*)s;
 }
+
 char*
 fd_remote(int fd) {
   return fd_address(fd, &getpeername);
 }
+
 char*
 fd_local(int fd) {
   return fd_address(fd, &getsockname);
+}
+
+char*
+lws_get_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
+  size_t len;
+  char buf[1024];
+
+  if((len = lws_hdr_copy(wsi, buf, sizeof(buf) - 1, token)) > 0)
+    buf[len] = '\0';
+  else
+    return 0;
+
+  return js_strndup(ctx, buf, len);
+}
+
+int
+lws_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, DynBuf* db) {
+  int ret = 0, len;
+  // dbuf_init2(&dbuf, 0, 0);
+
+  len = lws_hdr_fragment_length(wsi, token, fragment);
+
+  if(len <= 0)
+    return len;
+
+  dbuf_realloc(db, len + 1);
+
+  if((ret = lws_hdr_copy_fragment(wsi, db->buf, db->size, token, fragment)) <= 0)
+    return ret;
+
+  return len;
+}
+
+int
+lws_num_fragments(struct lws* wsi, enum lws_token_indexes token) {
+  int i, len;
+
+  for(i = 0;; i++) {
+
+    len = lws_hdr_fragment_length(wsi, token, i);
+
+    if(len <= 0)
+      break;
+  }
+
+  return i;
+}
+
+int
+minnet_query_object(struct lws* wsi, JSContext* ctx, JSValueConst obj) {
+  int r, i;
+  DynBuf dbuf;
+  dbuf_init2(&dbuf, 0, 0);
+
+  for(i = 0;; i++) {
+    size_t namelen, valuelen;
+    const char* value;
+    r = lws_copy_fragment(wsi, WSI_TOKEN_HTTP_URI_ARGS, i, &dbuf);
+
+    if(r <= 0)
+      break;
+
+    namelen = byte_chr(dbuf.buf, r, '=');
+    dbuf.buf[namelen] = '\0';
+    value = &dbuf.buf[namelen + 1];
+    valuelen = r - (namelen + 1);
+
+    JS_SetPropertyStr(ctx, obj, (const char*)dbuf.buf, JS_NewStringLen(ctx, value, valuelen));
+  }
+  return i;
 }
 
 const char*
