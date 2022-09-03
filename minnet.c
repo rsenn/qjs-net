@@ -62,7 +62,7 @@ static JSValue
 lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   LWSIOHandler* closure = ptr;
   struct pollfd* p;
-  JSIOHandler wr;
+  int32_t wr;
   JSValue ret = JS_UNDEFINED;
 
   assert(closure->opaque);
@@ -156,6 +156,44 @@ minnet_log_callback(int level, const char* line) {
       js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log_cb);
     }
   }
+}
+
+static int
+wsi_iohandler(struct lws* wsi, struct js_callback* cb, struct lws_pollargs args) {
+  JSValue argv[3] = {
+      JS_NewInt32(cb->ctx, args.fd),
+      JS_NULL,
+      JS_NULL,
+  };
+
+  minnet_io_handlers(cb->ctx, wsi, args, &argv[1]);
+  callback_emit(cb, countof(argv), argv);
+
+  js_vector_free(cb->ctx, countof(argv), argv);
+  return 0;
+}
+
+int
+wsi_handle_poll(struct lws* wsi, enum lws_callback_reasons reason, struct js_callback* cb, struct lws_pollargs* args) {
+  switch(reason) {
+    case LWS_CALLBACK_LOCK_POLL:
+    case LWS_CALLBACK_UNLOCK_POLL: break;
+    case LWS_CALLBACK_ADD_POLL_FD:
+      if(cb->ctx)
+        wsi_iohandler(wsi, cb, *args);
+      break;
+    case LWS_CALLBACK_DEL_POLL_FD:
+      if(cb->ctx)
+        wsi_iohandler(wsi, cb, *args);
+      break;
+    case LWS_CALLBACK_CHANGE_MODE_POLL_FD:
+      if(cb->ctx)
+        if(args->events != args->prev_events)
+          wsi_iohandler(wsi, cb, *args);
+      break;
+    default: return -1;
+  }
+  return 0;
 }
 
 int

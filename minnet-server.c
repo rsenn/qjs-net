@@ -234,8 +234,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_ThrowInternalError(ctx, "lws init failed");
 
   if(ptr) {
-    ((MinnetClosure*)ptr)->server = server;
-    ((MinnetClosure*)ptr)->free_func = &server_free;
+    MinnetClosure* closure = ptr;
+    closure->pointer = server;
+    closure->free_func = &server_free;
   }
 
   info = &server->context.info;

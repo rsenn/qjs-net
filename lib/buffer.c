@@ -4,13 +4,13 @@
 #include <assert.h>
 
 void
-block_init(MinnetBytes* blk, uint8_t* start, size_t len) {
+block_init(ByteBlock* blk, uint8_t* start, size_t len) {
   blk->start = start;
   blk->end = blk->start + len;
 }
 
 uint8_t*
-block_alloc(MinnetBytes* blk, size_t size, JSContext* ctx) {
+block_alloc(ByteBlock* blk, size_t size, JSContext* ctx) {
   uint8_t* ptr;
 
   if((ptr = js_malloc(ctx, size + LWS_PRE))) {
@@ -22,7 +22,7 @@ block_alloc(MinnetBytes* blk, size_t size, JSContext* ctx) {
 }
 
 uint8_t*
-block_realloc(MinnetBytes* blk, size_t size, JSContext* ctx) {
+block_realloc(ByteBlock* blk, size_t size, JSContext* ctx) {
   uint8_t* ptr;
 
   if(!size) {
@@ -41,7 +41,7 @@ block_realloc(MinnetBytes* blk, size_t size, JSContext* ctx) {
 }
 
 void
-block_free(MinnetBytes* blk, JSRuntime* rt) {
+block_free(ByteBlock* blk, JSRuntime* rt) {
   if(blk->start)
     js_free_rt(rt, blk->start - LWS_PRE);
 
@@ -54,7 +54,7 @@ block_finalizer(JSRuntime* rt, void* alloc, void* start) {
 }
 
 int
-block_fromarraybuffer(MinnetBytes* blk, JSValueConst value, JSContext* ctx) {
+block_fromarraybuffer(ByteBlock* blk, JSValueConst value, JSContext* ctx) {
   size_t len;
 
   if(!(blk->start = JS_GetArrayBuffer(ctx, &len, value)))
@@ -65,18 +65,18 @@ block_fromarraybuffer(MinnetBytes* blk, JSValueConst value, JSContext* ctx) {
 }
 
 JSValue
-block_toarraybuffer(MinnetBytes* blk, JSContext* ctx) {
-  MinnetBytes mem = block_move(blk);
+block_toarraybuffer(ByteBlock* blk, JSContext* ctx) {
+  ByteBlock mem = block_move(blk);
   return JS_NewArrayBuffer(ctx, block_BEGIN(&mem), block_SIZE(&mem), block_finalizer, block_ALLOC(&mem), FALSE);
 }
 
 JSValue
-block_tostring(MinnetBytes const* blk, JSContext* ctx) {
+block_tostring(ByteBlock const* blk, JSContext* ctx) {
   return JS_NewStringLen(ctx, block_BEGIN(blk), block_SIZE(blk));
 }
 
 void
-buffer_init(MinnetBuffer* buf, uint8_t* start, size_t len) {
+buffer_init(ByteBuffer* buf, uint8_t* start, size_t len) {
   block_init(&buf->block, start, len);
 
   buf->read = buf->start;
@@ -85,7 +85,7 @@ buffer_init(MinnetBuffer* buf, uint8_t* start, size_t len) {
 }
 
 uint8_t*
-buffer_alloc(MinnetBuffer* buf, size_t size, JSContext* ctx) {
+buffer_alloc(ByteBuffer* buf, size_t size, JSContext* ctx) {
   uint8_t* ret;
   if((ret = block_alloc(&buf->block, size, ctx))) {
     buf->alloc = ret;
@@ -96,7 +96,7 @@ buffer_alloc(MinnetBuffer* buf, size_t size, JSContext* ctx) {
 }
 
 ssize_t
-buffer_append(MinnetBuffer* buf, const void* x, size_t n, JSContext* ctx) {
+buffer_append(ByteBuffer* buf, const void* x, size_t n, JSContext* ctx) {
   if((size_t)buffer_AVAIL(buf) < n + 1) {
     if(!buffer_realloc(buf, buffer_HEAD(buf) + n + 1, ctx))
       return -1;
@@ -108,14 +108,14 @@ buffer_append(MinnetBuffer* buf, const void* x, size_t n, JSContext* ctx) {
 }
 
 void
-buffer_free(MinnetBuffer* buf, JSRuntime* rt) {
+buffer_free(ByteBuffer* buf, JSRuntime* rt) {
   if(buf->alloc)
     block_free(&buf->block, rt);
   buf->read = buf->write = buf->alloc = 0;
 }
 
 BOOL
-buffer_write(MinnetBuffer* buf, const void* x, size_t n) {
+buffer_write(ByteBuffer* buf, const void* x, size_t n) {
   assert((size_t)buffer_AVAIL(buf) >= n);
   memcpy(buf->write, x, n);
   buf->write += n;
@@ -123,7 +123,7 @@ buffer_write(MinnetBuffer* buf, const void* x, size_t n) {
 }
 
 int
-buffer_vprintf(MinnetBuffer* buf, const char* format, va_list ap) {
+buffer_vprintf(ByteBuffer* buf, const char* format, va_list ap) {
   ssize_t n, size = buffer_AVAIL(buf);
   n = vsnprintf((char*)buf->write, size, format, ap);
   if(n > size)
@@ -135,7 +135,7 @@ buffer_vprintf(MinnetBuffer* buf, const char* format, va_list ap) {
 }
 
 int
-buffer_printf(MinnetBuffer* buf, const char* format, ...) {
+buffer_printf(ByteBuffer* buf, const char* format, ...) {
   int n;
   va_list ap;
   va_start(ap, format);
@@ -145,7 +145,7 @@ buffer_printf(MinnetBuffer* buf, const char* format, ...) {
 }
 
 uint8_t*
-buffer_realloc(MinnetBuffer* buf, size_t size, JSContext* ctx) {
+buffer_realloc(ByteBuffer* buf, size_t size, JSContext* ctx) {
   size_t rd, wr;
   uint8_t* x;
 
@@ -170,7 +170,7 @@ buffer_realloc(MinnetBuffer* buf, size_t size, JSContext* ctx) {
 }
 
 int
-buffer_fromarraybuffer(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
+buffer_fromarraybuffer(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
   int ret;
 
   if(!(ret = block_fromarraybuffer(&buf->block, value, ctx))) {
@@ -182,7 +182,7 @@ buffer_fromarraybuffer(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
 }
 
 int
-buffer_fromvalue(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
+buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
   int ret = -1;
   JSBuffer input = js_input_chars(ctx, value);
 
@@ -197,12 +197,12 @@ buffer_fromvalue(MinnetBuffer* buf, JSValueConst value, JSContext* ctx) {
 }
 
 JSValue
-buffer_tostring(MinnetBuffer const* buf, JSContext* ctx) {
+buffer_tostring(ByteBuffer const* buf, JSContext* ctx) {
   return JS_NewStringLen(ctx, (const char*)buf->start, buffer_HEAD(buf));
 }
 
 size_t
-buffer_escape(MinnetBuffer* buf, const void* x, size_t len, JSContext* ctx) {
+buffer_escape(ByteBuffer* buf, const void* x, size_t len, JSContext* ctx) {
   const uint8_t *ptr, *end;
 
   size_t prev = buffer_REMAIN(buf);
@@ -268,9 +268,9 @@ buffer_escape(MinnetBuffer* buf, const void* x, size_t len, JSContext* ctx) {
 }
 
 char*
-buffer_escaped(MinnetBuffer const* buf, JSContext* ctx) {
+buffer_escaped(ByteBuffer const* buf, JSContext* ctx) {
   char* ptr;
-  MinnetBuffer out;
+  ByteBuffer out;
   size_t size = buffer_REMAIN(buf) * 4;
 
   size = (size + 8) & (~7);
@@ -287,31 +287,31 @@ buffer_escaped(MinnetBuffer const* buf, JSContext* ctx) {
 
 void
 buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
-  // MinnetBuffer* buf = opaque;
+  // ByteBuffer* buf = opaque;
 }
 
 JSValue
-buffer_toarraybuffer(MinnetBuffer* buf, JSContext* ctx) {
-  MinnetBuffer moved = buffer_move(buf);
+buffer_toarraybuffer(ByteBuffer* buf, JSContext* ctx) {
+  ByteBuffer moved = buffer_move(buf);
   return block_toarraybuffer(&moved.block, ctx);
 }
 
 JSValue
-buffer_toarraybuffer_size(MinnetBuffer* buf, size_t* sz, JSContext* ctx) {
-  MinnetBuffer moved = buffer_move(buf);
+buffer_toarraybuffer_size(ByteBuffer* buf, size_t* sz, JSContext* ctx) {
+  ByteBuffer moved = buffer_move(buf);
   if(sz)
     *sz = block_SIZE(&moved.block);
   return block_toarraybuffer(&moved.block, ctx);
 }
 
 void
-buffer_dump(const char* n, MinnetBuffer const* buf) {
+buffer_dump(const char* n, ByteBuffer const* buf) {
   fprintf(stderr, "%s\t{ write = %td, read = %td, size = %td }\n", n, buf->write - buf->start, buf->read - buf->start, buf->end - buf->start);
   fflush(stderr);
 }
 
 BOOL
-buffer_clone(MinnetBuffer* buf, const MinnetBuffer* other, JSContext* ctx) {
+buffer_clone(ByteBuffer* buf, const ByteBuffer* other, JSContext* ctx) {
   if(!buffer_alloc(buf, block_SIZE(other), ctx))
     return FALSE;
   memcpy(buf->start, other->start, buffer_HEAD(other));
@@ -322,14 +322,14 @@ buffer_clone(MinnetBuffer* buf, const MinnetBuffer* other, JSContext* ctx) {
 }
 
 uint8_t*
-buffer_skip(MinnetBuffer* buf, size_t size) {
+buffer_skip(ByteBuffer* buf, size_t size) {
   assert(buf->read + size <= buf->write);
   buf->read += size;
   return buf->read;
 }
 
 BOOL
-buffer_putchar(MinnetBuffer* buf, char c) {
+buffer_putchar(ByteBuffer* buf, char c) {
   if(buf->write + 1 <= buf->end) {
     *buf->write = (uint8_t)c;
     buf->write++;
@@ -338,15 +338,15 @@ buffer_putchar(MinnetBuffer* buf, char c) {
   return FALSE;
 }
 
-MinnetBuffer
-buffer_move(MinnetBuffer* buf) {
-  MinnetBuffer ret = *buf;
-  memset(buf, 0, sizeof(MinnetBuffer));
+ByteBuffer
+buffer_move(ByteBuffer* buf) {
+  ByteBuffer ret = *buf;
+  memset(buf, 0, sizeof(ByteBuffer));
   return ret;
 }
 
 uint8_t*
-buffer_grow(MinnetBuffer* buf, size_t size, JSContext* ctx) {
+buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx) {
   size += buffer_SIZE(buf);
   return buffer_realloc(buf, size, ctx);
 }

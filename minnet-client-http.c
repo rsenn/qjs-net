@@ -1,4 +1,5 @@
 #include "minnet-client.h"
+#include "minnet-client-http.h"
 #include "minnet-websocket.h"
 #include "minnet-response.h"
 #include "headers.h"
@@ -17,7 +18,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   struct wsi_opaque_user_data* opaque;
 
   if(lws_reason_poll(reason))
-    return fd_callback(wsi, reason, &client->on.fd, in);
+    return wsi_handle_poll(wsi, reason, &client->on.fd, in);
 
   if((opaque = lws_opaque(wsi, ctx))) {
     if(!opaque->sess && session)
@@ -84,7 +85,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
 
       MinnetRequest* req = opaque->req;
-      MinnetBuffer buf = BUFFER_N(*(uint8_t**)in, len);
+      ByteBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
       size_t n = headers_write(&buf.write, buf.end, &req->headers, wsi);
 
@@ -148,7 +149,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         int n;
         ssize_t size, r;
         // MinnetRequest* req = client->request;
-        MinnetBuffer buf;
+        ByteBuffer buf;
         buffer_alloc(&buf, 1024, ctx);
 
         if(lws_http_is_redirected_to_get(wsi))
@@ -190,7 +191,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP: {
       int ret;
       static uint8_t buffer[1024 + LWS_PRE];
-      MinnetBuffer buf = BUFFER(buffer);
+      ByteBuffer buf = BUFFER(buffer);
       int len = buffer_AVAIL(&buf);
       // lwsl_user("http #1  " FGC(171, "%-38s") " fd=%d buf=%p write=%zu len=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), block_BEGIN(&buf), buffer_HEAD(&buf), len);
       ret = lws_http_client_read(wsi, (char**)&buf.write, &len);

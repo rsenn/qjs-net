@@ -23,7 +23,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     opaque = lws_opaque(wsi, ctx);
 
   if(lws_reason_poll(reason))
-    return fd_callback(wsi, reason, &server->cb.fd, in);
+    return wsi_handle_poll(wsi, reason, &server->cb.fd, in);
   if(lws_reason_http(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
@@ -96,7 +96,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       if(!lws_is_ssl(wsi) && !strcmp(in, "h2c")) {
         char* dest;
         size_t destlen;
-        MinnetBuffer out = BUFFER_0();
+        ByteBuffer out = BUFFER_0();
         url.protocol = protocol_string(PROTOCOL_HTTPS);
         dest = url_format(url, ctx);
         destlen = url_length(url);
@@ -201,7 +201,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         size_t size;
 
         if((size = ringbuffer_size(&opaque->ws->sendq))) {
-          MinnetBuffer buf;
+          ByteBuffer buf;
           ringbuffer_consume(&opaque->ws->sendq, &buf, 1);
 
           /*int ret =*/(void)lws_write(wsi, buf.start, buf.end - buf.start, opaque->binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);

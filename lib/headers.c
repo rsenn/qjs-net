@@ -40,7 +40,7 @@ headers_atom(JSAtom atom, JSContext* ctx) {
 }
 
 int
-headers_addobj(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
+headers_addobj(ByteBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
 
@@ -73,7 +73,7 @@ headers_addobj(MinnetBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContex
 }
 
 size_t
-headers_write(uint8_t** in, uint8_t* end, MinnetBuffer* buffer, struct lws* wsi) {
+headers_write(uint8_t** in, uint8_t* end, ByteBuffer* buffer, struct lws* wsi) {
   uint8_t *r = buffer->read, *w = buffer->write, *next, *start, *ptr;
 
   start = ptr = *in;
@@ -112,7 +112,7 @@ headers_write(uint8_t** in, uint8_t* end, MinnetBuffer* buffer, struct lws* wsi)
 }
 
 int
-headers_fromobj(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
+headers_fromobj(ByteBuffer* buffer, JSValueConst obj, JSContext* ctx) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
 
@@ -146,7 +146,7 @@ headers_fromobj(MinnetBuffer* buffer, JSValueConst obj, JSContext* ctx) {
 }
 
 ssize_t
-headers_set(JSContext* ctx, MinnetBuffer* buffer, const char* name, const char* value) {
+headers_set(JSContext* ctx, ByteBuffer* buffer, const char* name, const char* value) {
   size_t namelen = strlen(name), valuelen = strlen(value);
   size_t len = namelen + 2 + valuelen + 2;
 
@@ -160,7 +160,7 @@ headers_set(JSContext* ctx, MinnetBuffer* buffer, const char* name, const char* 
 }
 
 ssize_t
-headers_findb(MinnetBuffer* buffer, const char* name, size_t namelen) {
+headers_findb(ByteBuffer* buffer, const char* name, size_t namelen) {
   uint8_t* ptr;
   ssize_t ret = 0;
 
@@ -180,7 +180,7 @@ headers_findb(MinnetBuffer* buffer, const char* name, size_t namelen) {
 }
 
 char*
-headers_at(MinnetBuffer* buffer, size_t* lenptr, size_t index) {
+headers_at(ByteBuffer* buffer, size_t* lenptr, size_t index) {
   uint8_t* ptr;
   size_t i = 0;
   for(ptr = buffer->start; ptr < buffer->write;) {
@@ -198,7 +198,7 @@ headers_at(MinnetBuffer* buffer, size_t* lenptr, size_t index) {
 }
 
 char*
-headers_get(MinnetBuffer* buffer, size_t* lenptr, const char* name) {
+headers_get(ByteBuffer* buffer, size_t* lenptr, const char* name) {
   ssize_t index;
 
   if((index = headers_find(buffer, name)) != -1) {
@@ -219,7 +219,7 @@ headers_get(MinnetBuffer* buffer, size_t* lenptr, const char* name) {
 }
 
 ssize_t
-headers_copy(MinnetBuffer* buffer, char* dest, size_t sz, const char* name) {
+headers_copy(ByteBuffer* buffer, char* dest, size_t sz, const char* name) {
   char* hdr;
   size_t len;
 
@@ -234,12 +234,12 @@ headers_copy(MinnetBuffer* buffer, char* dest, size_t sz, const char* name) {
 }
 
 ssize_t
-headers_find(MinnetBuffer* buffer, const char* name) {
+headers_find(ByteBuffer* buffer, const char* name) {
   return headers_findb(buffer, name, strlen(name));
 }
 
 ssize_t
-headers_unsetb(MinnetBuffer* buffer, const char* name, size_t namelen) {
+headers_unsetb(ByteBuffer* buffer, const char* name, size_t namelen) {
   ssize_t pos;
 
   if((pos = headers_findb(buffer, name, namelen)) >= 0) {
@@ -258,12 +258,12 @@ headers_unsetb(MinnetBuffer* buffer, const char* name, size_t namelen) {
 }
 
 ssize_t
-headers_unset(MinnetBuffer* buffer, const char* name) {
+headers_unset(ByteBuffer* buffer, const char* name) {
   return headers_unsetb(buffer, name, strlen(name));
 }
 
 int
-headers_tostring(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
+headers_tostring(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   int tok, len, count = 0;
 
   if(!headers->start)

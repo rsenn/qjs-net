@@ -38,12 +38,19 @@ callback_zero(JSCallback* cb) {
   cb->name = 0;
 }
 
+typedef enum callback_e { MESSAGE = 0, CONNECT, CLOSE, PONG, FD, HTTP, READ, POST, NUM_CALLBACKS } CallbackType;
+
 typedef struct callbacks {
-  JSCallback message, connect, close, pong, fd, http, read, post;
-} MinnetCallbacks;
+  union {
+    struct {
+      JSCallback message, connect, close, pong, fd, http, read, post;
+    };
+    JSCallback on[NUM_CALLBACKS];
+  };
+} CallbackList;
 
 static inline void
-callbacks_zero(MinnetCallbacks* cbs) {
+callbacks_zero(CallbackList* cbs) {
   callback_zero(&cbs->message);
   callback_zero(&cbs->connect);
   callback_zero(&cbs->close);
@@ -52,8 +59,6 @@ callbacks_zero(MinnetCallbacks* cbs) {
   callback_zero(&cbs->http);
 }
 
-int fd_handler(struct lws*, JSCallback*, struct lws_pollargs);
-int fd_callback(struct lws*, enum lws_callback_reasons, JSCallback*, struct lws_pollargs* args);
 JSValue callback_emit_this(const struct js_callback*, JSValue, int, JSValue* argv);
 JSValue callback_emit(const struct js_callback*, int, JSValue*);
 

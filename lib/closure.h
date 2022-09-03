@@ -10,11 +10,13 @@ struct server_context;
 typedef struct closure {
   int ref_count;
   union {
-    struct context* context;
-    struct client_context* client;
-    struct server_context* server;
+    void* pointer;
+    /* struct context* context;
+     struct client_context* client;
+     struct server_context* server;*/
   };
-  void (*free_func)();
+  void (*free_func)(/*void**/);
+  JSContext* ctx;
 } MinnetClosure;
 
 MinnetClosure* closure_new(JSContext*);

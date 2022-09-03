@@ -45,7 +45,7 @@ enum http_method {
   METHOD_HEAD,
 };
 
-typedef enum http_method MinnetHttpMethod;
+typedef enum http_method HTTPMethod;
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -75,8 +75,8 @@ char* wsi_query_string_len(struct lws*, size_t* len_p, JSContext* ctx);
 BOOL wsi_token_exists(struct lws* wsi, enum lws_token_indexes token);
 char* wsi_token_len(struct lws*, JSContext* ctx, enum lws_token_indexes token, size_t* len_p);
 int wsi_copy_fragment(struct lws*, enum lws_token_indexes token, int fragment, DynBuf* db);
-char* wsi_uri_and_method(struct lws*, JSContext* ctx, MinnetHttpMethod* method);
-MinnetHttpMethod wsi_method(struct lws* wsi);
+char* wsi_uri_and_method(struct lws*, JSContext* ctx, HTTPMethod* method);
+HTTPMethod wsi_method(struct lws* wsi);
 enum lws_token_indexes wsi_uri_token(struct lws* wsi);
 char* wsi_host_and_port(struct lws* wsi, JSContext* ctx, int* port);
 const char* wsi_vhost_name(struct lws* wsi);

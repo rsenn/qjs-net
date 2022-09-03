@@ -85,6 +85,13 @@ struct TimerClosure {
 #define JS_BIND_THIS 0x8000
 
 JSValue vector2array(JSContext* ctx, int argc, JSValueConst argv[]);
+static inline void
+js_vector_free(JSContext* ctx, int argc, JSValue argv[]) {
+  for(int i = 0; i < argc; i++) {
+    JS_FreeValue(ctx, argv[i]);
+    argv[i] = JS_UNDEFINED;
+  }
+}
 JSValue js_object_constructor(JSContext* ctx, JSValueConst value);
 char* js_object_classname(JSContext* ctx, JSValueConst value);
 void js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log);

@@ -61,7 +61,7 @@ ws_new(struct lws* wsi, JSContext* ctx) {
 
   ws->lwsi = wsi;
   ws->ref_count = 2;
-  ringbuffer_init2(&ws->sendq, sizeof(MinnetBytes), 65536 * 2);
+  ringbuffer_init2(&ws->sendq, sizeof(ByteBlock), 65536 * 2);
 
   if((opaque = lws_opaque(wsi, ctx))) {
     opaque->ws = ws;
@@ -199,7 +199,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
   {
     JSBuffer jsbuf = js_input_args(ctx, argc, argv);
-    MinnetBytes buffer = block_fromjs(jsbuf);
+    ByteBlock buffer = block_fromjs(jsbuf);
 
     ringbuffer_insert(&ws->sendq, &buffer, 1);
 
@@ -217,7 +217,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
   if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  MinnetBuffer header = BUFFER_0();
+  ByteBuffer header = BUFFER_0();
 
   switch(magic) {
     case RESPONSE_BODY: {

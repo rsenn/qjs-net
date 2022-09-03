@@ -180,8 +180,10 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   client_zero(client);
 
   if(ptr) {
-    ((MinnetClosure*)ptr)->client = client;
-    ((MinnetClosure*)ptr)->free_func = &client_free;
+    MinnetClosure* closure = ptr;
+
+    closure->pointer = client;
+    closure->free_func = &client_free;
   }
 
   *client = (MinnetClient){.context = (MinnetContext){.ref_count = 1}, .headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
@@ -413,7 +415,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   int ret = 0;
 
   if(lws_reason_poll(reason))
-    return fd_callback(wsi, reason, &client->on.fd, in);
+    return wsi_handle_poll(wsi, reason, &client->on.fd, in);
 
   if(lws_reason_http(reason))
     return http_client_callback(wsi, reason, user, in, len);
@@ -532,7 +534,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
-      MinnetBuffer* buf = &client->session.send_buf;
+      ByteBuffer* buf = &client->session.send_buf;
       int ret, size = buffer_REMAIN(buf);
 
       if((ret = lws_write(wsi, buf->read, size, LWS_WRITE_TEXT)) != size) {

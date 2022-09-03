@@ -19,10 +19,10 @@ typedef struct http_response {
   int status;
   char* status_text;
   BOOL ok;
-  MinnetBuffer headers;
+  ByteBuffer headers;
   union {
     MinnetGenerator* generator;
-    MinnetBuffer* body;
+    ByteBuffer* body;
   };
 } MinnetResponse;
 

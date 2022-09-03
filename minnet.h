@@ -1,8 +1,12 @@
 #ifndef MINNET_H
 #define MINNET_H
 
-#include <quickjs.h>
-#include "jsutils.h"
+#include <inttypes.h>      // for PRId64
+#include <libwebsockets.h> // for LLL_PARSER, LLL_USER, lwsl_...
+#include <quickjs.h>       // for JSContext, JSValueConst
+#include <stddef.h>        // for NULL
+#include "jsutils.h"       // for JS_INIT_MODULE
+#include "utils.h"         // for FG, NC
 
 #define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
 
@@ -24,7 +28,11 @@ typedef enum socket_state MinnetStatus;
 void minnet_io_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValueConst out[2]);
 void minnet_log_callback(int, const char* line);
 int minnet_lws_unhandled(const char*, int reason);
+
+struct js_callback;
+
+int wsi_handle_poll(struct lws*, enum lws_callback_reasons, struct js_callback*, struct lws_pollargs* args);
 JSValue minnet_get_sessions(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[]);
-JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
+JSModuleDef* JS_INIT_MODULE(JSContext*, const char* module_name);
 
 #endif /* MINNET_H */

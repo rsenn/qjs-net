@@ -1,18 +1,27 @@
-#include <sys/types.h>
-#include <cutils.h>
-#include <ctype.h>
-#include <libgen.h>
-#include <assert.h>
-#include <libwebsockets.h>
-
-#include "jsutils.h"
-#include "minnet-websocket.h"
-#include "minnet-server.h"
 #include "minnet-server-http.h"
-#include "minnet-response.h"
-#include "minnet-request.h"
-#include "minnet-form-parser.h"
-#include "headers.h"
+#include <assert.h>             // for assert
+#include <ctype.h>              // for isspace
+#include <cutils.h>             // for BOOL, FALSE, TRUE, pstrcpy
+#include <inttypes.h>           // for PRId64, PRIi64
+#include <libwebsockets.h>      // for lws_http_mount, lws_is_ssl, lws_call...
+#include <stdint.h>             // for uint8_t, uint32_t, uintptr_t
+#include <stdio.h>              // for printf, fseek, ftell, fclose, fopen
+#include <string.h>             // for strlen, size_t, strncmp, strcmp, strstr
+#include <sys/types.h>          // for ssize_t
+#include "context.h"            // for MinnetContext
+#include "headers.h"            // for headers_tostring
+#include "jsutils.h"            // for js_is_iterator, JSBuffer, js_buffer_...
+#include "minnet-form-parser.h" // for form_parser, form_parser::(anonymous)
+#include "minnet-generator.h"   // for MinnetGenerator, generator_close
+#include "minnet-request.h"     // for MinnetRequest, http_request, minnet_...
+#include "minnet-response.h"    // for http_response, http_response::(anony...
+#include "minnet-server.h"      // for MinnetServer, server_exception, serv...
+#include "minnet-url.h"         // for MinnetURL, url_string, url_set_path_len
+#include "minnet-websocket.h"   // for lws_opaque, minnet_ws_wrap
+#include "minnet.h"             // for LOGCB, LOG, minnet_lws_unhandled
+#include "opaque.h"             // for wsi_opaque_user_data, OPEN
+#include "quickjs.h"            // for JS_FreeValue, js_free, JS_FreeCString
+#include "utils.h"              // for wsi_http2, FG, METHOD_GET, NC, byte_chr
 
 MinnetVhostOptions*
 vhost_options_create(JSContext* ctx, const char* name, const char* value) {
@@ -320,7 +329,7 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
 }
 
 int
-http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* resp, JSContext* ctx, MinnetSession* session) {
+http_server_respond(struct lws* wsi, ByteBuffer* buf, struct http_response* resp, JSContext* ctx, MinnetSession* session) {
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int is_ssl = lws_is_ssl(wsi);
   int h2 = wsi_http2(wsi);
@@ -500,7 +509,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
 
 int
 http_server_generate(JSContext* ctx, MinnetSession* session, MinnetResponse* resp, BOOL* done_p) {
-  // MinnetBuffer b = BUFFER(buf);
+  // ByteBuffer b = BUFFER(buf);
 
   if(JS_IsObject(session->generator)) {
     JSValue ret = JS_UNDEFINED;
@@ -569,7 +578,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   if(lws_reason_poll(reason)) {
     assert(server);
-    return fd_callback(wsi, reason, &server->cb.fd, in);
+    return wsi_handle_poll(wsi, reason, &server->cb.fd, in);
   }
 
   if(reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
@@ -686,7 +695,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
-      MinnetBuffer b = BUFFER(buf);
+      ByteBuffer b = BUFFER(buf);
 
       session->in_body = FALSE;
 
@@ -736,7 +745,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP: {
       MinnetRequest* req;
       MinnetHttpMount* mount;
-      MinnetBuffer b = BUFFER(buf);
+      ByteBuffer b = BUFFER(buf);
       JSValue* args = &session->ws_obj;
       char* path = in;
       size_t mountpoint_len = 0, pathlen = 0;

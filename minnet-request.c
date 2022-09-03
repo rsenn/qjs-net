@@ -78,7 +78,7 @@ request_alloc(JSContext* ctx) {
 }
 
 MinnetRequest*
-request_new(MinnetURL url, MinnetHttpMethod method, JSContext* ctx) {
+request_new(MinnetURL url, HTTPMethod method, JSContext* ctx) {
   MinnetRequest* req;
 
   if((req = request_alloc(ctx)))
@@ -130,7 +130,7 @@ request_fromobj(JSValueConst options, JSContext* ctx) {
 MinnetRequest*
 request_fromwsi(struct lws* wsi, JSContext* ctx) {
   MinnetRequest* ret = 0;
-  MinnetHttpMethod method = wsi_method(wsi);
+  HTTPMethod method = wsi_method(wsi);
   MinnetURL url = URL_INIT();
 
   url_fromwsi(&url, wsi, ctx);
@@ -138,7 +138,7 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
   ret = request_new(url, method, ctx);
 
   /*const char* uri;
-    MinnetHttpMethod method = -1;
+    HTTPMethod method = -1;
 
     if((uri = wsi_uri_and_method(wsi, ctx, &method))) {
       MinnetURL url = url_create(uri, ctx);
@@ -168,7 +168,7 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
 
 MinnetRequest*
 request_fromurl(const char* uri, JSContext* ctx) {
-  MinnetHttpMethod method = METHOD_GET;
+  HTTPMethod method = METHOD_GET;
   MinnetURL url = url_create(uri, ctx);
 
   return request_new(url, method, ctx);
@@ -214,7 +214,7 @@ request_free_rt(MinnetRequest* req, JSRuntime* rt) {
 }
 
 /*static const char*
-header_get(JSContext* ctx, size_t* lenp, MinnetBuffer* buf, const char* name) {
+header_get(JSContext* ctx, size_t* lenp, ByteBuffer* buf, const char* name) {
   size_t len, namelen = strlen(name);
   uint8_t *x, *end;
 

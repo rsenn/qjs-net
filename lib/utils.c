@@ -264,7 +264,7 @@ wsi_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, D
 }
 
 char*
-wsi_uri_and_method(struct lws* wsi, JSContext* ctx, MinnetHttpMethod* method) {
+wsi_uri_and_method(struct lws* wsi, JSContext* ctx, HTTPMethod* method) {
   char* url;
 
   if((url = wsi_token(wsi, ctx, WSI_TOKEN_POST_URI))) {
@@ -339,9 +339,9 @@ wsi_uri_token(struct lws* wsi) {
   return -1;
 }
 
-MinnetHttpMethod
+HTTPMethod
 wsi_method(struct lws* wsi) {
-  static const MinnetHttpMethod methods[] = {
+  static const HTTPMethod methods[] = {
       METHOD_GET,
       METHOD_POST,
       METHOD_OPTIONS,

@@ -1,13 +1,16 @@
 #ifndef QUICKJS_NET_LIB_GENERATOR_H
 #define QUICKJS_NET_LIB_GENERATOR_H
 
-#include "jsutils.h"
-#include <libwebsockets.h>
-#include <pthread.h>
-#include "buffer.h"
+#include <cutils.h>    // for BOOL
+#include <quickjs.h>   // for JSContext, JSValue
+#include <stddef.h>    // for size_t
+#include <stdint.h>    // for uint64_t
+#include <sys/types.h> // for ssize_t
+#include "buffer.h"    // for ByteBuffer
+#include "jsutils.h"   // for AsyncIterator
 
 typedef struct generator {
-  MinnetBuffer buffer;
+  ByteBuffer buffer;
   union {
     AsyncIterator iterator;
     struct {

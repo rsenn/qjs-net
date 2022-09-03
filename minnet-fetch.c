@@ -56,7 +56,7 @@ enum {
 static JSValue
 fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MinnetClosure* closure = opaque;
-  MinnetClient* client = closure->client;
+  MinnetClient* client = closure->pointer;
 
   // printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
 
@@ -138,7 +138,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   // printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->client);
 
-  cc->client = client_dup(cc->client);
+  cc->pointer = client_dup(cc->pointer);
 
   return ret;
 }
@@ -148,7 +148,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
 struct header_context {
   JSContext* ctx;
-  MinnetBuffer* buf;
+  ByteBuffer* buf;
 };
 
 struct curl_callback {
