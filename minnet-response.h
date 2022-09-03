@@ -5,8 +5,9 @@
 #include <list.h>
 #include <libwebsockets.h>
 #include "minnet-url.h"
-#include "minnet-buffer.h"
-#include "minnet-generator.h"
+#include "buffer.h"
+#include "generator.h"
+#include "session.h"
 
 // struct http_request;
 
@@ -46,6 +47,7 @@ JSValue minnet_response_new(JSContext*, MinnetURL, int, char* status_text, BOOL 
 JSValue minnet_response_wrap(JSContext*, MinnetResponse*);
 JSValue minnet_response_constructor(JSContext*, JSValue, int, JSValue argv[]);
 void minnet_response_finalizer(JSRuntime*, JSValue);
+struct http_response* session_response(MinnetSession*, MinnetCallback*);
 
 extern THREAD_LOCAL JSClassID minnet_response_class_id;
 extern THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;

@@ -14,13 +14,13 @@ struct pollfd {
 #endif
 
 #include "minnet.h"
-#include "minnet-ringbuffer.h"
+#include "ringbuffer.h"
+#include "opaque.h"
 #include <quickjs.h>
 
 struct lws;
 struct http_request;
 struct http_response;
-struct wsi_opaque_user_data;
 
 /* class WebSocket */
 
@@ -31,10 +31,6 @@ typedef struct socket {
   MinnetRingbuffer sendq;
 } MinnetWebsocket;
 
-extern int64_t ws_serial;
-
-void opaque_free_rt(struct wsi_opaque_user_data*, JSRuntime*);
-void opaque_free(struct wsi_opaque_user_data*, JSContext*);
 JSValue minnet_ws_new(JSContext*, struct lws*);
 MinnetWebsocket* ws_new(struct lws*, JSContext*);
 void ws_clear_rt(MinnetWebsocket*, JSRuntime*);
@@ -52,35 +48,6 @@ extern THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
 extern JSClassDef minnet_ws_class;
 extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_static_funcs[], minnet_ws_proto_defs[];
 extern const size_t minnet_ws_proto_funcs_size, minnet_ws_static_funcs_size, minnet_ws_proto_defs_size;
-
-enum socket_state {
-  CONNECTING = 0,
-  OPEN = 1,
-  CLOSING = 2,
-  CLOSED = 3,
-};
-
-struct wsi_opaque_user_data {
-  int ref_count;
-  struct socket* ws;
-  struct http_request* req;
-  struct http_response* resp;
-  struct session_data* sess;
-  JSValue handler;
-  int64_t serial;
-  enum socket_state status;
-  struct pollfd poll;
-  int error;
-  BOOL binary;
-  struct list_head link;
-  struct form_parser* form_parser;
-};
-
-static inline struct wsi_opaque_user_data*
-opaque_dup(struct wsi_opaque_user_data* opaque) {
-  opaque->ref_count++;
-  return opaque;
-}
 
 static inline struct session_data*
 lws_session(struct lws* wsi) {

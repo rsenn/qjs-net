@@ -4,9 +4,9 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "jsutils.h"
-#include "minnet-generator.h"
+#include "generator.h"
 #include "minnet-websocket.h"
-#include "minnet-callback.h"
+#include "callback.h"
 
 typedef struct form_parser {
   int ref_count;

@@ -4,7 +4,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "jsutils.h"
-#include "minnet-generator.h"
+#include "generator.h"
 #include "minnet-url.h"
 
 struct socket;

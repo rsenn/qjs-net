@@ -2,7 +2,7 @@
 #define MINNET_SERVER_H
 
 #include <quickjs.h>
-#include "minnet-buffer.h"
+#include "buffer.h"
 #include "minnet.h"
 #include "minnet-server-http.h"
 

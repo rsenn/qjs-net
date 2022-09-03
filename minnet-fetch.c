@@ -2,8 +2,8 @@
 #include "minnet-request.h"
 #include "minnet-response.h"
 #include "minnet-client.h"
-#include "minnet-buffer.h"
-#include "minnet-closure.h"
+#include "buffer.h"
+#include "closure.h"
 #include "jsutils.h"
 #include <strings.h>
 #include <quickjs.h>

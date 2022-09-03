@@ -1,4 +1,4 @@
-#include "minnet-query.h"
+#include "query.h"
 
 JSValue
 query_object(const char* q, JSContext* ctx) {

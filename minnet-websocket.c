@@ -1,4 +1,4 @@
-#include "minnet-buffer.h"
+#include "buffer.h"
 #include "jsutils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
@@ -9,8 +9,6 @@
 #include <strings.h>
 #include <assert.h>
 #include <libwebsockets.h>
-
-int64_t ws_serial = 0;
 
 THREAD_LOCAL JSValue minnet_ws_proto, minnet_ws_ctor;
 THREAD_LOCAL JSClassID minnet_ws_class_id;
@@ -74,56 +72,6 @@ ws_new(struct lws* wsi, JSContext* ctx) {
 
   return ws;
 }
-static void* prev_ptr = 0;
-
-void
-opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
-
-  // printf("%s opaque=%p link=[%p, %p]\n", __func__, opaque, opaque->link.next, opaque->link.prev);
-
-  prev_ptr = opaque;
-
-  if(opaque->ws) {
-    MinnetWebsocket* ws = opaque->ws;
-    opaque->ws = 0;
-    ws_free_rt(ws, rt);
-  }
-  if(opaque->req) {
-    struct http_request* req = opaque->req;
-    opaque->req = 0;
-    request_free_rt(req, rt);
-  }
-  if(opaque->resp) {
-    struct http_response* resp = opaque->resp;
-    opaque->resp = 0;
-    response_free_rt(resp, rt);
-  }
-
-  assert(opaque->link.next);
-  list_del(&opaque->link);
-}
-
-void
-opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
-  opaque_clear_rt(opaque, rt);
-
-  if(--opaque->ref_count == 0)
-    js_free_rt(rt, opaque);
-}
-
-void
-opaque_clear(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
-  opaque_clear_rt(opaque, JS_GetRuntime(ctx));
-}
-
-void
-opaque_free(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
-  opaque_clear(opaque, ctx);
-
-  if(--opaque->ref_count == 0)
-
-    js_free(ctx, opaque);
-}
 
 void
 ws_clear_rt(MinnetWebsocket* ws, JSRuntime* rt) {
@@ -171,21 +119,6 @@ MinnetWebsocket*
 ws_dup(MinnetWebsocket* ws) {
   ++ws->ref_count;
   return ws;
-}
-
-struct wsi_opaque_user_data*
-opaque_new(JSContext* ctx) {
-  struct wsi_opaque_user_data* opaque;
-
-  if((opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data)))) {
-    opaque->serial = ++ws_serial;
-    opaque->status = CONNECTING;
-    opaque->ref_count = 1;
-
-    list_add(&opaque->link, &minnet_sockets);
-  }
-
-  return opaque;
 }
 
 struct wsi_opaque_user_data*

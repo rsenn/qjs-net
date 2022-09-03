@@ -1,6 +1,6 @@
 #define _GNU_SOURCE
-#include "minnet.h"
 #include "minnet-hash.h"
+#include "utils.h"
 #include <assert.h>
 
 THREAD_LOCAL JSClassID minnet_hash_class_id;

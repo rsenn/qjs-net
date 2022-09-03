@@ -4,14 +4,14 @@
 #include "minnet-request.h"
 #include "minnet-response.h"
 #include "minnet-websocket.h"
-#include "minnet-ringbuffer.h"
-#include "minnet-generator.h"
+#include "ringbuffer.h"
+#include "generator.h"
 #include "minnet-form-parser.h"
 #include "minnet-hash.h"
 #include "minnet-fetch.h"
 #include "jsutils.h"
 #include "utils.h"
-#include "minnet-buffer.h"
+#include "buffer.h"
 #include <libwebsockets.h>
 #include <assert.h>
 #include <errno.h>
@@ -54,7 +54,6 @@ typedef struct handler_closure {
 static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 static THREAD_LOCAL int32_t minnet_log_level = 0;
 static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
-THREAD_LOCAL struct list_head minnet_sockets = {0, 0};
 
 void
 minnet_log_callback(int level, const char* line) {
@@ -91,41 +90,6 @@ minnet_log_callback(int level, const char* line) {
     }
   }
 }
-
-JSValue
-context_exception(MinnetContext* context, JSValue retval) {
-  if(JS_IsException(retval)) {
-    context->exception = TRUE;
-    JSValue exception = JS_GetException(context->js);
-    JSValue stack = JS_GetPropertyStr(context->js, exception, "stack");
-    const char* err = JS_ToCString(context->js, exception);
-    const char* stk = JS_ToCString(context->js, stack);
-    printf("Got exception: %s\n%s\n", err, stk);
-    JS_FreeCString(context->js, err);
-    JS_FreeCString(context->js, stk);
-    JS_FreeValue(context->js, stack);
-    JS_Throw(context->js, exception);
-  }
-
-  return retval;
-}
-
-void
-context_clear(MinnetContext* context) {
-  JSContext* ctx = context->js;
-
-  lws_set_log_level(0, 0);
-
-  lws_context_destroy(context->lws);
-  lws_set_log_level(((unsigned)minnet_log_level & ((1u << LLL_COUNT) - 1)), minnet_log_callback);
-
-  JS_FreeValue(ctx, context->crt);
-  JS_FreeValue(ctx, context->key);
-  JS_FreeValue(ctx, context->ca);
-
-  JS_FreeValue(ctx, context->error);
-}
-
 int
 minnet_lws_unhandled(const char* handler, int reason) {
   lwsl_warn("Unhandled \x1b[1;31m%s\x1b[0m event: %i %s\n", handler, reason, lws_callback_name(reason));
@@ -288,8 +252,6 @@ static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   /*  minnet_log_cb = JS_UNDEFINED;
     minnet_log_this = JS_UNDEFINED;*/
-
-  init_list_head(&minnet_sockets);
 
   JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 

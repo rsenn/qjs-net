@@ -1,11 +1,10 @@
 #ifndef MINNET_GENERATOR_H
 #define MINNET_GENERATOR_H
 
-#include "minnet.h"
 #include "jsutils.h"
 #include <libwebsockets.h>
 #include <pthread.h>
-#include "minnet-buffer.h"
+#include "buffer.h"
 
 typedef struct generator {
   MinnetBuffer buffer;

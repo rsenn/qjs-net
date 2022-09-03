@@ -3,7 +3,7 @@
 
 #include <quickjs.h>
 #include <libwebsockets.h>
-#include "minnet-buffer.h"
+#include "buffer.h"
 
 JSValue headers_object(JSContext*, const void*, const void*);
 char* headers_atom(JSAtom, JSContext*);

@@ -4,7 +4,7 @@
 #include <quickjs.h>
 #include "minnet.h"
 #include "minnet-request.h"
-#include "minnet-session.h"
+#include "session.h"
 #include "jsutils.h"
 
 #define client_exception(client, retval) context_exception(&(client->context), (retval))

@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include "jsutils.h"
-#include "minnet.h"
 
 static AsyncRead* asynciterator_shift(AsyncIterator*, JSContext*);
 

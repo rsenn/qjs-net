@@ -3,8 +3,7 @@
 
 #include <quickjs.h>
 #include <cutils.h>
-#include "minnet.h"
-#include "minnet-buffer.h"
+#include "buffer.h"
 #include <libwebsockets.h>
 #include <pthread.h>
 

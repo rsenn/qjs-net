@@ -1,6 +1,6 @@
 #include "minnet-websocket.h"
 #include "minnet-response.h"
-#include "minnet-buffer.h"
+#include "buffer.h"
 #include "jsutils.h"
 #include "headers.h"
 #include <cutils.h>
@@ -430,3 +430,23 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
 };
 
 const size_t minnet_response_proto_funcs_size = countof(minnet_response_proto_funcs);
+
+struct http_response*
+session_response(MinnetSession* session, MinnetCallback* cb) {
+  MinnetResponse* resp = minnet_response_data2(cb->ctx, session->resp_obj);
+
+  if(cb && cb->ctx) {
+    JSValue ret = minnet_emit_this(cb, session->ws_obj, 2, session->args);
+    lwsl_user("session_response ret=%s", JS_ToCString(cb->ctx, ret));
+    if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
+      JS_FreeValue(cb->ctx, session->args[1]);
+      session->args[1] = ret;
+      resp = minnet_response_data2(cb->ctx, ret);
+    } else {
+      JS_FreeValue(cb->ctx, ret);
+    }
+  }
+  lwsl_user("session_response %s", response_dump(resp));
+
+  return resp;
+}

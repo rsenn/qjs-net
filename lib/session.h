@@ -2,8 +2,9 @@
 #define MINNET_SESSION_H
 
 #include <stdint.h>
-#include "minnet-buffer.h"
-#include "minnet-callback.h"
+#include "buffer.h"
+#include "callback.h"
+#include <list.h>
 
 struct http_mount;
 struct proxy_connection;
@@ -29,11 +30,13 @@ typedef struct session_data {
   struct server_context* server;
   struct client_context* client;
   MinnetBuffer send_buf;
+  struct list_head link;
 } MinnetSession;
+
+extern THREAD_LOCAL struct list_head session_list;
 
 void session_zero(MinnetSession*);
 void session_clear(MinnetSession*, JSContext*);
-struct http_response* session_response(MinnetSession*, MinnetCallback*);
 JSValue session_object(struct wsi_opaque_user_data*, JSContext*);
 JSValue minnet_get_sessions(JSContext*, JSValueConst, int, JSValueConst argv[]);
 

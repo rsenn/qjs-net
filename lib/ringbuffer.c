@@ -1,4 +1,4 @@
-#include "minnet-ringbuffer.h"
+#include "ringbuffer.h"
 #include <quickjs.h>
 #include <assert.h>
 #include <libwebsockets.h>

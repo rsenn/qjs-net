@@ -1,7 +1,8 @@
 #ifndef MINNET_HASH_H
 #define MINNET_HASH_H
 
-#include <quickjs.h>
+#include "utils.h"
+#include "jsutils.h"
 #include <libwebsockets.h>
 
 typedef struct hash_hmac {

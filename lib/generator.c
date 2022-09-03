@@ -1,4 +1,4 @@
-#include "minnet-generator.h"
+#include "generator.h"
 #include "jsutils.h"
 #include <quickjs.h>
 #include <assert.h>

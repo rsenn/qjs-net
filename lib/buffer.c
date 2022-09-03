@@ -1,4 +1,4 @@
-#include "minnet-buffer.h"
+#include "buffer.h"
 #include "jsutils.h"
 #include <libwebsockets.h>
 #include <assert.h>

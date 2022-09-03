@@ -1,8 +1,8 @@
-#include "minnet-session.h"
-#include "minnet-websocket.h"
-#include "minnet-response.h"
+#include "session.h"
+#include "opaque.h"
 
 static THREAD_LOCAL uint32_t session_serial = 0;
+THREAD_LOCAL struct list_head session_list = {0, 0};
 
 void
 session_zero(MinnetSession* session) {
@@ -15,15 +15,23 @@ session_zero(MinnetSession* session) {
   session->next = JS_NULL;
 
   session->serial = ++session_serial;
+}
 
-  // list_add(&session->link, &minnet_sessions);
+void
+session_add(MinnetSession* session) {
+  if(session_list.prev == NULL)
+    init_list_head(&session_list);
 
-  // printf("%s #%i %p\n", __func__, session->serial, session);
+  list_add(&session->link, &session_list);
+}
+
+void
+session_remove(MinnetSession* session) {
+  list_del(&session->link);
 }
 
 void
 session_clear(MinnetSession* session, JSContext* ctx) {
-  // list_del(&session->link);
 
   JS_FreeValue(ctx, session->ws_obj);
   JS_FreeValue(ctx, session->req_obj);
@@ -34,26 +42,6 @@ session_clear(MinnetSession* session, JSContext* ctx) {
   buffer_free(&session->send_buf, JS_GetRuntime(ctx));
 
   // printf("%s #%i %p\n", __func__, session->serial, session);
-}
-
-struct http_response*
-session_response(MinnetSession* session, MinnetCallback* cb) {
-  MinnetResponse* resp = minnet_response_data2(cb->ctx, session->resp_obj);
-
-  if(cb && cb->ctx) {
-    JSValue ret = minnet_emit_this(cb, session->ws_obj, 2, session->args);
-    lwsl_user("session_response ret=%s", JS_ToCString(cb->ctx, ret));
-    if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
-      JS_FreeValue(cb->ctx, session->args[1]);
-      session->args[1] = ret;
-      resp = minnet_response_data2(cb->ctx, ret);
-    } else {
-      JS_FreeValue(cb->ctx, ret);
-    }
-  }
-  lwsl_user("session_response %s", response_dump(resp));
-
-  return resp;
 }
 
 JSValue
@@ -79,7 +67,7 @@ minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
   ret = JS_NewArray(ctx);
 
-  list_for_each(el, &minnet_sockets) {
+  list_for_each(el, &session_list) {
     struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
     // printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
 

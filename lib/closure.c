@@ -1,6 +1,5 @@
-#include "minnet-closure.h"
-#include "minnet-server.h"
-#include "minnet-client.h"
+#include "closure.h"
+#include "context.h"
 
 MinnetClosure*
 closure_new(JSContext* ctx) {
@@ -26,6 +25,7 @@ closure_free(void* ptr) {
     if(closure->server) {
       JSContext* ctx = closure->context->js;
       // printf("%s server=%p\n", __func__, closure->server);
+
       if(closure->free_func)
         closure->free_func(closure->context);
 

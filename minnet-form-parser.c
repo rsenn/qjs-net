@@ -2,7 +2,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "minnet-form-parser.h"
-#include "minnet-callback.h"
+#include "callback.h"
 #include "jsutils.h"
 #include <ctype.h>
 #include <strings.h>
