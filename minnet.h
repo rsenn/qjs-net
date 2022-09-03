@@ -21,16 +21,6 @@
 
 typedef enum socket_state MinnetStatus;
 
-typedef struct closure {
-  int ref_count;
-  union {
-    struct context* context;
-    struct client_context* client;
-    struct server_context* server;
-  };
-  void (*free_func)();
-} MinnetClosure;
-
 typedef struct context {
   int ref_count;
   JSContext* js;
@@ -47,9 +37,6 @@ extern THREAD_LOCAL struct list_head minnet_sockets;
 void minnet_log_callback(int, const char* line);
 JSValueConst context_exception(MinnetContext*, JSValueConst retval);
 void context_clear(MinnetContext*);
-MinnetClosure* closure_new(JSContext*);
-MinnetClosure* closure_dup(MinnetClosure*);
-void closure_free(void*);
 int minnet_lws_unhandled(const char*, int reason);
 void minnet_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValueConst out[2]);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);

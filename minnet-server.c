@@ -6,6 +6,7 @@
 #include "minnet-server-proxy.h"
 #include "minnet-response.h"
 #include "minnet-request.h"
+#include "minnet-closure.h"
 #include <list.h>
 #include <quickjs-libc.h>
 #include <libwebsockets.h>

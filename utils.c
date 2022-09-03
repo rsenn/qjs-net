@@ -60,6 +60,41 @@ scan_charsetnskip(const char* s, const char* charset, size_t limit) {
   return (size_t)(t - s);
 }
 
+size_t
+skip_brackets(const char* line, size_t len) {
+  size_t n = 0;
+  if(len > 0 && line[0] == '[') {
+    if((n = byte_chr(line, len, ']')) < len)
+      n++;
+    while(n < len && isspace(line[n])) n++;
+    if(n + 1 < len && line[n + 1] == ':')
+      n += 2;
+    while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
+  }
+
+  return n;
+}
+
+size_t
+skip_directory(const char* line, size_t len) {
+  if(line[0] == '/') {
+    size_t colon = byte_chr(line, len, ':');
+    size_t slash = byte_rchr(line, colon, '/');
+
+    if(slash < colon)
+      return slash + 1;
+  }
+
+  return 0;
+}
+
+size_t
+strip_trailing_newline(const char* line, size_t* len_p) {
+  size_t len = *len_p;
+  while(len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) len--;
+  return *len_p = len;
+}
+
 unsigned
 uint_pow(unsigned base, unsigned degree) {
   unsigned result = 1;

@@ -3,13 +3,14 @@
 #include "minnet-response.h"
 #include "minnet-client.h"
 #include "minnet-buffer.h"
+#include "minnet-closure.h"
 #include "jsutils.h"
 #include <strings.h>
 #include <quickjs.h>
 
 #ifndef USE_CURL
 
-typedef struct fetch_closure {
+/*typedef struct fetch_closure {
   int ref_count;
   MinnetClient* client;
 } MinnetFetch;
@@ -31,7 +32,7 @@ fetch_dup(MinnetFetch* c) {
 }
 
 void
-fetch_free(void* ptr) {
+closure_free(void* ptr) {
   MinnetFetch* closure = ptr;
 
   if(--closure->ref_count == 0) {
@@ -43,7 +44,7 @@ fetch_free(void* ptr) {
       js_free(ctx, closure);
     }
   }
-}
+}*/
 
 enum {
   ON_HTTP = 0,
@@ -54,7 +55,7 @@ enum {
 
 static JSValue
 fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
-  MinnetFetch* closure = opaque;
+  MinnetClosure* closure = opaque;
   MinnetClient* client = closure->client;
 
   // printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
@@ -106,13 +107,13 @@ JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret, handlers[4], args[2];
   MinnetClosure* cc;
-  MinnetFetch* fc;
+ // MinnetFetch* fc;
 
   if(argc >= 2 && !JS_IsObject(argv[1]))
     return JS_ThrowTypeError(ctx, "argument 2 must be an object");
-
+/*
   if(!(fc = fetch_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_ThrowOutOfMemory(ctx);*/
 
   if(!(cc = closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
@@ -120,10 +121,10 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   args[0] = argv[0];
   args[1] = argc <= 1 ? JS_NewObject(ctx) : JS_DupValue(ctx, argv[1]);
 
-  handlers[0] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, fetch_dup(fc), fetch_free);
-  handlers[1] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_ERROR, fetch_dup(fc), fetch_free);
-  handlers[2] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_CLOSE, fetch_dup(fc), fetch_free);
-  handlers[3] = JS_NewCClosure(ctx, &fetch_handler, 3, ON_FD, fetch_dup(fc), fetch_free);
+  handlers[0] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, closure_dup(cc), closure_free);
+  handlers[1] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_ERROR, closure_dup(cc), closure_free);
+  handlers[2] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_CLOSE, closure_dup(cc), closure_free);
+  handlers[3] = JS_NewCClosure(ctx, &fetch_handler, 3, ON_FD, closure_dup(cc), closure_free);
 
   JS_SetPropertyStr(ctx, args[1], "onHttp", handlers[0]);
   JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);
@@ -137,7 +138,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   // printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->client);
 
-  fc->client = client_dup(cc->client);
+  cc->client = client_dup(cc->client);
 
   return ret;
 }

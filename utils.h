@@ -56,6 +56,10 @@ size_t scan_whitenskip(const char*, size_t limit);
 size_t scan_nonwhitenskip(const char*, size_t limit);
 size_t scan_charsetnskip(const char*, const char* charset, size_t limit);
 
+size_t skip_brackets(const char*, size_t len);
+size_t skip_directory(const char*, size_t len);
+size_t strip_trailing_newline(const char*, size_t* len_p);
+
 unsigned uint_pow(unsigned, unsigned degree);
 
 int socket_geterror(int);

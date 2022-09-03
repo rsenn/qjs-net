@@ -8,6 +8,7 @@
 #include "minnet-generator.h"
 #include "minnet-form-parser.h"
 #include "minnet-hash.h"
+#include "minnet-fetch.h"
 #include "jsutils.h"
 #include "utils.h"
 #include "minnet-buffer.h"
@@ -50,48 +51,11 @@ typedef struct handler_closure {
   struct wsi_opaque_user_data* opaque;
 } MinnetHandler;
 
-JSValue minnet_fetch(JSContext*, JSValueConst, int, JSValueConst*);
-
 static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 static THREAD_LOCAL int32_t minnet_log_level = 0;
 static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
 THREAD_LOCAL struct list_head minnet_sockets = {0, 0};
-
-static size_t
-skip_brackets(const char* line, size_t len) {
-  size_t n = 0;
-  if(len > 0 && line[0] == '[') {
-    if((n = byte_chr(line, len, ']')) < len)
-      n++;
-    while(n < len && isspace(line[n])) n++;
-    if(n + 1 < len && line[n + 1] == ':')
-      n += 2;
-    while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
-  }
-
-  return n;
-}
-
-static size_t
-skip_directory(const char* line, size_t len) {
-  if(line[0] == '/') {
-    size_t colon = byte_chr(line, len, ':');
-    size_t slash = byte_rchr(line, colon, '/');
-
-    if(slash < colon)
-      return slash + 1;
-  }
-
-  return 0;
-}
-
-static size_t
-strip_trailing_newline(const char* line, size_t* len_p) {
-  size_t len = *len_p;
-  while(len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) len--;
-  return *len_p = len;
-}
-
+ 
 void
 minnet_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
