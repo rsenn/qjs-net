@@ -253,6 +253,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 struct http_mount*
 mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
   struct lws_http_mount *p, *m = 0;
+  printf("mount_find('%.*s')\n", (int)n, x);
   int protocol = n == 0 ? LWSMPRO_CALLBACK : LWSMPRO_HTTP;
   size_t l = 0;
   if(n == 0)
@@ -729,16 +730,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_HTTP: {
       MinnetRequest* req;
-      MinnetHttpMount* mount;
       ByteBuffer b = BUFFER(buf);
       JSValue* args = &session->ws_obj;
       char* path = in;
       size_t mountpoint_len = 0, pathlen = 0;
 
-      if(!(req = opaque->req)) {
-
+      if(!(req = opaque->req))
         req = opaque->req = request_fromwsi(wsi, ctx);
-      }
 
       if(opaque->uri)
         url_set_path_len(&req->url, opaque->uri, opaque->uri_len, ctx);
@@ -749,10 +747,14 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       assert(req->url.path);
 
       printf("req->url.path = '%s'\n", req->url.path);
-
       pathlen = req->url.path ? strlen(req->url.path) : 0;
 
-      if(req->url.path && in && len < pathlen /*&& !strcmp(req->url.path, in)*/)
+      if(opaque->uri) {
+        mountpoint_len = (char*)in - opaque->uri;
+
+        printf("opaque->uri = '%.*s'\n", (int)opaque->uri_len, opaque->uri);
+        printf("mountpoint_len = %zu\n", mountpoint_len);
+      } else if(req->url.path && in && len < pathlen)
         mountpoint_len = pathlen - len;
 
       LOGCB("HTTP(1)", "mountpoint='%.*s' path='%s'", (int)mountpoint_len, req->url.path, path);
@@ -762,128 +764,133 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!opaque->req->headers.write) {
         /*int num_hdr =*/headers_tostring(ctx, &opaque->req->headers, wsi);
       }
+      {
+        MinnetHttpMount* mounts = (MinnetHttpMount*)server->context.info.mounts;
 
-      if(!session->mount)
-        if(req->url.path)
-          session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, req->url.path, mountpoint_len);
-      if(!session->mount)
-        if(path)
-          session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, path, 0);
-      if(req->url.path && !session->mount)
-        if(!(session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, req->url.path, mountpoint_len)))
-          session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, req->url.path, 0);
+        if(!session->mount)
+          if(req->url.path)
+            session->mount = mount_find(mounts, req->url.path, mountpoint_len);
+        if(!session->mount)
+          if(path)
+            session->mount = mount_find(mounts, path, 0);
+        if(req->url.path && !session->mount)
+          if(!(session->mount = mount_find(mounts, req->url.path, mountpoint_len)))
+            session->mount = mount_find(mounts, req->url.path, 0);
+      }
 
       session->h2 = wsi_http2(wsi);
+      {
+        MinnetHttpMount* mount;
 
-      if((mount = session->mount)) {
-        size_t mlen = strlen(mount->mnt);
+        if((mount = session->mount)) {
+          size_t mlen = strlen(mount->mnt);
 
-        printf("mount->mnt = '%s'\n", mount->mnt);
-        printf("mount->mnt = '%.*s'\n", (int)mlen, mount->mnt);
+          printf("mount->mnt = '%s'\n", mount->mnt);
+          printf("mount->mnt = '%.*s'\n", (int)mlen, mount->mnt);
 
-        assert(req->url.path);
-        assert(mount->mnt);
-        assert(mlen);
-        // assert(!strncmp(req->url.path, mount->mnt, mlen));
+          assert(req->url.path);
+          assert(mount->mnt);
+          assert(mlen);
+          // assert(!strncmp(req->url.path, mount->mnt, mlen));
 
-        if(!strcmp(req->url.path + mlen, path)) {
-          assert(!strcmp(req->url.path + mlen, path));
+          if(!strcmp(req->url.path + mlen, path)) {
+            assert(!strcmp(req->url.path + mlen, path));
 
-          LOGCB("HTTP(2)",
-                "mount: mnt='%s', org='%s', pro='%s', origin_protocol='%s'\n",
-                mount->mnt,
-                mount->org,
-                mount->pro,
-                ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK"})[(uintptr_t)mount->lws.origin_protocol]);
+            LOGCB("HTTP(2)",
+                  "mount: mnt='%s', org='%s', pro='%s', origin_protocol='%s'\n",
+                  mount->mnt,
+                  mount->org,
+                  mount->pro,
+                  ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK"})[(uintptr_t)mount->lws.origin_protocol]);
+          }
         }
-      }
+        session->req_obj = minnet_request_wrap(ctx, opaque->req);
 
-      session->req_obj = minnet_request_wrap(ctx, opaque->req);
-
-      if(!JS_IsObject(session->ws_obj)) {
-        if(opaque->ws)
-          session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
-      }
-
-      if(!JS_IsObject(session->resp_obj))
-        session->resp_obj = minnet_response_new(ctx, req->url, /*opaque->req->method == METHOD_POST ? 201 :*/ 200, 0, TRUE, "text/html");
-
-      // MinnetRequest* req = opaque->req;
-      MinnetResponse* resp = opaque->resp = minnet_response_data2(ctx, session->resp_obj);
-
-      LOGCB("HTTP(3)", "req=%p, header=%zu", req, buffer_HEAD(&req->headers));
-
-      request_dup(req);
-
-      JSCallback* cb = &mount->callback;
-
-      if(mount && !mount->callback.ctx)
-        cb = 0;
-
-      if(mount && ((mount->lws.origin_protocol == LWSMPRO_CALLBACK && (!cb || !cb->ctx)) ||
-                   (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin)))) {
-
-        ret = serve_file(wsi, path, mount, resp, ctx);
-
-        if(ret) {
-          LOGCB("HTTP(4)", "serve_file FAIL %d", ret);
-          JS_FreeValue(ctx, session->ws_obj);
-          session->ws_obj = JS_NULL;
-          lws_callback_on_writable(wsi);
-          return 0;
+        if(!JS_IsObject(session->ws_obj)) {
+          if(opaque->ws)
+            session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
         }
-        /* ret = http_server_respond(wsi, &b, resp, ctx);
-         if(ret) {
-           LOGCB("HTTP", "http_server_respond FAIL %d", ret);
-           JS_FreeValue(ctx, session->ws_obj);
-           session->ws_obj = JS_NULL;
+
+        if(!JS_IsObject(session->resp_obj))
+          session->resp_obj = minnet_response_new(ctx, req->url, /*opaque->req->method == METHOD_POST ? 201 :*/ 200, 0, TRUE, "text/html");
+
+        // MinnetRequest* req = opaque->req;
+        MinnetResponse* resp = opaque->resp = minnet_response_data2(ctx, session->resp_obj);
+
+        LOGCB("HTTP(3)", "req=%p, header=%zu", req, buffer_HEAD(&req->headers));
+
+        request_dup(req);
+
+        JSCallback* cb = &mount->callback;
+
+        if(mount && !mount->callback.ctx)
+          cb = 0;
+
+        if(mount && ((mount->lws.origin_protocol == LWSMPRO_CALLBACK && (!cb || !cb->ctx)) ||
+                     (mount->lws.origin_protocol == LWSMPRO_FILE || (mount->lws.origin_protocol == LWSMPRO_CALLBACK && mount->lws.origin)))) {
+
+          ret = serve_file(wsi, path, mount, resp, ctx);
+
+          if(ret) {
+            LOGCB("HTTP(4)", "serve_file FAIL %d", ret);
+            JS_FreeValue(ctx, session->ws_obj);
+            session->ws_obj = JS_NULL;
+            lws_callback_on_writable(wsi);
             return 0;
-         }*/
-      }
+          }
+          /* ret = http_server_respond(wsi, &b, resp, ctx);
+           if(ret) {
+             LOGCB("HTTP", "http_server_respond FAIL %d", ret);
+             JS_FreeValue(ctx, session->ws_obj);
+             session->ws_obj = JS_NULL;
+              return 0;
+           }*/
+        }
 
-      if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
+        if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
 
-        if(cb && cb->ctx) {
-          if(req->method == METHOD_GET /* || wsi_http2(wsi)*/) {
-            resp = session_response(session, cb);
+          if(cb && cb->ctx) {
+            if(req->method == METHOD_GET /* || wsi_http2(wsi)*/) {
+              resp = session_response(session, cb);
 
-            JSValue gen = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &args[1]));
-            if(js_is_iterator(ctx, gen)) {
-              assert(js_is_iterator(ctx, gen));
-              LOGCB("HTTP(5)", "gen=%s", JS_ToCString(ctx, gen));
+              JSValue gen = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &args[1]));
+              if(js_is_iterator(ctx, gen)) {
+                assert(js_is_iterator(ctx, gen));
+                LOGCB("HTTP(5)", "gen=%s", JS_ToCString(ctx, gen));
 
-              session->generator = gen;
-              session->next = JS_UNDEFINED;
+                session->generator = gen;
+                session->next = JS_UNDEFINED;
 
-              /* lws_callback_on_writable(wsi);
-               return 0;*/
-            } else {
-              LOGCB("HTTP(6)", "gen=%s", JS_ToCString(ctx, gen));
+                /* lws_callback_on_writable(wsi);
+                 return 0;*/
+              } else {
+                LOGCB("HTTP(6)", "gen=%s", JS_ToCString(ctx, gen));
+              }
             }
           }
+
+          /*     LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, req->url.path);
+             if(lws_http_transaction_completed(wsi))
+                return -1;
+            }
+
+          }*/
         }
 
-        /*     LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, req->url.path);
-           if(lws_http_transaction_completed(wsi))
-              return -1;
+        if(/*req->method != METHOD_POST &&*/ server->cb.http.ctx) {
+          cb = &server->cb.http;
+
+          JSValue val = server_exception(server, callback_emit_this(cb, session->ws_obj, 3, args));
+          JS_FreeValue(ctx, val);
+        }
+
+        if(!(req->method != METHOD_GET && wsi_http2(wsi))) {
+
+          if((ret = http_server_respond(wsi, &b, resp, ctx, session))) {
+            JS_FreeValue(ctx, session->ws_obj);
+            session->ws_obj = JS_NULL;
+            return 1;
           }
-
-        }*/
-      }
-
-      if(/*req->method != METHOD_POST &&*/ server->cb.http.ctx) {
-        cb = &server->cb.http;
-
-        JSValue val = server_exception(server, callback_emit_this(cb, session->ws_obj, 3, args));
-        JS_FreeValue(ctx, val);
-      }
-
-      if(!(req->method != METHOD_GET && wsi_http2(wsi))) {
-
-        if((ret = http_server_respond(wsi, &b, resp, ctx, session))) {
-          JS_FreeValue(ctx, session->ws_obj);
-          session->ws_obj = JS_NULL;
-          return 1;
         }
       }
 
@@ -900,7 +907,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       /*JS_FreeValue(ctx, session->ws_obj);
       session->ws_obj=JS_NULL;*/
-      break;
+      return 0;
     }
 
     case LWS_CALLBACK_HTTP_WRITEABLE: {
@@ -927,6 +934,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
 
+      // opaque_free(opaque, ctx);
       if(opaque->req) {
         request_free(opaque->req, ctx);
         opaque->req = 0;
@@ -938,8 +946,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         response_free(opaque->resp, ctx);
         opaque->resp = 0;
       }
-      JS_FreeValue(ctx, session->resp_obj);
-      session->resp_obj = JS_NULL;
 
       if(opaque->form_parser) {
         form_parser_free(opaque->form_parser, ctx);
@@ -963,10 +969,14 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_CLOSED_HTTP: {
-      LOGCB("HTTP", "in='%.*s' url=%s", (int)len, (char*)in, opaque->req ? url_string(&opaque->req->url) : 0);
+      LOGCB("HTTP(1)", "in='%.*s' url=%s session=%p", (int)len, (char*)in, opaque->req ? url_string(&opaque->req->url) : 0, session);
       // lws_close_free_wsi(wsi, LWS_CLOSE_STATUS_NOSTATUS, __func__);
 
-      session_clear(session, ctx);
+      if(opaque)
+        opaque_free(opaque, ctx);
+
+      if(session)
+        session_clear(session, ctx);
       ret = -1;
       break;
     }

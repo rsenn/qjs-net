@@ -465,7 +465,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
 JSValue
 minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  struct closure* closure;
+  MinnetClosure* closure;
   JSValue ret;
 
   if(!(closure = closure_new(ctx)))

@@ -425,7 +425,7 @@ url_fromvalue(MinnetURL* url, JSValueConst value, JSContext* ctx) {
 
 void
 url_fromwsi(MinnetURL* url, struct lws* wsi, JSContext* ctx) {
-  int i, len, port = -1;
+  int i, port = -1;
   char* p;
   const char* protocol;
   typedef char* get_host_and_port(struct lws*, JSContext*, int*);

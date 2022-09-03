@@ -54,11 +54,6 @@ typedef struct input_buffer {
   OffsetLength range;
 } JSBuffer;
 
-typedef struct key_value {
-  JSAtom key;
-  JSValue value;
-} JSEntry;
-
 #define JS_BUFFER_DEFAULT() JS_BUFFER(0, 0, &js_buffer_free_default)
 
 #define JS_BUFFER_0(free) JS_BUFFER(0, 0, (free))
@@ -67,6 +62,14 @@ typedef struct key_value {
   (JSBuffer) { \
     (data), (size), 0, (free), JS_UNDEFINED, { 0, -1 } \
   }
+
+typedef struct key_value {
+  JSAtom key;
+  JSValue value;
+} JSEntry;
+
+#define JS_ENTRY() \
+  (JSEntry) { -1, JS_UNDEFINED }
 
 typedef union resolve_functions {
   JSValue array[2];
@@ -92,6 +95,7 @@ js_vector_free(JSContext* ctx, int argc, JSValue argv[]) {
     argv[i] = JS_UNDEFINED;
   }
 }
+
 JSValue js_object_constructor(JSContext* ctx, JSValueConst value);
 char* js_object_classname(JSContext* ctx, JSValueConst value);
 void js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log);
@@ -224,9 +228,12 @@ js_entry_dup(JSContext* ctx, const JSEntry entry) {
 }
 
 static inline int
-js_entry_apply(JSContext* ctx, const JSEntry entry, JSValueConst obj) {
+js_entry_apply(JSContext* ctx, JSEntry* entry, JSValueConst obj) {
   int ret;
-  ret = JS_SetProperty(ctx, obj, entry.key, JS_DupValue(ctx, entry.value));
+  ret = JS_SetProperty(ctx, obj, entry->key, entry->value);
+  JS_FreeAtom(ctx, entry->key);
+  entry->key = -1;
+  entry->value = JS_UNDEFINED;
   return ret;
 }
 

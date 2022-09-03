@@ -4,20 +4,14 @@
 #include <quickjs.h>
 #include "allocated.h"
 
-struct context;
-struct client_context;
-struct server_context;
-
-typedef struct closure {
-  int ref_count;
-  JSContext* ctx;
-  union {
-    struct {
-      void* pointer;
-      void (*free_func)(/*void**/);
-    };
-    struct allocated allocated;
+typedef union closure {
+  struct {
+    void* pointer;
+    void (*free_func)();
+    int ref_count;
+    JSContext* ctx;
   };
+  struct allocated allocated;
 } MinnetClosure;
 
 MinnetClosure* closure_new(JSContext*);

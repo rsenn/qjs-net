@@ -10,13 +10,12 @@ query_object_len(const char* q, size_t n, JSContext* ctx) {
   const char *p, *end = q + n;
   size_t entrylen;
   JSValue ret = JS_NewObject(ctx);
-  JSEntry entry = {-1, JS_NULL};
+  JSEntry entry = JS_ENTRY();
 
   for(p = q; p < end; p += entrylen + 1) {
     entrylen = byte_chr(p, end - p, '&');
-    if(query_entry(p, entrylen, ctx, &entry)) {
-      JS_SetProperty(ctx, ret, entry.key, entry.value);
-    }
+    if(query_entry(p, entrylen, ctx, &entry))
+      js_entry_apply(ctx, &entry, ret);
   }
   return ret;
 }
@@ -26,20 +25,18 @@ query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry) {
   size_t len;
 
   if((len = byte_chr(q, n, '=')) < n) {
-    // size_t namelen;
     char* decoded;
     const char *value = q + len + 1, *end = q + n;
-    // namelen = value - q;
 
-    if(entry->key >= 0)
-      JS_FreeAtom(ctx, entry->key);
+    js_entry_clear(ctx, entry);
 
     entry->key = JS_NewAtomLen(ctx, q, len);
     len = end - value;
+
     decoded = js_strndup(ctx, value, len);
     lws_urldecode(decoded, decoded, len + 1);
-    JS_FreeValue(ctx, entry->value);
     entry->value = JS_NewString(ctx, decoded);
+    js_free(ctx, decoded);
     return TRUE;
   }
 
@@ -81,7 +78,7 @@ query_from(JSValueConst obj, JSContext* ctx) {
   return (char*)out.buf;
 }
 
-void
+/*void
 minnet_query_entry(char* start, size_t len, JSContext* ctx, JSValueConst obj) {
   size_t namelen, valuelen;
   const char* value;
@@ -95,4 +92,4 @@ minnet_query_entry(char* start, size_t len, JSContext* ctx, JSValueConst obj) {
   valuelen = len - (namelen + 1);
 
   JS_SetPropertyStr(ctx, obj, start, JS_NewStringLen(ctx, value, valuelen));
-}
+}*/

@@ -26,40 +26,6 @@ static const struct lws_protocols client_protocols[] = {
     {0},
 };
 
-/*static void
-closure_free(void* ptr) {
-  MinnetClosure* closure = ptr;
-
-  if(--closure->ref_count == 0) {
-    if(closure->client) {
-      JSContext* ctx = closure->client->context.js;
-
-      // printf("%s client=%p\n", __func__, closure->client);
-
-      client_free(closure->client);
-
-      js_free(ctx, closure);
-    }
-  }
-}
-
-MinnetClosure*
-closure_new(JSContext* ctx) {
-  MinnetClosure* closure;
-
-  if((closure = js_mallocz(ctx, sizeof(MinnetClosure))))
-    closure->ref_count = 1;
-
-  return closure;
-}
-
-MinnetClosure*
-closure_dup(MinnetClosure* c) {
-  ++c->ref_count;
-  return c;
-}
-
-*/
 static JSValue
 close_status(JSContext* ctx, const char* in, size_t len) {
   if(len >= 2)
@@ -148,11 +114,11 @@ minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   /*switch(magic) {
     case ON_RESOLVE: {
-      //printf("%s %s %d\n", __func__, "ON_RESOLVE", ((MinnetClosure*)ptr)->ref_count);
+      DEBUG("%s %s %d\n", __func__, "ON_RESOLVE", ((MinnetClosure*)ptr)->ref_count);
       break;
     }
     case ON_REJECT: {
-      //printf("%s %s\n", __func__, "ON_REJECT", ((MinnetClosure*)ptr)->ref_count);
+      DEBUG("%s %s\n", __func__, "ON_REJECT", ((MinnetClosure*)ptr)->ref_count);
       break;
     }
   }
@@ -300,8 +266,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
 #ifdef DEBUG_OUTPUT
-  fprintf(stderr, "METHOD: %s\n", client->connect_info.method);
-  // fprintf(stderr, "PROTOCOL: %s\n", conn->protocol);
+  printf("METHOD: %s\n", client->connect_info.method);
+  DEBUG("PROTOCOL: %s\n", conn->protocol);
 #endif
 
   if(!block)
@@ -322,7 +288,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   {
     wsi2 = lws_client_connect_via_info(&client->connect_info);
   }
-  // fprintf(stderr, "client->wsi = %p, wsi2 = %p\n", client->wsi, wsi2);
+  DEBUG("client->wsi = %p, wsi2 = %p\n", client->wsi, wsi2);
 
   if(!client->wsi /*&& !wsi2*/) {
     if(!block) {
