@@ -107,13 +107,13 @@ JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret, handlers[4], args[2];
   MinnetClosure* cc;
- // MinnetFetch* fc;
+  // MinnetFetch* fc;
 
   if(argc >= 2 && !JS_IsObject(argv[1]))
     return JS_ThrowTypeError(ctx, "argument 2 must be an object");
-/*
-  if(!(fc = fetch_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);*/
+  /*
+    if(!(fc = fetch_new(ctx)))
+      return JS_ThrowOutOfMemory(ctx);*/
 
   if(!(cc = closure_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);

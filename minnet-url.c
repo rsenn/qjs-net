@@ -138,7 +138,7 @@ url_parse(MinnetURL* url, const char* u, JSContext* ctx) {
 
 MinnetURL
 url_create(const char* str, JSContext* ctx) {
-  MinnetURL ret = {1, 0, 0, 0, 0, 0};
+  MinnetURL ret = {1, 0, 0, 0, 0};
   url_parse(&ret, str, ctx);
   return ret;
 }

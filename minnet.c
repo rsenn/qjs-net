@@ -55,7 +55,7 @@ static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 static THREAD_LOCAL int32_t minnet_log_level = 0;
 static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
 THREAD_LOCAL struct list_head minnet_sockets = {0, 0};
- 
+
 void
 minnet_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
@@ -124,38 +124,6 @@ context_clear(MinnetContext* context) {
   JS_FreeValue(ctx, context->ca);
 
   JS_FreeValue(ctx, context->error);
-}
-
-MinnetClosure*
-closure_new(JSContext* ctx) {
-  MinnetClosure* closure;
-
-  if((closure = js_mallocz(ctx, sizeof(MinnetClosure))))
-    closure->ref_count = 1;
-
-  return closure;
-}
-
-MinnetClosure*
-closure_dup(MinnetClosure* c) {
-  ++c->ref_count;
-  return c;
-}
-
-void
-closure_free(void* ptr) {
-  MinnetClosure* closure = ptr;
-
-  if(--closure->ref_count == 0) {
-    if(closure->server) {
-      JSContext* ctx = closure->context->js;
-      // printf("%s server=%p\n", __func__, closure->server);
-      if(closure->free_func)
-        closure->free_func(closure->context);
-
-      js_free(ctx, closure);
-    }
-  }
 }
 
 int
