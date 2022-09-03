@@ -133,7 +133,7 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
   MinnetHttpMethod method = -1;
   MinnetRequest* ret = 0;
 
-  if((uri = minnet_uri_and_method(wsi, ctx, &method))) {
+  if((uri = wsi_uri_and_method(wsi, ctx, &method))) {
     MinnetURL url = url_create(uri, ctx);
     struct lws_vhost* vhost;
 
@@ -147,19 +147,16 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
     ret = request_new(url, method, ctx);
   }
 
-  return ret;
-}
-
-BOOL
-request_query(MinnetRequest* req, struct lws* wsi, JSContext* ctx) {
-
-  if(minnet_query_length(wsi) > 0) {
-    req->query = JS_NewObject(ctx);
-    minnet_query_object(wsi, ctx, req->query);
-  } else {
-    req->query = JS_NULL;
+  if(ret && url_query(ret->url) == NULL) {
+    char* q;
+    size_t qlen;
+    if((q = wsi_query_string_len(wsi, &qlen, ctx))) {
+      url_set_query_len(&ret->url, q, qlen, ctx);
+      js_free(ctx, q);
+    }
   }
-  return !JS_IsNull(req->query);
+
+  return ret;
 }
 
 MinnetRequest*

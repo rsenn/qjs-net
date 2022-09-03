@@ -41,6 +41,8 @@ size_t url_length(const MinnetURL);
 void url_free(MinnetURL*, JSContext*);
 void url_free_rt(MinnetURL*, JSRuntime*);
 MinnetProtocol url_set_protocol(MinnetURL*, const char*);
+BOOL url_set_path_len(MinnetURL*, const char*, size_t, JSContext*);
+BOOL url_set_query_len(MinnetURL*, const char*, size_t, JSContext*);
 void url_info(const MinnetURL, struct lws_client_connect_info*);
 char* url_location(const MinnetURL, JSContext*);
 const char* url_query(const MinnetURL);
@@ -48,8 +50,6 @@ void url_fromobj(MinnetURL*, JSValueConst, JSContext*);
 BOOL url_fromvalue(MinnetURL*, JSValueConst, JSContext*);
 void url_fromwsi(MinnetURL*, struct lws*, JSContext*);
 void url_dump(const char*, MinnetURL const*);
-JSValue query_object(const char*, JSContext*);
-char* query_from(JSValueConst, JSContext*);
 JSValue minnet_url_wrap(JSContext*, MinnetURL*);
 MinnetURL* url_new(JSContext*);
 JSValue minnet_url_new(JSContext*, MinnetURL);
@@ -119,6 +119,16 @@ minnet_url_data(JSValueConst obj) {
 static inline MinnetURL*
 minnet_url_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_url_class_id);
+}
+
+static inline BOOL
+url_set_path(MinnetURL* url, const char* path, JSContext* ctx) {
+  return url_set_path_len(url, path, strlen(path), ctx);
+}
+
+static inline BOOL
+url_set_query(MinnetURL* url, const char* query, JSContext* ctx) {
+  return url_set_query_len(url, query, strlen(query), ctx);
 }
 
 #endif /* MINNET_URL_H */

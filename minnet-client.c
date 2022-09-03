@@ -409,10 +409,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   struct wsi_opaque_user_data* opaque = 0;
   int ret = 0;
 
-  if(lws_is_poll_callback(reason))
+  if(lws_reason_poll(reason))
     return fd_callback(wsi, reason, &client->on.fd, in);
 
-  if(lws_is_http_callback(reason))
+  if(lws_reason_http(reason))
     return http_client_callback(wsi, reason, user, in, len);
 
   if(client->context.js)

@@ -15,7 +15,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   JSContext* ctx = client ? client->context.js : 0;
   struct wsi_opaque_user_data* opaque;
 
-  if(lws_is_poll_callback(reason))
+  if(lws_reason_poll(reason))
     return fd_callback(wsi, reason, &client->on.fd, in);
 
   if((opaque = lws_opaque(wsi, ctx))) {

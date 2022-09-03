@@ -221,7 +221,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 JSValue
 minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   int argind = 0, asynciterator_shift = 0;
-  BOOL block = TRUE, is_tls = FALSE, is_h2 = TRUE;
+  BOOL block = TRUE, is_tls = FALSE, wsi_http2 = TRUE;
   MinnetServer* server;
   MinnetURL url = {0};
   JSValue ret, options;
@@ -303,7 +303,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   JSValue opt_h2 = JS_GetPropertyStr(ctx, options, "h2");
   if(!JS_IsUndefined(opt_h2))
-    is_h2 = JS_ToBool(ctx, opt_h2);
+    wsi_http2 = JS_ToBool(ctx, opt_h2);
   JS_FreeValue(ctx, opt_h2);
 
   GETCB(opt_on_pong, server->cb.pong)
@@ -351,7 +351,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
   client_certificate(&server->context, options);
 
-  if(is_h2) {
+  if(wsi_http2) {
     info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
     // info->options |= LWS_SERVER_OPTION_VH_H2_HALF_CLOSED_LONG_POLL;
   }
@@ -500,7 +500,7 @@ int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetServer* server = /*session ? session->server :*/ lws_context_user(lws_get_context(wsi));
 
-  // if(!lws_is_poll_callback(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
+  // if(!lws_reason_poll(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
 
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:

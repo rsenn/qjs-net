@@ -9,25 +9,30 @@
 
 #ifndef USE_CURL
 
-struct fetch_closure {
+typedef struct fetch_closure {
   int ref_count;
   MinnetClient* client;
-};
+} MinnetFetch;
 
-static struct fetch_closure*
-fetch_closure_new(JSContext* ctx) {
-  return js_mallocz(ctx, sizeof(struct fetch_closure));
+MinnetFetch*
+fetch_new(JSContext* ctx) {
+  MinnetFetch* ret;
+
+  if((ret = js_mallocz(ctx, sizeof(MinnetFetch))))
+    ++ret->ref_count;
+
+  return ret;
 }
 
-static struct fetch_closure*
-fetch_closure_dup(struct fetch_closure* c) {
+MinnetFetch*
+fetch_dup(MinnetFetch* c) {
   ++c->ref_count;
   return c;
 }
 
-static void
-fetch_closure_free(void* ptr) {
-  struct fetch_closure* closure = ptr;
+void
+fetch_free(void* ptr) {
+  MinnetFetch* closure = ptr;
 
   if(--closure->ref_count == 0) {
     if(closure->client) {
@@ -49,7 +54,7 @@ enum {
 
 static JSValue
 fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
-  struct fetch_closure* closure = opaque;
+  MinnetFetch* closure = opaque;
   MinnetClient* client = closure->client;
 
   // printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
@@ -101,12 +106,12 @@ JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret, handlers[4], args[2];
   MinnetClosure* cc;
-  struct fetch_closure* fc;
+  MinnetFetch* fc;
 
   if(argc >= 2 && !JS_IsObject(argv[1]))
     return JS_ThrowTypeError(ctx, "argument 2 must be an object");
 
-  if(!(fc = fetch_closure_new(ctx)))
+  if(!(fc = fetch_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   if(!(cc = closure_new(ctx)))
@@ -115,10 +120,10 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   args[0] = argv[0];
   args[1] = argc <= 1 ? JS_NewObject(ctx) : JS_DupValue(ctx, argv[1]);
 
-  handlers[0] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, fetch_closure_dup(fc), fetch_closure_free);
-  handlers[1] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_ERROR, fetch_closure_dup(fc), fetch_closure_free);
-  handlers[2] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_CLOSE, fetch_closure_dup(fc), fetch_closure_free);
-  handlers[3] = JS_NewCClosure(ctx, &fetch_handler, 3, ON_FD, fetch_closure_dup(fc), fetch_closure_free);
+  handlers[0] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, fetch_dup(fc), fetch_free);
+  handlers[1] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_ERROR, fetch_dup(fc), fetch_free);
+  handlers[2] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_CLOSE, fetch_dup(fc), fetch_free);
+  handlers[3] = JS_NewCClosure(ctx, &fetch_handler, 3, ON_FD, fetch_dup(fc), fetch_free);
 
   JS_SetPropertyStr(ctx, args[1], "onHttp", handlers[0]);
   JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);

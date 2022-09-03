@@ -30,6 +30,9 @@
     .name = prop_name, .prop_flags = (flags), .def_type = JS_DEF_CFUNC, .magic = 0, .u = {.func = {length, JS_CFUNC_generic, {.generic = func1}} } \
   }
 
+typedef enum { READ_HANDLER = 0, WRITE_HANDLER } os_handler_e;
+typedef enum { ON_RESOLVE = 0, ON_REJECT } promise_handler_e;
+
 typedef struct JSThreadState {
   struct list_head os_rw_handlers;
   struct list_head os_signal_handlers;
@@ -51,6 +54,11 @@ typedef struct input_buffer {
   JSValue value;
   OffsetLength range;
 } JSBuffer;
+
+typedef struct key_value {
+  JSAtom key;
+  JSValue value;
+} JSEntry;
 
 #define JS_BUFFER_DEFAULT() JS_BUFFER(0, 0, &js_buffer_free_default)
 
@@ -74,60 +82,6 @@ struct TimerClosure {
   JSContext* ctx;
   JSValueConst id, handler, callback;
 };
-
-static inline void
-ol_init(OffsetLength* ol) {
-  ol->offset = 0;
-  ol->length = INT64_MAX;
-}
-
-static inline BOOL
-ol_is_default(const OffsetLength* ol) {
-  return ol->offset == 0 && ol->length == INT64_MAX;
-}
-
-static inline uint8_t*
-ol_data(const OffsetLength* ol, const void* x) {
-  return (uint8_t*)x + ol->offset;
-}
-
-static inline size_t
-ol_size(const OffsetLength* ol, size_t n) {
-  return MIN(ol->length, n - ol->offset);
-}
-
-/*static inline MemoryBlock
-ol_block(const OffsetLength* ol, const void* x, size_t n) {
-  return (MemoryBlock){ol_data(ol, x), ol_size(ol, n)};
-}*/
-
-/*static inline PointerRange
-ol_range(const OffsetLength* ol, const void* x, size_t n) {
-  MemoryBlock mb = offset_block(ol, x, n);
-  return range_from(&mb);
-}*/
-
-static inline OffsetLength
-ol_slice(const OffsetLength ol, int64_t start, int64_t end) {
-  if(start < 0)
-    start = ol.length + (start % ol.length);
-  else if(start > ol.length)
-    start = ol.length;
-  if(end < 0)
-    end = ol.length + (end % ol.length);
-  else if(end > ol.length)
-    end = ol.length;
-
-  return (OffsetLength){start, end - start};
-}
-
-static inline OffsetLength
-ol_offset(const OffsetLength* ol, const OffsetLength* by) {
-  OffsetLength ret;
-  ret.offset = ol->offset + by->offset;
-  ret.length = MIN(by->length, ol->length - by->offset);
-  return ret;
-}
 
 #define JS_BIND_THIS 0x8000
 
@@ -204,6 +158,125 @@ BOOL js_is_arraybuffer(JSContext* ctx, JSValueConst value);
 BOOL js_is_dataview(JSContext* ctx, JSValueConst value);
 BOOL js_is_typedarray(JSContext* ctx, JSValueConst value);
 BOOL js_is_generator(JSContext* ctx, JSValueConst value);
+
+static inline void
+js_entry_init(JSEntry* entry) {
+  entry->key = -1;
+  entry->value = JS_UNDEFINED;
+}
+
+static inline void
+js_entry_clear(JSContext* ctx, JSEntry* entry) {
+  if(entry->key >= 0)
+    JS_FreeAtom(ctx, entry->key);
+  entry->key = -1;
+  JS_FreeValue(ctx, entry->value);
+  entry->value = JS_UNDEFINED;
+}
+
+static inline void
+js_entry_clear_rt(JSRuntime* rt, JSEntry* entry) {
+  if(entry->key >= 0)
+    JS_FreeAtomRT(rt, entry->key);
+  entry->key = -1;
+  JS_FreeValueRT(rt, entry->value);
+  entry->value = JS_UNDEFINED;
+}
+
+static inline void
+js_entry_reset(JSContext* ctx, JSEntry* entry, JSAtom key, JSValue value) {
+  js_entry_clear(ctx, entry);
+  entry->key = key;
+  entry->value = value;
+}
+
+static inline void
+js_entry_reset_string(JSContext* ctx, JSEntry* entry, const char* keystr, JSValue value) {
+  JSAtom key;
+  key = JS_NewAtom(ctx, keystr);
+  js_entry_reset(ctx, entry, key, value);
+}
+
+static inline const char*
+js_entry_key_string(JSContext* ctx, const JSEntry entry) {
+  const char* str;
+  str = JS_AtomToCString(ctx, entry.key);
+  return str;
+}
+
+static inline const char*
+js_entry_value_string(JSContext* ctx, const JSEntry entry) {
+  const char* str;
+  str = JS_ToCString(ctx, entry.value);
+  return str;
+}
+
+static inline JSEntry
+js_entry_dup(JSContext* ctx, const JSEntry entry) {
+  JSEntry ret = {JS_DupAtom(ctx, entry.key), JS_DupValue(ctx, entry.value)};
+  return ret;
+}
+
+static inline int
+js_entry_apply(JSContext* ctx, const JSEntry entry, JSValueConst obj) {
+  int ret;
+  ret = JS_SetProperty(ctx, obj, entry.key, JS_DupValue(ctx, entry.value));
+  return ret;
+}
+
+static inline void
+ol_init(OffsetLength* ol) {
+  ol->offset = 0;
+  ol->length = INT64_MAX;
+}
+
+static inline BOOL
+ol_is_default(const OffsetLength* ol) {
+  return ol->offset == 0 && ol->length == INT64_MAX;
+}
+
+static inline uint8_t*
+ol_data(const OffsetLength* ol, const void* x) {
+  return (uint8_t*)x + ol->offset;
+}
+
+static inline size_t
+ol_size(const OffsetLength* ol, size_t n) {
+  return MIN(ol->length, n - ol->offset);
+}
+
+/*static inline MemoryBlock
+ol_block(const OffsetLength* ol, const void* x, size_t n) {
+  return (MemoryBlock){ol_data(ol, x), ol_size(ol, n)};
+}*/
+
+/*static inline PointerRange
+ol_range(const OffsetLength* ol, const void* x, size_t n) {
+  MemoryBlock mb = offset_block(ol, x, n);
+  return range_from(&mb);
+}*/
+
+static inline OffsetLength
+ol_slice(const OffsetLength ol, int64_t start, int64_t end) {
+  if(start < 0)
+    start = ol.length + (start % ol.length);
+  else if(start > ol.length)
+    start = ol.length;
+  if(end < 0)
+    end = ol.length + (end % ol.length);
+  else if(end > ol.length)
+    end = ol.length;
+
+  return (OffsetLength){start, end - start};
+}
+
+static inline OffsetLength
+ol_offset(const OffsetLength* ol, const OffsetLength* by) {
+  OffsetLength ret;
+  ret.offset = ol->offset + by->offset;
+  ret.length = MIN(by->length, ol->length - by->offset);
+  return ret;
+}
 
 static inline void
 js_clear(JSContext* ctx, const void* arg) {

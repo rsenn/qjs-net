@@ -4,6 +4,9 @@
 #include <stddef.h>
 #include <ctype.h>
 #include <libwebsockets.h>
+#include <arpa/inet.h>
+#include <quickjs.h>
+#include <cutils.h>
 
 #if defined(_WIN32) || defined(__MINGW32__)
 #define VISIBLE __declspec(dllexport)
@@ -26,6 +29,12 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+#define FG(c) "\x1b[38;5;" c "m"
+#define BG(c) "\x1b[48;5;" c "m"
+#define FGC(c, str) FG(#c) str NC
+#define BGC(c, str) BG(#c) str NC
+#define NC "\x1b[0m"
+
 enum http_method {
   METHOD_GET = 0,
   METHOD_POST,
@@ -39,132 +48,47 @@ enum http_method {
 typedef enum http_method MinnetHttpMethod;
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
-static inline size_t
-byte_chr(const void* x, size_t len, char c) {
-  const char *s, *t, *str = x;
-  for(s = str, t = s + len; s < t; ++s)
-    if(*s == c)
-      break;
-  return s - str;
-}
 
-static inline size_t
-byte_chrs(const void* x, size_t len, const char needle[], size_t nl) {
-  const char *s, *t;
-  for(s = x, t = (const char*)x + len; s != t; s++)
-    if(byte_chr(needle, nl, *s) < nl)
-      break;
-  return s - (const char*)x;
-}
+size_t byte_chr(const void*, size_t len, char c);
+size_t byte_chrs(const void*, size_t len, const char needle[], size_t nl);
+size_t byte_rchr(const void*, size_t len, char needle);
+size_t scan_whitenskip(const char*, size_t limit);
+size_t scan_nonwhitenskip(const char*, size_t limit);
+size_t scan_charsetnskip(const char*, const char* charset, size_t limit);
 
-static inline size_t
-byte_rchr(const void* x, size_t len, char needle) {
-  const char *s, *t;
-  for(s = x, t = (const char*)x + len; --t >= s;) {
-    if(*t == needle)
-      return (size_t)(t - s);
-  }
-  return len;
-}
+unsigned uint_pow(unsigned, unsigned degree);
 
-static inline size_t
-scan_whitenskip(const char* s, size_t limit) {
-  const char* t = s;
-  const char* u = t + limit;
-  while(t < u && isspace(*t)) ++t;
-  return (size_t)(t - s);
-}
+int socket_geterror(int);
+char* socket_address(int, int (*fn)(int, struct sockaddr*, socklen_t*));
 
-static inline size_t
-scan_nonwhitenskip(const char* s, size_t limit) {
-  const char* t = s;
-  const char* u = t + limit;
-  while(t < u && !isspace(*t)) ++t;
-  return (size_t)(t - s);
-}
+char* wsi_peer(struct lws*, JSContext* ctx);
+char* wsi_host(struct lws*, JSContext* ctx);
+void wsi_cert(struct lws*);
+char* wsi_query_string_len(struct lws*, size_t* len_p, JSContext* ctx);
+int wsi_query_object(struct lws*, JSContext* ctx, JSValueConst obj);
+char* wsi_token_len(struct lws*, JSContext* ctx, enum lws_token_indexes token, size_t* len_p);
+int wsi_copy_fragment(struct lws*, enum lws_token_indexes token, int fragment, DynBuf* db);
+char* wsi_uri_and_method(struct lws*, JSContext* ctx, MinnetHttpMethod* method);
 
-static inline size_t
-scan_charsetnskip(const char* s, const char* charset, size_t limit) {
-  const char* t = s;
-  const char* u = t + limit;
-  const char* i;
-  while(t < u) {
-    for(i = charset; *i; ++i)
-      if(*i == *t)
-        break;
-    if(*i != *t)
-      break;
-    ++t;
-  }
-  return (size_t)(t - s);
-}
+const char* lws_callback_name(int reason);
 
-static inline unsigned
-uint_pow(unsigned base, unsigned degree) {
-  unsigned result = 1;
-  unsigned term = base;
-  while(degree) {
-    if(degree & 1)
-      result *= term;
-    term *= term;
-    degree = degree >> 1;
-  }
-  return result;
-}
-
-static inline char*
-lws_get_token_len(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token, size_t* len_p) {
-  size_t len;
-  int r;
-  char* buf;
-
-  len = lws_hdr_total_length(wsi, token);
-
-  if(!(buf = js_mallocz(ctx, len + 1)))
-    return 0;
-
-  lws_hdr_copy(wsi, buf, len + 1, token);
-
-  if(len_p)
-    *len_p = len;
-
-  return buf;
-}
-
-static inline char*
-lws_get_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
-  return lws_get_token_len(wsi, ctx, token, NULL);
-}
-
-static inline char*
-minnet_uri_and_method(struct lws* wsi, JSContext* ctx, MinnetHttpMethod* method) {
-  char* url;
-
-  if((url = lws_get_token(wsi, ctx, WSI_TOKEN_POST_URI))) {
-    if(method)
-      *method = METHOD_POST;
-  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_GET_URI))) {
-    if(method)
-      *method = METHOD_GET;
-  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_HEAD_URI))) {
-    if(method)
-      *method = METHOD_HEAD;
-  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_OPTIONS_URI))) {
-    if(method)
-      *method = METHOD_OPTIONS;
-  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_PATCH_URI))) {
-    if(method)
-      *method = METHOD_PATCH;
-  } else if((url = lws_get_token(wsi, ctx, WSI_TOKEN_PUT_URI))) {
-    if(method)
-      *method = METHOD_PUT;
-  }
-
-  return url;
+static inline BOOL
+has_query(const char* str) {
+  return !!strchr(str, '?');
 }
 
 static inline BOOL
-lws_is_poll_callback(int reason) {
+has_query_b(const char* str, size_t len) {
+  return byte_chr(str, len, '?') < len;
+}
+
+static inline char*
+wsi_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
+  return wsi_token_len(wsi, ctx, token, NULL);
+}
+
+static inline BOOL
+lws_reason_poll(int reason) {
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:
     case LWS_CALLBACK_UNLOCK_POLL:
@@ -176,7 +100,7 @@ lws_is_poll_callback(int reason) {
 }
 
 static inline BOOL
-lws_is_http_callback(int reason) {
+lws_reason_http(int reason) {
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP:
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
@@ -203,7 +127,7 @@ lws_is_http_callback(int reason) {
 }
 
 static inline BOOL
-lws_is_client_callback(int reason) {
+lws_reason_client(int reason) {
   switch(reason) {
     case LWS_CALLBACK_CONNECTING:
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
@@ -239,13 +163,23 @@ lws_is_client_callback(int reason) {
 }
 
 static inline int
-is_h2(struct lws* wsi) {
+wsi_http2(struct lws* wsi) {
   return lws_wsi_is_h2(wsi);
 }
 
 static inline int
-minnet_query_length(struct lws* wsi) {
+wsi_query_len(struct lws* wsi) {
   return lws_hdr_total_length(wsi, WSI_TOKEN_HTTP_URI_ARGS);
+}
+
+static inline char*
+socket_remote(int fd) {
+  return socket_address(fd, &getpeername);
+}
+
+static inline char*
+socket_local(int fd) {
+  return socket_address(fd, &getsockname);
 }
 
 #endif /* MINNET_UTILS_H */

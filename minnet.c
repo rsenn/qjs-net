@@ -18,7 +18,6 @@
 #include <strings.h>
 #include <ctype.h>
 #include <sys/time.h>
-#include <arpa/inet.h>
 
 /*#ifdef _WIN32
 #include "poll.h"
@@ -45,21 +44,18 @@
 */
 #define PIO (POLLIN | POLLOUT | POLLERR)
 
-struct handler_closure {
+typedef struct handler_closure {
   JSContext* ctx;
   struct lws* lwsi;
   struct wsi_opaque_user_data* opaque;
-};
+} MinnetHandler;
 
 JSValue minnet_fetch(JSContext*, JSValueConst, int, JSValueConst*);
 
-// THREAD_LOCAL struct lws_context* minnet_lws_context = 0;
-
 static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
-THREAD_LOCAL int32_t minnet_log_level = 0;
-THREAD_LOCAL JSContext* minnet_log_ctx = 0;
+static THREAD_LOCAL int32_t minnet_log_level = 0;
+static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
 THREAD_LOCAL struct list_head minnet_sockets = {0, 0};
-// THREAD_LOCAL BOOL minnet_exception = FALSE;
 
 static size_t
 skip_brackets(const char* line, size_t len) {
@@ -130,19 +126,6 @@ minnet_log_callback(int level, const char* line) {
       js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log_cb);
     }
   }
-}
-
-int
-socket_geterror(int fd) {
-  int e;
-  socklen_t sl = sizeof(e);
-
-  if(!getsockopt(fd, SOL_SOCKET, SO_ERROR, &e, &sl)) {
-    setsockopt(fd, SOL_SOCKET, SO_ERROR, &e, sl);
-    return e;
-  }
-
-  return -1;
 }
 
 JSValue
@@ -218,11 +201,6 @@ minnet_lws_unhandled(const char* handler, int reason) {
   return -1;
 }
 
-/*static JSValue
-get_log(JSContext* ctx, JSValueConst this_val) {
-  return JS_DupValue(ctx, minnet_log_cb);
-}*/
-
 static JSValue
 set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst thisObj) {
   JSValue ret = JS_VALUE_GET_TAG(minnet_log_cb) == 0 ? JS_UNDEFINED : minnet_log_cb;
@@ -252,39 +230,9 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return ret;
 }
 
-/*static const char*
-io_events(int events) {
-  switch(events) {
-    case POLLOUT | POLLHUP: return "OUT|HUP";
-    case POLLIN | POLLOUT | POLLHUP | POLLERR: return "IN|OUT|HUP|ERR";
-    case POLLOUT | POLLHUP | POLLERR: return "OUT|HUP|ERR";
-    case POLLIN | POLLOUT: return "IN|OUT";
-    case POLLIN: return "IN";
-    case POLLOUT:
-      return "OUT";
-  }
-  assert(!events);
-  return "";
-}*/
-
-/*static int
-io_parse_events(const char* str) {
-  int events = 0;
-
-  if(strstr(str, "IN"))
-    events |= POLLIN;
-  if(strstr(str, "OUT"))
-    events |= POLLOUT;
-  if(strstr(str, "HUP"))
-    events |= POLLHUP;
-  if(strstr(str, "ERR"))
-    events |= POLLERR;
-  return events;
-}*/
-
 static JSValue
 minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  struct handler_closure* closure = ptr;
+  MinnetHandler* closure = ptr;
   struct pollfd* p;
   int32_t wr;
   JSValue ret = JS_UNDEFINED;
@@ -320,19 +268,19 @@ minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
 
 static void
 free_handler_closure(void* ptr) {
-  struct handler_closure* closure = ptr;
+  MinnetHandler* closure = ptr;
   JSContext* ctx = closure->ctx;
   js_free(ctx, closure);
 };
 
 static JSValue
 make_handler(JSContext* ctx, int fd, int events, struct lws* wsi) {
-  struct handler_closure* closure;
+  MinnetHandler* closure;
 
-  if(!(closure = js_mallocz(ctx, sizeof(struct handler_closure))))
+  if(!(closure = js_mallocz(ctx, sizeof(MinnetHandler))))
     return JS_ThrowOutOfMemory(ctx);
 
-  *closure = (struct handler_closure){ctx, wsi, lws_opaque(wsi, ctx)};
+  *closure = (MinnetHandler){ctx, wsi, lws_opaque(wsi, ctx)};
 
   closure->opaque->poll = (struct pollfd){fd, events, 0};
 
@@ -403,13 +351,6 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_PROP_INT32_DEF("LLL_ALL", ~((~0u) << LLL_COUNT), 0),
     JS_OBJECT_DEF("logLevels", minnet_loglevels, countof(minnet_loglevels), JS_PROP_CONFIGURABLE),
 };
-
-void
-value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
-  const char* str = JS_ToCString(ctx, *v);
-  lwsl_user("%s = '%s'\n", n, str);
-  JS_FreeCString(ctx, str);
-}
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
@@ -555,295 +496,4 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   lws_set_log_level(minnet_log_level, minnet_log_callback);
 
   return m;
-}
-
-char*
-lws_get_peer(struct lws* wsi, JSContext* ctx) {
-  char buf[1024];
-
-  lws_get_peer_simple(wsi, buf, sizeof(buf) - 1);
-
-  return js_strdup(ctx, buf);
-}
-
-char*
-lws_get_host(struct lws* wsi, JSContext* ctx) {
-  return lws_get_token(wsi, ctx, lws_wsi_is_h2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST);
-}
-
-void
-lws_peer_cert(struct lws* wsi) {
-  uint8_t buf[1280];
-  union lws_tls_cert_info_results* ci = (union lws_tls_cert_info_results*)buf;
-#if defined(LWS_HAVE_CTIME_R)
-  char date[32];
-#endif
-
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_COMMON_NAME, ci, sizeof(buf) - sizeof(*ci)))
-    lwsl_notice(" Peer Cert CN        : %s\n", ci->ns.name);
-
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_ISSUER_NAME, ci, sizeof(ci->ns.name)))
-    lwsl_notice(" Peer Cert issuer    : %s\n", ci->ns.name);
-
-#if defined(LWS_HAVE_CTIME_R)
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_VALIDITY_FROM, ci, 0))
-    lwsl_notice(" Peer Cert Valid from: %s", ctime_r(&ci->time, date));
-#else
-  lwsl_notice(" Peer Cert Valid from: %s", ctime(&ci->time));
-#endif
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_VALIDITY_TO, ci, 0))
-#if defined(LWS_HAVE_CTIME_R)
-    lwsl_notice(" Peer Cert Valid to  : %s", ctime_r(&ci->time, date));
-#else
-    lwsl_notice(" Peer Cert Valid to  : %s", ctime(&ci->time));
-#endif
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_USAGE, ci, 0))
-    lwsl_notice(" Peer Cert usage bits: 0x%x\n", ci->usage);
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_OPAQUE_PUBLIC_KEY, ci, sizeof(buf) - sizeof(*ci))) {
-    lwsl_notice(" Peer Cert public key:\n");
-    lwsl_hexdump_notice(ci->ns.name, (unsigned int)ci->ns.len);
-  }
-
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID, ci, 0)) {
-    lwsl_notice(" AUTHORITY_KEY_ID\n");
-    lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
-  }
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID_ISSUER, ci, 0)) {
-    lwsl_notice(" AUTHORITY_KEY_ID ISSUER\n");
-    lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
-  }
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID_SERIAL, ci, 0)) {
-    lwsl_notice(" AUTHORITY_KEY_ID SERIAL\n");
-    lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
-  }
-  if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_SUBJECT_KEY_ID, ci, 0)) {
-    lwsl_notice(" AUTHORITY_KEY_ID SUBJECT_KEY_ID\n");
-    lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
-  }
-}
-
-char*
-fd_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
-  const char* s = 0;
-  union {
-    struct sockaddr a;
-    struct sockaddr_in ai;
-    struct sockaddr_in6 ai6;
-  } sa;
-  socklen_t sl = sizeof(s);
-  uint16_t port;
-  static char addr[1024];
-
-  if(fn(fd, &sa.a, &sl) != -1) {
-    size_t i;
-    s = inet_ntop(sa.ai.sin_family, sa.ai.sin_family == AF_INET ? (void*)&sa.ai.sin_addr : (void*)&sa.ai6.sin6_addr, addr, sizeof(addr));
-    i = strlen(s);
-
-    switch(sa.ai.sin_family) {
-      case AF_INET: port = ntohs(sa.ai.sin_port); break;
-      case AF_INET6: port = ntohs(sa.ai6.sin6_port); break;
-    }
-    snprintf(&addr[i], sizeof(addr) - i, ":%u", port);
-  }
-
-  return (char*)s;
-}
-
-char*
-fd_remote(int fd) {
-  return fd_address(fd, &getpeername);
-}
-
-char*
-fd_local(int fd) {
-  return fd_address(fd, &getsockname);
-}
-
-int
-lws_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, DynBuf* db) {
-  int ret = 0, len;
-  // dbuf_init2(&dbuf, 0, 0);
-
-  len = lws_hdr_fragment_length(wsi, token, fragment);
-
-  dbuf_realloc(db, (len > 0 ? len : 1023) + 1);
-
-  if((ret = lws_hdr_copy_fragment(wsi, db->buf, db->size, token, fragment)) < 0)
-    return ret;
-
-  return len;
-}
-
-int
-minnet_query_object2(struct lws* wsi, JSContext* ctx, JSValueConst obj) {
-  int r, i, len;
-  DynBuf dbuf;
-  dbuf_init2(&dbuf, 0, 0);
-  len = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP_URI_ARGS);
-  for(i = 0; i < len; i++) {
-    size_t namelen, valuelen;
-    const char* value;
-    r = lws_copy_fragment(wsi, WSI_TOKEN_HTTP_URI_ARGS, i, &dbuf);
-    printf("query #%i: '%.*s'\n", i, (int)r, (char*)dbuf.buf);
-    namelen = byte_chr(dbuf.buf, r, '=');
-    dbuf.buf[namelen] = '\0';
-    value = (const char*)&dbuf.buf[namelen + 1];
-    valuelen = r - (namelen + 1);
-    JS_SetPropertyStr(ctx, obj, (const char*)dbuf.buf, JS_NewStringLen(ctx, value, valuelen));
-  }
-  dbuf_free(&dbuf);
-  return i;
-}
-
-void
-minnet_query_entry(char* start, size_t len, JSContext* ctx, JSValueConst obj) {
-  size_t namelen, valuelen;
-  const char* value;
-
-  namelen = byte_chr(start, len, '=');
-
-  if(namelen < len)
-    start[namelen] = '\0';
-
-  value = start + namelen + 1;
-  valuelen = len - (namelen + 1);
-
-  JS_SetPropertyStr(ctx, obj, start, JS_NewStringLen(ctx, value, valuelen));
-}
-
-int
-minnet_query_object(struct lws* wsi, JSContext* ctx, JSValueConst obj) {
-  char* tok;
-  size_t toklen;
-  int i = 0;
-
-  if((tok = lws_get_token_len(wsi, ctx, WSI_TOKEN_HTTP_URI_ARGS, &toklen))) {
-    char *start = tok, *end = tok + toklen;
-
-    while(tok < end) {
-      size_t paramlen = byte_chr(tok, end - tok, '&');
-
-      printf("query #%i = '%.*s'\n", i++, (int)paramlen, tok);
-
-      minnet_query_entry(tok, paramlen, ctx, obj);
-
-      tok += paramlen + 1;
-    }
-
-    js_free(ctx, start);
-  }
-
-  return 0;
-}
-
-const char*
-lws_callback_name(int reason) {
-  return ((const char* const[]){
-      "LWS_CALLBACK_ESTABLISHED",
-      "LWS_CALLBACK_CLIENT_CONNECTION_ERROR",
-      "LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH",
-      "LWS_CALLBACK_CLIENT_ESTABLISHED",
-      "LWS_CALLBACK_CLOSED",
-      "LWS_CALLBACK_CLOSED_HTTP",
-      "LWS_CALLBACK_RECEIVE",
-      "LWS_CALLBACK_RECEIVE_PONG",
-      "LWS_CALLBACK_CLIENT_RECEIVE",
-      "LWS_CALLBACK_CLIENT_RECEIVE_PONG",
-      "LWS_CALLBACK_CLIENT_WRITEABLE",
-      "LWS_CALLBACK_SERVER_WRITEABLE",
-      "LWS_CALLBACK_HTTP",
-      "LWS_CALLBACK_HTTP_BODY",
-      "LWS_CALLBACK_HTTP_BODY_COMPLETION",
-      "LWS_CALLBACK_HTTP_FILE_COMPLETION",
-      "LWS_CALLBACK_HTTP_WRITEABLE",
-      "LWS_CALLBACK_FILTER_NETWORK_CONNECTION",
-      "LWS_CALLBACK_FILTER_HTTP_CONNECTION",
-      "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED",
-      "LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION",
-      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS",
-      "LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS",
-      "LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION",
-      "LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER",
-      "LWS_CALLBACK_CONFIRM_EXTENSION_OKAY",
-      "LWS_CALLBACK_CLIENT_CONFIRM_EXTENSION_SUPPORTED",
-      "LWS_CALLBACK_PROTOCOL_INIT",
-      "LWS_CALLBACK_PROTOCOL_DESTROY",
-      "LWS_CALLBACK_WSI_CREATE",
-      "LWS_CALLBACK_WSI_DESTROY",
-      "LWS_CALLBACK_GET_THREAD_ID",
-      "LWS_CALLBACK_ADD_POLL_FD",
-      "LWS_CALLBACK_DEL_POLL_FD",
-      "LWS_CALLBACK_CHANGE_MODE_POLL_FD",
-      "LWS_CALLBACK_LOCK_POLL",
-      "LWS_CALLBACK_UNLOCK_POLL",
-      "LWS_CALLBACK_OPENSSL_CONTEXT_REQUIRES_PRIVATE_KEY",
-      "LWS_CALLBACK_WS_PEER_INITIATED_CLOSE",
-      "LWS_CALLBACK_WS_EXT_DEFAULTS",
-      "LWS_CALLBACK_CGI",
-      "LWS_CALLBACK_CGI_TERMINATED",
-      "LWS_CALLBACK_CGI_STDIN_DATA",
-      "LWS_CALLBACK_CGI_STDIN_COMPLETED",
-      "LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP",
-      "LWS_CALLBACK_CLOSED_CLIENT_HTTP",
-      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP",
-      "LWS_CALLBACK_COMPLETED_CLIENT_HTTP",
-      "LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ",
-      "LWS_CALLBACK_HTTP_BIND_PROTOCOL",
-      "LWS_CALLBACK_HTTP_DROP_PROTOCOL",
-      "LWS_CALLBACK_CHECK_ACCESS_RIGHTS",
-      "LWS_CALLBACK_PROCESS_HTML",
-      "LWS_CALLBACK_ADD_HEADERS",
-      "LWS_CALLBACK_SESSION_INFO",
-      "LWS_CALLBACK_GS_EVENT",
-      "LWS_CALLBACK_HTTP_PMO",
-      "LWS_CALLBACK_CLIENT_HTTP_WRITEABLE",
-      "LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION",
-      "LWS_CALLBACK_RAW_RX",
-      "LWS_CALLBACK_RAW_CLOSE",
-      "LWS_CALLBACK_RAW_WRITEABLE",
-      "LWS_CALLBACK_RAW_ADOPT",
-      "LWS_CALLBACK_RAW_ADOPT_FILE",
-      "LWS_CALLBACK_RAW_RX_FILE",
-      "LWS_CALLBACK_RAW_WRITEABLE_FILE",
-      "LWS_CALLBACK_RAW_CLOSE_FILE",
-      "LWS_CALLBACK_SSL_INFO",
-      0,
-      "LWS_CALLBACK_CHILD_CLOSING",
-      "LWS_CALLBACK_CGI_PROCESS_ATTACH",
-      "LWS_CALLBACK_EVENT_WAIT_CANCELLED",
-      "LWS_CALLBACK_VHOST_CERT_AGING",
-      "LWS_CALLBACK_TIMER",
-      "LWS_CALLBACK_VHOST_CERT_UPDATE",
-      "LWS_CALLBACK_CLIENT_CLOSED",
-      "LWS_CALLBACK_CLIENT_HTTP_DROP_PROTOCOL",
-      "LWS_CALLBACK_WS_SERVER_BIND_PROTOCOL",
-      "LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL",
-      "LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL",
-      "LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_FILE_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_FILE_DROP_PROTOCOL",
-      "LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL",
-      "LWS_CALLBACK_HTTP_CONFIRM_UPGRADE",
-      0,
-      0,
-      "LWS_CALLBACK_RAW_PROXY_CLI_RX",
-      "LWS_CALLBACK_RAW_PROXY_SRV_RX",
-      "LWS_CALLBACK_RAW_PROXY_CLI_CLOSE",
-      "LWS_CALLBACK_RAW_PROXY_SRV_CLOSE",
-      "LWS_CALLBACK_RAW_PROXY_CLI_WRITEABLE",
-      "LWS_CALLBACK_RAW_PROXY_SRV_WRITEABLE",
-      "LWS_CALLBACK_RAW_PROXY_CLI_ADOPT",
-      "LWS_CALLBACK_RAW_PROXY_SRV_ADOPT",
-      "LWS_CALLBACK_RAW_PROXY_CLI_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_PROXY_SRV_BIND_PROTOCOL",
-      "LWS_CALLBACK_RAW_PROXY_CLI_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_PROXY_SRV_DROP_PROTOCOL",
-      "LWS_CALLBACK_RAW_CONNECTED",
-      "LWS_CALLBACK_VERIFY_BASIC_AUTHORIZATION",
-      "LWS_CALLBACK_WSI_TX_CREDIT_GET",
-      "LWS_CALLBACK_CLIENT_HTTP_REDIRECT",
-      "LWS_CALLBACK_CONNECTING",
-  })[reason];
 }

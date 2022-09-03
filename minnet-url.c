@@ -1,5 +1,6 @@
 #include "minnet-url.h"
 #include "jsutils.h"
+#include "utils.h"
 #include <assert.h>
 #include <limits.h>
 #include <ctype.h>
@@ -137,7 +138,7 @@ url_parse(MinnetURL* url, const char* u, JSContext* ctx) {
 
 MinnetURL
 url_create(const char* str, JSContext* ctx) {
-  MinnetURL ret = {1, 0, 0, 0, 0};
+  MinnetURL ret = {1, 0, 0, 0, 0, 0};
   url_parse(&ret, str, ctx);
   return ret;
 }
@@ -240,6 +241,43 @@ url_set_protocol(MinnetURL* url, const char* proto) {
   return p;
 }
 
+BOOL
+url_set_path_len(MinnetURL* url, const char* path, size_t len, JSContext* ctx) {
+  char* oldpath = url->path;
+  BOOL ret = FALSE;
+
+  if(has_query_b(path, len)) {
+    ret = !!(url->path = js_strndup(ctx, path, len));
+  } else {
+    const char* oldquery = url_query(*url);
+    if((url->path = js_strndup(ctx, path, len))) {
+      url_set_query(url, oldquery, ctx);
+      ret = TRUE;
+    }
+  }
+  js_free(ctx, oldpath);
+  return ret;
+}
+
+BOOL
+url_set_query_len(MinnetURL* url, const char* query, size_t len, JSContext* ctx) {
+  size_t pathlen;
+  char* oldquery;
+
+  if(url->path && (oldquery = strchr(url->path, '?'))) {
+    pathlen = oldquery - url->path;
+  } else {
+    pathlen = url->path ? strlen(url->path) : 0;
+  }
+  if((url->path = js_realloc(ctx, url->path, pathlen + 1 + len + 1))) {
+    url->path[pathlen] = '?';
+    memcpy(&url->path[pathlen + 1], query, len);
+    url->path[pathlen + 1 + len] = '\0';
+    return TRUE;
+  }
+  return FALSE;
+}
+
 void
 url_info(const MinnetURL url, struct lws_client_connect_info* info) {
   MinnetProtocol proto = url.protocol ? protocol_number(url.protocol) : PROTOCOL_RAW;
@@ -310,6 +348,9 @@ url_location(const MinnetURL url, JSContext* ctx) {
 const char*
 url_query(const MinnetURL url) {
   const char* p;
+  if(!url.path)
+    return 0;
+
   for(p = url.path; *p; p++) {
     if(*p == '\\') {
       ++p;
@@ -391,81 +432,20 @@ url_fromwsi(MinnetURL* url, struct lws* wsi, JSContext* ctx) {
     }
   }
 
-  if((p = minnet_uri_and_method(wsi, ctx, 0))) {
+  if((p = wsi_uri_and_method(wsi, ctx, 0))) {
     url->path = p;
     // lws_hdr_copy(wsi, url->path, len + 1, WSI_TOKEN_GET_URI);
   }
+
+  assert(url->path);
+
+  // url->query = minnet_query_string(wsi, ctx);
 }
 
 void
 url_dump(const char* n, MinnetURL const* url) {
   fprintf(stderr, "%s{ protocol = %s, host = %s, port = %u, path = %s }\n", n, url->protocol, url->host, url->port, url->path);
   fflush(stderr);
-}
-
-JSValue
-query_object(const char* q, JSContext* ctx) {
-  const char* p;
-  size_t i, n = strlen(q);
-  JSValue ret = JS_NewObject(ctx);
-
-  for(i = 0, p = q; i <= n; i++, q++) {
-    if(*q == '\\') {
-      ++q;
-      continue;
-    }
-    if(*p == '&' || *p == '\0') {
-      size_t namelen, len;
-      char *value, *decoded;
-      JSAtom atom;
-      if((value = strchr(q, '='))) {
-        namelen = (const char*)value - q;
-        ++value;
-        atom = JS_NewAtomLen(ctx, q, namelen);
-        len = p - (const char*)value;
-        decoded = js_strndup(ctx, value, len);
-        lws_urldecode(decoded, decoded, len + 1);
-        JS_SetProperty(ctx, ret, atom, JS_NewString(ctx, decoded));
-        JS_FreeAtom(ctx, atom);
-      }
-    }
-  }
-  return ret;
-}
-
-char*
-query_from(JSValueConst obj, JSContext* ctx) {
-  JSPropertyEnum* tab;
-  uint32_t tab_len, i;
-  DynBuf out;
-  dbuf_init2(&out, ctx, (DynBufReallocFunc*)js_realloc);
-
-  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
-    return 0;
-
-  for(i = 0; i < tab_len; i++) {
-    JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);
-    size_t len;
-    const char *prop, *str;
-
-    str = JS_ToCStringLen(ctx, &len, value);
-    prop = JS_AtomToCString(ctx, tab[i].atom);
-
-    dbuf_putstr(&out, prop);
-    dbuf_putc(&out, '=');
-    dbuf_realloc(&out, out.size + (len * 3) + 1);
-
-    lws_urlencode((char*)&out.buf[out.size], str, out.allocated_size - out.size);
-    out.size += strlen((const char*)&out.buf[out.size]);
-
-    JS_FreeCString(ctx, prop);
-    JS_FreeCString(ctx, str);
-
-    JS_FreeValue(ctx, value);
-  }
-
-  js_free(ctx, tab);
-  return (char*)out.buf;
 }
 
 static THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;

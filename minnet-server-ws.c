@@ -21,12 +21,12 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   if(!opaque && ctx)
     opaque = lws_opaque(wsi, ctx);
 
-  if(lws_is_poll_callback(reason))
+  if(lws_reason_poll(reason))
     return fd_callback(wsi, reason, &server->cb.fd, in);
-  if(lws_is_http_callback(reason))
+  if(lws_reason_http(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
-  LOGCB("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), is_h2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, (char*)in, session ? session->serial : 0);
+  LOGCB("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, (char*)in, session ? session->serial : 0);
 
   switch(reason) {
     case LWS_CALLBACK_CONNECTING: {
@@ -58,7 +58,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
-      lws_peer_cert(wsi);
+      wsi_cert(wsi);
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);
       return 0;
@@ -253,7 +253,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
   }
 
-  // lwsl_user("ws   " FG("%d") "%-38s" NC " fd=%d url='%s' in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), lws_get_token(wsi, server->context.js, //
+  // lwsl_user("ws   " FG("%d") "%-38s" NC " fd=%d url='%s' in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), wsi_token(wsi, server->context.js, //
   // WSI_TOKEN_GET_URI), (int)len, (char*)in);
 
   if(opaque && opaque->status >= CLOSING)

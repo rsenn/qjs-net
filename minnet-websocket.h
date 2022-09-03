@@ -53,6 +53,13 @@ extern JSClassDef minnet_ws_class;
 extern const JSCFunctionListEntry minnet_ws_proto_funcs[], minnet_ws_static_funcs[], minnet_ws_proto_defs[];
 extern const size_t minnet_ws_proto_funcs_size, minnet_ws_static_funcs_size, minnet_ws_proto_defs_size;
 
+enum socket_state {
+  CONNECTING = 0,
+  OPEN = 1,
+  CLOSING = 2,
+  CLOSED = 3,
+};
+
 struct wsi_opaque_user_data {
   int ref_count;
   struct socket* ws;
@@ -61,7 +68,7 @@ struct wsi_opaque_user_data {
   struct session_data* sess;
   JSValue handler;
   int64_t serial;
-  MinnetStatus status;
+  enum socket_state status;
   struct pollfd poll;
   int error;
   BOOL binary;
