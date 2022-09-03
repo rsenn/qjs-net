@@ -8,6 +8,12 @@
 #include "jsutils.h"       // for JS_INIT_MODULE
 #include "utils.h"         // for FG, NC
 
+#ifdef DEBUG_OUTPUT
+#define DEBUG(x...) printf(x)
+#else
+#define DEBUG(x...)
+#endif
+
 #define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
 
 #define ADD(ptr, inst, member) \

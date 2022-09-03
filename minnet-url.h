@@ -14,6 +14,7 @@ typedef enum protocol {
   PROTOCOL_HTTPS,
   PROTOCOL_RAW,
   PROTOCOL_TLS,
+  NUM_PROTOCOLS,
 } MinnetProtocol;
 
 MinnetProtocol protocol_number(const char*);
@@ -25,7 +26,7 @@ typedef struct url {
   int ref_count;
   const char* protocol;
   char *host, *path;
-  uint16_t port;
+  int port;
 } MinnetURL;
 
 #define URL_INIT() \

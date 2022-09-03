@@ -163,26 +163,26 @@ server_certificate(MinnetContext* context, JSValueConst options) {
 
   if(JS_IsString(context->crt)) {
     info->ssl_cert_filepath = js_tostring(ctx, context->crt);
-    // printf("server SSL certificate file: %s\n", info->ssl_cert_filepath);
+    DEBUG("server SSL certificate file: %s\n", info->ssl_cert_filepath);
   } else {
     info->server_ssl_cert_mem = js_toptrsize(ctx, &info->server_ssl_cert_mem_len, context->crt);
-    // printf("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
+    DEBUG("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
   }
 
   if(JS_IsString(context->key)) {
     info->ssl_private_key_filepath = js_tostring(ctx, context->key);
-    // printf("server SSL private key file: %s\n", info->ssl_private_key_filepath);
+    DEBUG("server SSL private key file: %s\n", info->ssl_private_key_filepath);
   } else {
     info->server_ssl_private_key_mem = js_toptrsize(ctx, &info->server_ssl_private_key_mem_len, context->key);
-    // printf("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
+    DEBUG("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
   }
 
   if(JS_IsString(context->ca)) {
     info->ssl_ca_filepath = js_tostring(ctx, context->ca);
-    // printf("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
+    DEBUG("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
   } else {
     info->server_ssl_ca_mem = js_toptrsize(ctx, &info->server_ssl_ca_mem_len, context->ca);
-    // printf("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
+    DEBUG("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
   }
 }
 
@@ -197,7 +197,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   struct TimerClosure* timer = server->context.timer;
 
   if(timer) {
-    // printf("timeout %" PRIu32 "\n", timer->interval);
+    DEBUG("timeout %" PRIu32 "\n", timer->interval);
     uint32_t new_interval;
 
     do {
@@ -207,14 +207,14 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
         lws_service_tsi(server->context.lws, -1, 0);
     } while(new_interval == 0);
 
-    // printf("new_interval %" PRIu32 "\n", new_interval);
+    DEBUG("new_interval %" PRIu32 "\n", new_interval);
     timer->interval = new_interval;
 
     js_timer_restart(timer);
 
     return JS_FALSE;
   }
-  // printf("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
+  DEBUG("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
 
   return JS_TRUE;
 }
@@ -222,7 +222,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 JSValue
 minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   int argind = 0, asynciterator_shift = 0;
-  BOOL block = TRUE, is_tls = FALSE, wsi_http2 = TRUE;
+  BOOL block = TRUE, is_tls = FALSE, is_h2 = TRUE;
   MinnetServer* server;
   MinnetURL url = {0};
   JSValue ret, options;
@@ -278,7 +278,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsUndefined(opt_tls)) {
 
     is_tls = JS_ToBool(ctx, opt_tls);
-    // printf("is_tls = %d\n", is_tls);
+    DEBUG("is_tls = %d\n", is_tls);
   }
 
   if(!JS_IsUndefined(opt_port)) {
@@ -305,7 +305,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   JSValue opt_h2 = JS_GetPropertyStr(ctx, options, "h2");
   if(!JS_IsUndefined(opt_h2))
-    wsi_http2 = JS_ToBool(ctx, opt_h2);
+    is_h2 = JS_ToBool(ctx, opt_h2);
   JS_FreeValue(ctx, opt_h2);
 
   GETCB(opt_on_pong, server->cb.pong)
@@ -353,9 +353,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
   client_certificate(&server->context, options);
 
-  if(wsi_http2) {
+  if(is_h2) {
     info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
-    // info->options |= LWS_SERVER_OPTION_VH_H2_HALF_CLOSED_LONG_POLL;
+    info->options |= LWS_SERVER_OPTION_VH_H2_HALF_CLOSED_LONG_POLL;
   }
   // info->options |= LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
 
@@ -374,9 +374,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   {
     MinnetVhostOptions* pvo;
 
-    for(pvo = server->mimetypes; pvo; pvo = pvo->next) {
-      // printf("pvo mimetype %s %s\n", pvo->name, pvo->value);
-    }
+    for(pvo = server->mimetypes; pvo; pvo = pvo->next) { DEBUG("pvo mimetype %s %s\n", pvo->name, pvo->value); }
   }
 
   MinnetVhostOptions* vhopt = vhost_options_create(ctx, "lws-deaddrop", "");

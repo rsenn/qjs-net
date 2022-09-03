@@ -11,7 +11,7 @@ THREAD_LOCAL struct list_head sockets = {0, 0};
 void
 opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
-  // printf("%s opaque=%p link=[%p, %p]\n", __func__, opaque, opaque->link.next, opaque->link.prev);
+  DEBUG("%s opaque=%p link=[%p, %p]\n", __func__, opaque, opaque->link.next, opaque->link.prev);
 
   prev_ptr = opaque;
 

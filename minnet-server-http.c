@@ -28,7 +28,7 @@ vhost_options_create(JSContext* ctx, const char* name, const char* value) {
   MinnetVhostOptions* vo = js_mallocz(ctx, sizeof(MinnetVhostOptions));
 
 #ifdef DEBUG_OUTPUT
-  fprintf(stderr, "vhost_options_create %s %s\n", name, value);
+  printf("vhost_options_create %s %s\n", name, value);
 #endif
 
   vo->name = name ? js_strdup(ctx, name) : 0;
@@ -113,7 +113,7 @@ vhost_options_dump(MinnetVhostOptions* vo) {
   uint32_t i = 0;
   while(vo) {
     i++;
-    fprintf(stderr, "option %u %s = %s\n", i, vo->name, vo->value);
+    printf("option %u %s = %s\n", i, vo->name, vo->value);
 
     vo = vo->next;
   }
@@ -269,7 +269,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
         mnt++;
         len--;
       }
-      // printf("mount_find i=%d x='%.*s' '%.*s'\n", i++, (int)n, x, (int)len, mnt);
+      DEBUG("mount_find x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
 
       if((len == n || (n > len && (x[len] == '/' || x[len] == '?'))) && !strncmp(x, mnt, n)) {
         m = p;
@@ -296,7 +296,7 @@ mount_find_s(MinnetHttpMount* mounts, const char* x) {
     const char* mnt = p->mountpoint;
     size_t len = p->mountpoint_len;
 
-    // printf("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+    DEBUG("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
     if(len == n && !strncmp(x, mnt, n)) {
       m = p;
       break;
@@ -517,7 +517,7 @@ http_server_generate(JSContext* ctx, MinnetSession* session, MinnetResponse* res
 
     session->next = JS_UNDEFINED;
 
-    // printf("LWS_CALLBACK_HTTP_WRITEABLE: %s\n", JS_ToCString(ctx, session->generator));
+    DEBUG("LWS_CALLBACK_HTTP_WRITEABLE: %s\n", JS_ToCString(ctx, session->generator));
 
     while(!*done_p) {
       ret = js_iterator_next(ctx, session->generator, &session->next, done_p, 0, 0);
@@ -721,7 +721,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
         if(req->body && ctx) {
-          // fprintf(stderr, "POST body: %p\n", req->body);
+          DEBUG("POST body: %p\n", req->body);
           generator_close(req->body, ctx);
         }
       }

@@ -9,7 +9,7 @@ THREAD_LOCAL JSValue minnet_ringbuffer_proto, minnet_ringbuffer_ctor;
 
 void
 ringbuffer_dump(struct ringbuffer const* strm) {
-  /*  fprintf(stderr, "\nMinnetRingbuffer {\n\tref_count = %zu", strm->ref_count);
+  /*  printf("\nMinnetRingbuffer {\n\tref_count = %zu", strm->ref_count);
     buffer_dump("buffer", &strm->buffer);
     fputs("\n}", stderr);
     fflush(stderr);*/

@@ -89,7 +89,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       size_t n = headers_write(&buf.write, buf.end, &req->headers, wsi);
 
-      // printf("APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
+      DEBUG("APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
       *(uint8_t**)in += n;
 
       if(method_number(client->connect_info.method) == METHOD_POST && !lws_http_is_redirected_to_get(wsi)) {
@@ -158,7 +158,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           while(!client->done) {
             value = js_iterator_next(ctx, client->body, &client->next, &client->done, 0, 0);
 
-            // printf("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), client->done);
+            DEBUG("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), client->done);
 
             if(JS_IsException(value)) {
               JSValue exception = JS_GetException(ctx);
@@ -170,7 +170,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
               printf("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
               buffer_append(&buf, input.data, input.size, ctx);
-              // printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
+              DEBUG("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
               js_buffer_free(&input, ctx);
             }
 
@@ -181,7 +181,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         size = buf.write - buf.start;
         if((r = lws_write(wsi, buf.start, size, (enum lws_write_protocol)n)) != size)
           return 1;
-        // printf("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
+        DEBUG("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
         if(n != LWS_WRITE_HTTP_FINAL)
           lws_callback_on_writable(wsi);
       }

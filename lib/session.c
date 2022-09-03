@@ -41,7 +41,7 @@ session_clear(MinnetSession* session, JSContext* ctx) {
 
   buffer_free(&session->send_buf, JS_GetRuntime(ctx));
 
-  // printf("%s #%i %p\n", __func__, session->serial, session);
+  DEBUG("%s #%i %p\n", __func__, session->serial, session);
 }
 
 JSValue

@@ -49,6 +49,8 @@ typedef enum http_method HTTPMethod;
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
+size_t str_chr(const char* in, char needle);
+
 size_t byte_chr(const void*, size_t len, char c);
 size_t byte_chrs(const void*, size_t len, const char needle[], size_t nl);
 size_t byte_rchr(const void*, size_t len, char needle);
@@ -66,6 +68,7 @@ int socket_geterror(int);
 char* socket_address(int, int (*fn)(int, struct sockaddr*, socklen_t*));
 
 BOOL wsi_http2(struct lws*);
+BOOL wsi_tls(struct lws*);
 char* wsi_peer(struct lws*, JSContext* ctx);
 char* wsi_host(struct lws*, JSContext* ctx);
 void wsi_cert(struct lws*);
@@ -79,7 +82,9 @@ char* wsi_uri_and_method(struct lws*, JSContext* ctx, HTTPMethod* method);
 HTTPMethod wsi_method(struct lws* wsi);
 enum lws_token_indexes wsi_uri_token(struct lws* wsi);
 char* wsi_host_and_port(struct lws* wsi, JSContext* ctx, int* port);
+char* wsi_vhost_and_port(struct lws* wsi, JSContext* ctx, int* port);
 const char* wsi_vhost_name(struct lws* wsi);
+const char* wsi_protocol_name(struct lws* wsi);
 
 const char* lws_callback_name(int reason);
 

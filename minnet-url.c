@@ -1,6 +1,7 @@
 #include "minnet-url.h"
 #include "jsutils.h"
 #include "utils.h"
+#include "query.h"
 #include <assert.h>
 #include <limits.h>
 #include <ctype.h>
@@ -129,7 +130,7 @@ url_parse(MinnetURL* url, const char* u, JSContext* ctx) {
   } else if(url->protocol) {
     url->port = protocol_default_port(proto);
   } else {
-    url->port = 0;
+    url->port = -1;
   }
 
   // if(!url->path)
@@ -424,37 +425,33 @@ url_fromvalue(MinnetURL* url, JSValueConst value, JSContext* ctx) {
 
 void
 url_fromwsi(MinnetURL* url, struct lws* wsi, JSContext* ctx) {
-  int len, port = -1;
+  int i, len, port = -1;
   char* p;
+  const char* protocol;
+  typedef char* get_host_and_port(struct lws*, JSContext*, int*);
+  get_host_and_port* fns[] = {
+      &wsi_host_and_port,
+      &wsi_vhost_and_port,
+  };
 
-  /*  if((len = lws_hdr_total_length(wsi, WSI_TOKEN_HOST))) {
-      if(url->host)
-        js_free(ctx, url->host);
-      url->host = js_malloc(ctx, len + 1);
-      lws_hdr_copy(wsi, url->host, len + 1, WSI_TOKEN_HOST);
-
-      while(--len >= 0 && isdigit(url->host[len]))
-        ;
-
-      if(url->host[len] == ':') {
-        url->port = atoi(&url->host[len + 1]);
-        url->host[len] = '\0';
+  for(i = 0; i < countof(fns); i++) {
+    if((p = fns[i](wsi, ctx, &port))) {
+      if(p[0]) {
+        if(url->host)
+          js_free(ctx, url->host);
+        url->host = p;
+        if(port >= 0 && port <= 65535)
+          url->port = port;
+      } else {
+        js_free(ctx, p);
       }
-    }*/
-
-  if((p = wsi_host_and_port(wsi, ctx, &port))) {
-    if(url->host)
-      js_free(ctx, url->host);
-    url->host = p;
-    if(port != -1)
-      url->port = port;
+    }
   }
 
   if((p = wsi_uri_and_method(wsi, ctx, 0))) {
     if(url->path)
       js_free(ctx, url->path);
     url->path = p;
-    // lws_hdr_copy(wsi, url->path, len + 1, WSI_TOKEN_GET_URI);
   }
 
   assert(url->path);
@@ -468,19 +465,39 @@ url_fromwsi(MinnetURL* url, struct lws* wsi, JSContext* ctx) {
     }
   }
 
+  if((protocol = wsi_protocol_name(wsi))) {
+    MinnetProtocol number = protocol_number(protocol);
+
+    if(number >= 0 && number < NUM_PROTOCOLS) {
+      if(!protocol_is_tls(number)) {
+        if(wsi_tls(wsi))
+          number++;
+      }
+
+      url->protocol = protocol_string(number);
+    }
+  }
+
   // url->query = minnet_query_string(wsi, ctx);
 }
 
 void
 url_dump(const char* n, MinnetURL const* url) {
-  fprintf(stderr, "%s{ protocol = %s, host = %s, port = %u, path = %s }\n", n, url->protocol, url->host, url->port, url->path);
+  printf("%s{ protocol = %s, host = %s, port = %u, path = %s }\n", n, url->protocol, url->host, url->port, url->path);
   fflush(stderr);
 }
 
 static THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;
 THREAD_LOCAL JSClassID minnet_url_class_id;
 
-enum { URL_PROTOCOL, URL_HOST, URL_PORT, URL_PATH, URL_TLS };
+enum {
+  URL_PROTOCOL,
+  URL_HOST,
+  URL_PORT,
+  URL_PATH,
+  URL_QUERY,
+  URL_TLS,
+};
 
 JSValue
 minnet_url_wrap(JSContext* ctx, MinnetURL* url) {
@@ -546,7 +563,23 @@ minnet_url_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case URL_PATH: {
-      ret = JS_NewString(ctx, url->path ? url->path : "");
+      if(url->path) {
+        size_t pathlen = str_chr(url->path, '?');
+        ret = JS_NewStringLen(ctx, url->path, pathlen);
+      } else {
+        ret = JS_NULL;
+      }
+      break;
+    }
+    case URL_QUERY: {
+      const char* query;
+
+      if((query = url_query(*url))) {
+        ret = query_object(query, ctx);
+      } else {
+        ret = JS_NULL;
+      }
+
       break;
     }
     case URL_TLS: {
@@ -596,23 +629,36 @@ minnet_url_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int ma
       break;
     }
     case URL_PORT: {
-      uint32_t port = 0;
-      if(!JS_ToUint32(ctx, &port, value))
-        if(port <= 65535)
-          url->port = port;
+      int32_t port = -1;
+      JS_ToInt32(ctx, &port, value);
+
+      url->port = (port >= 0 && port <= 65535) ? port : -1;
       break;
     }
     case URL_PATH: {
-      /* if(JS_IsNull(value) || JS_IsUndefined(value)) {
-         if(url->path)
-           js_free(ctx, url->path);
-         url->path = 0;
-       } else*/
       if((str = JS_ToCStringLen(ctx, &len, value))) {
-        if(url->path)
-          js_free(ctx, url->path);
-        url->path = js_strndup(ctx, str, len);
+        url_set_path_len(url, str, len, ctx);
         JS_FreeCString(ctx, str);
+      }
+      break;
+    }
+    case URL_QUERY: {
+      if(JS_IsString(value)) {
+        if((str = JS_ToCStringLen(ctx, &len, value))) {
+          url_set_query_len(url, str, len, ctx);
+          JS_FreeCString(ctx, str);
+        }
+      } else if(JS_IsObject(value)) {
+        char* query;
+        if((query = query_from(value, ctx))) {
+          url_set_query(url, query, ctx);
+          js_free(ctx, query);
+        }
+      } else if(JS_IsNull(value) || JS_IsUndefined(value)) {
+        size_t pathlen;
+        if(url->path[(pathlen = str_chr(url->path, '?'))]) {
+          url->path[pathlen] = '\0';
+        }
       }
       break;
     }
@@ -742,6 +788,7 @@ static const JSCFunctionListEntry minnet_url_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("host", minnet_url_get, minnet_url_set, URL_HOST, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_url_get, minnet_url_set, URL_PORT, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_url_get, minnet_url_set, URL_PATH, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("query", minnet_url_get, minnet_url_set, URL_QUERY, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("tls", minnet_url_get, 0, URL_TLS, 0),
     JS_CFUNC_MAGIC_DEF("toString", 0, minnet_url_method, URL_TO_STRING),
     JS_CFUNC_DEF("inspect", 0, minnet_url_inspect),

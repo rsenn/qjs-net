@@ -2,6 +2,7 @@
 #include "minnet-request.h"
 #include "minnet-response.h"
 #include "minnet-client.h"
+#include "minnet.h"
 #include "buffer.h"
 #include "closure.h"
 #include "jsutils.h"
@@ -58,7 +59,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   MinnetClosure* closure = opaque;
   MinnetClient* client = closure->pointer;
 
-  // printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
+  DEBUG("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
 
   switch(magic) {
     case ON_HTTP: {
@@ -136,7 +137,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   JS_FreeValue(ctx, args[1]);
 
-  // printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->client);
+  DEBUG("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->pointer);
 
   cc->pointer = client_dup(cc->pointer);
 
@@ -242,7 +243,7 @@ handle_socket(CURL* easy, curl_socket_t s, int action, void* userp, void* socket
         sock->wantwrite = TRUE;
       if(action != CURL_POLL_OUT)
         sock->wantread = TRUE;
-      // fprintf(stderr, "handle_socket sock=%d, wantwrite=%d, wantread=%d\n", sock->sockfd, sock->wantwrite, sock->wantread);
+      DEBUG("handle_socket sock=%d, wantwrite=%d, wantread=%d\n", sock->sockfd, sock->wantwrite, sock->wantread);
 
       break;
     case CURL_POLL_REMOVE:

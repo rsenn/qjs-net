@@ -25,7 +25,7 @@ closure_free(void* ptr) {
 
   if(--closure->ref_count == 0) {
     JSContext* ctx = closure->ctx;
-    // printf("%s server=%p\n", __func__, closure->server);
+    printf("%s pointer=%p\n", __func__, closure->pointer);
 
     if(closure->free_func)
       closure->free_func(closure->pointer);

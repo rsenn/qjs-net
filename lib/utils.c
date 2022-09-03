@@ -1,6 +1,19 @@
 #include "utils.h"
 
 size_t
+str_chr(const char* in, char needle) {
+  const char* t = in;
+  const char c = needle;
+  for(;;) {
+    if(!*t || *t == c) {
+      break;
+    };
+    ++t;
+  }
+  return (size_t)(t - in);
+}
+
+size_t
 byte_chr(const void* x, size_t len, char c) {
   const char *s, *t, *str = x;
   for(s = str, t = s + len; s < t; ++s)
@@ -149,10 +162,16 @@ socket_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
 }
 
 int lws_wsi_is_h2(struct lws* wsi);
+int lws_is_ssl(struct lws* wsi);
 
 BOOL
 wsi_http2(struct lws* wsi) {
   return lws_wsi_is_h2(wsi);
+}
+
+BOOL
+wsi_tls(struct lws* wsi) {
+  return lws_is_ssl(wsi);
 }
 
 char*
@@ -315,6 +334,35 @@ wsi_vhost_name(struct lws* wsi) {
     return lws_get_vhost_name(vhost);
 
   return 0;
+}
+
+const char*
+wsi_protocol_name(struct lws* wsi) {
+  const struct lws_protocols* protocol;
+
+  if((protocol = lws_get_protocol(wsi)))
+    return protocol->name;
+
+  return 0;
+}
+
+char*
+wsi_vhost_and_port(struct lws* wsi, JSContext* ctx, int* port) {
+  char* host = 0;
+  struct lws_vhost* vhost;
+
+  if((vhost = lws_get_vhost(wsi))) {
+    const char* vhn = lws_get_vhost_name(vhost);
+    size_t hostlen = str_chr(vhn, ':');
+    host = js_strndup(ctx, vhn, hostlen);
+
+    printf("%s host=%s port=%u\n", __func__, host, lws_get_vhost_port(vhost));
+
+    if(port)
+      *port = lws_get_vhost_port(vhost);
+  }
+
+  return host;
 }
 
 static const enum lws_token_indexes wsi_uri_tokens[] = {

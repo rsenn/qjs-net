@@ -306,7 +306,7 @@ buffer_toarraybuffer_size(ByteBuffer* buf, size_t* sz, JSContext* ctx) {
 
 void
 buffer_dump(const char* n, ByteBuffer const* buf) {
-  fprintf(stderr, "%s\t{ write = %td, read = %td, size = %td }\n", n, buf->write - buf->start, buf->read - buf->start, buf->end - buf->start);
+  printf("%s\t{ write = %td, read = %td, size = %td }\n", n, buf->write - buf->start, buf->read - buf->start, buf->end - buf->start);
   fflush(stderr);
 }
 

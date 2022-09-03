@@ -5,8 +5,8 @@
 #include <cutils.h>
 #include "jsutils.h"
 
-JSValueConst query_object(const char* q, JSContext* ctx);
-JSValueConst query_object_len(const char* q, size_t n, JSContext* ctx);
+JSValue query_object(const char* q, JSContext* ctx);
+JSValue query_object_len(const char* q, size_t n, JSContext* ctx);
 BOOL query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry);
 char* query_from(JSValueConst obj, JSContext* ctx);
 void minnet_query_entry(char* start, size_t len, JSContext* ctx, JSValueConst obj);

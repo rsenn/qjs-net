@@ -365,7 +365,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_HEADERS: {
-      // printf("REQUEST_HEADERS start=%p, end=%p\n", req->headers.start, req->headers.end);
+      DEBUG("REQUEST_HEADERS start=%p, end=%p\n", req->headers.start, req->headers.end);
 
       if(buffer_BYTES(&req->headers))
         ret = headers_object(ctx, req->headers.start, req->headers.write);

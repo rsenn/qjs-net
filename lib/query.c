@@ -26,16 +26,15 @@ query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry) {
   size_t len;
 
   if((len = byte_chr(q, n, '=')) < n) {
-    size_t namelen;
+    // size_t namelen;
     char* decoded;
     const char *value = q + len + 1, *end = q + n;
-    namelen = value - q;
-    ++value;
+    // namelen = value - q;
 
     if(entry->key >= 0)
       JS_FreeAtom(ctx, entry->key);
 
-    entry->key = JS_NewAtomLen(ctx, q, namelen);
+    entry->key = JS_NewAtomLen(ctx, q, len);
     len = end - value;
     decoded = js_strndup(ctx, value, len);
     lws_urldecode(decoded, decoded, len + 1);
