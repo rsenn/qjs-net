@@ -4,6 +4,7 @@
 #include "minnet-websocket.h"
 #include "minnet-request.h"
 #include "minnet-response.h"
+#include "context.h"
 #include "closure.h"
 #include "minnet.h"
 #include "jsutils.h"

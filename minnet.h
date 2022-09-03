@@ -21,22 +21,10 @@
 
 typedef enum socket_state MinnetStatus;
 
-typedef struct context {
-  int ref_count;
-  JSContext* js;
-  struct lws_context* lws;
-  struct lws_context_creation_info info;
-  BOOL exception;
-  JSValue error;
-  JSValue crt, key, ca;
-  struct TimerClosure* timer;
-} MinnetContext;
-
-void minnet_io_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValue out[2]);
+void minnet_io_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValueConst out[2]);
 void minnet_log_callback(int, const char* line);
-JSValueConst context_exception(MinnetContext*, JSValueConst retval);
-void context_clear(MinnetContext*);
 int minnet_lws_unhandled(const char*, int reason);
+JSValue minnet_get_sessions(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[]);
 JSModuleDef* js_init_module_minnet(JSContext*, const char* module_name);
 
 #endif /* MINNET_H */

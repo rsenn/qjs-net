@@ -56,6 +56,5 @@ int fd_handler(struct lws*, JSCallback*, struct lws_pollargs);
 int fd_callback(struct lws*, enum lws_callback_reasons, JSCallback*, struct lws_pollargs* args);
 JSValue callback_emit_this(const struct js_callback*, JSValue, int, JSValue* argv);
 JSValue callback_emit(const struct js_callback*, int, JSValue*);
-void callback_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValue out[2]);
 
 #endif /* QUICKJS_NET_LIB_CALLBACK_H */

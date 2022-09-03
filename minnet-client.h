@@ -6,6 +6,7 @@
 #include "minnet-request.h"
 #include "session.h"
 #include "jsutils.h"
+#include "context.h"
 
 #define client_exception(client, retval) context_exception(&(client->context), (retval))
 

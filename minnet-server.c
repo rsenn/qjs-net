@@ -512,7 +512,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
       struct lws_pollargs* args = in;
       if(server->cb.fd.ctx) {
         JSValue argv[3] = {JS_NewInt32(server->cb.fd.ctx, args->fd)};
-        callback_handlers(server->cb.fd.ctx, wsi, *args, &argv[1]);
+        minnet_io_handlers(server->cb.fd.ctx, wsi, *args, &argv[1]);
         server_exception(server, callback_emit(&server->cb.fd, 3, argv));
         JS_FreeValue(server->cb.fd.ctx, argv[0]);
         JS_FreeValue(server->cb.fd.ctx, argv[1]);
@@ -526,7 +526,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
         JSValue argv[3] = {
             JS_NewInt32(server->cb.fd.ctx, args->fd),
         };
-        callback_handlers(server->cb.fd.ctx, wsi, *args, &argv[1]);
+        minnet_io_handlers(server->cb.fd.ctx, wsi, *args, &argv[1]);
         server_exception(server, callback_emit(&server->cb.fd, 3, argv));
         JS_FreeValue(server->cb.fd.ctx, argv[0]);
         JS_FreeValue(server->cb.fd.ctx, argv[1]);
@@ -539,7 +539,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
       if(server->cb.fd.ctx) {
         if(args->events != args->prev_events) {
           JSValue argv[3] = {JS_NewInt32(server->cb.fd.ctx, args->fd)};
-          callback_handlers(server->cb.fd.ctx, wsi, *args, &argv[1]);
+          minnet_io_handlers(server->cb.fd.ctx, wsi, *args, &argv[1]);
           server_exception(server, callback_emit(&server->cb.fd, 3, argv));
           JS_FreeValue(server->cb.fd.ctx, argv[0]);
           JS_FreeValue(server->cb.fd.ctx, argv[1]);

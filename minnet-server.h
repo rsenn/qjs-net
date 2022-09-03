@@ -5,6 +5,7 @@
 #include "buffer.h"
 #include "minnet.h"
 #include "minnet-server-http.h"
+#include "context.h"
 
 #define server_exception(server, retval) context_exception(&((server)->context), (retval))
 
