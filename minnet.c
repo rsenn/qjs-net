@@ -144,7 +144,6 @@ socket_geterror(int fd) {
   return -1;
 }
 
-
 JSValue
 context_exception(MinnetContext* context, JSValue retval) {
   if(JS_IsException(retval)) {

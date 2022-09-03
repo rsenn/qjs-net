@@ -31,10 +31,10 @@ typedef struct session_data {
   MinnetBuffer send_buf;
 } MinnetSession;
 
-void                  session_zero(MinnetSession*);
-void                  session_clear(MinnetSession*, JSContext*);
+void session_zero(MinnetSession*);
+void session_clear(MinnetSession*, JSContext*);
 struct http_response* session_response(MinnetSession*, MinnetCallback*);
-JSValue               session_object(struct wsi_opaque_user_data*, JSContext*);
-JSValue               minnet_get_sessions(JSContext*, JSValueConst, int, JSValueConst argv[]);
+JSValue session_object(struct wsi_opaque_user_data*, JSContext*);
+JSValue minnet_get_sessions(JSContext*, JSValueConst, int, JSValueConst argv[]);
 
 #endif /* MINNET_SESSION_H */

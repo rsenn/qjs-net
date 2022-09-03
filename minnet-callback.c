@@ -49,7 +49,6 @@ fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* c
   }
 }
 
-
 JSValue
 minnet_emit_this(const struct ws_callback* cb, JSValueConst this_obj, int argc, JSValue* argv) {
   JSValue ret = JS_UNDEFINED;

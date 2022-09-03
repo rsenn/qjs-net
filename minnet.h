@@ -109,27 +109,8 @@ enum http_method {
 };
 
 typedef enum http_method MinnetHttpMethod;
-/*
-typedef struct session_data {
-  JSValue ws_obj;
-  union {
-    struct {
-      JSValue req_obj;
-      JSValue resp_obj;
-    };
-    JSValue args[2];
-  };
-  struct http_mount* mount;
-  struct proxy_connection* proxy;
-  JSValue generator, next;
-  int serial;
-  BOOL h2, in_body;
-  int64_t written;
-  struct server_context* server;
-  struct client_context* client;
-  MinnetBuffer send_buf;
-} MinnetSession;
-*/
+ 
+ 
 typedef struct context {
   int ref_count;
   JSContext* js;
