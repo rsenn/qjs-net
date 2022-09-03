@@ -58,7 +58,6 @@ static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 THREAD_LOCAL int32_t minnet_log_level = 0;
 THREAD_LOCAL JSContext* minnet_log_ctx = 0;
 THREAD_LOCAL struct list_head minnet_sockets = {0, 0};
-static THREAD_LOCAL uint32_t session_serial = 0;
 // THREAD_LOCAL BOOL minnet_exception = FALSE;
 
 static size_t
@@ -546,55 +545,6 @@ headers_tostring(JSContext* ctx, MinnetBuffer* headers, struct lws* wsi) {
   return count;
 }
 
-int
-fd_handler(struct lws* wsi, MinnetCallback* cb, struct lws_pollargs args) {
-  JSValue argv[3] = {JS_NewInt32(cb->ctx, args.fd)};
-
-  minnet_handlers(cb->ctx, wsi, args, &argv[1]);
-  minnet_emit(cb, 3, argv);
-
-  JS_FreeValue(cb->ctx, argv[0]);
-  JS_FreeValue(cb->ctx, argv[1]);
-  JS_FreeValue(cb->ctx, argv[2]);
-  return 0;
-}
-
-int
-fd_callback(struct lws* wsi, enum lws_callback_reasons reason, MinnetCallback* cb, struct lws_pollargs* args) {
-
-  switch(reason) {
-    case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL: return 0;
-
-    case LWS_CALLBACK_ADD_POLL_FD: {
-
-      if(cb->ctx) {
-        fd_handler(wsi, cb, *args);
-      }
-      return 0;
-    }
-    case LWS_CALLBACK_DEL_POLL_FD: {
-
-      if(cb->ctx) {
-        fd_handler(wsi, cb, *args);
-      }
-      return 0;
-    }
-    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-      if(cb->ctx) {
-        if(args->events != args->prev_events) {
-          fd_handler(wsi, cb, *args);
-        }
-      }
-      return 0;
-    }
-
-    default: {
-      return -1;
-    }
-  }
-}
-
 /*static const char*
 io_events(int events) {
   switch(events) {
@@ -682,23 +632,6 @@ make_handler(JSContext* ctx, int fd, int events, struct lws* wsi) {
   return JS_NewCClosure(ctx, minnet_io_handler, 1, events, closure, free_handler_closure);
 }
 
-JSValue
-minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  struct list_head* el;
-  JSValue ret;
-  uint32_t i = 0;
-
-  ret = JS_NewArray(ctx);
-
-  list_for_each(el, &minnet_sockets) {
-    struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
-    // printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
-
-    JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
-  }
-  return ret;
-}
-
 void
 minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {
   JSValue func;
@@ -714,36 +647,6 @@ minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSVal
   if(events)
     JS_FreeValue(ctx, func);
 }
-
-JSValue
-minnet_emit_this(const struct ws_callback* cb, JSValueConst this_obj, int argc, JSValue* argv) {
-  JSValue ret = JS_UNDEFINED;
-
-  if(cb->ctx) {
-    /*size_t len;
-    const char* str  = JS_ToCStringLen(cb->ctx, &len, cb->func_obj);
-    // printf("emit %s [%d] \"%.*s\"\n", cb->name, argc, (int)((const char*)memchr(str, '{', len) - str), str);
-    JS_FreeCString(cb->ctx, str);*/
-
-    ret = JS_Call(cb->ctx, cb->func_obj, this_obj, argc, argv);
-  }
-
-  if(JS_IsException(ret)) {
-    JSValue exception = JS_GetException(cb->ctx);
-    js_error_print(cb->ctx, exception);
-    ret = JS_Throw(cb->ctx, exception);
-  }
-  /*if(JS_IsException(ret))
-    minnet_exception = TRUE; */
-
-  return ret;
-}
-
-JSValue
-minnet_emit(const struct ws_callback* cb, int argc, JSValue* argv) {
-  return minnet_emit_this(cb, cb->this_obj /* ? *cb->this_obj : JS_NULL*/, argc, argv);
-}
-
 static const JSCFunctionListEntry minnet_loglevels[] = {
     JS_INDEX_STRING_DEF(1, "ERR"),
     JS_INDEX_STRING_DEF(2, "WARN"),

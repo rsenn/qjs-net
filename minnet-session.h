@@ -1,14 +1,15 @@
 #ifndef MINNET_SESSION_H
 #define MINNET_SESSION_H
 
-#include <quickjs.h>
 #include <stdint.h>
 #include "minnet-buffer.h"
+#include "minnet-callback.h"
 
 struct http_mount;
 struct proxy_connection;
 struct server_context;
 struct client_context;
+struct wsi_opaque_user_data;
 
 typedef struct session_data {
   JSValue ws_obj;
@@ -30,8 +31,10 @@ typedef struct session_data {
   MinnetBuffer send_buf;
 } MinnetSession;
 
-void session_zero(MinnetSession*);
-void session_clear(MinnetSession*, JSContext*);
-struct http_response* session_response(MinnetSession* session, MinnetCallback* cb);
+void                  session_zero(MinnetSession*);
+void                  session_clear(MinnetSession*, JSContext*);
+struct http_response* session_response(MinnetSession*, MinnetCallback*);
+JSValue               session_object(struct wsi_opaque_user_data*, JSContext*);
+JSValue               minnet_get_sessions(JSContext*, JSValueConst, int, JSValueConst argv[]);
 
 #endif /* MINNET_SESSION_H */

@@ -6,6 +6,7 @@
 #include "jsutils.h"
 #include "minnet-generator.h"
 #include "minnet-websocket.h"
+#include "minnet-callback.h"
 
 typedef struct form_parser {
   int ref_count;

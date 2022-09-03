@@ -3,6 +3,7 @@
 
 #include <quickjs.h>
 #include "minnet.h"
+#include "minnet-session.h"
 
 struct http_request;
 struct http_response;

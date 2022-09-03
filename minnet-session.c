@@ -1,4 +1,8 @@
 #include "minnet-session.h"
+#include "minnet-websocket.h"
+#include "minnet-response.h"
+
+static THREAD_LOCAL uint32_t session_serial = 0;
 
 void
 session_zero(MinnetSession* session) {
@@ -63,6 +67,23 @@ session_object(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
     JS_SetPropertyUint32(ctx, ret, 1, JS_DupValue(ctx, opaque->sess->ws_obj));
     JS_SetPropertyUint32(ctx, ret, 2, JS_DupValue(ctx, opaque->sess->req_obj));
     JS_SetPropertyUint32(ctx, ret, 3, JS_DupValue(ctx, opaque->sess->resp_obj));
+  }
+  return ret;
+}
+
+JSValue
+minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  struct list_head* el;
+  JSValue ret;
+  uint32_t i = 0;
+
+  ret = JS_NewArray(ctx);
+
+  list_for_each(el, &minnet_sockets) {
+    struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
+    // printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
+
+    JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
   }
   return ret;
 }
