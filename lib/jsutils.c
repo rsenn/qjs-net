@@ -713,6 +713,7 @@ js_module_export_find(JSModuleDef* module, JSAtom name) {
 
   return 0;
 }
+
 extern JSModuleDef* js_module_loader(JSContext* ctx, const char* module_name, void* opaque);
 
 JSValue

@@ -34,5 +34,4 @@ static inline MinnetHash*
 minnet_hash_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_hash_class_id);
 }
-
 #endif /* MINNET_HASH_H */

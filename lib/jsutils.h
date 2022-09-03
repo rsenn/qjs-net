@@ -30,7 +30,6 @@
     .name = prop_name, .prop_flags = (flags), .def_type = JS_DEF_CFUNC, .magic = 0, .u = {.func = {length, JS_CFUNC_generic, {.generic = func1}} } \
   }
 
-typedef enum { READ_HANDLER = 0, WRITE_HANDLER } os_handler_e;
 typedef enum { ON_RESOLVE = 0, ON_REJECT } promise_handler_e;
 
 typedef struct JSThreadState {

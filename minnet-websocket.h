@@ -14,7 +14,7 @@ struct pollfd {
 #endif
 
 #include "minnet.h"
-#include "ringbuffer.h"
+#include "minnet-ringbuffer.h"
 #include "opaque.h"
 #include <quickjs.h>
 
@@ -84,5 +84,4 @@ static inline MinnetWebsocket*
 minnet_ws_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_ws_class_id);
 }
-
 #endif /* MINNET_WEBSOCKET_H */

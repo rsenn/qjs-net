@@ -4,8 +4,8 @@
 #include "minnet-request.h"
 #include "minnet-response.h"
 #include "minnet-websocket.h"
-#include "ringbuffer.h"
-#include "generator.h"
+#include "minnet-ringbuffer.h"
+#include "minnet-generator.h"
 #include "minnet-form-parser.h"
 #include "minnet-hash.h"
 #include "minnet-fetch.h"
@@ -24,6 +24,10 @@
 #include "poll.h"
 #endif*/
 
+static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
+static THREAD_LOCAL int32_t minnet_log_level = 0;
+static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
+
 #ifndef POLLIN
 #define POLLIN 1
 #endif
@@ -36,17 +40,87 @@
 #ifndef POLLHUP
 #define POLLHUP 16
 #endif
-/*
-#ifdef JS_SHARED_LIBRARY
-#define JS_INIT_MODULE js_init_module
-#else
-#define JS_INIT_MODULE js_init_module_minnet
-#endif
-*/
 
-static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
-static THREAD_LOCAL int32_t minnet_log_level = 0;
-static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
+#define PIO (POLLIN | POLLOUT | POLLERR)
+
+typedef struct {
+  JSContext* ctx;
+  struct lws* lwsi;
+  struct wsi_opaque_user_data* opaque;
+} LWSIOHandler;
+
+typedef enum { READ_HANDLER = 0, WRITE_HANDLER } JSIOHandler;
+
+static void
+lws_iohandler_free(void* ptr) {
+  LWSIOHandler* closure = ptr;
+  JSContext* ctx = closure->ctx;
+  js_free(ctx, closure);
+};
+
+static JSValue
+lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  LWSIOHandler* closure = ptr;
+  struct pollfd* p;
+  JSIOHandler wr;
+  JSValue ret = JS_UNDEFINED;
+
+  assert(closure->opaque);
+  p = &closure->opaque->poll;
+
+  JS_ToInt32(ctx, &wr, argv[0]);
+
+  p->revents = magic & (wr == WRITE_HANDLER ? POLLOUT : POLLIN);
+
+  if((p->revents & PIO) != magic) {
+    if(poll(p, 1, 0) < 0)
+      lwsl_err("poll error: %s\n", strerror(errno));
+  }
+
+  if(p->revents & PIO) {
+    struct lws_pollfd x = {p->fd, magic, p->revents & PIO};
+
+    if(p->revents & (POLLERR | POLLHUP))
+      closure->opaque->error = errno;
+
+    /*if(x.revents & POLLOUT)
+      if(x.revents & POLLIN)
+        x.revents &= ~(POLLOUT);*/
+    // errno = 0;
+
+    ret = JS_NewInt32(ctx, lws_service_fd(lws_get_context(closure->lwsi), &x));
+  }
+
+  return ret;
+}
+
+static JSValue
+minnet_io_handler(JSContext* ctx, int fd, int events, struct lws* wsi) {
+  LWSIOHandler* h;
+
+  if(!(h = js_mallocz(ctx, sizeof(LWSIOHandler))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  *h = (LWSIOHandler){ctx, wsi, lws_opaque(wsi, ctx)};
+
+  h->opaque->poll = (struct pollfd){fd, events, 0};
+
+  return JS_NewCClosure(ctx, lws_iohandler, 1, events, h, lws_iohandler_free);
+}
+
+void
+minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {
+  JSValue func = JS_NULL;
+  int events = args.events & (POLLIN | POLLOUT);
+
+  if(events)
+    func = minnet_io_handler(ctx, args.fd, events, wsi);
+
+  out[0] = (events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
+  out[1] = (events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
+
+  JS_FreeValue(ctx, func);
+}
 
 void
 minnet_log_callback(int level, const char* line) {
@@ -83,6 +157,7 @@ minnet_log_callback(int level, const char* line) {
     }
   }
 }
+
 int
 minnet_lws_unhandled(const char* handler, int reason) {
   lwsl_warn("Unhandled \x1b[1;31m%s\x1b[0m event: %i %s\n", handler, reason, lws_callback_name(reason));
@@ -116,6 +191,23 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   ret = set_log(ctx, this_val, argv[0], argc > 1 ? argv[1] : JS_NULL);
   lws_set_log_level(((unsigned)minnet_log_level & ((1u << LLL_COUNT) - 1)), minnet_log_callback);
+  return ret;
+}
+
+JSValue
+minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  struct list_head* el;
+  JSValue ret;
+  uint32_t i = 0;
+
+  ret = JS_NewArray(ctx);
+
+  list_for_each(el, &session_list) {
+    struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
+    // printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
+
+    JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
+  }
   return ret;
 }
 

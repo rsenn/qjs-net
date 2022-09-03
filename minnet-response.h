@@ -6,7 +6,7 @@
 #include <libwebsockets.h>
 #include "minnet-url.h"
 #include "buffer.h"
-#include "generator.h"
+#include "minnet-generator.h"
 #include "session.h"
 
 // struct http_request;
@@ -42,12 +42,13 @@ response_generator(MinnetResponse* resp, JSContext* ctx) {
     resp->generator = generator_new(ctx);
   return resp->generator;
 }
+
 MinnetResponse* response_new(JSContext*);
 JSValue minnet_response_new(JSContext*, MinnetURL, int, char* status_text, BOOL ok, const char* type);
 JSValue minnet_response_wrap(JSContext*, MinnetResponse*);
 JSValue minnet_response_constructor(JSContext*, JSValue, int, JSValue argv[]);
 void minnet_response_finalizer(JSRuntime*, JSValue);
-struct http_response* session_response(MinnetSession*, MinnetCallback*);
+struct http_response* session_response(MinnetSession*, JSCallback*);
 
 extern THREAD_LOCAL JSClassID minnet_response_class_id;
 extern THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
@@ -64,5 +65,4 @@ static inline MinnetResponse*
 minnet_response_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_response_class_id);
 }
-
 #endif /* MINNET_RESPONSE_H */

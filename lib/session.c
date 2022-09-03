@@ -58,20 +58,3 @@ session_object(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
   }
   return ret;
 }
-
-JSValue
-minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  struct list_head* el;
-  JSValue ret;
-  uint32_t i = 0;
-
-  ret = JS_NewArray(ctx);
-
-  list_for_each(el, &session_list) {
-    struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
-    // printf("%s @%u #%i %p\n", __func__, i, session->serial, session);
-
-    JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
-  }
-  return ret;
-}

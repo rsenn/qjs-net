@@ -57,6 +57,7 @@ int ppoll(struct pollfd* fds, nfds_t nfds, const struct timespec* timeout, const
 
 #ifdef __cplusplus
 }
+
 #endif /* defined(__cplusplus) */
 
 #endif /* QUICKJS_NET_LIB_LIB_POLL_H */

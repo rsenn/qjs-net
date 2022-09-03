@@ -29,6 +29,7 @@ strlcpy(char* dst, const char* src, size_t siz) {
 
   return (s - src - 1);
 }
+
 #endif
 
 static char const* const protocol_names[] = {

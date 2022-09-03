@@ -32,6 +32,7 @@ typedef struct context {
   struct TimerClosure* timer;
 } MinnetContext;
 
+void minnet_io_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValue out[2]);
 void minnet_log_callback(int, const char* line);
 JSValueConst context_exception(MinnetContext*, JSValueConst retval);
 void context_clear(MinnetContext*);

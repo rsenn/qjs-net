@@ -365,5 +365,4 @@ fail:
   curl_global_cleanup();
   return resObj;
 }
-
 #endif

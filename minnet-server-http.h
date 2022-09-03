@@ -26,7 +26,7 @@ typedef struct http_mount {
     };
     struct lws_http_mount lws;
   };
-  MinnetCallback callback;
+  JSCallback callback;
 } MinnetHttpMount;
 
 MinnetVhostOptions* vhost_options_create(JSContext*, const char*, const char*);

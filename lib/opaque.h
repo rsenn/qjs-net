@@ -44,5 +44,4 @@ opaque_dup(struct wsi_opaque_user_data* opaque) {
   opaque->ref_count++;
   return opaque;
 }
-
 #endif /* QUICKJS_NET_LIB_OPAQUE_H */

@@ -52,5 +52,4 @@ static inline MinnetRingbuffer*
 minnet_ringbuffer_data(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_ringbuffer_class_id);
 }
-
 #endif /* QUICKJS_NET_LIB_RINGBUFFER_H */

@@ -16,7 +16,7 @@ enum { FORM_PARSER_PARAMS, FORM_PARSER_SOCKET, FORM_PARSER_READ, FORM_PARSER_ON_
 static int
 form_parser_callback(void* data, const char* name, const char* filename, char* buf, int len, enum lws_spa_fileupload_states state) {
   MinnetFormParser* fp = data;
-  MinnetCallback* cb = 0;
+  JSCallback* cb = 0;
   JSValue args[2] = {JS_NULL, JS_NULL};
 
   switch(state) {

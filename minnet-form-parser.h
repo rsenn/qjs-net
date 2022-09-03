@@ -4,7 +4,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "jsutils.h"
-#include "generator.h"
+#include "minnet-generator.h"
 #include "minnet-websocket.h"
 #include "callback.h"
 
@@ -15,7 +15,7 @@ typedef struct form_parser {
   struct lwsac* lwsac_head;
   MinnetWebsocket* ws;
   struct {
-    MinnetCallback content, open, close, finalize;
+    JSCallback content, open, close, finalize;
   } cb;
   JSValue exception;
   JSValue name, file;
@@ -57,5 +57,4 @@ static inline MinnetFormParser*
 minnet_form_parser_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_form_parser_class_id);
 }
-
 #endif /* MINNET_FORM_PARSER_H */

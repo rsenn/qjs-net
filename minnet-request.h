@@ -4,7 +4,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "jsutils.h"
-#include "generator.h"
+#include "minnet-generator.h"
 #include "minnet-url.h"
 
 struct socket;
@@ -63,5 +63,4 @@ method_name(int m) {
     return "-1";
   return ((const char* const[]){"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE", "CONNECT", "HEAD"})[m];
 }
-
 #endif /* MINNET_REQUEST_H */

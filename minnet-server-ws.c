@@ -13,7 +13,7 @@ int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, s
 char* lws_hdr_simple_ptr(struct lws*, int);
 
 int
-ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetSession* session = user;
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
@@ -248,7 +248,7 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       return 0;
     }
     default: {
-      // printf("ws_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
+      // printf("js_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
       minnet_lws_unhandled(__func__, reason);
       break;
     }

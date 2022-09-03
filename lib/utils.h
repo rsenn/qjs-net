@@ -187,5 +187,4 @@ static inline char*
 socket_local(int fd) {
   return socket_address(fd, &getsockname);
 }
-
 #endif /* QUICKJS_NET_LIB_UTILS_H */

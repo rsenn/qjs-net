@@ -8,7 +8,7 @@
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj) \
   if(JS_IsFunction(ctx, opt)) { \
-    cb_ptr = (MinnetCallback){ctx, JS_DupValue(ctx, this_obj), opt, #cb_ptr}; \
+    cb_ptr = (JSCallback){ctx, JS_DupValue(ctx, this_obj), opt, #cb_ptr}; \
   }
 
 #define FREECB(cb_ptr) \
@@ -23,15 +23,15 @@
     JS_FreeValueRT(rt, cb_ptr.func_obj); \
   } while(0);
 
-typedef struct ws_callback {
+typedef struct js_callback {
   JSContext* ctx;
   JSValue this_obj;
   JSValue func_obj;
   const char* name;
-} MinnetCallback;
+} JSCallback;
 
 static inline void
-callback_zero(MinnetCallback* cb) {
+callback_zero(JSCallback* cb) {
   cb->ctx = 0;
   cb->this_obj = JS_UNDEFINED;
   cb->func_obj = JS_NULL;
@@ -39,7 +39,7 @@ callback_zero(MinnetCallback* cb) {
 }
 
 typedef struct callbacks {
-  MinnetCallback message, connect, close, pong, fd, http, read, post;
+  JSCallback message, connect, close, pong, fd, http, read, post;
 } MinnetCallbacks;
 
 static inline void
@@ -52,10 +52,10 @@ callbacks_zero(MinnetCallbacks* cbs) {
   callback_zero(&cbs->http);
 }
 
-int fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
-int fd_callback(struct lws*, enum lws_callback_reasons, MinnetCallback*, struct lws_pollargs* args);
-JSValue callback_emit_this(const struct ws_callback*, JSValue, int, JSValue* argv);
-JSValue callback_emit(const struct ws_callback*, int, JSValue*);
+int fd_handler(struct lws*, JSCallback*, struct lws_pollargs);
+int fd_callback(struct lws*, enum lws_callback_reasons, JSCallback*, struct lws_pollargs* args);
+JSValue callback_emit_this(const struct js_callback*, JSValue, int, JSValue* argv);
+JSValue callback_emit(const struct js_callback*, int, JSValue*);
 void callback_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValue out[2]);
 
 #endif /* QUICKJS_NET_LIB_CALLBACK_H */

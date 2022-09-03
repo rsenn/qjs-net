@@ -133,5 +133,4 @@ static inline BOOL
 url_set_query(MinnetURL* url, const char* query, JSContext* ctx) {
   return url_set_query_len(url, query, strlen(query), ctx);
 }
-
 #endif /* MINNET_URL_H */

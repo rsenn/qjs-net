@@ -327,6 +327,7 @@ compute_revents(int fd, int sought, fd_set* rfds, fd_set* wfds, fd_set* efds) {
 
   return happened;
 }
+
 #endif /* !MinGW */
 
 int
@@ -556,6 +557,7 @@ restart:
   return rc;
 #endif
 }
+
 #endif /* defined(__MSYS__) */
 
 #endif /* !defined(HAVE_POLL) */

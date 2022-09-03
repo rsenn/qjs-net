@@ -432,7 +432,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
 const size_t minnet_response_proto_funcs_size = countof(minnet_response_proto_funcs);
 
 struct http_response*
-session_response(MinnetSession* session, MinnetCallback* cb) {
+session_response(MinnetSession* session, JSCallback* cb) {
   MinnetResponse* resp = minnet_response_data2(cb->ctx, session->resp_obj);
 
   if(cb && cb->ctx) {

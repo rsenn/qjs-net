@@ -1,4 +1,4 @@
-#include "generator.h"
+#include "minnet-generator.h"
 #include "jsutils.h"
 #include <quickjs.h>
 #include <assert.h>
@@ -131,6 +131,7 @@ minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
 
   return ret;
 }
+
 /*
 JSValue
 minnet_generator_wrap(JSContext* ctx, MinnetGenerator* gen) {

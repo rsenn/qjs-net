@@ -34,5 +34,4 @@ generator_dup(struct generator* gen) {
   ++gen->ref_count;
   return gen;
 }
-
 #endif /* QUICKJS_NET_LIB_GENERATOR_H */

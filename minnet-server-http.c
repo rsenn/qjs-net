@@ -701,7 +701,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       {
-        MinnetCallback* cb = session->mount ? &session->mount->callback : 0;
+        JSCallback* cb = session->mount ? &session->mount->callback : 0;
 
         if(cb && cb->ctx) {
           JSValue ret = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, session->args));
@@ -821,7 +821,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       request_dup(req);
 
-      MinnetCallback* cb = &mount->callback;
+      JSCallback* cb = &mount->callback;
 
       if(mount && !mount->callback.ctx)
         cb = 0;

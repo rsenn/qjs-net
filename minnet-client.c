@@ -12,7 +12,7 @@
 #include <errno.h>
 #include <libwebsockets.h>
 
-// static MinnetCallback client_cb_message, client_cb_connect, client_cb_close, client_cb_pong, client_cb_fd;
+// static JSCallback client_cb_message, client_cb_connect, client_cb_close, client_cb_pong, client_cb_fd;
 
 static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
@@ -57,6 +57,7 @@ closure_dup(MinnetClosure* c) {
   ++c->ref_count;
   return c;
 }
+
 */
 static JSValue
 close_status(JSContext* ctx, const char* in, size_t len) {
