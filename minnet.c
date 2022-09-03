@@ -9,6 +9,7 @@
 #include "minnet-form-parser.h"
 #include "minnet-hash.h"
 #include "jsutils.h"
+#include "utils.h"
 #include "minnet-buffer.h"
 #include <libwebsockets.h>
 #include <assert.h>
@@ -656,30 +657,6 @@ fd_remote(int fd) {
 char*
 fd_local(int fd) {
   return fd_address(fd, &getsockname);
-}
-
-char*
-lws_get_token_len(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token, size_t* len_p) {
-  size_t len;
-  int r;
-  char* buf;
-
-  len = lws_hdr_total_length(wsi, token);
-
-  if(!(buf = js_mallocz(ctx, len + 1)))
-    return 0;
-
-  lws_hdr_copy(wsi, buf, len + 1, token);
-
-  if(len_p)
-    *len_p = len;
-
-  return buf;
-}
-
-char*
-lws_get_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
-  return lws_get_token_len(wsi, ctx, token, NULL);
 }
 
 int
