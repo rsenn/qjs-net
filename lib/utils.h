@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_UTILS_H
-#define QUICKJS_NET_LIB_UTILS_H
+#ifndef QJSNET_LIB_UTILS_H
+#define QJSNET_LIB_UTILS_H
 
 #include <stddef.h>
 #include <ctype.h>
@@ -192,4 +192,4 @@ static inline char*
 socket_local(int fd) {
   return socket_address(fd, &getsockname);
 }
-#endif /* QUICKJS_NET_LIB_UTILS_H */
+#endif /* QJSNET_LIB_UTILS_H */

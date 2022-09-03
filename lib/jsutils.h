@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_JSUTILS_H
-#define QUICKJS_NET_LIB_JSUTILS_H
+#ifndef QJSNET_LIB_JSUTILS_H
+#define QJSNET_LIB_JSUTILS_H
 
 #include <quickjs.h>
 #include <cutils.h>
@@ -392,4 +392,4 @@ BOOL asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx);
 BOOL asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx);
 JSValue asynciterator_obj(JSValueConst value, BOOL done, JSContext* ctx);
 
-#endif /* QUICKJS_NET_LIB_JS_UTILS_H */
+#endif /* QJSNET_LIB_JS_UTILS_H */

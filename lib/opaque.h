@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_OPAQUE_H
-#define QUICKJS_NET_LIB_OPAQUE_H
+#ifndef QJSNET_LIB_OPAQUE_H
+#define QJSNET_LIB_OPAQUE_H
 
 #include "utils.h"
 #include <list.h>
@@ -44,4 +44,4 @@ opaque_dup(struct wsi_opaque_user_data* opaque) {
   opaque->ref_count++;
   return opaque;
 }
-#endif /* QUICKJS_NET_LIB_OPAQUE_H */
+#endif /* QJSNET_LIB_OPAQUE_H */

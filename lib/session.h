@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_SESSION_H
-#define QUICKJS_NET_LIB_SESSION_H
+#ifndef QJSNET_LIB_SESSION_H
+#define QJSNET_LIB_SESSION_H
 
 #include <stdint.h>
 #include "buffer.h"
@@ -36,8 +36,8 @@ typedef struct session_data {
 extern THREAD_LOCAL struct list_head session_list;
 
 void session_zero(MinnetSession*);
-void session_clear(MinnetSession*, JSContext*);
+void session_clear(MinnetSession*, JSContext* ctx);
+void session_clear_rt(MinnetSession*, JSRuntime* rt);
 JSValue session_object(struct wsi_opaque_user_data*, JSContext*);
-JSValue minnet_get_sessions(JSContext*, JSValueConst, int, JSValueConst argv[]);
 
-#endif /* QUICKJS_NET_LIB_SESSION_H */
+#endif /* QJSNET_LIB_SESSION_H */

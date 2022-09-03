@@ -605,23 +605,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         session ? session->serial : 0);
 
   switch(reason) {
-    case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: break;
-
+    case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
     case LWS_CALLBACK_ESTABLISHED:
-    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: {
-      return 0;
-      break;
-    }
-    case LWS_CALLBACK_PROTOCOL_INIT: {
-      // session_zero(session);
-      return 0;
-    }
+    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
+    case LWS_CALLBACK_PROTOCOL_INIT:
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS:
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
-    case LWS_CALLBACK_PROTOCOL_DESTROY: {
-
-      break;
-    }
+    case LWS_CALLBACK_PROTOCOL_DESTROY: break;
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
       if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
@@ -633,9 +623,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       int num_hdr = headers_tostring(ctx, &opaque->req->headers, wsi);
 
       LOGCB("HTTP", "fd=%i, num_hdr=%i", lws_get_socket_fd(lws_get_network_wsi(wsi)), num_hdr);
-
-      /*return 1;*/
-      return 0;
+      break;
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
@@ -652,16 +640,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
-      /* if(!opaque->req)
-         opaque->req = request_fromwsi(wsi, ctx);*/
-
       opaque->status = OPEN;
 
       if(opaque->req)
         url_set_protocol(&opaque->req->url, lws_is_ssl(wsi) ? "https" : "http");
 
       // LOGCB("HTTP", "url=%s", opaque->req ? url_string(&opaque->req->url) : 0);
-      return 0;
+      break;
     }
 
     case LWS_CALLBACK_ADD_HEADERS: {
@@ -691,7 +676,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         JS_FreeValue(server->cb.read.ctx, ret);
       }
 
-      return 0;
+      break;
     }
 
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
@@ -739,7 +724,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       lws_callback_on_writable(wsi);
-      return 0;
+      break;
     }
 
     case LWS_CALLBACK_HTTP: {
@@ -915,14 +900,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       /*JS_FreeValue(ctx, session->ws_obj);
       session->ws_obj=JS_NULL;*/
-
-      return 0;
+      break;
     }
 
     case LWS_CALLBACK_HTTP_WRITEABLE: {
 
       if(session->in_body)
-        return 0;
+        break;
 
       MinnetResponse* resp;
       BOOL done = FALSE;
@@ -962,41 +946,34 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         opaque->form_parser = 0;
       }
 
-      return 0;
+      break;
     }
 
     case LWS_CALLBACK_HTTP_FILE_COMPLETION: {
-
       if(opaque->req) {
         request_free(opaque->req, ctx);
         opaque->req = 0;
       }
-
       if(opaque->resp) {
         response_free(opaque->resp, ctx);
         opaque->resp = 0;
       }
-
       return lws_callback_http_dummy(wsi, reason, user, in, len);
       break;
     }
 
-    case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
     case LWS_CALLBACK_CLOSED_HTTP: {
       LOGCB("HTTP", "in='%.*s' url=%s", (int)len, (char*)in, opaque->req ? url_string(&opaque->req->url) : 0);
       // lws_close_free_wsi(wsi, LWS_CLOSE_STATUS_NOSTATUS, __func__);
-      /*     if(session) {
-             JS_FreeValue(ctx, session->req_obj);
-             session->req_obj = JS_UNDEFINED;
-             JS_FreeValue(ctx, session->resp_obj);
-             session->resp_obj = JS_UNDEFINED;
-           }*/
-      return -1;
+
+      session_clear(session, ctx);
+      ret = -1;
+      break;
     }
     case LWS_CALLBACK_VHOST_CERT_AGING:
     case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
     case LWS_CALLBACK_GET_THREAD_ID: {
-      return 0;
+      break;
     }
     default: {
       minnet_lws_unhandled(__func__, reason);

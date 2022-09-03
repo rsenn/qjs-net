@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_HEADERS_H
-#define QUICKJS_NET_LIB_HEADERS_H
+#ifndef QJSNET_LIB_HEADERS_H
+#define QJSNET_LIB_HEADERS_H
 
 #include <quickjs.h>
 #include <libwebsockets.h>
@@ -20,4 +20,4 @@ ssize_t headers_unsetb(ByteBuffer*, const char*, size_t);
 ssize_t headers_unset(ByteBuffer*, const char*);
 int headers_tostring(JSContext*, ByteBuffer*, struct lws*);
 
-#endif /* QUICKJS_NET_LIB_HEADERS_H */
+#endif /* QJSNET_LIB_HEADERS_H */

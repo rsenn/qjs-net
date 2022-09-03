@@ -32,16 +32,27 @@ session_remove(MinnetSession* session) {
 
 void
 session_clear(MinnetSession* session, JSContext* ctx) {
+  session_clear_rt(session, JS_GetRuntime(ctx));
+}
 
-  JS_FreeValue(ctx, session->ws_obj);
-  JS_FreeValue(ctx, session->req_obj);
-  JS_FreeValue(ctx, session->resp_obj);
-  JS_FreeValue(ctx, session->generator);
-  JS_FreeValue(ctx, session->next);
+void
+session_clear_rt(MinnetSession* session, JSRuntime* rt) {
 
-  buffer_free(&session->send_buf, JS_GetRuntime(ctx));
+  JS_FreeValueRT(rt, session->ws_obj);
+  session->ws_obj = JS_UNDEFINED;
 
-  DEBUG("%s #%i %p\n", __func__, session->serial, session);
+  JS_FreeValueRT(rt, session->req_obj);
+  session->req_obj = JS_UNDEFINED;
+  JS_FreeValueRT(rt, session->resp_obj);
+  session->resp_obj = JS_UNDEFINED;
+  JS_FreeValueRT(rt, session->generator);
+  session->generator = JS_UNDEFINED;
+  JS_FreeValueRT(rt, session->next);
+  session->next = JS_UNDEFINED;
+
+  buffer_free(&session->send_buf, rt);
+
+  printf("%s #%i %p\n", __func__, session->serial, session);
 }
 
 JSValue

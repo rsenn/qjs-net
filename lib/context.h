@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_CONTEXT_H
-#define QUICKJS_NET_LIB_CONTEXT_H
+#ifndef QJSNET_LIB_CONTEXT_H
+#define QJSNET_LIB_CONTEXT_H
 
 #include <quickjs.h>
 #include <cutils.h>
@@ -19,4 +19,4 @@ typedef struct context {
 JSValue context_exception(MinnetContext*, JSValueConst retval);
 void context_clear(MinnetContext*);
 
-#endif /* QUICKJS_NET_LIB_CONTEXT_H */
+#endif /* QJSNET_LIB_CONTEXT_H */

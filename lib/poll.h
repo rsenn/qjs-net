@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_LIB_POLL_H
-#define QUICKJS_NET_LIB_LIB_POLL_H
+#ifndef QJSNET_LIB_LIB_POLL_H
+#define QJSNET_LIB_LIB_POLL_H
 
 #include <stddef.h>
 
@@ -60,4 +60,4 @@ int ppoll(struct pollfd* fds, nfds_t nfds, const struct timespec* timeout, const
 
 #endif /* defined(__cplusplus) */
 
-#endif /* QUICKJS_NET_LIB_LIB_POLL_H */
+#endif /* QJSNET_LIB_LIB_POLL_H */

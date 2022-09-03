@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_CALLBACK_H
-#define QUICKJS_NET_LIB_CALLBACK_H
+#ifndef QJSNET_LIB_CALLBACK_H
+#define QJSNET_LIB_CALLBACK_H
 
 #include <quickjs.h>
 #include <libwebsockets.h>
@@ -62,4 +62,4 @@ callbacks_zero(CallbackList* cbs) {
 JSValue callback_emit_this(const struct js_callback*, JSValue, int, JSValue* argv);
 JSValue callback_emit(const struct js_callback*, int, JSValue*);
 
-#endif /* QUICKJS_NET_LIB_CALLBACK_H */
+#endif /* QJSNET_LIB_CALLBACK_H */

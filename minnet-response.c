@@ -81,7 +81,6 @@ response_clear_rt(MinnetResponse* resp, JSRuntime* rt) {
 
 void
 response_free(MinnetResponse* resp, JSContext* ctx) {
-
   if(--resp->ref_count == 0) {
     response_clear(resp, ctx);
     js_free(ctx, resp);

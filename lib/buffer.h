@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_BUFFER_H
-#define QUICKJS_NET_LIB_BUFFER_H
+#ifndef QJSNET_LIB_BUFFER_H
+#define QJSNET_LIB_BUFFER_H
 
 #include <stdint.h>
 #include <stdarg.h>
@@ -113,4 +113,4 @@ buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx) {
   return block_grow(&buf->block, size, ctx);
 }*/
 
-#endif /* QUICKJS_NET_LIB_BUFFER_H */
+#endif /* QJSNET_LIB_BUFFER_H */
