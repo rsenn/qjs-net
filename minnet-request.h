@@ -30,6 +30,7 @@ MinnetRequest* request_new(MinnetURL, MinnetHttpMethod method, JSContext*);
 MinnetRequest* request_dup(MinnetRequest*);
 MinnetRequest* request_fromobj(JSValueConst, JSContext*);
 MinnetRequest* request_fromwsi(struct lws*, JSContext*);
+BOOL request_query(MinnetRequest* req, struct lws* wsi, JSContext* ctx);
 MinnetRequest* request_fromurl(const char* uri, JSContext* ctx);
 void request_zero(MinnetRequest*);
 void request_clear(MinnetRequest*, JSContext*);

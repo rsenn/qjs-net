@@ -146,16 +146,19 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
     ret = request_new(url, method, ctx);
   }
 
-  if(ret) {
-    if(minnet_num_queries(wsi) > 0) {
-      ret->query = JS_NewObject(ctx);
-      minnet_query_object(wsi, ctx, ret->query);
-    } else {
-      ret->query = JS_NULL;
-    }
-  }
-
   return ret;
+}
+
+BOOL
+request_query(MinnetRequest* req, struct lws* wsi, JSContext* ctx) {
+
+  if(minnet_query_length(wsi) > 0) {
+    req->query = JS_NewObject(ctx);
+    minnet_query_object(wsi, ctx, req->query);
+  } else {
+    req->query = JS_NULL;
+  }
+  return !JS_IsNull(req->query);
 }
 
 MinnetRequest*

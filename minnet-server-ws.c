@@ -41,8 +41,8 @@ ws_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
-      if(!opaque->req)
-        opaque->req = request_fromwsi(wsi, ctx);
+      /* if(!opaque->req)
+         opaque->req = request_fromwsi(wsi, ctx);*/
 
       break;
 

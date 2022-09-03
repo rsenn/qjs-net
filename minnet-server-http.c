@@ -617,8 +617,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
         return -1;
 
-      if(!opaque->req)
-        opaque->req = request_fromwsi(wsi, ctx);
+      /*if(!opaque->req)
+        opaque->req = request_fromwsi(wsi, ctx);*/
 
       int num_hdr = headers_tostring(ctx, &opaque->req->headers, wsi);
 
@@ -629,12 +629,21 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+      MinnetRequest* req;
+      if(!(req = opaque->req))
+        req = opaque->req = request_fromwsi(wsi, ctx);
+
+      if(!req->url.path && len) {
+        req->url.path = js_strndup(ctx, in, len);
+        printf("Got path: '%.*'\n", (int)len, (char*)in);
+      }
+
       LOGCB("HTTP", "in=%.*s", (int)len, (char*)in);
       break;
     }
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
-      if(!opaque->req)
-        opaque->req = request_fromwsi(wsi, ctx);
+      /* if(!opaque->req)
+         opaque->req = request_fromwsi(wsi, ctx);*/
 
       opaque->status = OPEN;
 
@@ -724,38 +733,49 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP: {
-      MinnetURL* url = &opaque->req->url;
+      MinnetRequest* req;
       MinnetHttpMount* mount;
       MinnetBuffer b = BUFFER(buf);
       JSValue* args = &session->ws_obj;
       char* path = in;
-      size_t mountpoint_len = 0, pathlen = strlen(url->path);
+      size_t mountpoint_len = 0, pathlen = 0;
 
-      if(url->path && in && len < pathlen /*&& !strcmp(url->path, in)*/)
+      if(!(req = opaque->req))
+        req = opaque->req = request_fromwsi(wsi, ctx);
+
+      assert(req);
+
+      pathlen = req->url.path ? strlen(req->url.path) : 0;
+
+      if(req->url.path && in && len < pathlen /*&& !strcmp(req->url.path, in)*/)
         mountpoint_len = pathlen - len;
 
-      LOGCB("HTTP(1)", "mountpoint='%.*s' path='%s'", (int)mountpoint_len, url->path, path);
+      LOGCB("HTTP(1)", "mountpoint='%.*s' path='%s'", (int)mountpoint_len, req->url.path, path);
+
+      request_query(opaque->req, wsi, ctx);
 
       if(!opaque->req->headers.write) {
         /*int num_hdr =*/headers_tostring(ctx, &opaque->req->headers, wsi);
       }
 
       if(!session->mount)
-        session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, url->path, mountpoint_len);
+        if(req->url.path)
+          session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, req->url.path, mountpoint_len);
       if(!session->mount)
-        session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, path, 0);
-      if(url->path && !session->mount)
-        if(!(session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, url->path, mountpoint_len)))
-          session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, url->path, 0);
+        if(path)
+          session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, path, 0);
+      if(req->url.path && !session->mount)
+        if(!(session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, req->url.path, mountpoint_len)))
+          session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, req->url.path, 0);
 
       session->h2 = is_h2(wsi);
 
       if((mount = session->mount)) {
         size_t mlen = strlen(mount->mnt);
-        assert(!strncmp(url->path, mount->mnt, mlen));
+        assert(!strncmp(req->url.path, mount->mnt, mlen));
 
-        if(!strcmp(url->path + mlen, path)) {
-          assert(!strcmp(url->path + mlen, path));
+        if(!strcmp(req->url.path + mlen, path)) {
+          assert(!strcmp(req->url.path + mlen, path));
 
           LOGCB("HTTP(2)",
                 "mount: mnt='%s', org='%s', pro='%s', origin_protocol='%s'\n",
@@ -774,9 +794,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       if(!JS_IsObject(session->resp_obj))
-        session->resp_obj = minnet_response_new(ctx, *url, /*opaque->req->method == METHOD_POST ? 201 :*/ 200, 0, TRUE, "text/html");
+        session->resp_obj = minnet_response_new(ctx, req->url, /*opaque->req->method == METHOD_POST ? 201 :*/ 200, 0, TRUE, "text/html");
 
-      MinnetRequest* req = opaque->req;
+      // MinnetRequest* req = opaque->req;
       MinnetResponse* resp = opaque->resp = minnet_response_data2(ctx, session->resp_obj);
 
       LOGCB("HTTP(3)", "req=%p, header=%zu", req, buffer_HEAD(&req->headers));
@@ -831,7 +851,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           }
         }
 
-        /*     LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);
+        /*     LOGCB("HTTP", "path=%s mountpoint=%.*s", path, (int)mountpoint_len, req->url.path);
            if(lws_http_transaction_completed(wsi))
               return -1;
           }
@@ -857,7 +877,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       goto http_exit;
 
-      /*      LOGCB("HTTP", "NOT FOUND\tpath=%s mountpoint=%.*s", path, (int)mountpoint_len, url->path);
+      /*      LOGCB("HTTP", "NOT FOUND\tpath=%s mountpoint=%.*s", path, (int)mountpoint_len, req->url.path);
             if(cb && cb->ctx)
               server_exception(server, minnet_emit(cb, 2, &session->req_obj));*/
 

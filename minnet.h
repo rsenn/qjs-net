@@ -143,7 +143,7 @@ enum http_method {
 };
 
 typedef enum http_method MinnetHttpMethod;
-
+/*
 typedef struct session_data {
   JSValue ws_obj;
   union {
@@ -163,7 +163,7 @@ typedef struct session_data {
   struct client_context* client;
   MinnetBuffer send_buf;
 } MinnetSession;
-
+*/
 typedef struct callbacks {
   MinnetCallback message, connect, close, pong, fd, http, read, post;
 } MinnetCallbacks;
@@ -314,14 +314,15 @@ is_h2(struct lws* wsi) {
   return lws_wsi_is_h2(wsi);
 }
 
-char* lws_get_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token);
-int lws_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, DynBuf* db);
-int lws_num_fragments(struct lws* wsi, enum lws_token_indexes token);
 static inline int
-minnet_num_queries(struct lws* wsi) {
-  return lws_num_fragments(wsi, WSI_TOKEN_HTTP_URI_ARGS);
+minnet_query_length(struct lws* wsi) {
+  return lws_hdr_total_length(wsi, WSI_TOKEN_HTTP_URI_ARGS);
 }
-int minnet_query_object(struct lws* wsi, JSContext* ctx, JSValueConst obj);
+char* lws_get_token_len(struct lws*, JSContext*, enum lws_token_indexes, size_t* len_p);
+char* lws_get_token(struct lws*, JSContext*, enum lws_token_indexes);
+int lws_copy_fragment(struct lws*, enum lws_token_indexes, int, DynBuf* db);
+int minnet_query_object2(struct lws*, JSContext*, JSValueConst);
+int minnet_query_object(struct lws*, JSContext*, JSValueConst);
 
 char* lws_get_host(struct lws* wsi, JSContext* ctx);
 void lws_peer_cert(struct lws*);

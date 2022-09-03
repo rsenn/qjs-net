@@ -145,72 +145,6 @@ socket_geterror(int fd) {
   return -1;
 }
 
-void
-session_zero(MinnetSession* session) {
-  memset(session, 0, sizeof(MinnetSession));
-  session->serial = -1;
-  session->ws_obj = JS_NULL;
-  session->req_obj = JS_NULL;
-  session->resp_obj = JS_NULL;
-  session->generator = JS_NULL;
-  session->next = JS_NULL;
-
-  session->serial = ++session_serial;
-
-  // list_add(&session->link, &minnet_sessions);
-
-  // printf("%s #%i %p\n", __func__, session->serial, session);
-}
-
-void
-session_clear(MinnetSession* session, JSContext* ctx) {
-  // list_del(&session->link);
-
-  JS_FreeValue(ctx, session->ws_obj);
-  JS_FreeValue(ctx, session->req_obj);
-  JS_FreeValue(ctx, session->resp_obj);
-  JS_FreeValue(ctx, session->generator);
-  JS_FreeValue(ctx, session->next);
-
-  buffer_free(&session->send_buf, JS_GetRuntime(ctx));
-
-  // printf("%s #%i %p\n", __func__, session->serial, session);
-}
-
-struct http_response*
-session_response(MinnetSession* session, MinnetCallback* cb) {
-  MinnetResponse* resp = minnet_response_data2(cb->ctx, session->resp_obj);
-
-  if(cb && cb->ctx) {
-    JSValue ret = minnet_emit_this(cb, session->ws_obj, 2, session->args);
-    lwsl_user("session_response ret=%s", JS_ToCString(cb->ctx, ret));
-    if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
-      JS_FreeValue(cb->ctx, session->args[1]);
-      session->args[1] = ret;
-      resp = minnet_response_data2(cb->ctx, ret);
-    } else {
-      JS_FreeValue(cb->ctx, ret);
-    }
-  }
-  lwsl_user("session_response %s", response_dump(resp));
-
-  return resp;
-}
-
-JSValue
-session_object(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
-  JSValue ret;
-  ret = JS_NewArray(ctx);
-
-  JS_SetPropertyUint32(ctx, ret, 0, opaque->serial ? JS_NewInt32(ctx, opaque->serial) : JS_NULL);
-
-  if(opaque->sess) {
-    JS_SetPropertyUint32(ctx, ret, 1, JS_DupValue(ctx, opaque->sess->ws_obj));
-    JS_SetPropertyUint32(ctx, ret, 2, JS_DupValue(ctx, opaque->sess->req_obj));
-    JS_SetPropertyUint32(ctx, ret, 3, JS_DupValue(ctx, opaque->sess->resp_obj));
-  }
-  return ret;
-}
 
 JSValue
 context_exception(MinnetContext* context, JSValue retval) {
@@ -1116,16 +1050,27 @@ fd_local(int fd) {
 }
 
 char*
-lws_get_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
+lws_get_token_len(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token, size_t* len_p) {
   size_t len;
-  char buf[1024];
+  int r;
+  char* buf;
 
-  if((len = lws_hdr_copy(wsi, buf, sizeof(buf) - 1, token)) > 0)
-    buf[len] = '\0';
-  else
+  len = lws_hdr_total_length(wsi, token);
+
+  if(!(buf = js_mallocz(ctx, len + 1)))
     return 0;
 
-  return js_strndup(ctx, buf, len);
+  lws_hdr_copy(wsi, buf, len + 1, token);
+
+  if(len_p)
+    *len_p = len;
+
+  return buf;
+}
+
+char*
+lws_get_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
+  return lws_get_token_len(wsi, ctx, token, NULL);
 }
 
 int
@@ -1135,54 +1080,74 @@ lws_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, D
 
   len = lws_hdr_fragment_length(wsi, token, fragment);
 
-  if(len <= 0)
-    return len;
+  dbuf_realloc(db, (len > 0 ? len : 1023) + 1);
 
-  dbuf_realloc(db, len + 1);
-
-  if((ret = lws_hdr_copy_fragment(wsi, db->buf, db->size, token, fragment)) <= 0)
+  if((ret = lws_hdr_copy_fragment(wsi, db->buf, db->size, token, fragment)) < 0)
     return ret;
 
   return len;
 }
 
 int
-lws_num_fragments(struct lws* wsi, enum lws_token_indexes token) {
-  int i, len;
-
-  for(i = 0;; i++) {
-
-    len = lws_hdr_fragment_length(wsi, token, i);
-
-    if(len <= 0)
-      break;
+minnet_query_object2(struct lws* wsi, JSContext* ctx, JSValueConst obj) {
+  int r, i, len;
+  DynBuf dbuf;
+  dbuf_init2(&dbuf, 0, 0);
+  len = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP_URI_ARGS);
+  for(i = 0; i < len; i++) {
+    size_t namelen, valuelen;
+    const char* value;
+    r = lws_copy_fragment(wsi, WSI_TOKEN_HTTP_URI_ARGS, i, &dbuf);
+    printf("query #%i: '%.*s'\n", i, (int)r, (char*)dbuf.buf);
+    namelen = byte_chr(dbuf.buf, r, '=');
+    dbuf.buf[namelen] = '\0';
+    value = (const char*)&dbuf.buf[namelen + 1];
+    valuelen = r - (namelen + 1);
+    JS_SetPropertyStr(ctx, obj, (const char*)dbuf.buf, JS_NewStringLen(ctx, value, valuelen));
   }
-
+  dbuf_free(&dbuf);
   return i;
+}
+
+void
+minnet_query_entry(char* start, size_t len, JSContext* ctx, JSValueConst obj) {
+  size_t namelen, valuelen;
+  const char* value;
+
+  namelen = byte_chr(start, len, '=');
+
+  if(namelen < len)
+    start[namelen] = '\0';
+
+  value = start + namelen + 1;
+  valuelen = len - (namelen + 1);
+
+  JS_SetPropertyStr(ctx, obj, start, JS_NewStringLen(ctx, value, valuelen));
 }
 
 int
 minnet_query_object(struct lws* wsi, JSContext* ctx, JSValueConst obj) {
-  int r, i;
-  DynBuf dbuf;
-  dbuf_init2(&dbuf, 0, 0);
+  char* tok;
+  size_t toklen;
+  int i = 0;
 
-  for(i = 0;; i++) {
-    size_t namelen, valuelen;
-    const char* value;
-    r = lws_copy_fragment(wsi, WSI_TOKEN_HTTP_URI_ARGS, i, &dbuf);
+  if((tok = lws_get_token_len(wsi, ctx, WSI_TOKEN_HTTP_URI_ARGS, &toklen))) {
+    char *start = tok, *end = tok + toklen;
 
-    if(r <= 0)
-      break;
+    while(tok < end) {
+      size_t paramlen = byte_chr(tok, end - tok, '&');
 
-    namelen = byte_chr(dbuf.buf, r, '=');
-    dbuf.buf[namelen] = '\0';
-    value = &dbuf.buf[namelen + 1];
-    valuelen = r - (namelen + 1);
+      printf("query #%i = '%.*s'\n", i++, (int)paramlen, tok);
 
-    JS_SetPropertyStr(ctx, obj, (const char*)dbuf.buf, JS_NewStringLen(ctx, value, valuelen));
+      minnet_query_entry(tok, paramlen, ctx, obj);
+
+      tok += paramlen + 1;
+    }
+
+    js_free(ctx, start);
   }
-  return i;
+
+  return 0;
 }
 
 const char*
