@@ -1,4 +1,7 @@
 #include "opaque.h"
+#include "../minnet-websocket.h"
+#include "../minnet-request.h"
+#include "../minnet-response.h"
 #include <assert.h>
 
 static THREAD_LOCAL void* prev_ptr = 0;
@@ -69,5 +72,20 @@ opaque_new(JSContext* ctx) {
     list_add(&opaque->link, &sockets);
   }
 
+  return opaque;
+}
+
+struct wsi_opaque_user_data*
+lws_opaque(struct lws* wsi, JSContext* ctx) {
+  struct wsi_opaque_user_data* opaque;
+
+  if((opaque = lws_get_opaque_user_data(wsi)))
+    return opaque;
+
+  assert(ctx);
+
+  opaque = opaque_new(ctx);
+
+  lws_set_opaque_user_data(wsi, opaque);
   return opaque;
 }

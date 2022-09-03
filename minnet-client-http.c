@@ -1,6 +1,7 @@
 #include "minnet-client.h"
 #include "minnet-websocket.h"
 #include "minnet-response.h"
+#include "headers.h"
 #include "jsutils.h"
 #include <libwebsockets.h>
 
@@ -109,7 +110,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         opaque->status = CLOSED;
         if(client->on.close.ctx) {
           JSValueConst cb_argv[] = {JS_DupValue(client->on.close.ctx, session->ws_obj), JS_NewInt32(client->on.close.ctx, opaque->error)};
-          client_exception(client, minnet_emit(&client->on.close, countof(cb_argv), cb_argv));
+          client_exception(client, callback_emit(&client->on.close, countof(cb_argv), cb_argv));
           JS_FreeValue(client->on.close.ctx, cb_argv[0]);
           JS_FreeValue(client->on.close.ctx, cb_argv[1]);
         }
@@ -219,7 +220,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       /*  if(!JS_IsObject(session->resp_obj))
           session->resp_obj=minnet_response_wrap(ctx, resp);*/
 
-      client_exception(client, minnet_emit(&client->on.message, 2, &session->req_obj));
+      client_exception(client, callback_emit(&client->on.message, 2, &session->req_obj));
 
       // buffer_append(resp->body, in, len, ctx);
       return 0;
@@ -231,7 +232,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(client->on.http.ctx) {
         int32_t result = -1;
         JSValue ret;
-        ret = client_exception(client, minnet_emit(&client->on.http, 2, &session->req_obj));
+        ret = client_exception(client, callback_emit(&client->on.http, 2, &session->req_obj));
         if(JS_IsNumber(ret))
           JS_ToInt32(client->on.http.ctx, &result, ret);
         lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */

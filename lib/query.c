@@ -8,7 +8,7 @@ query_object(const char* q, JSContext* ctx) {
 JSValue
 query_object_len(const char* q, size_t n, JSContext* ctx) {
   const char *p, *end = q + n;
-  size_t i = 0, entrylen;
+  size_t entrylen;
   JSValue ret = JS_NewObject(ctx);
   JSEntry entry = {-1, JS_NULL};
 
@@ -23,13 +23,12 @@ query_object_len(const char* q, size_t n, JSContext* ctx) {
 
 BOOL
 query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry) {
-  const char* value;
-  JSEntry ret = {-1, JS_NULL};
+  size_t len;
 
-  if((value = byte_chr(q, n, '='))) {
-    size_t namelen, len;
+  if((len = byte_chr(q, n, '=')) < n) {
+    size_t namelen;
     char* decoded;
-    const char* end = q + n;
+    const char *value = q + len + 1, *end = q + n;
     namelen = value - q;
     ++value;
 

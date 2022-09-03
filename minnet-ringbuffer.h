@@ -1,5 +1,5 @@
-#ifndef MINNET_RINGBUFFER_H
-#define MINNET_RINGBUFFER_H
+#ifndef QUICKJS_NET_LIB_RINGBUFFER_H
+#define QUICKJS_NET_LIB_RINGBUFFER_H
 
 #include <quickjs.h>
 #include <cutils.h>
@@ -53,4 +53,4 @@ minnet_ringbuffer_data(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_ringbuffer_class_id);
 }
 
-#endif /* MINNET_RINGBUFFER_H */
+#endif /* QUICKJS_NET_LIB_RINGBUFFER_H */

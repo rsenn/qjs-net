@@ -1,5 +1,5 @@
-#ifndef MINNET_BUFFER_H
-#define MINNET_BUFFER_H
+#ifndef QUICKJS_NET_LIB_BUFFER_H
+#define QUICKJS_NET_LIB_BUFFER_H
 
 #include <stdint.h>
 #include <stdarg.h>
@@ -113,4 +113,4 @@ buffer_grow(MinnetBuffer* buf, size_t size, JSContext* ctx) {
   return block_grow(&buf->block, size, ctx);
 }*/
 
-#endif /* MINNET_BUFFER_H */
+#endif /* QUICKJS_NET_LIB_BUFFER_H */

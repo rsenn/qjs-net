@@ -1,5 +1,5 @@
-#ifndef MINNET_HEADERS_H
-#define MINNET_HEADERS_H
+#ifndef QUICKJS_NET_LIB_HEADERS_H
+#define QUICKJS_NET_LIB_HEADERS_H
 
 #include <quickjs.h>
 #include <libwebsockets.h>
@@ -20,4 +20,4 @@ ssize_t headers_unsetb(MinnetBuffer*, const char*, size_t);
 ssize_t headers_unset(MinnetBuffer*, const char*);
 int headers_tostring(JSContext*, MinnetBuffer*, struct lws*);
 
-#endif /* MINNET_HEADERS_H */
+#endif /* QUICKJS_NET_LIB_HEADERS_H */

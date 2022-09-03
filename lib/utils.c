@@ -148,6 +148,13 @@ socket_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
   return (char*)s;
 }
 
+int lws_wsi_is_h2(struct lws* wsi);
+
+BOOL
+wsi_http2(struct lws* wsi) {
+  return lws_wsi_is_h2(wsi);
+}
+
 char*
 wsi_peer(struct lws* wsi, JSContext* ctx) {
   char buf[1024];
@@ -218,30 +225,14 @@ wsi_query_string_len(struct lws* wsi, size_t* len_p, JSContext* ctx) {
   return wsi_token_len(wsi, ctx, WSI_TOKEN_HTTP_URI_ARGS, len_p);
 }
 
-int
-wsi_query_object(struct lws* wsi, JSContext* ctx, JSValueConst obj) {
-  char* tok;
-  size_t toklen;
-  int i = 0;
-
-  if((tok = wsi_token_len(wsi, ctx, WSI_TOKEN_HTTP_URI_ARGS, &toklen))) {
-    char *start = tok, *end = tok + toklen;
-    while(tok < end) {
-      size_t paramlen = byte_chr(tok, end - tok, '&');
-      printf("query #%i = '%.*s'\n", i++, (int)paramlen, tok);
-      minnet_query_entry(tok, paramlen, ctx, obj);
-      tok += paramlen + 1;
-    }
-    js_free(ctx, start);
-  }
-
-  return 0;
+BOOL
+wsi_token_exists(struct lws* wsi, enum lws_token_indexes token) {
+  return lws_hdr_total_length(wsi, token) > 0;
 }
 
 char*
 wsi_token_len(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token, size_t* len_p) {
   size_t len;
-  int r;
   char* buf;
 
   len = lws_hdr_total_length(wsi, token);
@@ -266,7 +257,7 @@ wsi_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, D
 
   dbuf_realloc(db, (len > 0 ? len : 1023) + 1);
 
-  if((ret = lws_hdr_copy_fragment(wsi, db->buf, db->size, token, fragment)) < 0)
+  if((ret = lws_hdr_copy_fragment(wsi, (void*)db->buf, db->size, token, fragment)) < 0)
     return ret;
 
   return len;
@@ -297,6 +288,74 @@ wsi_uri_and_method(struct lws* wsi, JSContext* ctx, MinnetHttpMethod* method) {
   }
 
   return url;
+}
+
+char*
+wsi_host_and_port(struct lws* wsi, JSContext* ctx, int* port) {
+  char* host;
+  size_t hostlen;
+
+  if((host = wsi_token_len(wsi, ctx, WSI_TOKEN_HOST, &hostlen))) {
+    size_t pos;
+
+    if((pos = byte_chr(host, hostlen, ':')) < hostlen) {
+      *port = atoi(&host[pos + 1]);
+      host[pos] = '\0';
+      host = js_realloc(ctx, host, pos + 1);
+    }
+  }
+  return host;
+}
+
+const char*
+wsi_vhost_name(struct lws* wsi) {
+  struct lws_vhost* vhost;
+
+  if((vhost = lws_get_vhost(wsi)))
+    return lws_get_vhost_name(vhost);
+
+  return 0;
+}
+
+static const enum lws_token_indexes wsi_uri_tokens[] = {
+    WSI_TOKEN_GET_URI,
+    WSI_TOKEN_POST_URI,
+    WSI_TOKEN_OPTIONS_URI,
+    WSI_TOKEN_PATCH_URI,
+    WSI_TOKEN_PUT_URI,
+    WSI_TOKEN_DELETE_URI,
+    WSI_TOKEN_HEAD_URI,
+};
+
+enum lws_token_indexes
+wsi_uri_token(struct lws* wsi) {
+
+  size_t i;
+
+  for(i = 0; i < countof(wsi_uri_tokens); i++)
+    if(wsi_token_exists(wsi, wsi_uri_tokens[i]))
+      return wsi_uri_tokens[i];
+
+  return -1;
+}
+
+MinnetHttpMethod
+wsi_method(struct lws* wsi) {
+  static const MinnetHttpMethod methods[] = {
+      METHOD_GET,
+      METHOD_POST,
+      METHOD_OPTIONS,
+      METHOD_PATCH,
+      METHOD_PUT,
+      METHOD_DELETE,
+      METHOD_HEAD,
+  };
+
+  for(size_t i = 0; i < countof(wsi_uri_tokens); i++)
+    if(wsi_token_exists(wsi, wsi_uri_tokens[i]))
+      return methods[i];
+
+  return -1;
 }
 
 void

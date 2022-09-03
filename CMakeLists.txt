@@ -13,6 +13,11 @@ if(USE_CURL)
   option(BUILD_CURL "Build curl library" ${LOCAL_CURL})
 endif(USE_CURL)
 option(BUILD_MINIMAL_EXAMPLES "Build minimal-examples" OFF)
+option(DEBUG_OUTPUT "Output debug messages" OFF)
+
+if(DEBUG_OUTPUT)
+  add_definitions(-DDEBUG_OUTPUT)
+endif(DEBUG_OUTPUT)
 
 #set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "PIC code")
 #set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")

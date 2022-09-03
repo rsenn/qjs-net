@@ -1,5 +1,5 @@
-#ifndef MINNET_GENERATOR_H
-#define MINNET_GENERATOR_H
+#ifndef QUICKJS_NET_LIB_GENERATOR_H
+#define QUICKJS_NET_LIB_GENERATOR_H
 
 #include "jsutils.h"
 #include <libwebsockets.h>
@@ -35,4 +35,4 @@ generator_dup(struct generator* gen) {
   return gen;
 }
 
-#endif /* MINNET_GENERATOR_H */
+#endif /* QUICKJS_NET_LIB_GENERATOR_H */

@@ -1,4 +1,6 @@
 #include "headers.h"
+#include <libwebsockets.h>
+#include <strings.h>
 
 JSValue
 headers_object(JSContext* ctx, const void* start, const void* e) {
@@ -100,7 +102,7 @@ headers_write(uint8_t** in, uint8_t* end, MinnetBuffer* buffer, struct lws* wsi)
     name[n + 1] = tmp;
 
 #ifdef DEBUG_OUTPUT
-    printf("name=%.*s value=%.*s lws_add_http_header_by_name() = %d\n", (int)n, name, (int)l, r, ret);
+    printf("name=%.*s value='%.*s'\n", (int)n, name, (int)l, r);
 #endif
     r = next;
   }

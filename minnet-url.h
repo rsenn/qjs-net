@@ -28,6 +28,9 @@ typedef struct url {
   uint16_t port;
 } MinnetURL;
 
+#define URL_INIT() \
+  (MinnetURL) { 1, 0, 0, 0, 0 }
+
 MinnetProtocol protocol_number(const char*);
 const char* protocol_string(MinnetProtocol);
 uint16_t protocol_default_port(MinnetProtocol);

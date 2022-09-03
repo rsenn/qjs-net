@@ -1,5 +1,5 @@
-#ifndef MINNET_UTILS_H
-#define MINNET_UTILS_H
+#ifndef QUICKJS_NET_LIB_UTILS_H
+#define QUICKJS_NET_LIB_UTILS_H
 
 #include <stddef.h>
 #include <ctype.h>
@@ -65,14 +65,21 @@ unsigned uint_pow(unsigned, unsigned degree);
 int socket_geterror(int);
 char* socket_address(int, int (*fn)(int, struct sockaddr*, socklen_t*));
 
+BOOL wsi_http2(struct lws*);
 char* wsi_peer(struct lws*, JSContext* ctx);
 char* wsi_host(struct lws*, JSContext* ctx);
 void wsi_cert(struct lws*);
 char* wsi_query_string_len(struct lws*, size_t* len_p, JSContext* ctx);
-int wsi_query_object(struct lws*, JSContext* ctx, JSValueConst obj);
+// int wsi_query_object(struct lws*, JSContext* ctx, JSValueConst obj);
+
+BOOL wsi_token_exists(struct lws* wsi, enum lws_token_indexes token);
 char* wsi_token_len(struct lws*, JSContext* ctx, enum lws_token_indexes token, size_t* len_p);
 int wsi_copy_fragment(struct lws*, enum lws_token_indexes token, int fragment, DynBuf* db);
 char* wsi_uri_and_method(struct lws*, JSContext* ctx, MinnetHttpMethod* method);
+MinnetHttpMethod wsi_method(struct lws* wsi);
+enum lws_token_indexes wsi_uri_token(struct lws* wsi);
+char* wsi_host_and_port(struct lws* wsi, JSContext* ctx, int* port);
+const char* wsi_vhost_name(struct lws* wsi);
 
 const char* lws_callback_name(int reason);
 
@@ -167,11 +174,6 @@ lws_reason_client(int reason) {
 }
 
 static inline int
-wsi_http2(struct lws* wsi) {
-  return lws_wsi_is_h2(wsi);
-}
-
-static inline int
 wsi_query_len(struct lws* wsi) {
   return lws_hdr_total_length(wsi, WSI_TOKEN_HTTP_URI_ARGS);
 }
@@ -186,4 +188,4 @@ socket_local(int fd) {
   return socket_address(fd, &getsockname);
 }
 
-#endif /* MINNET_UTILS_H */
+#endif /* QUICKJS_NET_LIB_UTILS_H */

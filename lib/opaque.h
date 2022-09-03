@@ -1,5 +1,5 @@
-#ifndef MINNET_OPAQUE_H
-#define MINNET_OPAQUE_H
+#ifndef QUICKJS_NET_LIB_OPAQUE_H
+#define QUICKJS_NET_LIB_OPAQUE_H
 
 #include "utils.h"
 #include <list.h>
@@ -26,12 +26,18 @@ struct wsi_opaque_user_data {
   BOOL binary;
   struct list_head link;
   struct form_parser* form_parser;
+  char* uri;
+  size_t uri_len;
 };
 
 extern THREAD_LOCAL int64_t serial;
 
-void opaque_free_rt(struct wsi_opaque_user_data*, JSRuntime*);
-void opaque_free(struct wsi_opaque_user_data*, JSContext*);
+void opaque_clear_rt(struct wsi_opaque_user_data*, JSRuntime* rt);
+void opaque_free_rt(struct wsi_opaque_user_data*, JSRuntime* rt);
+void opaque_clear(struct wsi_opaque_user_data*, JSContext* ctx);
+void opaque_free(struct wsi_opaque_user_data*, JSContext* ctx);
+struct wsi_opaque_user_data* opaque_new(JSContext*);
+struct wsi_opaque_user_data* lws_opaque(struct lws*, JSContext* ctx);
 
 static inline struct wsi_opaque_user_data*
 opaque_dup(struct wsi_opaque_user_data* opaque) {
@@ -39,4 +45,4 @@ opaque_dup(struct wsi_opaque_user_data* opaque) {
   return opaque;
 }
 
-#endif /* MINNET_OPAQUE_H */
+#endif /* QUICKJS_NET_LIB_OPAQUE_H */

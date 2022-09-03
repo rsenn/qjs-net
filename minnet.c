@@ -43,13 +43,6 @@
 #define JS_INIT_MODULE js_init_module_minnet
 #endif
 */
-#define PIO (POLLIN | POLLOUT | POLLERR)
-
-typedef struct handler_closure {
-  JSContext* ctx;
-  struct lws* lwsi;
-  struct wsi_opaque_user_data* opaque;
-} MinnetHandler;
 
 static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 static THREAD_LOCAL int32_t minnet_log_level = 0;
@@ -126,78 +119,6 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return ret;
 }
 
-static JSValue
-minnet_io_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  MinnetHandler* closure = ptr;
-  struct pollfd* p;
-  int32_t wr;
-  JSValue ret = JS_UNDEFINED;
-
-  assert(closure->opaque);
-  p = &closure->opaque->poll;
-
-  JS_ToInt32(ctx, &wr, argv[0]);
-
-  p->revents = magic & (wr == WRITE_HANDLER ? POLLOUT : POLLIN);
-
-  if((p->revents & PIO) != magic) {
-    if(poll(p, 1, 0) < 0)
-      lwsl_err("poll error: %s\n", strerror(errno));
-  }
-
-  if(p->revents & PIO) {
-    struct lws_pollfd x = {p->fd, magic, p->revents & PIO};
-
-    if(p->revents & (POLLERR | POLLHUP))
-      closure->opaque->error = errno;
-
-    /*if(x.revents & POLLOUT)
-      if(x.revents & POLLIN)
-        x.revents &= ~(POLLOUT);*/
-    // errno = 0;
-
-    ret = JS_NewInt32(ctx, lws_service_fd(lws_get_context(closure->lwsi), &x));
-  }
-
-  return ret;
-}
-
-static void
-free_handler_closure(void* ptr) {
-  MinnetHandler* closure = ptr;
-  JSContext* ctx = closure->ctx;
-  js_free(ctx, closure);
-};
-
-static JSValue
-make_handler(JSContext* ctx, int fd, int events, struct lws* wsi) {
-  MinnetHandler* closure;
-
-  if(!(closure = js_mallocz(ctx, sizeof(MinnetHandler))))
-    return JS_ThrowOutOfMemory(ctx);
-
-  *closure = (MinnetHandler){ctx, wsi, lws_opaque(wsi, ctx)};
-
-  closure->opaque->poll = (struct pollfd){fd, events, 0};
-
-  return JS_NewCClosure(ctx, minnet_io_handler, 1, events, closure, free_handler_closure);
-}
-
-void
-minnet_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {
-  JSValue func;
-  int events = args.events & (POLLIN | POLLOUT);
-  // struct wsi_opaque_user_data*opaque =lws_opaque(wsi, ctx);
-
-  if(events)
-    func = make_handler(ctx, args.fd, events, wsi);
-
-  out[0] = (events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
-  out[1] = (events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
-
-  if(events)
-    JS_FreeValue(ctx, func);
-}
 static const JSCFunctionListEntry minnet_loglevels[] = {
     JS_INDEX_STRING_DEF(1, "ERR"),
     JS_INDEX_STRING_DEF(2, "WARN"),

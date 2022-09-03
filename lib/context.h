@@ -1,5 +1,5 @@
-#ifndef MINNET_CONTEXT_H
-#define MINNET_CONTEXT_H
+#ifndef QUICKJS_NET_LIB_CONTEXT_H
+#define QUICKJS_NET_LIB_CONTEXT_H
 
 #include <quickjs.h>
 #include <cutils.h>
@@ -19,4 +19,4 @@ typedef struct context {
 JSValue context_exception(MinnetContext*, JSValueConst retval);
 void context_clear(MinnetContext*);
 
-#endif /* MINNET_CONTEXT_H */
+#endif /* QUICKJS_NET_LIB_CONTEXT_H */

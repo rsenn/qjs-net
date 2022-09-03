@@ -1,5 +1,5 @@
-#ifndef MINNET_CLOSURE_H
-#define MINNET_CLOSURE_H
+#ifndef QUICKJS_NET_LIB_CLOSURE_H
+#define QUICKJS_NET_LIB_CLOSURE_H
 
 #include <quickjs.h>
 
@@ -21,4 +21,4 @@ MinnetClosure* closure_new(JSContext*);
 MinnetClosure* closure_dup(MinnetClosure*);
 void closure_free(void*);
 
-#endif /* MINNET_CLOSURE_H */
+#endif /* QUICKJS_NET_LIB_CLOSURE_H */

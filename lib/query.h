@@ -1,5 +1,5 @@
-#ifndef MINNET_QUERY_H
-#define MINNET_QUERY_H
+#ifndef QUICKJS_NET_LIB_QUERY_H
+#define QUICKJS_NET_LIB_QUERY_H
 
 #include <quickjs.h>
 #include <cutils.h>
@@ -11,4 +11,4 @@ BOOL query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry);
 char* query_from(JSValueConst obj, JSContext* ctx);
 void minnet_query_entry(char* start, size_t len, JSContext* ctx, JSValueConst obj);
 
-#endif /* MINNET_QUERY_H */
+#endif /* QUICKJS_NET_LIB_QUERY_H */

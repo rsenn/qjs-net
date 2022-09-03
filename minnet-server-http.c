@@ -12,6 +12,7 @@
 #include "minnet-response.h"
 #include "minnet-request.h"
 #include "minnet-form-parser.h"
+#include "headers.h"
 
 MinnetVhostOptions*
 vhost_options_create(JSContext* ctx, const char* name, const char* value) {
@@ -322,7 +323,7 @@ int
 http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* resp, JSContext* ctx, MinnetSession* session) {
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int is_ssl = lws_is_ssl(wsi);
-  int wsi_http2 = lws_wsi_is_h2(wsi);
+  int h2 = wsi_http2(wsi);
 
   LOG("SERVER-HTTP",
       FG("%d") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu",
@@ -336,12 +337,12 @@ http_server_respond(struct lws* wsi, MinnetBuffer* buf, struct http_response* re
   // resp->read_only = TRUE;
   response_generator(resp, ctx);
 
-  if(!wsi_http2) {
+  if(!h2) {
     BOOL done = FALSE;
     while(!done) http_server_generate(ctx, session, resp, &done);
   }
 
-  if(lws_add_http_common_headers(wsi, resp->status, resp->type, is_ssl || wsi_http2 ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body), &buf->write, buf->end)) {
+  if(lws_add_http_common_headers(wsi, resp->status, resp->type, is_ssl || h2 ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body), &buf->write, buf->end)) {
     return 1;
   }
   /*  {
@@ -629,18 +630,18 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-      MinnetRequest* req;
-      if(!(req = opaque->req))
-        req = opaque->req = request_fromwsi(wsi, ctx);
+      if(!opaque->req)
+        opaque->req = request_fromwsi(wsi, ctx);
 
-      if(!req->url.path && len) {
-        req->url.path = js_strndup(ctx, in, len);
-        printf("Got path: '%.*'\n", (int)len, (char*)in);
+      if(in) {
+        opaque->uri = in;
+        opaque->uri_len = len ? len : strlen(in);
       }
 
-      LOGCB("HTTP", "in=%.*s", (int)len, (char*)in);
+      LOGCB("HTTP", "len=%d, in=%.*s", (int)len, (int)len, (char*)in);
       break;
     }
+
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
       /* if(!opaque->req)
          opaque->req = request_fromwsi(wsi, ctx);*/
@@ -677,7 +678,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(server->cb.read.ctx) {
         JSValue args[] = {JS_NewStringLen(server->cb.read.ctx, in, len)};
-        JSValue ret = server_exception(server, minnet_emit_this(&server->cb.read, session->req_obj, countof(args), args));
+        JSValue ret = server_exception(server, callback_emit_this(&server->cb.read, session->req_obj, countof(args), args));
         JS_FreeValue(server->cb.read.ctx, ret);
       }
 
@@ -694,7 +695,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(opaque->form_parser) {
         lws_spa_finalize(opaque->form_parser->spa);
         if(opaque->form_parser->cb.finalize.ctx) {
-          JSValue ret = server_exception(server, minnet_emit(&opaque->form_parser->cb.finalize, 0, 0));
+          JSValue ret = server_exception(server, callback_emit(&opaque->form_parser->cb.finalize, 0, 0));
           JS_FreeValue(opaque->form_parser->cb.finalize.ctx, ret);
         }
       }
@@ -703,7 +704,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         MinnetCallback* cb = session->mount ? &session->mount->callback : 0;
 
         if(cb && cb->ctx) {
-          JSValue ret = server_exception(server, minnet_emit_this(cb, session->ws_obj, 2, session->args));
+          JSValue ret = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, session->args));
 
           assert(js_is_iterator(ctx, ret));
           session->generator = ret;
@@ -718,7 +719,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(server->cb.post.ctx) {
         JSValue args[] = {opaque->binary ? buffer_toarraybuffer(&opaque->req->body->buffer, server->cb.post.ctx) : buffer_tostring(&opaque->req->body->buffer, server->cb.post.ctx)};
-        JSValue ret = server_exception(server, minnet_emit_this(&server->cb.post, session->req_obj, countof(args), args));
+        JSValue ret = server_exception(server, callback_emit_this(&server->cb.post, session->req_obj, countof(args), args));
         JS_FreeValue(server->cb.post.ctx, ret);
       }
 
@@ -743,10 +744,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!(req = opaque->req)) {
 
         req = opaque->req = request_fromwsi(wsi, ctx);
-
-      } else {
-        assert(url_query(req->url));
       }
+
+      if(opaque->uri)
+        url_set_path_len(&req->url, opaque->uri, opaque->uri_len, ctx);
+
+      //      assert(url_query(req->url));
 
       assert(req);
       assert(req->url.path);
@@ -850,7 +853,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           if(req->method == METHOD_GET /* || wsi_http2(wsi)*/) {
             resp = session_response(session, cb);
 
-            JSValue gen = server_exception(server, minnet_emit_this(cb, session->ws_obj, 2, &args[1]));
+            JSValue gen = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &args[1]));
             if(js_is_iterator(ctx, gen)) {
               assert(js_is_iterator(ctx, gen));
               LOGCB("HTTP(5)", "gen=%s", JS_ToCString(ctx, gen));
@@ -877,7 +880,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(/*req->method != METHOD_POST &&*/ server->cb.http.ctx) {
         cb = &server->cb.http;
 
-        JSValue val = server_exception(server, minnet_emit_this(cb, session->ws_obj, 3, args));
+        JSValue val = server_exception(server, callback_emit_this(cb, session->ws_obj, 3, args));
         JS_FreeValue(ctx, val);
       }
 
@@ -894,7 +897,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       /*      LOGCB("HTTP", "NOT FOUND\tpath=%s mountpoint=%.*s", path, (int)mountpoint_len, req->url.path);
             if(cb && cb->ctx)
-              server_exception(server, minnet_emit(cb, 2, &session->req_obj));*/
+              server_exception(server, callback_emit(cb, 2, &session->req_obj));*/
 
     http_exit:
       if(!(req->method != METHOD_GET && wsi_http2(wsi)))

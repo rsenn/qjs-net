@@ -1,5 +1,5 @@
-#ifndef MINNET_SESSION_H
-#define MINNET_SESSION_H
+#ifndef QUICKJS_NET_LIB_SESSION_H
+#define QUICKJS_NET_LIB_SESSION_H
 
 #include <stdint.h>
 #include "buffer.h"
@@ -40,4 +40,4 @@ void session_clear(MinnetSession*, JSContext*);
 JSValue session_object(struct wsi_opaque_user_data*, JSContext*);
 JSValue minnet_get_sessions(JSContext*, JSValueConst, int, JSValueConst argv[]);
 
-#endif /* MINNET_SESSION_H */
+#endif /* QUICKJS_NET_LIB_SESSION_H */

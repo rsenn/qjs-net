@@ -129,33 +129,40 @@ request_fromobj(JSValueConst options, JSContext* ctx) {
 
 MinnetRequest*
 request_fromwsi(struct lws* wsi, JSContext* ctx) {
-  const char* uri;
-  MinnetHttpMethod method = -1;
   MinnetRequest* ret = 0;
+  MinnetHttpMethod method = wsi_method(wsi);
+  MinnetURL url = URL_INIT();
 
-  if((uri = wsi_uri_and_method(wsi, ctx, &method))) {
-    MinnetURL url = url_create(uri, ctx);
-    struct lws_vhost* vhost;
+  url_fromwsi(&url, wsi, ctx);
 
-    if((vhost = lws_get_vhost(wsi))) {
-      const char* name;
+  ret = request_new(url, method, ctx);
 
-      if((name = lws_get_vhost_name(vhost)))
-        url_parse(&url, name, ctx);
+  /*const char* uri;
+    MinnetHttpMethod method = -1;
+
+    if((uri = wsi_uri_and_method(wsi, ctx, &method))) {
+      MinnetURL url = url_create(uri, ctx);
+      struct lws_vhost* vhost;
+
+      if((vhost = lws_get_vhost(wsi))) {
+        const char* name;
+
+        if((name = lws_get_vhost_name(vhost)))
+          url_parse(&url, name, ctx);
+      }
+
+      ret = request_new(url, method, ctx);
     }
 
-    ret = request_new(url, method, ctx);
-  }
-
-  if(ret && url_query(ret->url) == NULL) {
-    char* q;
-    size_t qlen;
-    if((q = wsi_query_string_len(wsi, &qlen, ctx))) {
-      url_set_query_len(&ret->url, q, qlen, ctx);
-      js_free(ctx, q);
+    if(ret && url_query(ret->url) == NULL) {
+      char* q;
+      size_t qlen;
+      if((q = wsi_query_string_len(wsi, &qlen, ctx))) {
+        url_set_query_len(&ret->url, q, qlen, ctx);
+        js_free(ctx, q);
+      }
     }
-  }
-
+  */
   return ret;
 }
 

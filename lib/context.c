@@ -25,7 +25,7 @@ context_clear(MinnetContext* context) {
   lws_set_log_level(0, 0);
 
   lws_context_destroy(context->lws);
-  lws_set_log_level(((unsigned)minnet_log_level & ((1u << LLL_COUNT) - 1)), minnet_log_callback);
+  // lws_set_log_level(((unsigned)minnet_log_level & ((1u << LLL_COUNT) - 1)), minnet_log_callback);
 
   JS_FreeValue(ctx, context->crt);
   JS_FreeValue(ctx, context->key);

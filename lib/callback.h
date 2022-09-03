@@ -1,5 +1,5 @@
-#ifndef MINNET_CALLBACK_H
-#define MINNET_CALLBACK_H
+#ifndef QUICKJS_NET_LIB_CALLBACK_H
+#define QUICKJS_NET_LIB_CALLBACK_H
 
 #include <quickjs.h>
 #include <libwebsockets.h>
@@ -54,7 +54,8 @@ callbacks_zero(MinnetCallbacks* cbs) {
 
 int fd_handler(struct lws*, MinnetCallback*, struct lws_pollargs);
 int fd_callback(struct lws*, enum lws_callback_reasons, MinnetCallback*, struct lws_pollargs* args);
-JSValue minnet_emit_this(const struct ws_callback*, JSValue, int, JSValue* argv);
-JSValue minnet_emit(const struct ws_callback*, int, JSValue*);
+JSValue callback_emit_this(const struct ws_callback*, JSValue, int, JSValue* argv);
+JSValue callback_emit(const struct ws_callback*, int, JSValue*);
+void callback_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValue out[2]);
 
-#endif /* MINNET_CALLBACK_H */
+#endif /* QUICKJS_NET_LIB_CALLBACK_H */

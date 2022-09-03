@@ -6,6 +6,7 @@
 #include "minnet-request.h"
 #include "minnet-response.h"
 #include "minnet.h"
+#include "opaque.h"
 #include <strings.h>
 #include <assert.h>
 #include <libwebsockets.h>
@@ -119,21 +120,6 @@ MinnetWebsocket*
 ws_dup(MinnetWebsocket* ws) {
   ++ws->ref_count;
   return ws;
-}
-
-struct wsi_opaque_user_data*
-lws_opaque(struct lws* wsi, JSContext* ctx) {
-  struct wsi_opaque_user_data* opaque;
-
-  if((opaque = lws_get_opaque_user_data(wsi)))
-    return opaque;
-
-  assert(ctx);
-
-  opaque = opaque_new(ctx);
-
-  lws_set_opaque_user_data(wsi, opaque);
-  return opaque;
 }
 
 /*JSValue

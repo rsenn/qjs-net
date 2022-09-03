@@ -249,10 +249,17 @@ url_set_path_len(MinnetURL* url, const char* path, size_t len, JSContext* ctx) {
   if(has_query_b(path, len)) {
     ret = !!(url->path = js_strndup(ctx, path, len));
   } else {
-    const char* oldquery = url_query(*url);
-    if((url->path = js_strndup(ctx, path, len))) {
-      url_set_query(url, oldquery, ctx);
-      ret = TRUE;
+    const char* oldquery;
+
+    if((oldquery = url_query(*url))) {
+      if((url->path = js_malloc(ctx, len + 1 + strlen(oldquery) + 1))) {
+        memcpy(url->path, path, len);
+        url->path[len] = '?';
+        strcpy(&url->path[len + 1], oldquery);
+      }
+    } else {
+      url->path = js_strndup(ctx, path, len);
+      ret = !!url->path;
     }
   }
   js_free(ctx, oldpath);
@@ -416,28 +423,49 @@ url_fromvalue(MinnetURL* url, JSValueConst value, JSContext* ctx) {
 
 void
 url_fromwsi(MinnetURL* url, struct lws* wsi, JSContext* ctx) {
-  int len;
+  int len, port = -1;
   char* p;
 
-  if((len = lws_hdr_total_length(wsi, WSI_TOKEN_HOST))) {
-    url->host = js_malloc(ctx, len + 1);
-    lws_hdr_copy(wsi, url->host, len + 1, WSI_TOKEN_HOST);
+  /*  if((len = lws_hdr_total_length(wsi, WSI_TOKEN_HOST))) {
+      if(url->host)
+        js_free(ctx, url->host);
+      url->host = js_malloc(ctx, len + 1);
+      lws_hdr_copy(wsi, url->host, len + 1, WSI_TOKEN_HOST);
 
-    while(--len >= 0 && isdigit(url->host[len]))
-      ;
+      while(--len >= 0 && isdigit(url->host[len]))
+        ;
 
-    if(url->host[len] == ':') {
-      url->port = atoi(&url->host[len + 1]);
-      url->host[len] = '\0';
-    }
+      if(url->host[len] == ':') {
+        url->port = atoi(&url->host[len + 1]);
+        url->host[len] = '\0';
+      }
+    }*/
+
+  if((p = wsi_host_and_port(wsi, ctx, &port))) {
+    if(url->host)
+      js_free(ctx, url->host);
+    url->host = p;
+    if(port != -1)
+      url->port = port;
   }
 
   if((p = wsi_uri_and_method(wsi, ctx, 0))) {
+    if(url->path)
+      js_free(ctx, url->path);
     url->path = p;
     // lws_hdr_copy(wsi, url->path, len + 1, WSI_TOKEN_GET_URI);
   }
 
   assert(url->path);
+
+  if(url_query(*url) == NULL) {
+    char* q;
+    size_t qlen;
+    if((q = wsi_query_string_len(wsi, &qlen, ctx))) {
+      url_set_query_len(url, q, qlen, ctx);
+      js_free(ctx, q);
+    }
+  }
 
   // url->query = minnet_query_string(wsi, ctx);
 }

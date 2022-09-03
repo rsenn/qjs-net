@@ -297,7 +297,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
 #ifdef DEBUG_OUTPUT
   fprintf(stderr, "METHOD: %s\n", client->connect_info.method);
-  fprintf(stderr, "PROTOCOL: %s\n", conn->protocol);
+  // fprintf(stderr, "PROTOCOL: %s\n", conn->protocol);
 #endif
 
   if(!block)
@@ -483,7 +483,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
             cb_argv[3] = JS_NewInt32(ctx, err);
           }
 
-          ret = client_exception(client, minnet_emit(&client->on.close, argc, cb_argv));
+          ret = client_exception(client, callback_emit(&client->on.close, argc, cb_argv));
           if(JS_IsNumber(ret))
             JS_ToInt32(ctx, &result, ret);
           JS_FreeValue(ctx, ret);
@@ -521,7 +521,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
           // lwsl_user("client   " FGC(171, "%-38s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
 
           if((client->on.connect.ctx = ctx))
-            client_exception(client, minnet_emit(&client->on.connect, 3, &client->session.ws_obj));
+            client_exception(client, callback_emit(&client->on.connect, 3, &client->session.ws_obj));
         }
         /*if(!minnet_response_data(sess->resp_obj))*/
       }
@@ -552,7 +552,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         JSValue msg = opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
         JSValue cb_argv[] = {client->session.ws_obj, msg};
 
-        client_exception(client, minnet_emit(&client->on.message, countof(cb_argv), cb_argv));
+        client_exception(client, callback_emit(&client->on.message, countof(cb_argv), cb_argv));
 
         JS_FreeValue(ctx, cb_argv[1]);
       }
@@ -563,7 +563,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       if((ctx = client->on.pong.ctx)) {
         JSValue data = JS_NewArrayBufferCopy(ctx, in, len);
         JSValue cb_argv[] = {client->session.ws_obj, data};
-        client_exception(client, minnet_emit(&client->on.pong, 2, cb_argv));
+        client_exception(client, callback_emit(&client->on.pong, 2, cb_argv));
         JS_FreeValue(ctx, cb_argv[1]);
       }
       break;

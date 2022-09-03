@@ -436,7 +436,7 @@ session_response(MinnetSession* session, MinnetCallback* cb) {
   MinnetResponse* resp = minnet_response_data2(cb->ctx, session->resp_obj);
 
   if(cb && cb->ctx) {
-    JSValue ret = minnet_emit_this(cb, session->ws_obj, 2, session->args);
+    JSValue ret = callback_emit_this(cb, session->ws_obj, 2, session->args);
     lwsl_user("session_response ret=%s", JS_ToCString(cb->ctx, ret));
     if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
       JS_FreeValue(cb->ctx, session->args[1]);

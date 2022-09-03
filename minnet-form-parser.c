@@ -35,7 +35,7 @@ form_parser_callback(void* data, const char* name, const char* filename, char* b
         if(!JS_IsUndefined(fp->file)) {
           if(fp->cb.close.ctx) {
             args[1] = fp->file;
-            JSValue ret = minnet_emit(&fp->cb.close, 2, args);
+            JSValue ret = callback_emit(&fp->cb.close, 2, args);
             JS_FreeValue(cb->ctx, ret);
           }
           JS_FreeValue(cb->ctx, fp->file);
@@ -78,7 +78,7 @@ form_parser_callback(void* data, const char* name, const char* filename, char* b
     if(JS_IsUndefined(fp->name))
       args[0] = JS_DupValue(cb->ctx, fp->name);
 
-    ret = minnet_emit(cb, 2, args);
+    ret = callback_emit(cb, 2, args);
 
     if(JS_IsException(ret))
       js_error_print(cb->ctx, fp->exception = JS_GetException(cb->ctx));
