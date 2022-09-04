@@ -615,16 +615,14 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_PROTOCOL_DESTROY: break;
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
-      if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
+      /*if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
         return -1;
 
-      /*if(!opaque->req)
-        opaque->req = request_fromwsi(wsi, ctx);*/
 
-      int num_hdr = headers_tostring(ctx, &opaque->req->headers, wsi);
+      //int num_hdr = headers_tostring(ctx, &opaque->req->headers, wsi);
 
       LOGCB("HTTP", "fd=%i, num_hdr=%i", lws_get_socket_fd(lws_get_network_wsi(wsi)), num_hdr);
-      break;
+ */ break;
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
@@ -972,11 +970,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       LOGCB("HTTP(1)", "in='%.*s' url=%s session=%p", (int)len, (char*)in, opaque->req ? url_string(&opaque->req->url) : 0, session);
       // lws_close_free_wsi(wsi, LWS_CLOSE_STATUS_NOSTATUS, __func__);
 
-      if(opaque)
-        opaque_free(opaque, ctx);
+      /*      if(opaque)
+              opaque_free(opaque, ctx);
 
-      if(session)
-        session_clear(session, ctx);
+            if(session)
+              session_clear(session, ctx);*/
       ret = -1;
       break;
     }

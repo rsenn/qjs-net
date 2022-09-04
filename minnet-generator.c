@@ -103,8 +103,9 @@ minnet_generator_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSVal
   return JS_DupValue(ctx, this_val);
 }
 
-static const JSCFunctionListEntry minnet_generator_funcs[1] = {
+static const JSCFunctionListEntry minnet_generator_funcs[] = {
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_generator_iterator),
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetGenerator", JS_PROP_CONFIGURABLE),
 };
 
 static JSValue
