@@ -970,11 +970,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       LOGCB("HTTP(1)", "in='%.*s' url=%s session=%p", (int)len, (char*)in, opaque->req ? url_string(&opaque->req->url) : 0, session);
       // lws_close_free_wsi(wsi, LWS_CLOSE_STATUS_NOSTATUS, __func__);
 
-      /*      if(opaque)
-              opaque_free(opaque, ctx);
+/*      if(opaque)
+        opaque_free(opaque, ctx);
 
-            if(session)
-              session_clear(session, ctx);*/
+      if(session)
+        session_clear(session, ctx);*/
       ret = -1;
       break;
     }
