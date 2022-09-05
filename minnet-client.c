@@ -378,6 +378,7 @@ static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetClient* client = lws_client(wsi);
   struct wsi_opaque_user_data* opaque = 0;
+  JSContext* ctx;
   int ret = 0;
 
   if(lws_reason_poll(reason))
@@ -386,8 +387,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if(lws_reason_http(reason))
     return http_client_callback(wsi, reason, user, in, len);
 
-  if(client->context.js)
-    opaque = lws_opaque(wsi, client->context.js);
+  if((ctx = client->context.js))
+    opaque = lws_opaque(wsi, ctx);
 
   LOGCB("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, (char*)in);
 
@@ -500,6 +501,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
+
+      /*
       ByteBuffer* buf = &client->session.send_buf;
       int ret, size = buffer_REMAIN(buf);
 
@@ -509,7 +512,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         break;
       }
 
-      buffer_reset(buf);
+      buffer_reset(buf);*/
+
+      ws_write(opaque->ws, opaque->binary, ctx);
       break;
     }
 

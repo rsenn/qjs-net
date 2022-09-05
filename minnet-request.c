@@ -185,7 +185,7 @@ request_zero(MinnetRequest* req) {
 void
 request_clear(MinnetRequest* req, JSContext* ctx) {
   url_free(&req->url, ctx);
-  buffer_free(&req->headers, JS_GetRuntime(ctx));
+  buffer_free_rt(&req->headers, JS_GetRuntime(ctx));
   if(req->body)
     generator_destroy(&req->body);
 }
@@ -193,7 +193,7 @@ request_clear(MinnetRequest* req, JSContext* ctx) {
 void
 request_clear_rt(MinnetRequest* req, JSRuntime* rt) {
   url_free_rt(&req->url, rt);
-  buffer_free(&req->headers, rt);
+  buffer_free_rt(&req->headers, rt);
   if(req->body)
     generator_destroy(&req->body);
 }

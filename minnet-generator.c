@@ -30,7 +30,7 @@ BOOL
 generator_free(struct generator* gen) {
   if(--gen->ref_count == 0) {
     asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
-    buffer_free(&gen->buffer, JS_GetRuntime(gen->ctx));
+    buffer_free_rt(&gen->buffer, JS_GetRuntime(gen->ctx));
     js_free(gen->ctx, gen);
     return TRUE;
   }

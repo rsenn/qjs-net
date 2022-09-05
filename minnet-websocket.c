@@ -5,6 +5,7 @@
 #include "minnet-server-http.h"
 #include "minnet-request.h"
 #include "minnet-response.h"
+#include "minnet-ringbuffer.h"
 #include "minnet.h"
 #include "opaque.h"
 #include <strings.h>
@@ -122,27 +123,25 @@ ws_dup(MinnetWebsocket* ws) {
   return ws;
 }
 
-/*JSValue
-minnet_ws_object(JSContext* ctx, struct lws* wsi) {
-  struct wsi_opaque_user_data* opaque;
+int
+ws_write(MinnetWebsocket* ws, BOOL binary, JSContext* ctx) {
+  int ret = 0;
+  size_t size;
 
-  if((opaque = lws_get_opaque_user_data(wsi))) {
-    JSValue ws_obj;
-    if(//opaque->obj
-     opaque->ws) {
-      ws_obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, opaque->obj));
-        //if(!(opaque->ws = minnet_ws_data2(ctx, ws_obj))) return JS_EXCEPTION;
-      opaque->ws->ref_count++;
-    } else {
-      ws_obj = minnet_ws_fromwsi(ctx, wsi);
-      //opaque->obj = JS_VALUE_GET_OBJ(ws_obj);
-      opaque->ws = minnet_ws_data(ws_obj);
-    }
-    return ws_obj;
+  if((size = ringbuffer_size(&ws->sendq))) {
+    ByteBlock buf;
+    ringbuffer_consume(&ws->sendq, &buf, 1);
+
+    ret = lws_write(ws->lwsi, block_BEGIN(&buf), block_SIZE(&buf), binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
+
+    block_free(&buf, ctx);
   }
 
-  return minnet_ws_new(ctx, wsi);
-}*/
+  if(size > 1)
+    lws_callback_on_writable(ws->lwsi);
+
+  return ret;
+}
 
 JSValue
 minnet_ws_wrap(JSContext* ctx, MinnetWebsocket* ws) {
@@ -159,7 +158,6 @@ minnet_ws_wrap(JSContext* ctx, MinnetWebsocket* ws) {
 JSValue
 minnet_ws_fromwsi(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
-  // struct wsi_opaque_user_data* opaque;
   JSValue ret;
 
   if(!(ws = ws_new(wsi, ctx)))
@@ -171,14 +169,6 @@ minnet_ws_fromwsi(JSContext* ctx, struct lws* wsi) {
     return JS_EXCEPTION;
 
   JS_SetOpaque(ret, ws);
-
-  /*  if((opaque = lws_opaque(wsi, ctx))) {
-      assert(opaque->ws == 0 || opaque->ws == ws);
-
-      //opaque->obj = JS_VALUE_GET_OBJ(ret);
-      opaque->ws = ws;
-      opaque->handler = JS_NULL;
-    }*/
 
   return ret;
 }
@@ -199,7 +189,8 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
   {
     JSBuffer jsbuf = js_input_args(ctx, argc, argv);
-    ByteBlock buffer = block_fromjs(jsbuf);
+    ByteBlock buffer = block_copy(jsbuf.data, jsbuf.size, ctx);
+    js_buffer_free(&jsbuf, ctx);
 
     ringbuffer_insert(&ws->sendq, &buffer, 1);
 

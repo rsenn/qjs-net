@@ -8,7 +8,7 @@
 #define GETCB(opt, cb_ptr) GETCBTHIS(opt, cb_ptr, this_val)
 #define GETCBTHIS(opt, cb_ptr, this_obj) \
   if(JS_IsFunction(ctx, opt)) { \
-    cb_ptr = (JSCallback){ctx, JS_DupValue(ctx, this_obj), opt, #cb_ptr}; \
+    cb_ptr = (JSCallback){opt, JS_DupValue(ctx, this_obj), ctx, #cb_ptr}; \
   }
 
 #define FREECB(cb_ptr) \
@@ -24,9 +24,8 @@
   } while(0);
 
 typedef struct js_callback {
+  JSValue func_obj, this_obj;
   JSContext* ctx;
-  JSValue this_obj;
-  JSValue func_obj;
   const char* name;
 } JSCallback;
 
@@ -36,6 +35,17 @@ callback_zero(JSCallback* cb) {
   cb->this_obj = JS_UNDEFINED;
   cb->func_obj = JS_NULL;
   cb->name = 0;
+}
+
+static inline void
+callback_clear(JSCallback* cb) {
+  if(cb->ctx) {
+    JS_FreeValue(cb->ctx, cb->this_obj);
+    cb->this_obj = JS_UNDEFINED;
+    JS_FreeValue(cb->ctx, cb->func_obj);
+    cb->func_obj = JS_NULL;
+  }
+  cb->ctx = 0;
 }
 
 typedef enum callback_e { MESSAGE = 0, CONNECT, CLOSE, PONG, FD, HTTP, READ, POST, NUM_CALLBACKS } CallbackType;
@@ -51,12 +61,12 @@ typedef struct callbacks {
 
 static inline void
 callbacks_zero(CallbackList* cbs) {
-  callback_zero(&cbs->message);
-  callback_zero(&cbs->connect);
-  callback_zero(&cbs->close);
-  callback_zero(&cbs->pong);
-  callback_zero(&cbs->fd);
-  callback_zero(&cbs->http);
+  for(int i = 0; i < NUM_CALLBACKS; i++) callback_zero(&cbs->on[i]);
+}
+
+static inline void
+callbacks_clear(CallbackList* cbs) {
+  for(int i = 0; i < NUM_CALLBACKS; i++) callback_clear(&cbs->on[i]);
 }
 
 JSValue callback_emit_this(const struct js_callback*, JSValue, int, JSValue* argv);

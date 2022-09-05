@@ -21,13 +21,22 @@ typedef struct byte_block {
 void block_init(ByteBlock*, uint8_t*, size_t);
 uint8_t* block_alloc(ByteBlock*, size_t, JSContext*);
 uint8_t* block_realloc(ByteBlock*, size_t, JSContext*);
-void block_free(ByteBlock*, JSRuntime*);
+void block_free_rt(ByteBlock*, JSRuntime*);
 int block_fromarraybuffer(ByteBlock*, JSValue, JSContext*);
 JSValue block_toarraybuffer(ByteBlock*, JSContext*);
 JSValue block_tostring(ByteBlock const*, JSContext*);
+
+static inline void
+block_free(ByteBlock* b, JSContext* ctx) {
+  block_free_rt(b, JS_GetRuntime(ctx));
+}
+
 static inline ByteBlock
-block_fromjs(JSBuffer buf) {
-  ByteBlock ret = {buf.data, buf.data + buf.size};
+block_copy(const void* ptr, size_t size, JSContext* ctx) {
+  ByteBlock ret = {0, 0};
+  if(block_alloc(&ret, size, ctx)) {
+    memcpy(ret.start, ptr, size);
+  }
   return ret;
 }
 
@@ -82,7 +91,7 @@ typedef union byte_buffer {
 void buffer_init(ByteBuffer*, uint8_t*, size_t);
 uint8_t* buffer_alloc(ByteBuffer*, size_t, JSContext*);
 ssize_t buffer_append(ByteBuffer*, const void*, size_t, JSContext* ctx);
-void buffer_free(ByteBuffer*, JSRuntime*);
+void buffer_free_rt(ByteBuffer*, JSRuntime*);
 BOOL buffer_write(ByteBuffer*, const void*, size_t);
 int buffer_vprintf(ByteBuffer*, const char*, va_list);
 int buffer_printf(ByteBuffer*, const char*, ...);
@@ -101,6 +110,11 @@ uint8_t* buffer_skip(ByteBuffer*, size_t);
 BOOL buffer_putchar(ByteBuffer*, char);
 ByteBuffer buffer_move(ByteBuffer*);
 uint8_t* buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx);
+
+static inline void
+buffer_free(ByteBuffer* b, JSContext* ctx) {
+  buffer_free_rt(b, JS_GetRuntime(ctx));
+}
 
 static inline void
 buffer_reset(ByteBuffer* buf) {

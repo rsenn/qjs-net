@@ -26,7 +26,7 @@ block_realloc(ByteBlock* blk, size_t size, JSContext* ctx) {
   uint8_t* ptr;
 
   if(!size) {
-    block_free(blk, JS_GetRuntime(ctx));
+    block_free(blk, ctx);
     return 0;
   }
 
@@ -41,7 +41,7 @@ block_realloc(ByteBlock* blk, size_t size, JSContext* ctx) {
 }
 
 void
-block_free(ByteBlock* blk, JSRuntime* rt) {
+block_free_rt(ByteBlock* blk, JSRuntime* rt) {
   if(blk->start)
     js_free_rt(rt, blk->start - LWS_PRE);
 
@@ -108,9 +108,9 @@ buffer_append(ByteBuffer* buf, const void* x, size_t n, JSContext* ctx) {
 }
 
 void
-buffer_free(ByteBuffer* buf, JSRuntime* rt) {
+buffer_free_rt(ByteBuffer* buf, JSRuntime* rt) {
   if(buf->alloc)
-    block_free(&buf->block, rt);
+    block_free_rt(&buf->block, rt);
   buf->read = buf->write = buf->alloc = 0;
 }
 
@@ -150,7 +150,7 @@ buffer_realloc(ByteBuffer* buf, size_t size, JSContext* ctx) {
   uint8_t* x;
 
   if(!size) {
-    buffer_free(buf, JS_GetRuntime(ctx));
+    buffer_free_rt(buf, JS_GetRuntime(ctx));
     return 0;
   }
 

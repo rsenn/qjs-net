@@ -63,7 +63,7 @@ response_clear(MinnetResponse* resp, JSContext* ctx) {
     resp->type = 0;
   }
 
-  buffer_free(&resp->headers, JS_GetRuntime(ctx));
+  buffer_free_rt(&resp->headers, JS_GetRuntime(ctx));
   generator_destroy(&resp->generator);
 }
 
@@ -75,7 +75,7 @@ response_clear_rt(MinnetResponse* resp, JSRuntime* rt) {
     resp->type = 0;
   }
 
-  buffer_free(&resp->headers, rt);
+  buffer_free_rt(&resp->headers, rt);
   generator_destroy(&resp->generator);
 }
 

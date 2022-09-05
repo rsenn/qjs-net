@@ -2,6 +2,7 @@
 #include "../minnet-websocket.h"
 #include "../minnet-request.h"
 #include "../minnet-response.h"
+#include "../minnet-form-parser.h"
 #include <assert.h>
 
 static THREAD_LOCAL void* prev_ptr = 0;
@@ -30,17 +31,22 @@ opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
     opaque->resp = 0;
     response_free_rt(resp, rt);
   }
-
-  assert(opaque->link.next);
-  list_del(&opaque->link);
+  if(opaque->form_parser) {
+    form_parser_free_rt(opaque->form_parser, rt);
+    opaque->form_parser = 0;
+  }
 }
 
 void
 opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
   opaque_clear_rt(opaque, rt);
 
-  if(--opaque->ref_count == 0)
+  if(--opaque->ref_count == 0) {
+    assert(opaque->link.next);
+    list_del(&opaque->link);
+
     js_free_rt(rt, opaque);
+  }
 }
 
 void
@@ -50,11 +56,7 @@ opaque_clear(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
 
 void
 opaque_free(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
-  opaque_clear(opaque, ctx);
-
-  if(--opaque->ref_count == 0)
-
-    js_free(ctx, opaque);
+  opaque_free_rt(opaque, JS_GetRuntime(ctx));
 }
 
 struct wsi_opaque_user_data*

@@ -168,7 +168,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               JSBuffer input = js_buffer_new(ctx, value);
               // js_std_dump_error(ctx);
 
-              printf("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
+              DEBUG("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
               buffer_append(&buf, input.data, input.size, ctx);
               DEBUG("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
               js_buffer_free(&input, ctx);

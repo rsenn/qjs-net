@@ -50,7 +50,7 @@ session_clear_rt(MinnetSession* session, JSRuntime* rt) {
   JS_FreeValueRT(rt, session->next);
   session->next = JS_UNDEFINED;
 
-  buffer_free(&session->send_buf, rt);
+  buffer_free_rt(&session->send_buf, rt);
 
   printf("%s #%i %p\n", __func__, session->serial, session);
 }

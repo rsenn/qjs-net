@@ -278,7 +278,7 @@ minnet_ringbuffer_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRingbuffer* strm = JS_GetOpaque(val, minnet_ringbuffer_class_id);
   if(strm && --strm->ref_count == 0) {
 
-    // buffer_free(&strm->buffer, rt);
+    // buffer_free_rt(&strm->buffer, rt);
 
     js_free_rt(rt, strm);
   }

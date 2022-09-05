@@ -38,6 +38,7 @@ void ws_clear(MinnetWebsocket*, JSContext*);
 void ws_free_rt(MinnetWebsocket*, JSRuntime*);
 void ws_free(MinnetWebsocket*, JSContext*);
 MinnetWebsocket* ws_dup(MinnetWebsocket*);
+int ws_write(MinnetWebsocket* ws, BOOL binary, JSContext* ctx);
 struct wsi_opaque_user_data* lws_opaque(struct lws*, JSContext*);
 JSValue minnet_ws_wrap(JSContext*, MinnetWebsocket*);
 JSValue minnet_ws_fromwsi(JSContext*, struct lws*);
