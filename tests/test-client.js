@@ -14,16 +14,16 @@ function main(...args) {
   if(args.length == 0) {
     pid = spawn('server.js', ['localhost', 30000], scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log'));
     sleep(100);
-    args.push('https://localhost:30000/minnet.h');
+    args.push('wss://localhost:30000/ws');
   }
 
   for(let arg of args) {
     Client(
       arg,
       {
-        onConnect(ws, req, resp) {
-          console.log('onConnect', { ws, req, resp });
-          const { protocol } = new URL(req.url);
+        onConnect(ws, req) {
+          console.log('onConnect', { ws, req });
+          const { protocol } = req.url;
           console.log('protocol', protocol);
 
           if(!protocol.startsWith('http')) {
@@ -67,16 +67,7 @@ function main(...args) {
           stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
           stdout.flush();
           // ws.close(1000);
-        },
-        onHttp(req, resp) {
-          console.log('onHttp', { req, resp });
-
-          let body = resp.text();
-
-          puts(body);
-
-          console.log(`Headers:`, resp.headers);
-        }
+        } 
       },
       debug ? LLL_INFO - 1 : LLL_USER
     );

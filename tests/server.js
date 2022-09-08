@@ -134,16 +134,16 @@ export class MinnetServer {
         const { url, method, headers } = req;
         const { status, ok, type } = res;
 
-        console.log('proxy', { url, method, headers }, { status, ok, url, type });
+        log('proxy', { url, method, headers }, { status, ok, url, type });
       },
       *config(req, res) {
-        console.log('/config', { req, res });
+        log('/config', { req, res });
         yield '{}';
       },
       ...mounts,
       '/': ['/', '.', 'index.html'],
       '/404.html': function* (req, res) {
-        console.log('/404.html', { req, res });
+        log('/404.html', { req, res });
         yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
       }
     };
@@ -289,7 +289,7 @@ if(w) {
       const host = args[1] ?? 'localhost',
         port = args[2] ? +args[2] : 30000;
 
-      console.log('MinnetServer', { host, port });
+      log('MinnetServer', { host, port });
 
       Init('server.js');
 
@@ -304,11 +304,11 @@ if(w) {
         mounts: {
           '/': ['/', parentDir, 'index.html'],
           '/404.html': function* (req, res) {
-            console.log('/404.html', { req, res });
+            log('/404.html', { req, res });
             yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
           },
           *generator(req, res) {
-            console.log('/generator', { req, res });
+            log('/generator', { req, res });
             yield 'This';
             yield ' ';
             yield 'is';
@@ -324,32 +324,32 @@ if(w) {
         onConnect: (ws, req) => {
           /*const { url, path } = req;
           const { family, address, port } = ws;
-          console.log('onConnect', { url, path, family, address, port });*/
+          log('onConnect', { url, path, family, address, port });*/
         },
         onClose: (ws, status, reason) => {
-          console.log('onClose', { ws, status, reason });
+          log('onClose', { ws, status, reason });
           ws.close(status);
           // if(status >= 1000) exit(status - 1000);
         },
         onError: (ws, error) => {
-          console.log('onError', { ws, error });
+          log('onError', { ws, error });
         },
         onHttp: (req, rsp) => {
-          console.log('onHttp', { req, rsp });
+          log('onHttp', { req, rsp });
         },
         onFd: (fd, rd, wr) => {
-          //console.log('onFd', { fd, rd, wr });
+          //log('onFd', { fd, rd, wr });
           setReadHandler(fd, rd);
           setWriteHandler(fd, wr);
         },
         onMessage: (ws, msg) => {
-          console.log('onMessage', typeof ws, { ws, msg });
+          log('onMessage', typeof ws, { ws, msg });
           ws.send('ECHO: ' + msg);
           //ws.send(JSON.stringify({ type: 'message', msg }));
         }
       });
     }
   } catch(error) {
-    console.log('ERROR', error);
+    log('ERROR', error);
   }
 }
