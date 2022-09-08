@@ -398,6 +398,7 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc.js
 #dump_target(quickjs-minnet)
 
 file(GLOB TESTS tests/test-*.js)
+list(FILTER TESTS EXCLUDE REGEX ".*/test-client.js")
 
 relative_path(TESTS "${CMAKE_CURRENT_SOURCE_DIR}" ${TESTS})
 

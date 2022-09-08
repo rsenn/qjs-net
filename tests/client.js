@@ -33,7 +33,9 @@ export default function Client(url, options, debug) {
     onClose(ws, reason) {
       connections.delete(ws);
 
-      onClose ? onClose(ws, reason) : (console.log('onClose', { ws, reason }), exit(reason != 1000 ? 1 : 0));
+      onClose
+        ? onClose(ws, reason)
+        : (console.log('onClose', { ws, reason }), exit(reason != 1000 && reason != 0 ? 1 : 0));
     },
     onError(ws, error) {
       connections.delete(ws);

@@ -67,7 +67,7 @@ function main(...args) {
           stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
           stdout.flush();
           // ws.close(1000);
-        } 
+        }
       },
       debug ? LLL_INFO - 1 : LLL_USER
     );
