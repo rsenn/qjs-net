@@ -74,41 +74,31 @@ headers_addobj(ByteBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext*
 
 size_t
 headers_write(uint8_t** in, uint8_t* end, ByteBuffer* buffer, struct lws* wsi) {
-  uint8_t *r = buffer->read, *w = buffer->write, *next, *start, *ptr;
+  int ret;
+  uint8_t *p = buffer->read, *q = buffer->write, *start = *in;
 
-  start = ptr = *in;
+  while(p < q) {
+    size_t next = scan_nextline(p, q - p);
+    size_t m, namelen = byte_chr(p, next, ':');
+    uint8_t* name = p;
 
-  while(r < w) {
-    size_t l = byte_chr(r, w - r, '\n');
-    size_t n, m = byte_chr(r, l, ':');
-    uint8_t* name = r;
+    m = namelen + 1;
+    while(p[m] && p[m] == ' ') ++m;
+    p += m;
+    next -= m;
 
-    next = r + l + 1;
+    uint8_t tmp = name[namelen + 1];
+    name[namelen + 1] = '\0';
+    ret = lws_add_http_header_by_name(wsi, name, p, scan_eol(p, next), in, end);
+    name[namelen + 1] = tmp;
+    // printf("name=%.*s value='%.*s'\namelen", (int)namelen, name, (int)linelen, p);
+    p += next;
 
-    n = m;
-    ++m;
-
-    while(r[m] && r[m] == ' ') ++m;
-
-    r += m;
-    l -= m;
-
-    // if(r + l < w)
-    while(l > 0 && (r[l - 1] == '\n' || r[l - 1] == '\r')) --l;
-    uint8_t tmp = name[n + 1];
-    name[n + 1] = '\0';
-
-    /*int ret = */ lws_add_http_header_by_name(wsi, name, r, l, &ptr, end);
-    name[n + 1] = tmp;
-
-#ifdef DEBUG_OUTPUT
-    printf("name=%.*s value='%.*s'\n", (int)n, name, (int)l, r);
-#endif
-    r = next;
+    if(ret)
+      break;
   }
 
-  *in = ptr;
-  return ptr - start;
+  return *in - start;
 }
 
 int
@@ -167,10 +157,11 @@ headers_findb(ByteBuffer* buffer, const char* name, size_t namelen) {
   for(ptr = buffer->start; ptr < buffer->write;) {
     size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
 
-    printf("%s %.*s\n", __func__, (int)len, (char*)ptr);
+    // printf("%s %.*s\n", __func__, (int)len, (char*)ptr);
 
     if(!strncasecmp((const char*)ptr, name, namelen) && ptr[namelen] == ':')
       return ret;
+
     while(isspace(ptr[len]) && ptr + len < buffer->write) ++len;
     ptr += len;
     ++ret;

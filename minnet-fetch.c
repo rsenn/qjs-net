@@ -11,42 +11,6 @@
 
 #ifndef USE_CURL
 
-/*typedef struct fetch_closure {
-  int ref_count;
-  MinnetClient* client;
-} MinnetFetch;
-
-MinnetFetch*
-fetch_new(JSContext* ctx) {
-  MinnetFetch* ret;
-
-  if((ret = js_mallocz(ctx, sizeof(MinnetFetch))))
-    ++ret->ref_count;
-
-  return ret;
-}
-
-MinnetFetch*
-fetch_dup(MinnetFetch* c) {
-  ++c->ref_count;
-  return c;
-}
-
-void
-closure_free(void* ptr) {
-  MinnetFetch* closure = ptr;
-
-  if(--closure->ref_count == 0) {
-    if(closure->client) {
-      JSContext* ctx = closure->client->context.js;
-
-      client_free(closure->client);
-
-      js_free(ctx, closure);
-    }
-  }
-}*/
-
 enum {
   ON_HTTP = 0,
   ON_ERROR,

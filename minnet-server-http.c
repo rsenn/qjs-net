@@ -111,7 +111,7 @@ vhost_options_dump(MinnetVhostOptions* vo) {
   uint32_t i = 0;
   while(vo) {
     i++;
-    printf("option %u %s = %s\n", i, vo->name, vo->value);
+    DEBUG("option %u %s = %s\n", i, vo->name, vo->value);
 
     vo = vo->next;
   }

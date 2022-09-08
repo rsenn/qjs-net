@@ -4,86 +4,115 @@
 
 size_t
 str_chr(const char* in, char needle) {
-  const char* t = in;
-  const char c = needle;
-  for(;;) {
-    if(!*t || *t == c) {
+  const char* t;
+
+  for(t = in; *t; ++t)
+    if(*t == needle)
       break;
-    };
-    ++t;
-  }
+
   return (size_t)(t - in);
 }
 
 size_t
 byte_chr(const void* x, size_t len, char c) {
   const char *s, *t, *str = x;
+
   for(s = str, t = s + len; s < t; ++s)
     if(*s == c)
       break;
+
   return s - str;
 }
 
 size_t
 byte_chrs(const void* x, size_t len, const char needle[], size_t nl) {
   const char *s, *t;
+
   for(s = x, t = (const char*)x + len; s != t; s++)
     if(byte_chr(needle, nl, *s) < nl)
       break;
+
   return s - (const char*)x;
 }
 
 size_t
 byte_rchr(const void* x, size_t len, char needle) {
   const char *s, *t;
-  for(s = x, t = (const char*)x + len; --t >= s;) {
+
+  for(s = x, t = (const char*)x + len; --t >= s;)
     if(*t == needle)
       return (size_t)(t - s);
-  }
+
   return len;
 }
 
 size_t
-scan_whitenskip(const char* s, size_t limit) {
-  const char* t = s;
-  const char* u = t + limit;
+scan_whitenskip(const void* s, size_t limit) {
+  const char *t = s, *u = t + limit;
+
   while(t < u && isspace(*t)) ++t;
-  return (size_t)(t - s);
+
+  return t - (const char*)s;
 }
 
 size_t
-scan_nonwhitenskip(const char* s, size_t limit) {
-  const char* t = s;
-  const char* u = t + limit;
+scan_nonwhitenskip(const void* s, size_t limit) {
+  const char *t = s, *u = t + limit;
+
   while(t < u && !isspace(*t)) ++t;
-  return (size_t)(t - s);
+
+  return t - (const char*)s;
 }
 
 size_t
-scan_charsetnskip(const char* s, const char* charset, size_t limit) {
+scan_eol(const void* s, size_t limit) {
   const char* t = s;
-  const char* u = t + limit;
-  const char* i;
+  size_t i = byte_chr(s, limit, '\n');
+
+  while(i > 0 && t[i - 1] == '\r') i--;
+
+  return i;
+}
+
+size_t
+scan_nextline(const void* s, size_t limit) {
+  size_t i;
+
+  if((i = byte_chr(s, limit, '\n')) < limit)
+    i++;
+
+  return i;
+}
+
+size_t
+scan_noncharsetnskip(const void* s, const char* charset, size_t limit) {
+  const char *t = s, *u = t + limit, *i;
+
   while(t < u) {
     for(i = charset; *i; ++i)
       if(*i == *t)
         break;
-    if(*i != *t)
+    if(*i == *t)
       break;
     ++t;
   }
-  return (size_t)(t - s);
+
+  return t - (const char*)s;
 }
 
 size_t
 skip_brackets(const char* line, size_t len) {
   size_t n = 0;
+
   if(len > 0 && line[0] == '[') {
     if((n = byte_chr(line, len, ']')) < len)
       n++;
+
     while(n < len && isspace(line[n])) n++;
+
     if(n + 1 < len && line[n + 1] == ':')
       n += 2;
+
     while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
   }
 
@@ -106,7 +135,9 @@ skip_directory(const char* line, size_t len) {
 size_t
 strip_trailing_newline(const char* line, size_t* len_p) {
   size_t len = *len_p;
+
   while(len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) len--;
+
   return *len_p = len;
 }
 

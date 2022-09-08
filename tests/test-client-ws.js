@@ -27,8 +27,9 @@ function main(...args) {
         onConnect(ws, req) {
           log('onConnect', { ws, req });
 
-          ws.send('TEST STRING\n');
-          ws.send(new Uint8Array([0x54, 0x45, 0x53, 0x54, 0x20, 0x44, 0x41, 0x54, 0x41, 10]).buffer);
+          ws.send('TEST STRING');
+          ws.send(new Uint8Array([0x54, 0x45, 0x53, 0x54, 0x20, 0x44, 0x41, 0x54, 0x41]).buffer);
+          ws.send('QUIT');
         },
         onClose(ws, reason) {
           log(`onClose ${reason}`);
@@ -40,9 +41,11 @@ function main(...args) {
         },
         onMessage(ws, msg) {
           log(`onMessage '${msg}'`);
-          stdout.puts(`\r\x1b[38;5;33m< ${escape(msg)}\x1b[0m\n`);
-          stdout.flush();
-          // ws.close(1000);
+
+          if(msg.endsWith( 'QUIT')) {
+            log(`CLOSING!`);
+            ws.close(1001);
+          }
         }
       },
       debug ? LLL_INFO - 1 : LLL_USER

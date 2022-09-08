@@ -269,10 +269,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-#ifdef DEBUG_OUTPUT
-  printf("METHOD: %s\n", client->connect_info.method);
+  DEBUG("METHOD: %s\n", client->connect_info.method);
   DEBUG("PROTOCOL: %s\n", client->connect_info.protocol);
-#endif
 
   if(!block)
     ret = js_promise_create(ctx, &client->promise);

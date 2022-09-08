@@ -670,10 +670,7 @@ js_module_list(JSContext* ctx) {
   JS_SetContextOpaque(ctx, (void*)needle);
 
   ptr = memmem(ctx, 1024, &needle, sizeof(needle));
-  /*  printf("ctx = %p\n", ctx);
-    printf("&needle = %p\n", &needle);
-    printf("ptr = %p\n", ptr);
-    printf("ctx.user_opaque = %016zx\n", (char*)ptr - (char*)ctx);*/
+
   JS_SetContextOpaque(ctx, tmp_opaque);
 
   return ((struct list_head*)(ptr - 2)) - 1;

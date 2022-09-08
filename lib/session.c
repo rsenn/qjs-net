@@ -52,7 +52,7 @@ session_clear_rt(MinnetSession* session, JSRuntime* rt) {
 
   buffer_free_rt(&session->send_buf, rt);
 
-  printf("%s #%i %p\n", __func__, session->serial, session);
+  // printf("%s #%i %p\n", __func__, session->serial, session);
 }
 
 JSValue
