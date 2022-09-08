@@ -1,5 +1,5 @@
 import { exit } from 'std';
-import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker } from 'os';
+import { close, exec, open,realpath, O_RDWR, setReadHandler, setWriteHandler, Worker } from 'os';
 import { server, URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
 import { Levels, DefaultLevels, Init } from './log.js';
 import { getpid, once, exists } from './common.js';
@@ -278,12 +278,18 @@ if(w) {
 } else {
   try {
     const args = globalThis.scriptArgs ?? process.argv;
+//const [me,err]=realpath(args[0]);
+const mydir=args[0].replace(/(\/|^)[^\/]*$/g, '$1.');
 
-    //console.log('args', args);
+console.log('args[0]',args[0]);
+console.log('mydir',mydir);
+
+const parentDir=mydir+'/..';
+
 
     if(/(^|\/)server\.js$/.test(args[0])) {
-      const sslCert = 'localhost.crt',
-        sslPrivateKey = 'localhost.key';
+      const sslCert = mydir+'/localhost.crt',
+        sslPrivateKey = mydir+'/localhost.key';
 
       const host = args[1] ?? 'localhost',
         port = args[2] ? +args[2] : 30000;
@@ -300,7 +306,7 @@ if(w) {
         sslCert,
         sslPrivateKey,
         mounts: {
-          '/': ['/', '.', 'index.html'],
+          '/': ['/', parentDir, 'index.html'],
           '/404.html': function* (req, res) {
             console.log('/404.html', { req, res });
             yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';

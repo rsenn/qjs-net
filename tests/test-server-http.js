@@ -38,7 +38,7 @@ function main(...args) {
 
   sleep(50);
 
-  TestClient('http://localhost:30000/jsutils.h');
+  TestClient('http://localhost:30000/minnet.h');
 
   kill(pid, SIGTERM);
   wait4(pid, status, WNOHANG);
