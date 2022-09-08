@@ -51,12 +51,13 @@ typedef enum http_method HTTPMethod;
 
 size_t str_chr(const char*, char);
 size_t byte_chr(const void*, size_t, char);
-size_t byte_chrs(const void*, size_t, const char*, size_t);
+size_t byte_chrs(const void*, size_t, const char[], size_t);
 size_t byte_rchr(const void*, size_t, char);
 size_t scan_whitenskip(const void*, size_t);
 size_t scan_nonwhitenskip(const void*, size_t);
 size_t scan_eol(const void*, size_t);
 size_t scan_nextline(const void*, size_t);
+size_t scan_charsetnskip(const void*, const char*, size_t);
 size_t scan_noncharsetnskip(const void*, const char*, size_t);
 
 size_t skip_brackets(const char*, size_t len);

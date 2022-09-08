@@ -85,16 +85,29 @@ scan_nextline(const void* s, size_t limit) {
 }
 
 size_t
-scan_noncharsetnskip(const void* s, const char* charset, size_t limit) {
-  const char *t = s, *u = t + limit, *i;
+scan_charsetnskip(const void* s, const char* charset, size_t limit) {
+  const char *t, *u, *i;
 
-  while(t < u) {
-    for(i = charset; *i; ++i)
+  for(t = s, u = t + limit; t < u; t++) {
+    for(i = charset; *i; i++)
+      if(*i == *t)
+        break;
+    if(*i != *t)
+      break;
+  }
+  return t - (const char*)s;
+}
+
+size_t
+scan_noncharsetnskip(const void* s, const char* charset, size_t limit) {
+  const char *t, *u, *i;
+
+  for(t = s, u = t + limit; t < u; t++) {
+    for(i = charset; *i; i++)
       if(*i == *t)
         break;
     if(*i == *t)
       break;
-    ++t;
   }
 
   return t - (const char*)s;
