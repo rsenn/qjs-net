@@ -1,10 +1,11 @@
 import { exit, puts, open } from 'std';
 import { fetch, Request, Response, setLog, logLevels, LLL_DEBUG, LLL_INFO, LLL_USER } from 'net';
+import { log } from './log.js';
 
 function WriteFile(name, data) {
   try {
     let f = open(name, 'w+');
-    console.log(`WriteFile \x1b[1;31m${name}\x1b[0m =`, f);
+    log(`WriteFile \x1b[1;31m${name}\x1b[0m =`, f);
 
     let r = f.write(data, 0, data.byteLength);
     f.close();
@@ -32,27 +33,27 @@ function FetchNext(array) {
           'sid=deb14330f89995598b4cd37ecd8f0c3d; language2=en; mp_session=ed5700f25fac3c643b872191; OptanonConsent=isIABGlobal=false&datestamp=Mon+Feb+14+2022+09%3A15%3A59+GMT%2B0100+(Central+European+Standard+Time)&version=6.20.0&hosts=&consentId=16f6b226-a0fd-429d-ba34-0bdad57d38f1&interactionCount=1&landingPath=https%3A%2F%2Fwww.discogs.com%2Fsell%2Fundefined&groups=C0001%3A1%2CC0004%3A1%2CC0003%3A1%2CC0002%3A1%2CSTACK8%3A0; currency=USD; ck_username=diskosenn; ppc_onboard_prompt=seen; session="5V0o/D1Lm2v3OYz32dQNvkTeAkE=?_expires=MTY2MjM3NDY4MQ==&auth_token=IktCZ0tWaWdxWkp3cWdubzZkY0RoMXpEb09EIg==&created_at=IjIwMjItMDMtMDlUMTA6NDQ6NDEuMjc3MDkxIg==&idp%3Auser_id=ODM2OTAyMg=="; __cf_bm=wo1vbcsHdRLdP1d.0TGEZ4nNZ4CrE_3K2j6Emuboaa8-1647067526-0-AVL1/sHkoRhF7/QIXuMC5nsTWQGo9HeFvV+unN2AzKdpRYx75fgQcO+o/8mqWVuP+CFBzCoVX+iGaQW2z3edfNs='
       }
     });
-    console.log(`fetching \x1b[1;33m${url}\x1b[0m`);
-    console.log(console.config({ compact: 0 }), request);
+    log(`fetching \x1b[1;33m${url}\x1b[0m`);
+    log(console.config({ compact: 0 }), request);
     let promise = fetch(request, {});
     promise
       .then(response => {
-        console.log(console.config({ compact: 0 }), response);
+        log(console.config({ compact: 0 }), response);
         let prom = response.arrayBuffer();
         prom.then(buf => {
           let prom = response.text();
           prom.then(text => {
-            console.log('arrayBuffer()', console.config({ compact: 2 }), buf);
+            log('arrayBuffer()', console.config({ compact: 2 }), buf);
 
             let filename = response.url.path.replace(/.*\//g, '');
-            console.log('filename', filename);
+            log('filename', filename);
             WriteFile(filename, buf);
 
             array.length ? FetchNext(array) : resolve();
           });
         });
       })
-      .catch(error => (console.log('error', error), reject(error)));
+      .catch(error => (log('error', error), reject(error)));
   });
 }
 
@@ -69,7 +70,7 @@ function main(...args) {
     (() => {
       let lf = open('test-fetch.log', 'w');
       return (level, msg) => {
-        //  console.log(logLevels[level].padEnd(10) + msg);
+        //  log(logLevels[level].padEnd(10) + msg);
         lf.puts(logLevels[level].padEnd(10) + msg + '\n');
         lf.flush();
       };
@@ -89,13 +90,13 @@ function main(...args) {
 
   function run() {
     let promise = FetchNext(args);
-    console.log('promise', promise);
+    log('promise', promise);
     promise
       .then(() => {
-        console.log('SUCCEEDED');
+        log('SUCCEEDED');
       })
       .catch(err => {
-        console.log('FAILED:', typeof err, err);
+        log('FAILED:', typeof err, err);
       });
   }
 }
@@ -103,6 +104,6 @@ function main(...args) {
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
-  console.log(`FAIL: ${error && error.message}\n${error && error.stack}`);
+  log(`FAIL: ${error && error.message}\n${error && error.stack}`);
   exit(1);
 }

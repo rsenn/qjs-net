@@ -5,9 +5,7 @@ import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker, tty
 import { in as stdin, out as stdout, err as stderr } from 'std';
 import { assert, getpid, exists, randStr, abbreviate, escape } from './common.js';
 import { spawn } from './spawn.js';
-
-const name = scriptArgs[0].replace(/.*\//g, '');
-const log = (...args) => console.log(name + ':', ...args);
+import { log } from './log.js';
 
 function main(...args) {
   const debug = args.indexOf('-x') != -1;

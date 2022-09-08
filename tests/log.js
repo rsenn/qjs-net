@@ -50,3 +50,8 @@ export const SetLog = (name, maxLevel = LLL_CLIENT) =>
 
 import('console').then(({ Console }) => { globalThis.console = new Console(err, { inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100 } });
 });
+
+export const log = (() => {
+  const name = scriptArgs[0].replace(/.*\//g, '');
+return (...args) => console.log(name + ':', ...args);
+})();

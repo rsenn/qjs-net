@@ -5,6 +5,7 @@ import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker, tty
 import { in as stdin, out as stdout, err as stderr } from 'std';
 import { assert, getpid, exists, randStr, abbreviate, escape } from './common.js';
 import { spawn } from './spawn.js';
+import { log } from './log.js';
 
 function main(...args) {
   const debug = args.indexOf('-x') != -1;
@@ -22,9 +23,9 @@ function main(...args) {
       arg,
       {
         onConnect(ws, req) {
-          console.log('onConnect', { ws, req });
+          log('onConnect', { ws, req });
           const { protocol } = req.url;
-          console.log('protocol', protocol);
+          log('protocol', protocol);
 
           if(!protocol.startsWith('http')) {
             if(protocol.startsWith('ws')) {
@@ -55,15 +56,15 @@ function main(...args) {
           }
         },
         onClose(ws, reason) {
-          console.log('onClose', { ws, reason });
+          log('onClose', { ws, reason });
           exit(0);
         },
         onError(ws, error) {
-          console.log('onError', { ws, error });
+          log('onError', { ws, error });
           exit(1);
         },
         onMessage(ws, msg) {
-          console.log('onMessage', { ws, msg });
+          log('onMessage', { ws, msg });
           stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
           stdout.flush();
           // ws.close(1000);
@@ -77,6 +78,6 @@ function main(...args) {
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
-  console.log(`FAIL: ${error && error.message}\n${error && error.stack}`);
+  log(`FAIL: ${error && error.message}\n${error && error.stack}`);
   exit(1);
 }

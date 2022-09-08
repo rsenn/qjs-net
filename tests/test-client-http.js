@@ -5,6 +5,7 @@ import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker, tty
 import { in as stdin, out as stdout, err as stderr } from 'std';
 import { assert, getpid, exists, randStr, abbreviate, escape } from './common.js';
 import { spawn } from './spawn.js';
+import { log } from './log.js';
 
 function main(...args) {
   const debug = args.indexOf('-x') != -1;
@@ -22,13 +23,13 @@ function main(...args) {
       arg,
       {
         onHttp(req, resp) {
-          console.log('onHttp', { req, resp });
+          log('onHttp', { req, resp });
 
           let body = resp.text();
 
           puts(body);
 
-          console.log(`Headers:`, resp.headers);
+          log(`Headers:`, resp.headers);
         }
       },
       debug ? LLL_INFO - 1 : LLL_USER
@@ -39,6 +40,6 @@ function main(...args) {
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
-  console.log(`FAIL: ${error && error.message}\n${error && error.stack}`);
+  log(`FAIL: ${error && error.message}\n${error && error.stack}`);
   exit(1);
 }
