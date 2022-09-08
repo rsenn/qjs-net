@@ -8,21 +8,25 @@ function TestClient(url) {
   const message = randStr(100);
 
   return Client(url, {
-    onConnect(ws, req) {
+     onConnect(ws, req) {
       console.log('onConnect', { ws, req });
     },
     onClose(ws, reason) {
       console.log('onClose', { ws, reason });
-      exit(1);
+     exit(reason);
     },
     onError(ws, error) {
       console.log('onError', { ws, error });
       exit(1);
     },
-    onHttp(ws, req, resp) {
+    onHttp(req, resp) {
+      const {url}=resp;
       console.log('onHttp', { req, resp });
+      console.log('req.url', req.url);
+      console.log('resp.url', resp.url);
+      console.log('url.path', url.path);
 
-      let file = loadFile('.' + req.path);
+      let file = loadFile('.' + url.path);
 
       let body = resp.text();
       console.log('onHttp', { body, file });
@@ -36,9 +40,9 @@ function main(...args) {
   let pid = spawn('server.js', ['localhost', 30000], scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log'));
   let status = [];
 
-  sleep(50);
+  sleep(100);
 
-  TestClient('http://localhost:30000/minnet.h');
+  TestClient('https://localhost:30000/minnet.h');
 
   kill(pid, SIGTERM);
   wait4(pid, status, WNOHANG);

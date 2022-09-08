@@ -324,6 +324,26 @@ js_symbol_static_value(JSContext* ctx, const char* name) {
 }
 
 JSValue
+js_symbol_for_value(JSContext* ctx, const char* name) {
+  JSValue symbol_ctor, nameval, ret;
+  JSAtom for_atom = JS_NewAtom(ctx, "for");
+  symbol_ctor = js_symbol_ctor(ctx);
+  nameval = JS_NewString(ctx, name);
+  ret = JS_Invoke(ctx, symbol_ctor, for_atom, 1, &nameval);
+  JS_FreeAtom(ctx, for_atom);
+  JS_FreeValue(ctx, nameval);
+  JS_FreeValue(ctx, symbol_ctor);
+  return ret;
+}
+
+JSAtom
+js_symbol_for_atom(JSContext* ctx, const char* name) {
+  JSValue sym = js_symbol_for_value(ctx, name);
+  JSAtom ret = JS_IsUndefined(sym) ? -1 : JS_ValueToAtom(ctx, sym);
+  JS_FreeValue(ctx, sym);
+  return ret;
+}
+JSValue
 js_symbol_ctor(JSContext* ctx) {
   return js_global_get(ctx, "Symbol");
 }
@@ -432,20 +452,6 @@ js_resolve_functions_is_null(ResolveFunctions const* funcs) {
   return JS_IsNull(funcs->array[0]) && JS_IsNull(funcs->array[1]);
 }
 
-void
-js_promise_free(JSContext* ctx, ResolveFunctions* funcs) {
-  JS_FreeValue(ctx, funcs->array[0]);
-  JS_FreeValue(ctx, funcs->array[1]);
-  js_resolve_functions_zero(funcs);
-}
-
-void
-js_promise_free_rt(JSRuntime* rt, ResolveFunctions* funcs) {
-  JS_FreeValueRT(rt, funcs->array[0]);
-  JS_FreeValueRT(rt, funcs->array[1]);
-  js_resolve_functions_zero(funcs);
-}
-
 static inline JSValue
 js_resolve_functions_call(JSContext* ctx, ResolveFunctions* funcs, int index, JSValueConst arg) {
   JSValue ret = JS_UNDEFINED;
@@ -488,6 +494,20 @@ js_promise_create(JSContext* ctx, ResolveFunctions* funcs) {
 
   ret = JS_NewPromiseCapability(ctx, funcs->array);
   return ret;
+}
+
+void
+js_promise_free(JSContext* ctx, ResolveFunctions* funcs) {
+  JS_FreeValue(ctx, funcs->array[0]);
+  JS_FreeValue(ctx, funcs->array[1]);
+  js_resolve_functions_zero(funcs);
+}
+
+void
+js_promise_free_rt(JSRuntime* rt, ResolveFunctions* funcs) {
+  JS_FreeValueRT(rt, funcs->array[0]);
+  JS_FreeValueRT(rt, funcs->array[1]);
+  js_resolve_functions_zero(funcs);
 }
 
 JSValue
@@ -835,7 +855,7 @@ js_atom_is_index(JSContext* ctx, int64_t* pval, JSAtom atom) {
 }
 
 BOOL
-js_atom_is_string(JSContext* ctx, JSAtom atom, const char* other) {
+js_atom_compare_string(JSContext* ctx, JSAtom atom, const char* other) {
   const char* str = JS_AtomToCString(ctx, atom);
   BOOL ret = !strcmp(str, other);
   JS_FreeCString(ctx, str);
@@ -844,7 +864,27 @@ js_atom_is_string(JSContext* ctx, JSAtom atom, const char* other) {
 
 BOOL
 js_atom_is_length(JSContext* ctx, JSAtom atom) {
-  return js_atom_is_string(ctx, atom, "length");
+  return js_atom_compare_string(ctx, atom, "length");
+}
+
+BOOL
+js_atom_is_symbol(JSContext* ctx, JSAtom atom) {
+  JSValue value;
+  BOOL ret;
+  value = JS_AtomToValue(ctx, atom);
+  ret = JS_IsSymbol(value);
+  JS_FreeValue(ctx, value);
+  return ret;
+}
+
+BOOL
+js_atom_is_string(JSContext* ctx, JSAtom atom) {
+  JSValue value;
+  BOOL ret;
+  value = JS_AtomToValue(ctx, atom);
+  ret = JS_IsString(value);
+  JS_FreeValue(ctx, value);
+  return ret;
 }
 
 JSBuffer

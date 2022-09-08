@@ -157,6 +157,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   session_zero(&client->session);
 
   client->request = request_from(argc, argv, ctx);
+  js_promise_zero(&client->promise);
 
   if(argc >= 2) {
 
@@ -240,6 +241,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   proto = protocol_number(client->request->url.protocol);
 
   url_info(client->request->url, &client->connect_info);
+
+  DEBUG("alpn = '%s'\n", client->connect_info.alpn);
+
   client->connect_info.pwsi = &client->wsi;
   client->connect_info.context = client->context.lws;
 
@@ -267,7 +271,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
 #ifdef DEBUG_OUTPUT
   printf("METHOD: %s\n", client->connect_info.method);
-  DEBUG("PROTOCOL: %s\n", conn->protocol);
+  DEBUG("PROTOCOL: %s\n", client->connect_info.protocol);
 #endif
 
   if(!block)
@@ -288,7 +292,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   {
     wsi2 = lws_client_connect_via_info(&client->connect_info);
   }
-  DEBUG("client->wsi = %p, wsi2 = %p\n", client->wsi, wsi2);
+  DEBUG("client->wsi = %p, wsi2 = %p, h2 = %d, ssl = %d\n", client->wsi, wsi2, wsi_http2(client->wsi), wsi_tls(client->wsi));
 
   if(!client->wsi /*&& !wsi2*/) {
     if(!block) {
@@ -390,7 +394,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if((ctx = client->context.js))
     opaque = lws_opaque(wsi, ctx);
 
-  LOGCB("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, (char*)in);
+  LOGCB("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
@@ -566,7 +570,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   /*  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu\n",
               22 + (reason * 2),
               lws_callback_name(reason) + 13,
-              lws_is_ssl(wsi),
+              wsi_tls(wsi),
               len,
               (int)MIN(len, 32),
               (reason == LWS_CALLBACK_RAW_RX || reason == LWS_CALLBACK_CLIENT_RECEIVE || reason == LWS_CALLBACK_RECEIVE) ? 0 : (char*)in,

@@ -1,7 +1,7 @@
 import { exit } from 'std';
-import { close, exec, open,realpath, O_RDWR, setReadHandler, setWriteHandler, Worker } from 'os';
-import { server, URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
-import { Levels, DefaultLevels, Init } from './log.js';
+import { close, exec, open, realpath, O_RDWR, setReadHandler, setWriteHandler, Worker } from 'os';
+import { server, URL, setLog, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
+import { Levels, DefaultLevels, Init,isDebug } from './log.js';
 import { getpid, once, exists } from './common.js';
 
 const w = Worker.parent;
@@ -125,7 +125,7 @@ export class MinnetServer {
 
     let started = once(() => w.postMessage({ type: 'running' }));
 
-    Init('SERVER');
+    Init('server.js');
 
     let { mounts = {}, mimetypes = [], ...options } = this.options;
 
@@ -151,6 +151,7 @@ export class MinnetServer {
     log('mounts', mounts);
 
     mimetypes = { ...MimeTypes, ...mimetypes };
+
 
     server({
       mimetypes,
@@ -277,28 +278,25 @@ if(w) {
   }
 } else {
   try {
-    const args = globalThis.scriptArgs ?? process.argv;
-//const [me,err]=realpath(args[0]);
-const mydir=args[0].replace(/(\/|^)[^\/]*$/g, '$1.');
-
-console.log('args[0]',args[0]);
-console.log('mydir',mydir);
-
-const parentDir=mydir+'/..';
-
+    const args = [...(globalThis.scriptArgs ?? process.argv)];
+    const mydir = args[0].replace(/(\/|^)[^\/]*$/g, '$1.');
+  
+ 
+    const parentDir = mydir + '/..';
 
     if(/(^|\/)server\.js$/.test(args[0])) {
-      const sslCert = mydir+'/localhost.crt',
-        sslPrivateKey = mydir+'/localhost.key';
+      const sslCert = mydir + '/localhost.crt',
+        sslPrivateKey = mydir + '/localhost.key';
 
       const host = args[1] ?? 'localhost',
         port = args[2] ? +args[2] : 30000;
 
       console.log('MinnetServer', { host, port });
 
-      Init('SERVER');
+      Init('server.js');
 
       server({
+        tls: true,
         mimetypes: MimeTypes,
         host,
         port,
@@ -330,10 +328,10 @@ const parentDir=mydir+'/..';
           const { family, address, port } = ws;
           console.log('onConnect', { url, path, family, address, port });*/
         },
-        onClose: (ws, status) => {
-          console.log('onClose', { ws, status });
+        onClose: (ws, status, reason) => {
+          console.log('onClose', { ws, status, reason });
           ws.close(status);
-          if(status >= 1000) exit(status - 1000);
+          // if(status >= 1000) exit(status - 1000);
         },
         onError: (ws, error) => {
           console.log('onError', { ws, error });

@@ -296,7 +296,7 @@ url_info(const MinnetURL url, struct lws_client_connect_info* info) {
   switch(proto) {
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
-#if defined(LWS_ROLE_H2) && defined(LWS_ROLE_H1)
+#if 0 && defined(LWS_ROLE_H2) && defined(LWS_ROLE_H1)
       info->alpn = "h2,http/1.1";
 #elif defined(LWS_ROLE_H2)
       info->alpn = "h2";
@@ -323,10 +323,12 @@ url_info(const MinnetURL url, struct lws_client_connect_info* info) {
 
   if(protocol_is_tls(proto)) {
     info->ssl_connection = LCCSCF_USE_SSL;
-    // info->ssl_connection |= LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;
     info->ssl_connection |= LCCSCF_ALLOW_SELFSIGNED;
     info->ssl_connection |= LCCSCF_ALLOW_INSECURE;
     info->ssl_connection |= LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+#ifdef LWS_ROLE_H2
+    info->ssl_connection |= LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;
+#endif
   }
 
   info->path = url.path ? url.path : "/";
@@ -815,10 +817,17 @@ minnet_url_init(JSContext* ctx, JSModuleDef* m) {
 
   JS_SetConstructor(ctx, minnet_url_ctor, minnet_url_proto);
 
-  if((inspect_atom = js_symbol_static_atom(ctx, "inspect")) >= 0) {
-    JS_SetProperty(ctx, minnet_url_proto, inspect_atom, JS_NewCFunction(ctx, minnet_url_inspect, "inspect", 0));
+  inspect_atom = js_symbol_static_atom(ctx, "inspect");
+
+  if(!js_atom_is_symbol(ctx, inspect_atom)) {
     JS_FreeAtom(ctx, inspect_atom);
+    inspect_atom = js_symbol_for_atom(ctx, "quickjs.inspect.custom");
   }
+
+  if(js_atom_is_symbol(ctx, inspect_atom))
+    JS_SetProperty(ctx, minnet_url_proto, inspect_atom, JS_NewCFunction(ctx, minnet_url_inspect, "inspect", 0));
+
+  JS_FreeAtom(ctx, inspect_atom);
 
   if(m)
     JS_SetModuleExport(ctx, m, "URL", minnet_url_ctor);

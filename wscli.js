@@ -10,6 +10,10 @@ import { quote } from 'util';
 const connections = new Set();
 let debug = 0;
 
+function MakePrompt(prefix, suffix, commandMode = false) {
+  return `\x1b[38;5;40m${prefix} \x1b[38;5;33m${suffix}\x1b[0m ${commandMode ? 'COMMAND' : 'DATA'} > `;
+}
+
 function FromDomain(buffer) {
   let s = '',
     i = 0,
@@ -87,8 +91,10 @@ class CLI extends REPL {
       .replace(/-/g, ' ')
       .replace(/\.[^\/.]*$/, '');
     let [prefix, suffix] = [name, prompt2];
+    let prompt = MakePrompt(prefix, suffix).slice(0, -2);
+    super(prompt, false);
 
-    super(`\x1b[38;5;40m${prefix} \x1b[38;5;33m${suffix}\x1b[0m`, false);
+    Object.assign(this, { prefix, suffix });
 
     this.historyLoad(null, false);
 
@@ -105,6 +111,9 @@ class CLI extends REPL {
 
       this.printStatus(args.map(arg => inspect(arg, console.options)));
     };
+    this.commandMode = false;
+    this.commands['\x1b'] = this.escape;
+    this.commands['§'] = this.escape;
     this.runSync();
   }
 
@@ -114,7 +123,16 @@ class CLI extends REPL {
     std.puts((typeof arg == 'string' ? arg : inspect(arg, globalThis.console.options)) + '\n');
   }
 
+  escape() {
+    this.commandMode = !this.commandMode;
+    this.readlineRemovePrompt();
+    this.prompt = this.ps1 = MakePrompt(this.prefix, this.suffix, this.commandMode);
+    this.readlinePrintPrompt();
+  }
+
   handleCmd(data) {
+    if(this.commandMode) return super.handleCmd(data);
+
     if(typeof data == 'string' && data.length > 0) {
       this.printStatus(`Sending '${data}'`, false);
       for(let connection of connections) connection.send(data);
@@ -160,13 +178,11 @@ function main(...args) {
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   const { binary } = params;
-  //console.log('params', params);
-  console.log('headers', headers);
+
   function createWS(url, callbacks, listen = 0) {
-    let urlObj = new URL(url);
-    console.log('createWS', { urlObj, url });
-    let repl;
-    let is_dns = false;
+    let repl,
+      is_dns,
+      urlObj = new URL(url);
 
     net.setLog(net.LLL_USER | (((debug ? net.LLL_INFO : net.LLL_NOTICE) << 1) - 1), (level, msg) => {
       let p =
@@ -178,11 +194,10 @@ function main(...args) {
       if(/\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
       msg = msg.replace(/\n/g, '\\n');
 
-      std.puts(p.padEnd(8) + '\t' + msg + '\n');
+      if(params.verbose) std.puts(p.padEnd(8) + '\t' + msg + '\n');
     });
 
     const fn = [net.client, net.server][+listen];
-    console.log('createWS', { url, binary });
     return fn(url, {
       sslCert,
       sslPrivateKey,
@@ -202,12 +217,13 @@ function main(...args) {
       ...callbacks,
       onConnect(ws, req) {
         connections.add(ws);
-        /*
-        console.log('req',{  url });*/
-        console.log('onConnect', { ws, req });
+
+        Object.assign(globalThis, { ws, req });
+
+        if(params.verbose) console.log('onConnect', { ws, req });
         const remote = `${ws.address}:${ws.port}`;
         try {
-          repl = new CLI(remote);
+          repl = globalThis.repl = new CLI(remote);
         } catch(err) {
           console.log('error:', err.message);
         }
@@ -254,16 +270,16 @@ function main(...args) {
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
-        console.log('onMessage', { ws });
+        //console.log('onMessage', { ws });
         if(typeof msg == 'string') {
           msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
           msg = msg.substring(0, 100);
         }
         if(is_dns) {
           let response = DNSResponse(msg);
-          console.log('onMessage', { ws, response });
+          //console.log('onMessage', { ws, response });
         } else {
-          console.log('onMessage', { ws, msg });
+          //console.log('onMessage', { ws, msg });
         }
       },
       onError(ws, error) {

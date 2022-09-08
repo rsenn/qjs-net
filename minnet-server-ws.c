@@ -27,7 +27,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   if(lws_reason_http(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
-  // LOGCB("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, (char*)in, session ? session->serial : 0);
+  // LOGCB("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in, session ? session->serial : 0);
 
   switch(reason) {
     case LWS_CALLBACK_CONNECTING: {
@@ -93,7 +93,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       MinnetURL url = {.protocol = protocol_string(PROTOCOL_WS)};
       url_fromwsi(&url, wsi, ctx);
 
-      if(!lws_is_ssl(wsi) && !strcmp(in, "h2c")) {
+      if(!wsi_tls(wsi) && !strcmp(in, "h2c")) {
         char* dest;
         size_t destlen;
         ByteBuffer out = BUFFER_0();
@@ -181,7 +181,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
         opaque->status = CLOSING;
 
-        LOGCB("ws", "fd=%d, status=%d", lws_get_socket_fd(wsi), opaque->status);
+        LOGCB("ws", "fd=%d, status=%d code=%d", lws_get_socket_fd(wsi), opaque->status, code);
 
         if(ctx) {
           JSValue cb_argv[3] = {session->ws_obj, code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED, why};

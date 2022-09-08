@@ -25,8 +25,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       opaque->sess = session;
   }
 
-  // lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, lws_is_ssl(wsi), len, (int)MIN(len, 32), (char*)in);
-  LOGCB("CLIENT-HTTP ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), lws_is_ssl(wsi) ? "ssl, " : "", (int)len, (char*)in);
+  // lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, wsi_tls(wsi), len, (int)MIN(len, 32), (char*)in);
+  LOGCB("CLIENT-HTTP ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {
@@ -35,7 +35,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetResponse* resp;
 
       if(req) {
-        url_fromwsi(&req->url, wsi, ctx);
+        // url_fromwsi(&req->url, wsi, ctx);
 
         session->req_obj = minnet_request_wrap(ctx, opaque->req);
       }
@@ -221,7 +221,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       /*  if(!JS_IsObject(session->resp_obj))
           session->resp_obj=minnet_response_wrap(ctx, resp);*/
 
-      client_exception(client, callback_emit(&client->on.message, 2, &session->req_obj));
+      // client_exception(client, callback_emit(&client->on.message, 2, &session->req_obj));
 
       // buffer_append(resp->body, in, len, ctx);
       return 0;

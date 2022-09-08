@@ -3,7 +3,7 @@
 #include <ctype.h>              // for isspace
 #include <cutils.h>             // for BOOL, FALSE, TRUE, pstrcpy
 #include <inttypes.h>           // for PRId64, PRIi64
-#include <libwebsockets.h>      // for lws_http_mount, lws_is_ssl, lws_call...
+#include <libwebsockets.h>      // for lws_http_mount, wsi_tls, lws_call...
 #include <stdint.h>             // for uint8_t, uint32_t, uintptr_t
 #include <stdio.h>              // for printf, fseek, ftell, fclose, fopen
 #include <string.h>             // for strlen, size_t, strncmp, strcmp, strstr
@@ -27,7 +27,7 @@ MinnetVhostOptions*
 vhost_options_create(JSContext* ctx, const char* name, const char* value) {
   MinnetVhostOptions* vo = js_mallocz(ctx, sizeof(MinnetVhostOptions));
 
-  DEBUG("vhost_options_create %s %s\n", name, value);
+  //DEBUG("vhost_options_create %s %s\n", name, value);
 
   vo->name = name ? js_strdup(ctx, name) : 0;
   vo->value = value ? js_strdup(ctx, value) : 0;
@@ -212,7 +212,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 
   const char* path = JS_ToCString(ctx, mnt);
 
-  DEBUG("mount_new '%s'\n", path);
+  //DEBUG("mount_new '%s'\n", path);
 
   if(JS_IsFunction(ctx, org)) {
     ret = mount_create(ctx, path, 0, 0, 0, LWSMPRO_CALLBACK);
@@ -247,15 +247,19 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 struct http_mount*
 mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
   struct lws_http_mount *p, *m = 0;
-  DEBUG("mount_find('%.*s')\n", (int)n, x);
   int protocol = n == 0 ? LWSMPRO_CALLBACK : LWSMPRO_HTTP;
   size_t l = 0;
+ 
+ //DEBUG("mount_find('%.*s')\n", (int)n, x);
+ 
   if(n == 0)
     n = strlen(x);
+
   if(protocol == LWSMPRO_CALLBACK && x[0] == '/') {
     x++;
     n--;
   }
+  
   for(p = (struct lws_http_mount*)mounts; p; p = (struct lws_http_mount*)p->mount_next) {
     if(protocol != LWSMPRO_CALLBACK || p->origin_protocol == LWSMPRO_CALLBACK) {
       const char* mnt = p->mountpoint;
@@ -264,7 +268,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
         mnt++;
         len--;
       }
-      DEBUG("mount_find x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+      //DEBUG("mount_find x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
 
       if((len == n || (n > len && (x[len] == '/' || x[len] == '?'))) && !strncmp(x, mnt, n)) {
         m = p;
@@ -290,14 +294,16 @@ mount_find_s(MinnetHttpMount* mounts, const char* x) {
     const char* mnt = p->mountpoint;
     size_t len = p->mountpoint_len;
 
-    DEBUG("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+    //DEBUG("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+
     if(len == n && !strncmp(x, mnt, n)) {
       m = p;
       break;
     }
-    if(len == 1 && mnt[0] == '/') {
+   
+    if(len == 1 && mnt[0] == '/')
       m = p;
-    }
+    
     if((n > len && (x[len] == '/' || x[len] == '?')) && (len == 0 || !strncmp(x, mnt, len))) {
       m = p;
       break;
@@ -325,7 +331,7 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
 int
 http_server_respond(struct lws* wsi, ByteBuffer* buf, struct http_response* resp, JSContext* ctx, MinnetSession* session) {
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
-  int is_ssl = lws_is_ssl(wsi);
+  int is_ssl = wsi_tls(wsi);
   int h2 = wsi_http2(wsi);
 
   LOG("SERVER-HTTP",
@@ -583,8 +589,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   // if(reason != LWS_CALLBACK_HTTP_BODY)
   LOGCB("HTTP",
         "%s%sfd=%d in='%.*s' url=%s session#%d",
-        wsi_http2(wsi) ? "h2, " : "",
-        lws_is_ssl(wsi) ? "ssl, " : "",
+        wsi_http2(wsi) ? "h2, " : "http/1.1, ",
+        wsi_tls(wsi) ? "TLS, " : "plain, ",
         lws_get_socket_fd(lws_get_network_wsi(wsi)),
         (int)MIN(32, len),
         (char*)in,
@@ -601,7 +607,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_PROTOCOL_DESTROY: break;
 
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: {
-      /*if(!lws_is_ssl(wsi) && !strcmp(in, "h2c"))
+      /*if(!wsi_tls(wsi) && !strcmp(in, "h2c"))
         return -1;
 
 
@@ -628,7 +634,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       opaque->status = OPEN;
 
       if(opaque->req)
-        url_set_protocol(&opaque->req->url, lws_is_ssl(wsi) ? "https" : "http");
+        url_set_protocol(&opaque->req->url, wsi_tls(wsi) ? "https" : "http");
 
       // LOGCB("HTTP", "url=%s", opaque->req ? url_string(&opaque->req->url) : 0);
       break;
@@ -731,14 +737,14 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       assert(req);
       assert(req->url.path);
 
-      DEBUG("req->url.path = '%s'\n", req->url.path);
+      //DEBUG("req->url.path = '%s'\n", req->url.path);
       pathlen = req->url.path ? strlen(req->url.path) : 0;
 
       if(opaque->uri) {
         mountpoint_len = (char*)in - opaque->uri;
 
-        DEBUG("opaque->uri = '%.*s'\n", (int)opaque->uri_len, opaque->uri);
-        DEBUG("mountpoint_len = %zu\n", mountpoint_len);
+        //DEBUG("opaque->uri = '%.*s'\n", (int)opaque->uri_len, opaque->uri);
+        //DEBUG("mountpoint_len = %zu\n", mountpoint_len);
       } else if(req->url.path && in && len < pathlen)
         mountpoint_len = pathlen - len;
 
@@ -770,8 +776,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if((mount = session->mount)) {
           size_t mlen = strlen(mount->mnt);
 
-          DEBUG("mount->mnt = '%s'\n", mount->mnt);
-          DEBUG("mount->mnt = '%.*s'\n", (int)mlen, mount->mnt);
+          //DEBUG("mount->mnt = '%s'\n", mount->mnt);
+          //DEBUG("mount->mnt = '%.*s'\n", (int)mlen, mount->mnt);
 
           assert(req->url.path);
           assert(mount->mnt);
@@ -953,7 +959,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
   // int ret = 0;
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE && (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
-    LOGCB("HTTP", "fd=%i %s%sin='%.*s' ret=%d\n", lws_get_socket_fd(wsi), (session && session->h2) || wsi_http2(wsi) ? "h2, " : "", lws_is_ssl(wsi) ? "ssl, " : "", (int)len, (char*)in, ret);
+    LOGCB("HTTP", "fd=%i %s%sin='%.*s' ret=%d\n", lws_get_socket_fd(wsi), (session && session->h2) || wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in, ret);
   }
 
   if(ret == 0)

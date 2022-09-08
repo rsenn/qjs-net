@@ -118,6 +118,8 @@ BOOL js_is_iterable(JSContext* ctx, JSValueConst obj);
 BOOL js_is_iterator(JSContext* ctx, JSValueConst obj);
 JSAtom js_symbol_static_atom(JSContext* ctx, const char* name);
 JSValue js_symbol_static_value(JSContext* ctx, const char* name);
+JSValue js_symbol_for_value(JSContext* ctx, const char* name);
+JSAtom js_symbol_for_atom(JSContext* ctx, const char* name);
 JSValue js_symbol_ctor(JSContext* ctx);
 JSValue js_global_get(JSContext* ctx, const char* prop);
 JSValue js_global_os(JSContext* ctx);
@@ -158,9 +160,24 @@ char** js_array_to_argv(JSContext* ctx, int* argcp, JSValueConst array);
 int64_t js_arraybuffer_length(JSContext* ctx, JSValueConst buffer);
 int js_offset_length(JSContext* ctx, int64_t size, int argc, JSValueConst argv[], OffsetLength* off_len_p);
 JSValue js_argv_to_array(JSContext* ctx, const char* const* argv);
+
+static inline BOOL
+js_atom_is_int32(JSAtom atom) {
+  if((int32_t)atom < 0)
+    return TRUE;
+  return FALSE;
+}
+
+static inline BOOL
+js_atom_valid(JSAtom atom) {
+  return atom != 0x7fffffff;
+}
+
 BOOL js_atom_is_index(JSContext* ctx, int64_t* pval, JSAtom atom);
-BOOL js_atom_is_string(JSContext* ctx, JSAtom atom, const char* other);
+BOOL js_atom_compare_string(JSContext* ctx, JSAtom atom, const char* other);
 BOOL js_atom_is_length(JSContext* ctx, JSAtom atom);
+BOOL js_atom_is_string(JSContext* ctx, JSAtom atom);
+BOOL js_atom_is_symbol(JSContext* ctx, JSAtom atom);
 JSBuffer js_input_buffer(JSContext* ctx, JSValueConst value);
 JSBuffer js_input_chars(JSContext* ctx, JSValueConst value);
 JSBuffer js_input_args(JSContext* ctx, int argc, JSValueConst argv[]);

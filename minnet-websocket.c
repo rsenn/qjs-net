@@ -410,7 +410,7 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case WEBSOCKET_SSL: {
-      ret = JS_NewBool(ctx, lws_is_ssl(lws_get_network_wsi(ws->lwsi)));
+      ret = JS_NewBool(ctx, wsi_tls(lws_get_network_wsi(ws->lwsi)));
       break;
     }
     case WEBSOCKET_BINARY: {
