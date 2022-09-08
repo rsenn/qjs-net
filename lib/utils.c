@@ -1,6 +1,5 @@
 
 
-
 #include "utils.h"
 
 size_t
@@ -359,7 +358,7 @@ wsi_vhost_and_port(struct lws* wsi, JSContext* ctx, int* port) {
     size_t hostlen = str_chr(vhn, ':');
     host = js_strndup(ctx, vhn, hostlen);
 
-    //printf("%s() host=%s port=%u\n", __func__, host, lws_get_vhost_port(vhost));
+    // printf("%s() host=%s port=%u\n", __func__, host, lws_get_vhost_port(vhost));
 
     if(port)
       *port = lws_get_vhost_port(vhost);

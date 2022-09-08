@@ -242,7 +242,7 @@ minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
   list_for_each(el, &session_list) {
     struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
-    DEBUG("%s @%u #%"PRId64" %p\n", __func__, i, session->serial, session);
+    DEBUG("%s @%u #%" PRId64 " %p\n", __func__, i, session->serial, session);
 
     JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
   }

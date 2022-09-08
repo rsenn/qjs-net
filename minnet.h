@@ -29,12 +29,11 @@
             args);
 #define LOGCB(name, fmt, args...) LOG((name), FG("%d") "%-38s" NC " wsi#%" PRId64 " " fmt "", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, args);
 
-
-#define BOOL_OPTION(name, prop,var) \
-  JSValue  name = JS_GetPropertyStr(ctx, options, prop); \
-  if(!JS_IsUndefined( name)) \
-    var = JS_ToBool(ctx,  name); \
-  JS_FreeValue(ctx,  name);
+#define BOOL_OPTION(name, prop, var) \
+  JSValue name = JS_GetPropertyStr(ctx, options, prop); \
+  if(!JS_IsUndefined(name)) \
+    var = JS_ToBool(ctx, name); \
+  JS_FreeValue(ctx, name);
 
 typedef enum socket_state MinnetStatus;
 

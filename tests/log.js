@@ -24,20 +24,22 @@ export const Levels = (() => {
 })();
 
 export const isDebug = () => scriptArgs.some(a => /^-[dx]/.test(a));
-export const DebugCallback = fn => isDebug() ? fn : () => {};
-
+export const DebugCallback = fn => (isDebug() ? fn : () => {});
 
 export const DefaultLevels =
   LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
 
 export const Init = (name, mask = LLL_USER | ((LLL_CLIENT << 1) - 1)) =>
-  setLog(mask, DebugCallback((level, msg) => {
-    let l = Levels[level];
-    if(!(level & mask)) return;
-    if(level >= LLL_NOTICE && level <= LLL_EXT) return;
-    if(l == 'USER') l = name ?? l;
-    err.puts(`${l.padEnd(10)} ${msg}\n`);
-  }));
+  setLog(
+    mask,
+    DebugCallback((level, msg) => {
+      let l = Levels[level];
+      if(!(level & mask)) return;
+      if(level >= LLL_NOTICE && level <= LLL_EXT) return;
+      if(l == 'USER') l = name ?? l;
+      err.puts(`${l.padEnd(10)} ${msg}\n`);
+    })
+  );
 
 export const SetLog = (name, maxLevel = LLL_CLIENT) =>
   setLog(LLL_USER | ((maxLevel << 1) - 1), (level, msg) => {

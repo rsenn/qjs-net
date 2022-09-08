@@ -8,19 +8,19 @@ function TestClient(url) {
   const message = randStr(100);
 
   return Client(url, {
-     onConnect(ws, req) {
+    onConnect(ws, req) {
       console.log('onConnect', { ws, req });
     },
     onClose(ws, reason) {
       console.log('onClose', { ws, reason });
-     exit(reason);
+      exit(reason);
     },
     onError(ws, error) {
       console.log('onError', { ws, error });
       exit(1);
     },
     onHttp(req, resp) {
-      const {url}=resp;
+      const { url } = resp;
       console.log('onHttp', { req, resp });
       console.log('req.url', req.url);
       console.log('resp.url', resp.url);

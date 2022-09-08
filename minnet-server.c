@@ -63,12 +63,18 @@ static const struct lws_http_mount mount = {
 };
 
 static const struct lws_extension extension_pmd[] = {
-    {"permessage-deflate",
-     lws_extension_callback_pm_deflate,
-     "permessage-deflate"
-     "; client_no_context_takeover"
-     "; client_max_window_bits",},
-    {NULL, NULL, NULL,},
+    {
+        "permessage-deflate",
+        lws_extension_callback_pm_deflate,
+        "permessage-deflate"
+        "; client_no_context_takeover"
+        "; client_max_window_bits",
+    },
+    {
+        NULL,
+        NULL,
+        NULL,
+    },
 };
 
 static MinnetServer*
@@ -197,7 +203,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   struct TimerClosure* timer = server->context.timer;
 
   if(timer) {
-    //DEBUG("timeout %" PRIu32 "\n", timer->interval);
+    // DEBUG("timeout %" PRIu32 "\n", timer->interval);
     uint32_t new_interval;
 
     do {
@@ -207,14 +213,14 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
         lws_service_tsi(server->context.lws, -1, 0);
     } while(new_interval == 0);
 
-    //DEBUG("new_interval %" PRIu32 "\n", new_interval);
+    // DEBUG("new_interval %" PRIu32 "\n", new_interval);
     timer->interval = new_interval;
 
     js_timer_restart(timer);
 
     return JS_FALSE;
   }
-  //DEBUG("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
+  // DEBUG("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
 
   return JS_TRUE;
 }
@@ -298,10 +304,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-BOOL_OPTION(opt_block, "block", block);
-BOOL_OPTION(opt_h2, "h2", is_h2);
-BOOL_OPTION(opt_pmd, "permessageDeflate", per_message_deflate);
-
+  BOOL_OPTION(opt_block, "block", block);
+  BOOL_OPTION(opt_h2, "h2", is_h2);
+  BOOL_OPTION(opt_pmd, "permessageDeflate", per_message_deflate);
 
   GETCB(opt_on_pong, server->cb.pong)
   GETCB(opt_on_close, server->cb.close)
@@ -327,8 +332,8 @@ BOOL_OPTION(opt_pmd, "permessageDeflate", per_message_deflate);
   info->timeout_secs = 0;
   info->options = 0;
 
-if(per_message_deflate)
-   info->extensions = extension_pmd;
+  if(per_message_deflate)
+    info->extensions = extension_pmd;
 
   // client_certificate(&server->context, options);
 
@@ -371,8 +376,8 @@ if(per_message_deflate)
   /*{
     MinnetVhostOptions* pvo;
 
-    for(pvo = server->mimetypes; pvo; pvo = pvo->next) { 
-      DEBUG("pvo mimetype %s %s\n", pvo->name, pvo->value); 
+    for(pvo = server->mimetypes; pvo; pvo = pvo->next) {
+      DEBUG("pvo mimetype %s %s\n", pvo->name, pvo->value);
     }
   }*/
 

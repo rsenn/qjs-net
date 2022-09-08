@@ -14,7 +14,7 @@ export default function Client(url, options, debug) {
 
   /*const sslCert = 'localhost.crt',
     sslPrivateKey = 'localhost.key';*/
- 
+
   err.puts(`Client connecting to ${url} ...\n`);
 
   return client(url, {
