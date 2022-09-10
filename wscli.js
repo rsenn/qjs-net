@@ -112,7 +112,7 @@ class CLI extends REPL {
       this.printStatus(args.map(arg => inspect(arg, console.options)));
     };
     this.commandMode = false;
-    this.commands['\x1b'] = this.escape;
+    this.commands['\x1b'] ??= this.escape;
     this.commands['§'] = this.escape;
     this.runSync();
   }
@@ -194,7 +194,7 @@ function main(...args) {
       if(/\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
       msg = msg.replace(/\n/g, '\\n');
 
-      if(params.verbose) std.puts(p.padEnd(8) + '\t' + msg + '\n');
+      if(params.verbose > 1) std.puts(p.padEnd(8) + '\t' + msg + '\n');
     });
 
     const fn = [net.client, net.server][+listen];
@@ -216,6 +216,7 @@ function main(...args) {
       },
       ...callbacks,
       onConnect(ws, req) {
+        console.log('onConnect', { ws, req });
         connections.add(ws);
 
         Object.assign(globalThis, { ws, req });
@@ -228,11 +229,14 @@ function main(...args) {
           console.log('error:', err.message);
         }
         repl.printStatus(`Connected to ${remote}`);
-        const { url } = req;
-        const { protocol, port } = url;
-        if((is_dns = protocol == 'udp' && port == 53)) {
-          ws.binary = true;
-          ws.send(DNSQuery('libwebsockets.org'));
+
+        if(req) {
+          const { url } = req;
+          const { protocol, port } = url;
+          if((is_dns = protocol == 'udp' && port == 53)) {
+            ws.binary = true;
+            ws.send(DNSQuery('libwebsockets.org'));
+          }
         }
       },
       onClose(ws, status, reason, error) {
@@ -270,7 +274,7 @@ function main(...args) {
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
-        //console.log('onMessage', { ws });
+        console.log('onMessage', { ws, msg });
         if(typeof msg == 'string') {
           msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
           msg = msg.substring(0, 100);

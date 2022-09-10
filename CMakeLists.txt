@@ -309,6 +309,8 @@ else(WIN32)
   add_library(quickjs-minnet SHARED ${JS_BINDINGS_SOURCES})
 endif(WIN32)
 
+target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY})
+
 if(BUILD_LIBWEBSOCKETS)
   add_dependencies(quickjs-minnet libwebsockets)
 endif(BUILD_LIBWEBSOCKETS)
