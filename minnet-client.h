@@ -21,24 +21,23 @@ typedef struct client_context {
   CallbackList on;
   JSValue headers, body, next;
   BOOL done;
-  // MinnetURL url;
   MinnetSession session;
   struct http_request* request;
   struct http_response* response;
   struct lws_client_connect_info connect_info;
   ResolveFunctions promise;
+  struct list_head link;
 } MinnetClient;
 
-void client_certificate(MinnetContext*, JSValueConst);
+void client_certificate(MinnetContext*, JSValueConst options);
+MinnetClient* client_new(JSContext*);
+MinnetClient* client_find(struct lws*);
+struct client_context* lws_client(struct lws*);
 void client_free(MinnetClient*);
 void client_zero(MinnetClient*);
 MinnetClient* client_dup(MinnetClient*);
-JSValue minnet_client_closure(JSContext*, JSValueConst, int, JSValueConst argv[], int magic, void* ptr);
-JSValue minnet_client(JSContext*, JSValueConst, int, JSValueConst argv[]);
-uint8_t* scan_backwards(uint8_t*, uint8_t);
+JSValue minnet_client_closure(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr);
+JSValue minnet_client(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[]);
+uint8_t* scan_backwards(uint8_t*, uint8_t ch);
 
-static inline struct client_context*
-lws_client(struct lws* wsi) {
-  return lws_context_user(lws_get_context(wsi));
-}
 #endif

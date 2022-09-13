@@ -100,8 +100,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_WSI_DESTROY: {
-      if(js_promise_pending(&client->promise))
-        js_promise_resolve(ctx, &client->promise, JS_UNDEFINED);
+      if(client->wsi == wsi) {
+        if(js_promise_pending(&client->promise))
+          js_promise_resolve(ctx, &client->promise, JS_UNDEFINED);
+      }
       return -1;
       break;
     }
@@ -228,15 +230,49 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
-      // MinnetResponse* resp = client->response;
-      //  headers_tostring(ctx, &resp->headers, wsi);
       if(client->on.http.ctx) {
+        MinnetRequest* req;
         int32_t result = -1;
         JSValue ret;
         ret = client_exception(client, callback_emit(&client->on.http, 2, &session->req_obj));
-        if(JS_IsNumber(ret))
+        if(JS_IsNumber(ret)) {
           JS_ToInt32(client->on.http.ctx, &result, ret);
-        lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
+        } else if((req = minnet_request_data2(client->on.http.ctx, ret))) {
+          url_info(req->url, &client->connect_info);
+          client->connect_info.pwsi = &client->wsi;
+          client->connect_info.context = client->context.lws;
+
+          if(client->request) {
+            request_free(client->request, client->on.http.ctx);
+
+            client->request = 0;
+          }
+          if(opaque->req) {
+            request_free(opaque->req, client->on.http.ctx);
+            opaque->req = 0;
+          }
+
+          if(client->response) {
+            response_free(client->response, client->on.http.ctx);
+            client->response = 0;
+          }
+          if(opaque->resp) {
+            response_free(opaque->resp, client->on.http.ctx);
+            opaque->resp = 0;
+          }
+
+          client->request = req;
+          opaque->req = request_dup(req);
+
+          lws_client_connect_via_info(&client->connect_info);
+
+          result = 0;
+        } else
+
+          JS_ThrowInternalError(client->on.http.ctx, "onHttp didn't return a number");
+
+        if(result != 0)
+          lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
 
         return result;
       }

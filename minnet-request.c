@@ -319,6 +319,19 @@ fail:
 }
 
 JSValue
+minnet_request_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  MinnetRequest *req, *req2;
+
+  if(!(req = minnet_request_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  if((req2 = request_new(url_clone(req->url, ctx), req->method, ctx)))
+    return minnet_request_wrap(ctx, req2);
+
+  return JS_ThrowOutOfMemory(ctx);
+}
+
+JSValue
 minnet_request_new(JSContext* ctx, MinnetURL url, enum http_method method) {
   MinnetRequest* req;
 
@@ -476,6 +489,7 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("arrayBuffer", minnet_request_get, 0, REQUEST_ARRAYBUFFER, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("text", minnet_request_get, 0, REQUEST_TEXT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, 0),
+    JS_CFUNC_DEF("clone", 0, minnet_request_clone),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 

@@ -3,12 +3,13 @@ import * as std from 'std';
 import * as os from 'os';
 import REPL from 'repl';
 import inspect from 'inspect';
-import net, { Socket, URL } from 'net';
+import net, { Socket, URL, Request } from 'net';
 import { Console } from 'console';
-import { quote } from 'util';
+import { quote, toString } from 'util';
 
 const connections = new Set();
-let debug = 0;
+let debug = 0,
+  params;
 
 function MakePrompt(prefix, suffix, commandMode = false) {
   return `\x1b[38;5;40m${prefix} \x1b[38;5;33m${suffix}\x1b[0m ${commandMode ? 'COMMAND' : 'DATA'} > `;
@@ -23,6 +24,18 @@ function FromDomain(buffer) {
     if(len == 0) return s;
     if(s != '') s += '.';
     while(len--) s += String.fromCharCode(u8[i++]);
+  }
+}
+
+function WriteFile(filename, buffer) {
+  let fd;
+
+  if((fd = os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)) != -1) {
+    let r = os.write(fd, buffer, 0, buffer.byteLength);
+    os.close(fd);
+    if(r >= 0) console.log(`Wrote '${filename}'.`);
+    else console.log(`Error writing '${filename}': ${std.strerror(util.error().errno)}`);
+    return r;
   }
 }
 
@@ -43,7 +56,7 @@ function DNSQuery(domain) {
     domain = domain.split('.').reverse().join('.') + '.in-addr.arpa';
     type = 0x0c;
   }
-  console.log('DNSQuery', domain);
+  //console.log('DNSQuery', domain);
   let outBuf = new Uint8Array([
     0xff,
     0xff,
@@ -65,7 +78,7 @@ function DNSQuery(domain) {
     0x01
   ]).buffer;
   new DataView(outBuf).setUint16(0, outBuf.byteLength - 2, false);
-  console.log('DNSQuery', outBuf);
+  //console.log('DNSQuery', outBuf);
   return outBuf;
 }
 
@@ -140,11 +153,11 @@ class CLI extends REPL {
   }
 }
 
-function main(...args) {
+async function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
   globalThis.console = new Console({ inspectOptions: { depth: Infinity, compact: 1, customInspect: true } });
   let headers = [];
-  let params = GetOpt(
+  params = GetOpt(
     {
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],
       listen: [false, null, 'l'],
@@ -156,6 +169,7 @@ function main(...args) {
       address: [true, null, 'a'],
       port: [true, null, 'p'],
       method: [true, null, 'm'],
+      output: [true, null, 'o'],
       header: [
         true,
         arg => {
@@ -174,10 +188,11 @@ function main(...args) {
     args
   );
   const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', method } = params;
-  const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
+  //  const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   const { binary } = params;
+  let urls=params['@'];
 
   function createWS(url, callbacks, listen = 0) {
     let repl,
@@ -189,13 +204,18 @@ function main(...args) {
         ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][
           level && Math.log2(level)
         ] ?? level + '';
+
+
+
       //console.log('log', { p, level,msg });
 
-      if(/\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
+      if(p =='INFO' || /RECEIVE_CLIENT_HTTP_READ|\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
       msg = msg.replace(/\n/g, '\\n');
 
-      if(params.verbose > 1) std.puts(p.padEnd(8) + '\t' + msg + '\n');
+      if(params.verbose > 1 || params.debug) std.puts(p.padEnd(8) + '\t' + msg + '\n');
     });
+
+    if(params.verbose) console.log(`Connecting to '${url}'...`);
 
     const fn = [net.client, net.server][+listen];
     return fn(url, {
@@ -216,7 +236,7 @@ function main(...args) {
       },
       ...callbacks,
       onConnect(ws, req) {
-        console.log('onConnect', { ws, req });
+        //console.log('onConnect', { ws, req });
         connections.add(ws);
 
         Object.assign(globalThis, { ws, req });
@@ -240,7 +260,7 @@ function main(...args) {
         }
       },
       onClose(ws, status, reason, error) {
-        console.log('onClose', { ws, status, reason, error });
+        //console.log('onClose', { ws, status, reason, error });
         connections.delete(ws);
         if(repl) {
           repl.printStatus(`Closed (${status}): ${reason}`);
@@ -251,22 +271,34 @@ function main(...args) {
           }, 100);
         }
       },
-      async onHttp(ws, req, resp) {
-        console.log('onHttp', console.config({ compact: false }), { req, resp });
-        console.log('request', req);
-        console.log('request.headers', req.headers);
-        console.log('response', resp);
-        console.log('response.headers', resp.headers);
-        let text = await resp.text();
-        console.log('onHttp', text);
-        /*text = text.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
-        const { url } = resp;
-        console.log('onHttp', url, { text });
+      onHttp(req, resp) {
+        //console.log('onHttp', console.config({ compact: false }), { req, resp });
 
-        let json = resp.json();
-        console.log('onHttp', { json });
-        let buffer = resp.arrayBuffer();
-        console.log('onHttp', { buffer });*/
+        let { headers } = resp;
+
+        //console.log('response.headers', headers['content-type']);
+
+        let type = (headers['content-type'] ?? 'text/html').replace(/;.*/g, '');
+        let extension = '.' + type.replace(/.*\//g, '');
+
+        let { url } = resp;
+        let { path } = url;
+        let name = path.replace(/\/[a-z]\/.*/g, '').replace(/.*\//g, '');
+
+        if(!name.endsWith(extension)) name += extension;
+
+        //console.log('onHttp', name);
+
+        let buffer = resp.body;
+        let text = toString(buffer);
+
+        WriteFile(params.output ?? name ?? 'output.bin', buffer);
+         
+         req =  new Request(urls.shift());
+
+        console.log('onHttp', { req });
+
+        return req;
       },
       onFd(fd, rd, wr) {
         //console.log('onFd', fd, rd, wr);
@@ -274,7 +306,7 @@ function main(...args) {
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
-        console.log('onMessage', { ws, msg });
+        //console.log('onMessage', { ws, msg });
         if(typeof msg == 'string') {
           msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
           msg = msg.substring(0, 100);
@@ -287,7 +319,7 @@ function main(...args) {
         }
       },
       onError(ws, error) {
-        console.log('onError', ws, error);
+        //console.log('onError', ws, error);
       }
     });
   }
@@ -297,16 +329,18 @@ function main(...args) {
     }
   });
 
-  createWS(url, {})
-    .then(() => {
-      console.log('FINISHED');
-    })
-    .catch(err => {
-      console.log('Failed', err);
-    });
+  /*while(urls.length) */{
+    await createWS(urls.shift(), {})
+      .then(() => {
+        console.log('FINISHED');
+      })
+      .catch(err => {
+        console.log('Failed', err);
+      });
+  }
 
   function quit(why) {
-    console.log(`quit('${why}')`);
+    //console.log(`quit('${why}')`);
     repl.cleanup(why);
   }
 }

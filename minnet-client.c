@@ -17,7 +17,7 @@
 
 static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
-// THREAD_LOCAL MinnetClient* minnet_client = 0;
+static THREAD_LOCAL struct list_head minnet_clients = {0};
 
 static const struct lws_protocols client_protocols[] = {
     {"raw", client_callback, 0, 0, 0, 0, 0},
@@ -65,6 +65,33 @@ client_certificate(MinnetContext* context, JSValueConst options) {
     info->client_ssl_ca_mem = js_toptrsize(ctx, &info->client_ssl_ca_mem_len, context->ca);
 }
 
+MinnetClient*
+client_new(JSContext* ctx) {
+  MinnetClient* client;
+  if(!(client = js_malloc(ctx, sizeof(MinnetClient))))
+    return 0;
+
+  if(minnet_clients.next == NULL)
+    init_list_head(&minnet_clients);
+
+  list_add_tail(&client->link, &minnet_clients);
+
+  return client;
+}
+
+MinnetClient*
+client_find(struct lws* wsi) {
+  struct list_head* el;
+
+  list_for_each_prev(el, &minnet_clients) {
+    MinnetClient* client = list_entry(el, MinnetClient, link);
+
+    if(client->wsi == wsi)
+      return client;
+  }
+  return 0;
+}
+
 void
 client_free(MinnetClient* client) {
   JSContext* ctx = client->context.js;
@@ -87,26 +114,35 @@ client_free(MinnetClient* client) {
     context_clear(&client->context);
     session_clear(&client->session, ctx);
 
+    list_del(&client->link);
+
     js_free(ctx, client);
   }
 }
 
 void
 client_zero(MinnetClient* client) {
-  memset(client, 0, sizeof(MinnetClient));
+  // memset(client, 0, sizeof(MinnetClient));
   client->ref_count = 1;
   client->headers = JS_NULL;
   client->body = JS_NULL;
   client->next = JS_NULL;
+
   session_zero(&client->session);
   js_promise_zero(&client->promise);
   callbacks_zero(&client->on);
+  // client->link.next = client->link.prev = 0;
 }
 
 MinnetClient*
 client_dup(MinnetClient* client) {
   ++client->ref_count;
   return client;
+}
+
+struct client_context*
+lws_client(struct lws* wsi) {
+  return lws_context_user(lws_get_context(wsi));
 }
 
 static JSValue
@@ -140,7 +176,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   // SETLOG(LLL_INFO)
 
-  if(!(client = js_malloc(ctx, sizeof(MinnetClient))))
+  if(!(client = client_new(ctx)))
     return JS_ThrowOutOfMemory(ctx);
 
   client_zero(client);
@@ -546,11 +582,13 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       break;
     }
     case LWS_CALLBACK_WSI_DESTROY: {
-      BOOL is_error = JS_IsUndefined(client->context.error);
+      if(client->wsi == wsi) {
+        BOOL is_error = JS_IsUndefined(client->context.error);
 
-      (is_error ? js_promise_reject : js_promise_resolve)(client->context.js, &client->promise, client->context.error);
-      JS_FreeValue(client->context.js, client->context.error);
-      client->context.error = JS_UNDEFINED;
+        (is_error ? js_promise_reject : js_promise_resolve)(client->context.js, &client->promise, client->context.error);
+        JS_FreeValue(client->context.js, client->context.error);
+        client->context.error = JS_UNDEFINED;
+      }
       break;
     }
     case LWS_CALLBACK_PROTOCOL_DESTROY: {
