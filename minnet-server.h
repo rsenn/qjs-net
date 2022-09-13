@@ -14,7 +14,7 @@ struct http_mount;
 typedef struct server_context {
   union {
     int ref_count;
-    MinnetContext context;
+    struct context context;
   };
   struct lws* wsi;
   CallbackList cb;
@@ -24,7 +24,7 @@ typedef struct server_context {
 
 struct proxy_connection;
 
-void server_certificate(MinnetContext*, JSValue);
+void server_certificate(struct context*, JSValue);
 JSValue minnet_server(JSContext*, JSValue, int, JSValue argv[]);
 int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
 int js_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);

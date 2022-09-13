@@ -14,7 +14,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     return 0;
 
   MinnetClient* client = lws_client(wsi);
-  MinnetSession* session = &client->session;
+  struct session_data* session = &client->session;
   JSContext* ctx = client ? client->context.js : 0;
   struct wsi_opaque_user_data* opaque;
 
@@ -27,7 +27,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
 
   // lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, wsi_tls(wsi), len, (int)MIN(len, 32), (char*)in);
-  LOGCB("CLIENT-HTTP ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in);
+  LOGCB("CLIENT-HTTP ", "fd=%d, h2=%i, tls=%i%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), (in && len) ? ", in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {

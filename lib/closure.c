@@ -1,11 +1,11 @@
 #include "closure.h"
 #include "context.h"
 
-MinnetClosure*
+union closure*
 closure_new(JSContext* ctx) {
-  MinnetClosure* closure;
+  union closure* closure;
 
-  if((closure = js_mallocz(ctx, sizeof(MinnetClosure)))) {
+  if((closure = js_mallocz(ctx, sizeof(union closure)))) {
     closure->ref_count = 1;
     closure->ctx = ctx;
   }
@@ -13,15 +13,15 @@ closure_new(JSContext* ctx) {
   return closure;
 }
 
-MinnetClosure*
-closure_dup(MinnetClosure* c) {
+union closure*
+closure_dup(union closure* c) {
   ++c->ref_count;
   return c;
 }
 
 void
 closure_free(void* ptr) {
-  MinnetClosure* closure = ptr;
+  union closure* closure = ptr;
 
   if(--closure->ref_count == 0) {
     JSContext* ctx = closure->ctx;

@@ -5,7 +5,7 @@
 #include <cutils.h>
 #include <libwebsockets.h>
 
-typedef struct context {
+struct context {
   int ref_count;
   JSContext* js;
   struct lws_context* lws;
@@ -14,9 +14,9 @@ typedef struct context {
   JSValue error;
   JSValue crt, key, ca;
   struct TimerClosure* timer;
-} MinnetContext;
+};
 
-JSValue context_exception(MinnetContext*, JSValueConst retval);
-void context_clear(MinnetContext*);
+JSValue context_exception(struct context*, JSValueConst retval);
+void context_clear(struct context*);
 
 #endif /* QJSNET_LIB_CONTEXT_H */

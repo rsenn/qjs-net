@@ -20,7 +20,7 @@ enum {
 
 static JSValue
 fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
-  MinnetClosure* closure = opaque;
+  union closure* closure = opaque;
   MinnetClient* client = closure->pointer;
 
   DEBUG("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
@@ -71,7 +71,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret, handlers[4], args[2];
-  MinnetClosure* cc;
+  union closure* cc;
   // MinnetFetch* fc;
 
   if(argc >= 2 && !JS_IsObject(argv[1]))

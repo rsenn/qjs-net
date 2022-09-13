@@ -8,7 +8,7 @@
 #include <stdio.h>              // for printf, fseek, ftell, fclose, fopen
 #include <string.h>             // for strlen, size_t, strncmp, strcmp, strstr
 #include <sys/types.h>          // for ssize_t
-#include "context.h"            // for MinnetContext
+#include "context.h"            // for struct context
 #include "headers.h"            // for headers_tostring
 #include "jsutils.h"            // for js_is_iterator, JSBuffer, js_buffer_...
 #include "minnet-form-parser.h" // for form_parser, form_parser::(anonymous)
@@ -329,7 +329,7 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
 }
 
 int
-http_server_respond(struct lws* wsi, ByteBuffer* buf, struct http_response* resp, JSContext* ctx, MinnetSession* session) {
+http_server_respond(struct lws* wsi, ByteBuffer* buf, struct http_response* resp, JSContext* ctx, struct session_data* session) {
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   int is_ssl = wsi_tls(wsi);
   int h2 = wsi_http2(wsi);
@@ -502,7 +502,7 @@ http_server_writable(struct lws* wsi, struct http_response* resp, BOOL done) {
 }
 
 int
-http_server_generate(JSContext* ctx, MinnetSession* session, MinnetResponse* resp, BOOL* done_p) {
+http_server_generate(JSContext* ctx, struct session_data* session, MinnetResponse* resp, BOOL* done_p) {
   // ByteBuffer b = BUFFER(buf);
 
   if(JS_IsObject(session->generator)) {
@@ -565,7 +565,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   int ret = 0;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
-  MinnetSession* session = user;
+  struct session_data* session = user;
   JSContext* ctx = server ? server->context.js : 0;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 

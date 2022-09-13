@@ -4,7 +4,7 @@
 #include <quickjs.h>
 #include "allocated.h"
 
-typedef union closure {
+union closure {
   struct {
     void* pointer;
     void (*free_func)();
@@ -12,10 +12,10 @@ typedef union closure {
     JSContext* ctx;
   };
   struct allocated allocated;
-} MinnetClosure;
+};
 
-MinnetClosure* closure_new(JSContext*);
-MinnetClosure* closure_dup(MinnetClosure*);
+union closure* closure_new(JSContext*);
+union closure* closure_dup(union closure*);
 void closure_free(void*);
 
 #endif /* QJSNET_LIB_CLOSURE_H */

@@ -12,7 +12,7 @@ struct server_context;
 struct client_context;
 struct wsi_opaque_user_data;
 
-typedef struct session_data {
+struct session_data {
   JSValue ws_obj;
   union {
     struct {
@@ -31,13 +31,13 @@ typedef struct session_data {
   struct client_context* client;
   ByteBuffer send_buf;
   struct list_head link;
-} MinnetSession;
+};
 
 extern THREAD_LOCAL struct list_head session_list;
 
-void session_zero(MinnetSession*);
-void session_clear(MinnetSession*, JSContext* ctx);
-void session_clear_rt(MinnetSession*, JSRuntime* rt);
+void session_zero(struct session_data*);
+void session_clear(struct session_data*, JSContext* ctx);
+void session_clear_rt(struct session_data*, JSRuntime* rt);
 JSValue session_object(struct wsi_opaque_user_data*, JSContext*);
 
 #endif /* QJSNET_LIB_SESSION_H */

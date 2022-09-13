@@ -1,7 +1,7 @@
 #include "context.h"
 
 JSValue
-context_exception(MinnetContext* context, JSValue retval) {
+context_exception(struct context* context, JSValue retval) {
   if(JS_IsException(retval)) {
     context->exception = TRUE;
     JSValue exception = JS_GetException(context->js);
@@ -19,7 +19,7 @@ context_exception(MinnetContext* context, JSValue retval) {
 }
 
 void
-context_clear(MinnetContext* context) {
+context_clear(struct context* context) {
   JSContext* ctx = context->js;
 
   lws_set_log_level(0, 0);

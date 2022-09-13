@@ -42,6 +42,6 @@ response_generator(struct http_response* resp, JSContext* ctx) {
 }
 
 struct http_response* response_new(JSContext*);
-struct http_response* session_response(MinnetSession*, JSCallback*);
+struct http_response* session_response(struct session_data*, JSCallback*);
 
 #endif /* WJSNET_LIBQJSNET_LIB_RESPONSE_H */

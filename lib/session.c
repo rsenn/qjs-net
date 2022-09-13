@@ -5,8 +5,8 @@ static THREAD_LOCAL uint32_t session_serial = 0;
 THREAD_LOCAL struct list_head session_list = {0, 0};
 
 void
-session_zero(MinnetSession* session) {
-  memset(session, 0, sizeof(MinnetSession));
+session_zero(struct session_data* session) {
+  memset(session, 0, sizeof(struct session_data));
   session->serial = -1;
   session->ws_obj = JS_NULL;
   session->req_obj = JS_NULL;
@@ -18,7 +18,7 @@ session_zero(MinnetSession* session) {
 }
 
 void
-session_add(MinnetSession* session) {
+session_add(struct session_data* session) {
   if(session_list.prev == NULL)
     init_list_head(&session_list);
 
@@ -26,17 +26,17 @@ session_add(MinnetSession* session) {
 }
 
 void
-session_remove(MinnetSession* session) {
+session_remove(struct session_data* session) {
   list_del(&session->link);
 }
 
 void
-session_clear(MinnetSession* session, JSContext* ctx) {
+session_clear(struct session_data* session, JSContext* ctx) {
   session_clear_rt(session, JS_GetRuntime(ctx));
 }
 
 void
-session_clear_rt(MinnetSession* session, JSRuntime* rt) {
+session_clear_rt(struct session_data* session, JSRuntime* rt) {
 
   JS_FreeValueRT(rt, session->ws_obj);
   session->ws_obj = JS_UNDEFINED;

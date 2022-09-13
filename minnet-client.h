@@ -5,23 +5,23 @@
 #include <quickjs.h>       // for JSValue, JSValueConst, JSContext
 #include <stdint.h>        // for uint8_t
 #include "callback.h"      // for CallbackList
-#include "context.h"       // for MinnetContext
+#include "context.h"       // for struct context
 #include "cutils.h"        // for BOOL
 #include "jsutils.h"       // for ResolveFunctions
-#include "session.h"       // for MinnetSession
+#include "session.h"       // for struct session_data
 
 #define client_exception(client, retval) context_exception(&(client->context), (retval))
 
 typedef struct client_context {
   union {
     int ref_count;
-    MinnetContext context;
+    struct context context;
   };
   struct lws* wsi;
   CallbackList on;
   JSValue headers, body, next;
   BOOL done;
- MinnetSession session;
+  struct session_data session;
   struct http_request* request;
   struct http_response* response;
   struct lws_client_connect_info connect_info;
@@ -29,7 +29,7 @@ typedef struct client_context {
   struct list_head link;
 } MinnetClient;
 
-void client_certificate(MinnetContext*, JSValueConst options);
+void client_certificate(struct context*, JSValueConst options);
 MinnetClient* client_new(JSContext*);
 MinnetClient* client_find(struct lws*);
 void client_free(MinnetClient*, JSContext* ctx);

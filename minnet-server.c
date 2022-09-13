@@ -18,9 +18,9 @@
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
-    {"ws", js_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"defprot", lws_callback_http_dummy, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    {"ws", js_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"defprot", lws_callback_http_dummy, sizeof(struct session_data), 1024, 0, NULL, 0},
     {"proxy-ws-raw-ws", callback_proxy_ws_server, 0, 1024, 0, NULL, 0},
     {"proxy-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
@@ -31,12 +31,12 @@ static struct lws_protocols protocols[] = {
 };
 
 static struct lws_protocols protocols2[] = {
-    {"ws", js_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"http", http_server_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
-    {"defprot", defprot_callback, sizeof(MinnetSession), 0},
+    {"ws", js_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"defprot", defprot_callback, sizeof(struct session_data), 0},
     {"proxy-ws-raw-ws", callback_proxy_ws_server, 0, 1024, 0, NULL, 0},
     {"proxy-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
-    //  {"proxy-ws", proxy_callback, sizeof(MinnetSession), 1024, 0, NULL, 0},
+    //  {"proxy-ws", proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
     //  LWS_PLUGIN_PROTOCOL_RAW_PROXY,
     {0, 0},
@@ -159,7 +159,7 @@ server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
 }
 
 void
-server_certificate(MinnetContext* context, JSValueConst options) {
+server_certificate(struct context* context, JSValueConst options) {
   struct lws_context_creation_info* info = &context->info;
   JSContext* ctx = context->js;
 
@@ -240,7 +240,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_ThrowInternalError(ctx, "lws init failed");
 
   if(ptr) {
-    MinnetClosure* closure = ptr;
+    union closure* closure = ptr;
     closure->pointer = server;
     closure->free_func = &server_free;
   }
@@ -469,7 +469,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
 JSValue
 minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  MinnetClosure* closure;
+  union closure* closure;
   JSValue ret;
 
   if(!(closure = closure_new(ctx)))

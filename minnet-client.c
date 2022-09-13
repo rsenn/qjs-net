@@ -17,7 +17,7 @@
 
 static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
-static THREAD_LOCAL struct list_head minnet_clients = {0};
+static /*THREAD_LOCAL*/ struct list_head minnet_clients = {0, 0};
 
 static const struct lws_protocols client_protocols[] = {
     {"raw", client_callback, 0, 0, 0, 0, 0},
@@ -41,7 +41,7 @@ close_reason(JSContext* ctx, const char* in, size_t len) {
 }
 
 void
-client_certificate(MinnetContext* context, JSValueConst options) {
+client_certificate(struct context* context, JSValueConst options) {
   struct lws_context_creation_info* info = &context->info;
   JSContext* ctx = context->js;
 
@@ -68,8 +68,11 @@ client_certificate(MinnetContext* context, JSValueConst options) {
 MinnetClient*
 client_new(JSContext* ctx) {
   MinnetClient* client;
-  if(!(client = js_malloc(ctx, sizeof(MinnetClient))))
+
+  if(!(client = js_mallocz(ctx, sizeof(MinnetClient))))
     return 0;
+
+  client_zero(client);
 
   if(minnet_clients.next == NULL)
     init_list_head(&minnet_clients);
@@ -174,11 +177,11 @@ minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   /*switch(magic) {
     case ON_RESOLVE: {
-      DEBUG("%s %s %d\n", __func__, "ON_RESOLVE", ((MinnetClosure*)ptr)->ref_count);
+      DEBUG("%s %s %d\n", __func__, "ON_RESOLVE", ((union closure*)ptr)->ref_count);
       break;
     }
     case ON_REJECT: {
-      DEBUG("%s %s\n", __func__, "ON_REJECT", ((MinnetClosure*)ptr)->ref_count);
+      DEBUG("%s %s\n", __func__, "ON_REJECT", ((union closure*)ptr)->ref_count);
       break;
     }
   }
@@ -206,14 +209,14 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   client_zero(client);
 
   if(ptr) {
-    MinnetClosure* closure = ptr;
+    union closure* closure = ptr;
 
     closure->pointer = client;
     closure->free_func = &client_free_rt;
   }
 
   *client = (MinnetClient){
-      .context = (MinnetContext){.ref_count = 1},
+      .context = (struct context){.ref_count = 1},
       .headers = JS_UNDEFINED,
       .body = JS_UNDEFINED,
       .next = JS_UNDEFINED,
@@ -245,7 +248,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
   {
-    MinnetContext* context = &client->context;
+    struct context* context = &client->context;
 
     context->js = ctx;
     context->error = JS_NULL;
@@ -401,7 +404,7 @@ fail:
 
 JSValue
 minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  MinnetClosure* closure;
+  union closure* closure;
   JSValue ret;
 
   if(!(closure = closure_new(ctx)))
@@ -457,7 +460,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if((ctx = client->context.js))
     opaque = lws_opaque(wsi, ctx);
 
-  LOGCB("CLIENT      ", "fd=%d, %sin='%.*s'", lws_get_socket_fd(wsi), wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in);
+  LOGCB("CLIENT      ", "fd=%d, h2=%i, tls=%i%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), (in && len) ? ", in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
 
   switch(reason) {
     case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {

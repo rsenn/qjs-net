@@ -110,7 +110,7 @@ response_redirect(struct http_response* resp, const char* location, JSContext* c
   return resp;
 }
 struct http_response*
-session_response(MinnetSession* session, JSCallback* cb) {
+session_response(struct session_data* session, JSCallback* cb) {
   struct http_response* resp = minnet_response_data2(cb->ctx, session->resp_obj);
 
   if(cb && cb->ctx) {

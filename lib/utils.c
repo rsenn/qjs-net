@@ -217,7 +217,7 @@ wsi_http2(struct lws* wsi) {
 
 BOOL
 wsi_tls(struct lws* wsi) {
-  return lws_is_ssl(wsi);
+  return lws_is_ssl(lws_get_network_wsi(wsi));
 }
 
 char*

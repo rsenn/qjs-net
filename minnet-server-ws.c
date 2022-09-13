@@ -14,7 +14,7 @@ char* lws_hdr_simple_ptr(struct lws*, int);
 
 int
 js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetSession* session = user;
+  struct session_data* session = user;
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
