@@ -1,23 +1,18 @@
 #ifndef WJSNET_LIBQJSNET_LIB_WS_H
 #define WJSNET_LIBQJSNET_LIB_WS_H
 
-#if(defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)) && !defined(__MSYS__)
+#include <libwebsockets.h>         // for lws_get_opaque_user_data
+#include <quickjs.h>               // for JSContext, JSRuntime
+#include "ringbuffer.h"  // for struct ringbuffer
+#include "cutils.h"                // for BOOL
+#include "opaque.h"                // for wsi_opaque_user_data
 
+
+#if(defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)) && !defined(__MSYS__)
 #warning winsock2
 #include <winsock2.h>
-#if 0
-struct pollfd {
-  int fd;
-  short events, revents;
-};
 #endif
-#endif
-
-#include "../minnet.h"
-#include "../minnet-ringbuffer.h"
-#include "opaque.h"
-#include <quickjs.h>
-
+ 
 struct lws;
 struct http_request;
 struct http_response;
@@ -26,7 +21,7 @@ struct socket {
   int ref_count;
   struct lws* lwsi;
   // struct wsi_opaque_user_data* opaque;
-  MinnetRingbuffer sendq;
+  struct ringbuffer sendq;
 };
 
 struct socket* ws_new(struct lws*, JSContext*);

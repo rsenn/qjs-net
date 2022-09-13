@@ -1,11 +1,7 @@
 #ifndef MINNET_WEBSOCKET_H
 #define MINNET_WEBSOCKET_H
 
-#include "lib/ws.h"
-#include "minnet.h"
-#include "minnet-ringbuffer.h"
-#include "opaque.h"
-#include <quickjs.h>
+#include "ws.h"
 
 typedef struct socket MinnetWebsocket;
 
