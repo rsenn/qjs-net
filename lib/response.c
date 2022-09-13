@@ -1,5 +1,5 @@
 #include "ws.h"
-#include "response.h"
+#include "../minnet-response.h"
 #include "buffer.h"
 #include "jsutils.h"
 #include "headers.h"

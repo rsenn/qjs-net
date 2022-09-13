@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include <quickjs.h>
 #include <cutils.h>
-#include "request.h"
+#include "../minnet-request.h"
 #include "../minnet-ringbuffer.h"
 #include "../minnet.h"
 #include "headers.h"

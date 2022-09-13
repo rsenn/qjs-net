@@ -32,13 +32,13 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   switch(reason) {
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {
 
-      MinnetRequest* req = opaque->req;
+      MinnetRequest* req = client->request;
       MinnetResponse* resp;
 
       if(req) {
         // url_fromwsi(&req->url, wsi, ctx);
 
-        session->req_obj = minnet_request_wrap(ctx, opaque->req);
+        session->req_obj = minnet_request_wrap(ctx, client->request);
       }
 
       if(!(resp = opaque->resp)) {
@@ -85,7 +85,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
 
-      MinnetRequest* req = opaque->req;
+      MinnetRequest* req = client->request;
       ByteBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
       size_t n = headers_write(&buf.write, buf.end, &req->headers, wsi);
@@ -235,7 +235,11 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         MinnetRequest* req;
         int32_t result = -1;
         JSValue ret;
+
+        url_copy(&client->response->url, client->request->url, client->on.http.ctx);
+
         ret = client_exception(client, callback_emit(&client->on.http, 2, &session->req_obj));
+
         if(JS_IsNumber(ret)) {
           JS_ToInt32(client->on.http.ctx, &result, ret);
         } else if((req = minnet_request_data2(client->on.http.ctx, ret))) {
@@ -245,12 +249,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
           if(client->request) {
             request_free(client->request, client->on.http.ctx);
-
             client->request = 0;
-          }
-          if(opaque->req) {
-            request_free(opaque->req, client->on.http.ctx);
-            opaque->req = 0;
           }
 
           if(client->response) {
@@ -263,7 +262,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           }
 
           client->request = req;
-          opaque->req = request_dup(req);
+          client->response = response_new(client->on.http.ctx);
+
+          //   opaque->req = request_dup(req);
 
           lws_client_connect_via_info(&client->connect_info);
 

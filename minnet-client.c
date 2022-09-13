@@ -343,8 +343,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   opaque = lws_opaque(client->wsi, client->context.js);
   opaque->binary = binary;
-  opaque->req = client->request;
-  opaque->resp = client->response;
+  /*opaque->req = client->request;
+  opaque->resp = client->response;*/
 
   if(!block)
     return ret;

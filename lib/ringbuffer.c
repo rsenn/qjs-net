@@ -12,7 +12,7 @@ ringbuffer_dump(struct ringbuffer const* strm) {
     fflush(stderr);*/
 }
 
-static void
+void
 ringbuffer_destroy_element(void* element) {}
 
 void

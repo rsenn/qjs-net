@@ -1,11 +1,6 @@
 #ifndef MINNET_URL_H
 #define MINNET_URL_H
 
-#include <libwebsockets.h>
-#include <quickjs.h>
-#include <cutils.h>
-#include <stdint.h>
-#include "utils.h"
 #include "url.h"
 
 typedef enum protocol MinnetProtocol;

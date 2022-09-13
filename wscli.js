@@ -192,7 +192,7 @@ async function main(...args) {
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   const { binary } = params;
-  let urls=params['@'];
+  let urls = params['@'];
 
   function createWS(url, callbacks, listen = 0) {
     let repl,
@@ -205,11 +205,9 @@ async function main(...args) {
           level && Math.log2(level)
         ] ?? level + '';
 
-
-
       //console.log('log', { p, level,msg });
 
-      if(p =='INFO' || /RECEIVE_CLIENT_HTTP_READ|\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
+      if(p == 'INFO' || /RECEIVE_CLIENT_HTTP_READ|\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
       msg = msg.replace(/\n/g, '\\n');
 
       if(params.verbose > 1 || params.debug) std.puts(p.padEnd(8) + '\t' + msg + '\n');
@@ -281,22 +279,19 @@ async function main(...args) {
         let type = (headers['content-type'] ?? 'text/html').replace(/;.*/g, '');
         let extension = '.' + type.replace(/.*\//g, '');
 
-        let { url } = resp;
+        let { url } = req;
         let { path } = url;
+
         let name = path.replace(/\/[a-z]\/.*/g, '').replace(/.*\//g, '');
 
         if(!name.endsWith(extension)) name += extension;
-
-        //console.log('onHttp', name);
 
         let buffer = resp.body;
         let text = toString(buffer);
 
         WriteFile(params.output ?? name ?? 'output.bin', buffer);
-         
-         req =  new Request(urls.shift());
 
-        console.log('onHttp', { req });
+        req = new Request(urls.shift());
 
         return req;
       },
@@ -329,7 +324,7 @@ async function main(...args) {
     }
   });
 
-  /*while(urls.length) */{
+  /*while(urls.length) */ {
     await createWS(urls.shift(), {})
       .then(() => {
         console.log('FINISHED');
