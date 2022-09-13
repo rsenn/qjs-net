@@ -34,7 +34,7 @@ struct generator*
 generator_new(JSContext* ctx) {
   struct generator* gen;
 
-  if((gen = js_malloc(ctx, sizeof(MinnetGenerator)))) {
+  if((gen = js_malloc(ctx, sizeof(struct generator)))) {
     generator_zero(gen);
     gen->ctx = ctx;
     gen->ref_count = 1;
@@ -44,7 +44,7 @@ generator_new(JSContext* ctx) {
 }
 
 JSValue
-generator_next(MinnetGenerator* gen, JSContext* ctx) {
+generator_next(struct generator* gen, JSContext* ctx) {
   JSValue ret = JS_UNDEFINED;
 
   ret = asynciterator_next(&gen->iterator, ctx);
@@ -62,7 +62,7 @@ generator_next(MinnetGenerator* gen, JSContext* ctx) {
 }
 
 ssize_t
-generator_write(MinnetGenerator* gen, const void* data, size_t len) {
+generator_write(struct generator* gen, const void* data, size_t len) {
   ssize_t ret = -1;
   if(list_empty(&gen->iterator.reads))
     return generator_queue(gen, data, len);
@@ -77,12 +77,12 @@ generator_write(MinnetGenerator* gen, const void* data, size_t len) {
 }
 
 BOOL
-generator_close(MinnetGenerator* gen, JSContext* ctx) {
+generator_close(struct generator* gen, JSContext* ctx) {
   return asynciterator_stop(&gen->iterator, JS_UNDEFINED, ctx);
 }
 
 ssize_t
-generator_queue(MinnetGenerator* gen, const void* data, size_t len) {
+generator_queue(struct generator* gen, const void* data, size_t len) {
   ssize_t ret;
 
   if((ret = buffer_append(&gen->buffer, data, len, gen->ctx)) > 0)

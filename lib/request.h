@@ -19,7 +19,7 @@ struct http_request {
   enum http_method method;
   struct url url;
   ByteBuffer headers;
-  MinnetGenerator* body;
+  struct generator* body;
 };
 
 const char* method_string(enum http_method);

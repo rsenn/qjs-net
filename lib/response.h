@@ -19,7 +19,7 @@ struct http_response {
   BOOL ok;
   ByteBuffer headers;
   union {
-    MinnetGenerator* generator;
+    struct generator* generator;
     ByteBuffer* body;
   };
 };
@@ -34,7 +34,7 @@ void response_clear(struct http_response*, JSContext*);
 void response_clear_rt(struct http_response*, JSRuntime*);
 void response_free(struct http_response*, JSContext*);
 void response_free_rt(struct http_response*, JSRuntime*);
-static inline MinnetGenerator*
+static inline struct generator*
 response_generator(struct http_response* resp, JSContext* ctx) {
   if(!resp->generator)
     resp->generator = generator_new(ctx);

@@ -1,7 +1,7 @@
 #include "opaque.h"
 #include "ws.h"
-#include "../minnet-request.h"
-#include "../minnet-response.h"
+#include "request.h"
+#include "response.h"
 #include "../minnet-form-parser.h"
 #include <assert.h>
 
