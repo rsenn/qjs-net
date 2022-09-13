@@ -188,7 +188,12 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     closure->free_func = &client_free;
   }
 
-  *client = (MinnetClient){.context = (MinnetContext){.ref_count = 1}, .headers = JS_UNDEFINED, .body = JS_UNDEFINED, .next = JS_UNDEFINED};
+  *client = (MinnetClient){
+      .context = (MinnetContext){.ref_count = 1},
+      .headers = JS_UNDEFINED,
+      .body = JS_UNDEFINED,
+      .next = JS_UNDEFINED,
+  };
 
   session_zero(&client->session);
 

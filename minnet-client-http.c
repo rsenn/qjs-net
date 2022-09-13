@@ -273,8 +273,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
           JS_ThrowInternalError(client->on.http.ctx, "onHttp didn't return a number");
 
-        if(result != 0)
+        if(result != 0) {
           lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
+        }
 
         return result;
       }

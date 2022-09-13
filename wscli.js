@@ -291,9 +291,16 @@ async function main(...args) {
 
         WriteFile(params.output ?? name ?? 'output.bin', buffer);
 
-        req = new Request(urls.shift());
+        let next = urls.length && urls.shift();
 
-        return req;
+        if(next) {
+          req = new Request(next);
+
+          return req;
+        } else {
+          //throw new Error('done');
+          return -1;
+        }
       },
       onFd(fd, rd, wr) {
         //console.log('onFd', fd, rd, wr);
