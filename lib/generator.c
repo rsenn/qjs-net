@@ -1,5 +1,4 @@
 #include "generator.h"
- 
 
 void
 generator_zero(struct generator* gen) {
@@ -91,4 +90,3 @@ generator_queue(MinnetGenerator* gen, const void* data, size_t len) {
 
   return ret;
 }
- 

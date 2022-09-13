@@ -2,6 +2,7 @@
 #include "minnet-client-http.h"
 #include "minnet-websocket.h"
 #include "minnet-response.h"
+#include "minnet.h"
 #include "headers.h"
 #include "jsutils.h"
 #include <libwebsockets.h>

@@ -6,7 +6,7 @@
 
 THREAD_LOCAL JSClassID minnet_generator_class_id;
 THREAD_LOCAL JSValue minnet_generator_proto, minnet_generator_ctor;
- 
+
 static JSValue
 minnet_generator_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   return JS_DupValue(ctx, this_val);

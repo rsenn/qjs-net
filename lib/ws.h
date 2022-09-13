@@ -1,18 +1,17 @@
 #ifndef WJSNET_LIBQJSNET_LIB_WS_H
 #define WJSNET_LIBQJSNET_LIB_WS_H
 
-#include <libwebsockets.h>         // for lws_get_opaque_user_data
-#include <quickjs.h>               // for JSContext, JSRuntime
-#include "ringbuffer.h"  // for struct ringbuffer
-#include "cutils.h"                // for BOOL
-#include "opaque.h"                // for wsi_opaque_user_data
-
+#include <libwebsockets.h> // for lws_get_opaque_user_data
+#include <quickjs.h>       // for JSContext, JSRuntime
+#include "ringbuffer.h"    // for struct ringbuffer
+#include "cutils.h"        // for BOOL
+#include "opaque.h"        // for wsi_opaque_user_data
 
 #if(defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)) && !defined(__MSYS__)
 #warning winsock2
 #include <winsock2.h>
 #endif
- 
+
 struct lws;
 struct http_request;
 struct http_response;
