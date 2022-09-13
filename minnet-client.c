@@ -93,9 +93,7 @@ client_find(struct lws* wsi) {
 }
 
 void
-client_free(MinnetClient* client) {
-  JSContext* ctx = client->context.js;
-
+client_free(MinnetClient* client, JSContext* ctx) {
   if(--client->ref_count == 0) {
     JS_FreeValue(ctx, client->headers);
     client->headers = JS_UNDEFINED;
@@ -117,6 +115,32 @@ client_free(MinnetClient* client) {
     list_del(&client->link);
 
     js_free(ctx, client);
+  }
+}
+
+void
+client_free_rt(MinnetClient* client, JSRuntime* rt) {
+  if(--client->ref_count == 0) {
+    JS_FreeValueRT(rt, client->headers);
+    client->headers = JS_UNDEFINED;
+    JS_FreeValueRT(rt, client->body);
+    client->body = JS_UNDEFINED;
+    JS_FreeValueRT(rt, client->next);
+    client->next = JS_UNDEFINED;
+
+    if(client->connect_info.method) {
+      js_free_rt(rt, (void*)client->connect_info.method);
+      client->connect_info.method = 0;
+    }
+
+    js_promise_free_rt(rt, &client->promise);
+
+    context_clear(&client->context);
+    session_clear_rt(&client->session, rt);
+
+    list_del(&client->link);
+
+    js_free_rt(rt, client);
   }
 }
 
@@ -185,7 +209,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     MinnetClosure* closure = ptr;
 
     closure->pointer = client;
-    closure->free_func = &client_free;
+    closure->free_func = &client_free_rt;
   }
 
   *client = (MinnetClient){

@@ -27,8 +27,10 @@ closure_free(void* ptr) {
     JSContext* ctx = closure->ctx;
     // printf("%s() pointer=%p\n", __func__, closure->pointer);
 
-    if(closure->free_func)
-      closure->free_func(closure->pointer);
+    if(closure->free_func) {
+      closure->free_func(closure->pointer, JS_GetRuntime(ctx));
+      closure->pointer = NULL;
+    }
 
     js_free(ctx, closure);
   }
