@@ -127,6 +127,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       int status;
       headers_tostring(ctx, &opaque->resp->headers, wsi);
 
+      if(!opaque->ws)
+        opaque->ws = ws_new(wsi, ctx);
+      session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
+
       opaque->resp->status = status = lws_http_client_http_response(wsi);
 
       lwsl_user("http-established #1 " FGC(171, "%-38s") "  server response: %d\n", lws_callback_name(reason) + 13, status);
@@ -139,6 +143,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           i += 1;
         client->response->status_text = js_strdup(ctx, &buf[i]);
       }
+
       if(method_number(client->connect_info.method) == METHOD_POST) {
         lws_client_http_body_pending(wsi, 1);
         lws_callback_on_writable(wsi);
@@ -238,10 +243,14 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         url_copy(&client->response->url, client->request->url, client->on.http.ctx);
 
-        ret = client_exception(client, callback_emit(&client->on.http, 2, &session->req_obj));
+        ret = client_exception(client, callback_emit_this(&client->on.http, session->ws_obj, 2, &session->req_obj));
 
         if(JS_IsNumber(ret)) {
           JS_ToInt32(client->on.http.ctx, &result, ret);
+
+          printf("onHttp() returned: %" PRId32 "\n", result);
+          client->wsi = wsi;
+
         } else if((req = minnet_request_data2(client->on.http.ctx, ret))) {
           url_info(req->url, &client->connect_info);
           client->connect_info.pwsi = &client->wsi;

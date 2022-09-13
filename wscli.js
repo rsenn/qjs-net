@@ -289,6 +289,8 @@ async function main(...args) {
         let buffer = resp.body;
         let text = toString(buffer);
 
+        console.log('this',this);
+
         WriteFile(params.output ?? name ?? 'output.bin', buffer);
 
         let next = urls.length && urls.shift();

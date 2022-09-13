@@ -6,15 +6,21 @@ THREAD_LOCAL struct list_head session_list = {0, 0};
 
 void
 session_zero(struct session_data* session) {
-  memset(session, 0, sizeof(struct session_data));
-  session->serial = -1;
   session->ws_obj = JS_NULL;
   session->req_obj = JS_NULL;
   session->resp_obj = JS_NULL;
+  session->mount = 0;
+  session->proxy = 0;
   session->generator = JS_NULL;
   session->next = JS_NULL;
-
   session->serial = ++session_serial;
+  session->h2 = FALSE;
+  session->in_body = FALSE;
+  session->written = 0;
+  session->server = NULL;
+  session->client = NULL;
+  buffer_init(&session->send_buf, 0, 0);
+  session->link.prev = session->link.next = NULL;
 }
 
 void

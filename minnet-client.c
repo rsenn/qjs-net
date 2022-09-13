@@ -98,6 +98,11 @@ client_find(struct lws* wsi) {
 void
 client_free(MinnetClient* client, JSContext* ctx) {
   if(--client->ref_count == 0) {
+    DEBUG("%s() client=%p\n", __func__, client);
+
+    if(client->link.prev)
+      list_del(&client->link);
+
     JS_FreeValue(ctx, client->headers);
     client->headers = JS_UNDEFINED;
     JS_FreeValue(ctx, client->body);
@@ -115,8 +120,6 @@ client_free(MinnetClient* client, JSContext* ctx) {
     context_clear(&client->context);
     session_clear(&client->session, ctx);
 
-    list_del(&client->link);
-
     js_free(ctx, client);
   }
 }
@@ -124,6 +127,11 @@ client_free(MinnetClient* client, JSContext* ctx) {
 void
 client_free_rt(MinnetClient* client, JSRuntime* rt) {
   if(--client->ref_count == 0) {
+    DEBUG("%s() client=%p\n", __func__, client);
+
+    if(client->link.prev)
+      list_del(&client->link);
+
     JS_FreeValueRT(rt, client->headers);
     client->headers = JS_UNDEFINED;
     JS_FreeValueRT(rt, client->body);
@@ -140,8 +148,6 @@ client_free_rt(MinnetClient* client, JSRuntime* rt) {
 
     context_clear(&client->context);
     session_clear_rt(&client->session, rt);
-
-    list_del(&client->link);
 
     js_free_rt(rt, client);
   }
@@ -490,6 +496,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
     case LWS_CALLBACK_WSI_CREATE:
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
+      if(!opaque->ws)
+        opaque->ws = ws_new(wsi, ctx);
       break;
     }
     case LWS_CALLBACK_CLIENT_CLOSED: {
