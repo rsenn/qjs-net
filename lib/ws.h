@@ -22,8 +22,7 @@ struct lws;
 struct http_request;
 struct http_response;
 
-
- struct socket {
+struct socket {
   int ref_count;
   struct lws* lwsi;
   // struct wsi_opaque_user_data* opaque;
@@ -37,7 +36,6 @@ void ws_free_rt(struct socket*, JSRuntime*);
 void ws_free(struct socket*, JSContext*);
 struct socket* ws_dup(struct socket*);
 int ws_write(struct socket* ws, BOOL binary, JSContext* ctx);
- 
 
 static inline struct session_data*
 lws_session(struct lws* wsi) {
@@ -48,7 +46,7 @@ lws_session(struct lws* wsi) {
 
   return 0;
 }
- 
+
 static inline struct wsi_opaque_user_data*
 ws_opaque(struct socket* ws) {
   return ws->lwsi ? lws_get_opaque_user_data(ws->lwsi) : 0;
@@ -64,5 +62,5 @@ ws_from_wsi(struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
   return (opaque = lws_get_opaque_user_data(wsi)) ? opaque->ws : 0;
 }
- 
+
 #endif /* WJSNET_LIBQJSNET_LIB_WS_H */

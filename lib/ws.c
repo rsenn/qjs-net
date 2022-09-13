@@ -1,10 +1,11 @@
+#include "ws.h"
 #include "buffer.h"
-#include "jsutils.h" 
-#include "minnet.h"
+#include "jsutils.h"
 #include "opaque.h"
 #include <strings.h>
 #include <assert.h>
 #include <libwebsockets.h>
+
 struct socket*
 ws_new(struct lws* wsi, JSContext* ctx) {
   struct socket* ws;

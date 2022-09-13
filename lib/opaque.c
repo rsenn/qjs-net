@@ -1,5 +1,5 @@
 #include "opaque.h"
-#include "../minnet-websocket.h"
+#include "ws.h"
 #include "../minnet-request.h"
 #include "../minnet-response.h"
 #include "../minnet-form-parser.h"

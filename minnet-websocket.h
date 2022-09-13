@@ -1,15 +1,15 @@
 #ifndef MINNET_WEBSOCKET_H
 #define MINNET_WEBSOCKET_H
- 
+
 #include "lib/ws.h"
 #include "minnet.h"
 #include "minnet-ringbuffer.h"
 #include "opaque.h"
 #include <quickjs.h>
- 
-typedef struct socket  MinnetWebsocket;
 
-JSValue minnet_ws_new(JSContext*, struct lws*); 
+typedef struct socket MinnetWebsocket;
+
+JSValue minnet_ws_new(JSContext*, struct lws*);
 struct wsi_opaque_user_data* lws_opaque(struct lws*, JSContext*);
 JSValue minnet_ws_wrap(JSContext*, MinnetWebsocket*);
 JSValue minnet_ws_fromwsi(JSContext*, struct lws*);
