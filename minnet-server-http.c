@@ -23,7 +23,7 @@
 #include "quickjs.h"            // for JS_FreeValue, js_free, JS_FreeCString
 #include "utils.h"              // for wsi_http2, FG, METHOD_GET, NC, byte_chr
 
-void lws_header_table_reset(struct lws* wsi, int autoservice);
+int lws_hdr_simple_create(struct lws*, enum lws_token_indexes, const char*);
 
 MinnetVhostOptions*
 vhost_options_create(JSContext* ctx, const char* name, const char* value) {

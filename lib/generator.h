@@ -1,13 +1,8 @@
 #ifndef QUICKJS_NET_LIB_GENERATOR_H
 #define QUICKJS_NET_LIB_GENERATOR_H
 
-#include <cutils.h>    // for BOOL
-#include <quickjs.h>   // for JSContext, JSValue
-#include <stddef.h>    // for size_t
-#include <stdint.h>    // for uint64_t
-#include <sys/types.h> // for ssize_t
-#include "buffer.h"    // for ByteBuffer
-#include "jsutils.h"   // for AsyncIterator
+#include "buffer.h"
+#include "asynciterator.h" // for AsyncIterator
 
 struct generator {
   ByteBuffer buffer;
