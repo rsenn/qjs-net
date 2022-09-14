@@ -23,6 +23,8 @@
 #include "quickjs.h"            // for JS_FreeValue, js_free, JS_FreeCString
 #include "utils.h"              // for wsi_http2, FG, METHOD_GET, NC, byte_chr
 
+void lws_header_table_reset(struct lws* wsi, int autoservice);
+
 MinnetVhostOptions*
 vhost_options_create(JSContext* ctx, const char* name, const char* value) {
   MinnetVhostOptions* vo = js_mallocz(ctx, sizeof(MinnetVhostOptions));
@@ -226,7 +228,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
     size_t plen = dotslashslash ? dotslashslash - dest : 0;
     const char* origin = &dest[plen ? plen + 3 : 0];
     const char* index = JS_IsUndefined(def) ? 0 : JS_ToCString(ctx, def);
-    enum lws_mount_protocols proto = plen == 0 ? LWSMPRO_CALLBACK : !strncmp(dest, "https", plen) ? LWSMPRO_HTTPS : LWSMPRO_HTTP;
+    enum lws_mount_protocols proto = plen == 0 ? LWSMPRO_CALLBACK : (plen == 5 && !strncmp(dest, "https", plen)) ? LWSMPRO_HTTPS : LWSMPRO_HTTP;
 
     ret = mount_create(ctx, path, origin, index, protocol, proto);
 
@@ -326,6 +328,11 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
     js_free(ctx, (void*)m->pro);
 
   js_free(ctx, (void*)m);
+}
+
+BOOL
+mount_is_proxy(MinnetHttpMount const* m) {
+  return m->lws.origin_protocol == LWSMPRO_HTTP || m->lws.origin_protocol == LWSMPRO_HTTPS;
 }
 
 int
@@ -597,6 +604,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         opaque && opaque->req ? url_string(&opaque->req->url) : 0,
         session ? session->serial : 0);
 
+  if(opaque->upstream) {
+    if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION) {
+      printf("FILTER(2)\n");
+    }
+
+    return lws_callback_http_dummy(wsi, reason, user, in, len);
+  }
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
@@ -617,6 +631,17 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+
+      if((session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, in, len))) {
+        if(mount_is_proxy(session->mount))
+          lws_hdr_simple_create(wsi, WSI_TOKEN_HOST, "");
+      }
+
+      if(opaque->upstream) {
+        printf("FILTER\n");
+        return lws_callback_http_dummy(wsi, reason, user, in, len);
+      }
+
       if(!opaque->req)
         opaque->req = request_fromwsi(wsi, ctx);
 
@@ -626,6 +651,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         url_set_path_len(&opaque->req->url, in, len, ctx);
       }
+
+      url_set_protocol(&opaque->req->url, wsi_tls(wsi) ? "https" : "http");
 
       // LOGCB("HTTP", "len=%d, in=%.*s", (int)len, (int)len, (char*)in);
       break;
@@ -646,6 +673,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP_BODY: {
+
+      if(opaque->upstream)
+        return lws_callback_http_dummy(wsi, reason, user, in, len);
+
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
 
       session->in_body = TRUE;
@@ -973,8 +1004,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       struct wsi_opaque_user_data* opaque2 = lws_get_opaque_user_data(lws_get_parent(wsi));
 
       opaque2->upstream = wsi;
-
-      printf("ESTABLISHED\n");
     }
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ:

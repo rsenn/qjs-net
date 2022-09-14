@@ -60,6 +60,15 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
+
+      struct lws* parent;
+
+      if((parent = lws_get_parent(wsi))) {
+        struct wsi_opaque_user_data* opaque2 = lws_get_opaque_user_data(parent);
+
+        opaque2->upstream = wsi;
+      }
+
       wsi_cert(wsi);
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);
