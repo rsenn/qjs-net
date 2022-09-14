@@ -5,7 +5,7 @@ import REPL from 'repl';
 import inspect from 'inspect';
 import net, { Socket, URL, Request } from 'net';
 import { Console } from 'console';
-import { quote, toString } from 'util';
+import { quote, toString, toArrayBuffer } from 'util';
 
 const connections = new Set();
 let debug = 0,
@@ -29,6 +29,7 @@ function FromDomain(buffer) {
 
 function WriteFile(filename, buffer) {
   let fd;
+  if(typeof buffer == 'string') buffer = toArrayBuffer(buffer);
 
   if((fd = os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)) != -1) {
     let r = os.write(fd, buffer, 0, buffer.byteLength);
@@ -270,7 +271,7 @@ async function main(...args) {
         }
       },
       onHttp(req, resp) {
-        //console.log('onHttp', console.config({ compact: false }), { req, resp });
+        console.log('onHttp', console.config({ compact: false }), { req, resp });
 
         let { headers } = resp;
 
@@ -284,12 +285,15 @@ async function main(...args) {
 
         let name = path.replace(/\/[a-z]\/.*/g, '').replace(/.*\//g, '');
 
+        if(name == '') name = 'index';
+
         if(!name.endsWith(extension)) name += extension;
 
         let buffer = resp.body;
         let text = toString(buffer);
 
-        console.log('this',this);
+        console.log('this', this);
+        //console.log('buffer',buffer);
 
         WriteFile(params.output ?? name ?? 'output.bin', buffer);
 

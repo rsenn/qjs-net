@@ -47,7 +47,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         resp->generator = generator_new(ctx);
         resp->status = lws_http_client_http_response(wsi);
 
-        headers_tostring(ctx, &opaque->resp->headers, wsi);
+        headers_tobuffer(ctx, &opaque->resp->headers, wsi);
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
       }
       /*    if(js_is_nullish(session->req_obj))
@@ -125,7 +125,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
       int status;
-      headers_tostring(ctx, &opaque->resp->headers, wsi);
+      headers_tobuffer(ctx, &opaque->resp->headers, wsi);
+
+      // opaque->resp->headers = headers_gettoken(ctx, wsi, WSI_TOKEN_HTTP_CONTENT_TYPE);
 
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);
@@ -238,10 +240,13 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
       if(client->on.http.ctx) {
         MinnetRequest* req;
+        MinnetResponse* resp = minnet_response_data2(client->on.http.ctx, session->resp_obj);
         int32_t result = -1;
         JSValue ret;
 
-        url_copy(&client->response->url, client->request->url, client->on.http.ctx);
+        url_copy(&resp->url, client->request->url, client->on.http.ctx);
+
+        resp->type = headers_get(&resp->headers, "content-type", client->on.http.ctx);
 
         ret = client_exception(client, callback_emit_this(&client->on.http, session->ws_obj, 2, &session->req_obj));
 

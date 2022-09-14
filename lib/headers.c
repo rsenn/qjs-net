@@ -189,7 +189,7 @@ headers_at(ByteBuffer* buffer, size_t* lenptr, size_t index) {
 }
 
 char*
-headers_get(ByteBuffer* buffer, size_t* lenptr, const char* name) {
+headers_getlen(ByteBuffer* buffer, size_t* lenptr, const char* name) {
   ssize_t index;
 
   if((index = headers_find(buffer, name)) != -1) {
@@ -209,12 +209,22 @@ headers_get(ByteBuffer* buffer, size_t* lenptr, const char* name) {
   return 0;
 }
 
+char*
+headers_get(ByteBuffer* buffer, const char* name, JSContext* ctx) {
+  size_t len;
+  char* str;
+
+  if((str = headers_getlen(buffer, &len, name)))
+    return js_strndup(ctx, str, len);
+  return 0;
+}
+
 ssize_t
 headers_copy(ByteBuffer* buffer, char* dest, size_t sz, const char* name) {
   char* hdr;
   size_t len;
 
-  if((hdr = headers_get(buffer, &len, name))) {
+  if((hdr = headers_getlen(buffer, &len, name))) {
     len = MIN(len, sz);
 
     strncpy(dest, hdr, len);
@@ -254,7 +264,7 @@ headers_unset(ByteBuffer* buffer, const char* name) {
 }
 
 int
-headers_tostring(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
+headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   int tok, len, count = 0;
 
   if(!headers->start)
@@ -284,4 +294,32 @@ headers_tostring(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
     }
   }
   return count;
+}
+
+char*
+headers_gettoken(JSContext* ctx, struct lws* wsi, enum lws_token_indexes tok) {
+  int len;
+
+  if((len = lws_hdr_total_length(wsi, tok)) > 0) {
+    char* hdr;
+
+    if((hdr = js_malloc(ctx, len + 1))) {
+      lws_hdr_copy(wsi, hdr, len + 1, tok);
+      hdr[len] = '\0';
+      return hdr;
+    }
+  }
+  return 0;
+}
+
+char*
+headers_tostring(JSContext* ctx, struct lws* wsi) {
+  ByteBuffer buf = BUFFER_0();
+  char* ret = 0;
+  headers_tobuffer(ctx, &buf, wsi);
+
+  ret = js_strndup(ctx, (const char*)buf.start, buffer_BYTES(&buf));
+
+  buffer_free(&buf, ctx);
+  return ret;
 }

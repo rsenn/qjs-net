@@ -340,7 +340,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->options |= LWS_SERVER_OPTION_PEER_CERT_NOT_REQUIRED;
   info->options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
   info->options |= LWS_SERVER_OPTION_DISABLE_IPV6;
-  // info->options |= LWS_SERVER_OPTION_IGNORE_MISSING_CERT;
+  info->options |= LWS_SERVER_OPTION_IGNORE_MISSING_CERT;
 
   // info->options |= LWS_SERVER_OPTION_CREATE_VHOST_SSL_CTX;
 

@@ -28,6 +28,7 @@ struct wsi_opaque_user_data {
   struct form_parser* form_parser;
   char* uri;
   size_t uri_len;
+  struct lws* upstream;
 };
 
 extern THREAD_LOCAL int64_t serial;

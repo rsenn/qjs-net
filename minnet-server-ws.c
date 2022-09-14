@@ -27,13 +27,14 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
   if(lws_reason_http(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
-  // LOGCB("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in, session ? session->serial : 0);
+  LOGCB("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in, session ? session->serial : 0);
 
   switch(reason) {
     case LWS_CALLBACK_CONNECTING: {
       break;
     }
     case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
+      X509_STORE_CTX_set_error(user, X509_V_OK);
       return 0;
     }
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
@@ -118,7 +119,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       if(!opaque->req) {
         opaque->req = request_new(url, METHOD_GET, ctx);
-        headers_tostring(ctx, &opaque->req->headers, wsi);
+        headers_tobuffer(ctx, &opaque->req->headers, wsi);
       } else {
         url_free(&url, ctx);
       }
@@ -230,6 +231,8 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;
     }
+    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
+    case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: break;
     case LWS_CALLBACK_CONFIRM_EXTENSION_OKAY: {
       return 0;
     }

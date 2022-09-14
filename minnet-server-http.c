@@ -9,7 +9,7 @@
 #include <string.h>             // for strlen, size_t, strncmp, strcmp, strstr
 #include <sys/types.h>          // for ssize_t
 #include "context.h"            // for struct context
-#include "headers.h"            // for headers_tostring
+#include "headers.h"            // for headers_tobuffer
 #include "jsutils.h"            // for js_is_iterator, JSBuffer, js_buffer_...
 #include "minnet-form-parser.h" // for form_parser, form_parser::(anonymous)
 #include "minnet-generator.h"   // for MinnetGenerator, generator_close
@@ -598,7 +598,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         session ? session->serial : 0);
 
   switch(reason) {
-    case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
     case LWS_CALLBACK_PROTOCOL_INIT:
@@ -611,7 +610,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         return -1;
 
 
-      //int num_hdr = headers_tostring(ctx, &opaque->req->headers, wsi);
+      //int num_hdr = headers_tobuffer(ctx, &opaque->req->headers, wsi);
 
       LOGCB("HTTP", "fd=%i, num_hdr=%i", lws_get_socket_fd(lws_get_network_wsi(wsi)), num_hdr);
  */ break;
@@ -624,9 +623,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(in) {
         opaque->uri = in;
         opaque->uri_len = len ? len : strlen(in);
+
+        url_set_path_len(&opaque->req->url, in, len, ctx);
       }
 
-      LOGCB("HTTP", "len=%d, in=%.*s", (int)len, (int)len, (char*)in);
+      // LOGCB("HTTP", "len=%d, in=%.*s", (int)len, (int)len, (char*)in);
       break;
     }
 
@@ -753,7 +754,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       // request_query(opaque->req, wsi, ctx);
 
       if(!opaque->req->headers.write) {
-        /*int num_hdr =*/headers_tostring(ctx, &opaque->req->headers, wsi);
+        /*int num_hdr =*/headers_tobuffer(ctx, &opaque->req->headers, wsi);
       }
       {
         MinnetHttpMount* mounts = (MinnetHttpMount*)server->context.info.mounts;
@@ -903,6 +904,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_HTTP_WRITEABLE: {
 
+      if(opaque->upstream)
+        return lws_callback_http_dummy(wsi, reason, user, in, len);
+
       if(session->in_body)
         break;
 
@@ -915,10 +919,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         session->resp_obj = minnet_response_wrap(ctx, resp);
       }
 
-      int ret = http_server_generate(ctx, session, resp, &done);
+      ret = http_server_generate(ctx, session, resp, &done);
 
-      if(http_server_writable(wsi, resp, done) == 1)
-        return http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, session, in, len);
+      if(resp->body)
+        if(http_server_writable(wsi, resp, done) == 1)
+          return http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, session, in, len);
 
       return ret;
     }
@@ -951,6 +956,31 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
     case LWS_CALLBACK_GET_THREAD_ID: {
       break;
+    }
+    case LWS_CALLBACK_RECEIVE_CLIENT_HTTP: /*{
+      int ret;
+      static uint8_t buffer[1024 + LWS_PRE];
+      ByteBuffer buf = BUFFER(buffer);
+      int len = buffer_AVAIL(&buf);
+
+      ret = lws_http_client_read(wsi, (char**)&buf.write, &len);
+      if(ret)
+        return -1;
+      return 0;
+      break;
+    }*/
+    case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
+      struct wsi_opaque_user_data* opaque2 = lws_get_opaque_user_data(lws_get_parent(wsi));
+
+      opaque2->upstream = wsi;
+
+      printf("ESTABLISHED\n");
+    }
+    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
+    case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ:
+    case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
+    case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
+      return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
     default: {
       minnet_lws_unhandled(__func__, reason);
