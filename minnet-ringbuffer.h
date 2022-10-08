@@ -1,6 +1,7 @@
 #ifndef MINNET_RINGBUFFER_H
 #define MINNET_RINGBUFFER_H
 
+#include "utils.h"
 #include "ringbuffer.h"
 
 typedef struct ringbuffer MinnetRingbuffer;

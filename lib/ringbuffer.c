@@ -1,4 +1,5 @@
 #include "ringbuffer.h"
+#include "utils.h"
 #include <quickjs.h>
 #include <assert.h>
 #include <libwebsockets.h>

@@ -25,7 +25,6 @@ JSValue generator_next(struct generator*, JSContext*);
 ssize_t generator_queue(struct generator*, const void*, size_t);
 ssize_t generator_write(struct generator*, const void*, size_t);
 BOOL generator_close(struct generator*, JSContext* ctx);
-JSValue minnet_generator_create(JSContext*, struct generator**);
 
 static inline struct generator*
 generator_dup(struct generator* gen) {

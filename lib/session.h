@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "buffer.h"
 #include "callback.h"
+#include "utils.h"
 #include <list.h>
 
 struct http_mount;

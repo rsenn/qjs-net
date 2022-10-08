@@ -634,7 +634,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if((session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, in, len))) {
         if(mount_is_proxy(session->mount))
-          lws_hdr_simple_create(wsi, WSI_TOKEN_HOST, "");
+          lws_hdr_simple_create(wsi, wsi_http2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST, "");
       }
 
       if(opaque->upstream) {

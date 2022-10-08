@@ -271,6 +271,7 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
     JS_CFUNC_SPECIAL_DEF("socket", 1, constructor, minnet_ws_constructor),
     JS_CFUNC_SPECIAL_DEF("url", 1, constructor, minnet_url_constructor),
+    JS_CFUNC_SPECIAL_DEF("generator", 1, constructor, minnet_generator_constructor),
     // JS_CGETSET_DEF("log", get_log, set_log),
     // JS_CGETSET_DEF("sessions", minnet_get_sessions, 0),
     JS_CFUNC_DEF("getSessions", 0, minnet_get_sessions),
@@ -411,6 +412,11 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Hash", minnet_hash_ctor);
 
+  minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetHash", 0, JS_CFUNC_constructor, 0);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
+
   {
     JSValue minnet_default = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, minnet_default, minnet_funcs, countof(minnet_funcs));
@@ -432,6 +438,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExport(ctx, m, "FormParser");
   JS_AddModuleExport(ctx, m, "Hash");
+  JS_AddModuleExport(ctx, m, "Generator");
   JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExport(ctx, m, "default");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));

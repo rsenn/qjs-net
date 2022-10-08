@@ -1,3 +1,4 @@
+#include "utils.h"
 #include "headers.h"
 #include <libwebsockets.h>
 #include <strings.h>

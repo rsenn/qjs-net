@@ -1,12 +1,13 @@
 #ifndef QJSNET_LIB_BUFFER_H
 #define QJSNET_LIB_BUFFER_H
 
-#include <stdint.h>
-#include <stdarg.h>
-#include <sys/types.h>
-#include <quickjs.h>
-#include <cutils.h>
-#include "jsutils.h"
+#include <cutils.h>        // for BOOL
+#include <libwebsockets.h> // for LWS_PRE
+#include <quickjs.h>       // for JSContext, JSValue, JS_GetRuntime, JSRuntime
+#include <stdarg.h>        // for va_list
+#include <stdint.h>        // for uint8_t
+#include <string.h>        // for size_t, memcpy
+#include <sys/types.h>     // for ssize_t
 
 typedef struct byte_block {
   uint8_t* start;
