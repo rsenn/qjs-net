@@ -12,7 +12,9 @@ let debug = 0,
   params;
 
 function MakePrompt(prefix, suffix, commandMode = false) {
-  return `\x1b[38;5;40m${prefix} \x1b[38;5;33m${suffix}\x1b[0m ${commandMode ? 'COMMAND' : 'DATA'} > `;
+  return `\x1b[38;5;40m${prefix} \x1b[38;5;33m${suffix}\x1b[0m ${
+    commandMode ? 'COMMAND' : 'DATA'
+  } > `;
 }
 
 function FromDomain(buffer) {
@@ -29,13 +31,25 @@ function FromDomain(buffer) {
 
 function WriteFile(filename, buffer) {
   let fd;
-  if(typeof buffer == 'string') buffer = toArrayBuffer(buffer);
+  if(typeof buffer == 'string')
+    buffer = toArrayBuffer(buffer);
 
-  if((fd = os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)) != -1) {
+  if(
+    (fd = os.open(
+      filename,
+      os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+      0o644
+    )) != -1
+  ) {
     let r = os.write(fd, buffer, 0, buffer.byteLength);
     os.close(fd);
     if(r >= 0) console.log(`Wrote '${filename}'.`);
-    else console.log(`Error writing '${filename}': ${std.strerror(util.error().errno)}`);
+    else
+      console.log(
+        `Error writing '${filename}': ${std.strerror(
+          util.error().errno
+        )}`
+      );
     return r;
   }
 }
@@ -46,7 +60,11 @@ function ToDomain(str, alpha = false) {
     .reduce(
       alpha
         ? (a, s) => a + String.fromCharCode(s.length) + s
-        : (a, s) => a.concat([s.length, ...s.split('').map(ch => ch.charCodeAt(0))]),
+        : (a, s) =>
+            a.concat([
+              s.length,
+              ...s.split('').map(ch => ch.charCodeAt(0))
+            ]),
       alpha ? '' : []
     );
 }
@@ -54,7 +72,9 @@ function ToDomain(str, alpha = false) {
 function DNSQuery(domain) {
   let type = 0x01;
   if(/^([0-9]+\.?){4}$/.test(domain)) {
-    domain = domain.split('.').reverse().join('.') + '.in-addr.arpa';
+    domain =
+      domain.split('.').reverse().join('.') +
+      '.in-addr.arpa';
     type = 0x0c;
   }
   //console.log('DNSQuery', domain);
@@ -78,7 +98,11 @@ function DNSQuery(domain) {
     0x00,
     0x01
   ]).buffer;
-  new DataView(outBuf).setUint16(0, outBuf.byteLength - 2, false);
+  new DataView(outBuf).setUint16(
+    0,
+    outBuf.byteLength - 2,
+    false
+  );
   //console.log('DNSQuery', outBuf);
   return outBuf;
 }
@@ -118,12 +142,16 @@ class CLI extends REPL {
       std.exit(0);
     });
     let orig_log = console.log;
-    let log = this.printFunction((...args) => orig_log(...args));
+    let log = this.printFunction((...args) =>
+      orig_log(...args)
+    );
     console.log = (...args) => {
       //log('console.log:', args);
       //while(str.endsWith('\n')) str = str.slice(0, -1);
 
-      this.printStatus(args.map(arg => inspect(arg, console.options)));
+      this.printStatus(
+        args.map(arg => inspect(arg, console.options))
+      );
     };
     this.commandMode = false;
     this.commands['\x1b'] ??= this.escape;
@@ -134,13 +162,21 @@ class CLI extends REPL {
   help() {}
 
   show(arg) {
-    std.puts((typeof arg == 'string' ? arg : inspect(arg, globalThis.console.options)) + '\n');
+    std.puts(
+      (typeof arg == 'string'
+        ? arg
+        : inspect(arg, globalThis.console.options)) + '\n'
+    );
   }
 
   escape() {
     this.commandMode = !this.commandMode;
     this.readlineRemovePrompt();
-    this.prompt = this.ps1 = MakePrompt(this.prefix, this.suffix, this.commandMode);
+    this.prompt = this.ps1 = MakePrompt(
+      this.prefix,
+      this.suffix,
+      this.commandMode
+    );
     this.readlinePrintPrompt();
   }
 
@@ -149,14 +185,23 @@ class CLI extends REPL {
 
     if(typeof data == 'string' && data.length > 0) {
       this.printStatus(`Sending '${data}'`, false);
-      for(let connection of connections) connection.send(data);
+      for(let connection of connections)
+        connection.send(data);
     }
   }
 }
 
 async function main(...args) {
-  const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
-  globalThis.console = new Console({ inspectOptions: { depth: Infinity, compact: 1, customInspect: true } });
+  const base = scriptArgs[0]
+    .replace(/.*\//g, '')
+    .replace(/\.[a-z]*$/, '');
+  globalThis.console = new Console({
+    inspectOptions: {
+      depth: Infinity,
+      compact: 1,
+      customInspect: true
+    }
+  });
   let headers = [];
   params = GetOpt(
     {
@@ -188,9 +233,14 @@ async function main(...args) {
     },
     args
   );
-  const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', method } = params;
+  const {
+    'ssl-cert': sslCert = 'localhost.crt',
+    'ssl-private-key': sslPrivateKey = 'localhost.key',
+    method
+  } = params;
   //  const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
-  const listen = params.connect && !params.listen ? false : true;
+  const listen =
+    params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   const { binary } = params;
   let urls = params['@'];
@@ -200,21 +250,45 @@ async function main(...args) {
       is_dns,
       urlObj = new URL(url);
 
-    net.setLog(net.LLL_USER | (((debug ? net.LLL_INFO : net.LLL_NOTICE) << 1) - 1), (level, msg) => {
-      let p =
-        ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][
-          level && Math.log2(level)
-        ] ?? level + '';
+    net.setLog(
+      net.LLL_USER |
+        (((debug ? net.LLL_INFO : net.LLL_NOTICE) << 1) -
+          1),
+      (level, msg) => {
+        let p =
+          [
+            'ERR',
+            'WARN',
+            'NOTICE',
+            'INFO',
+            'DEBUG',
+            'PARSER',
+            'HEADER',
+            'EXT',
+            'CLIENT',
+            'LATENCY',
+            'MINNET',
+            'THREAD'
+          ][level && Math.log2(level)] ?? level + '';
 
-      //console.log('log', { p, level,msg });
+        //console.log('log', { p, level,msg });
 
-      if(p == 'INFO' || /RECEIVE_CLIENT_HTTP_READ|\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
-      msg = msg.replace(/\n/g, '\\n');
+        if(
+          p == 'INFO' ||
+          /RECEIVE_CLIENT_HTTP_READ|\[mux|__lws|\[wsicli|lws_/.test(
+            msg
+          )
+        )
+          return;
+        msg = msg.replace(/\n/g, '\\n');
 
-      if(params.verbose > 1 || params.debug) std.puts(p.padEnd(8) + '\t' + msg + '\n');
-    });
+        if(params.verbose > 1 || params.debug)
+          std.puts(p.padEnd(8) + '\t' + msg + '\n');
+      }
+    );
 
-    if(params.verbose) console.log(`Connecting to '${url}'...`);
+    if(params.verbose)
+      console.log(`Connecting to '${url}'...`);
 
     const fn = [net.client, net.server][+listen];
     return fn(url, {
@@ -240,7 +314,8 @@ async function main(...args) {
 
         Object.assign(globalThis, { ws, req });
 
-        if(params.verbose) console.log('onConnect', { ws, req });
+        if(params.verbose)
+          console.log('onConnect', { ws, req });
         const remote = `${ws.address}:${ws.port}`;
         try {
           repl = globalThis.repl = new CLI(remote);
@@ -271,19 +346,27 @@ async function main(...args) {
         }
       },
       onHttp(req, resp) {
-        console.log('onHttp', console.config({ compact: false }), { req, resp });
+        console.log(
+          'onHttp',
+          console.config({ compact: false }),
+          { req, resp }
+        );
 
         let { headers } = resp;
 
         //console.log('response.headers', headers['content-type']);
 
-        let type = (headers['content-type'] ?? 'text/html').replace(/;.*/g, '');
+        let type = (
+          headers['content-type'] ?? 'text/html'
+        ).replace(/;.*/g, '');
         let extension = '.' + type.replace(/.*\//g, '');
 
         let { url } = req;
         let { path } = url;
 
-        let name = path.replace(/\/[a-z]\/.*/g, '').replace(/.*\//g, '');
+        let name = path
+          .replace(/\/[a-z]\/.*/g, '')
+          .replace(/.*\//g, '');
 
         if(name == '') name = 'index';
 
@@ -295,7 +378,10 @@ async function main(...args) {
         console.log('this', this);
         //console.log('buffer',buffer);
 
-        WriteFile(params.output ?? name ?? 'output.bin', buffer);
+        WriteFile(
+          params.output ?? name ?? 'output.bin',
+          buffer
+        );
 
         let next = urls.length && urls.shift();
 
@@ -316,7 +402,9 @@ async function main(...args) {
       onMessage(ws, msg) {
         //console.log('onMessage', { ws, msg });
         if(typeof msg == 'string') {
-          msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+          msg = msg
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r');
           msg = msg.substring(0, 100);
         }
         if(is_dns) {
@@ -357,9 +445,15 @@ function GetOpt(options = {}, args) {
   let s, l;
   let r = {};
   let positional = (r['@'] = []);
-  if(!(options instanceof Array)) options = Object.entries(options);
+  if(!(options instanceof Array))
+    options = Object.entries(options);
   const findOpt = a =>
-    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
+    options.find(
+      ([optname, option]) =>
+        (Array.isArray(option)
+          ? option.indexOf(a) != -1
+          : false) || a == optname
+    );
   let [, params] = options.find(o => o[0] == '@') || [];
   if(typeof params == 'string') params = params.split(',');
   for(let i = 0; i < args.length; i++) {
@@ -376,7 +470,8 @@ function GetOpt(options = {}, args) {
       if((o = findOpt(n))) {
         const [has_arg, handler] = o[1];
         if(has_arg) {
-          if(a.length > y) v = a.substring(y + (a[y] == '='));
+          if(a.length > y)
+            v = a.substring(y + (a[y] == '='));
           else v = args[++i];
         } else {
           v = true;
@@ -410,7 +505,11 @@ function GetOpt(options = {}, args) {
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
-  console.log(`FAIL: ${error && error.message}\n${error && error.stack}`);
+  console.log(
+    `FAIL: ${error && error.message}\n${
+      error && error.stack
+    }`
+  );
   std.exit(1);
 } finally {
   //console.log('SUCCESS');
