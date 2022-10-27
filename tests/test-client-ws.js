@@ -40,7 +40,7 @@ function main(...args) {
         onMessage(ws, msg) {
           log(`onMessage '${msg}'`);
 
-          if(msg.endsWith( 'QUIT')) {
+          if(msg.endsWith('QUIT')) {
             log(`CLOSING!`);
             ws.close(1001);
           }

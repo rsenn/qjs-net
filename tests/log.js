@@ -53,5 +53,5 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
 
 export const log = (() => {
   const name = scriptArgs[0].replace(/.*\//g, '');
-return (...args) => console.log(name + ':', ...args);
+  return (...args) => console.log(name + ':', ...args);
 })();
