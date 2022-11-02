@@ -125,6 +125,19 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
       int status;
+         MinnetResponse* resp;
+
+   
+      if(!(resp = opaque->resp)) {
+        resp = opaque->resp = response_new(ctx);
+
+        resp->generator = generator_new(ctx);
+        resp->status = lws_http_client_http_response(wsi);
+
+        headers_tobuffer(ctx, &opaque->resp->headers, wsi);
+        session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
+      }
+
       headers_tobuffer(ctx, &opaque->resp->headers, wsi);
 
       // opaque->resp->headers = headers_gettoken(ctx, wsi, WSI_TOKEN_HTTP_CONTENT_TYPE);
