@@ -7,7 +7,7 @@
 union closure {
   struct {
     void* pointer;
-    void (*free_func)();
+    void (*free_func)(void *, JSRuntime*);
     int ref_count;
     JSContext* ctx;
   };
