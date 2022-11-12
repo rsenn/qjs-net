@@ -5,7 +5,7 @@
 
 typedef struct allocated {
   void* pointer;
-  void (*free_func)(void *);
+  void (*free_func)(void*);
 } Allocated;
 
 #define ALLOCATED(ptr, free_func) \

@@ -96,3 +96,47 @@ ws_write(struct socket* ws, BOOL binary, JSContext* ctx) {
 
   return ret;
 }
+
+typedef struct {
+  JSContext* ctx;
+  struct socket* ws;
+} WSWantWrite;
+
+static void
+ws_want_write_free(void* ptr) {
+  WSWantWrite* closure = ptr;
+  JSContext* ctx = closure->ctx;
+
+  ws_free(closure->ws, ctx);
+  js_free(ctx, closure);
+};
+
+static JSValue
+want_write(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  WSWantWrite* closure = ptr;
+
+  lws_callback_on_writable(closure->ws->lwsi);
+  return JS_UNDEFINED;
+}
+
+JSValue
+ws_want_write(struct socket* ws, JSContext* ctx) {
+  WSWantWrite* h;
+
+  if(!(h = js_mallocz(ctx, sizeof(WSWantWrite))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  *h = (WSWantWrite){ctx, ws_dup(ws)};
+
+  return JS_NewCClosure(ctx, want_write, 0, 0, h, ws_want_write_free);
+}
+
+int
+ws_enqueue(struct socket* ws, const void* data, size_t size) {
+  ByteBlock buffer = {(uint8_t*)data, (uint8_t*)data + size};
+
+  ringbuffer_insert(&ws->sendq, &buffer, 1);
+  lws_callback_on_writable(ws->lwsi);
+
+  return 1;
+}

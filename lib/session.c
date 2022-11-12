@@ -19,7 +19,7 @@ session_zero(struct session_data* session) {
   session->written = 0;
   session->server = NULL;
   session->client = NULL;
-  buffer_init(&session->send_buf, 0, 0);
+  // buffer_init(&session->send_buf, 0, 0);
   session->link.prev = session->link.next = NULL;
 }
 
@@ -56,7 +56,7 @@ session_clear_rt(struct session_data* session, JSRuntime* rt) {
   JS_FreeValueRT(rt, session->next);
   session->next = JS_UNDEFINED;
 
-  buffer_free_rt(&session->send_buf, rt);
+  // buffer_free_rt(&session->send_buf, rt);
 
   // printf("%s #%i %p\n", __func__, session->serial, session);
 }

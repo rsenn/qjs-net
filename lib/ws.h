@@ -30,6 +30,8 @@ void ws_free_rt(struct socket*, JSRuntime*);
 void ws_free(struct socket*, JSContext*);
 struct socket* ws_dup(struct socket*);
 int ws_write(struct socket* ws, BOOL binary, JSContext* ctx);
+JSValue ws_want_write(struct socket*, JSContext* ctx);
+int ws_enqueue(struct socket*, const void* data, size_t size);
 
 static inline struct session_data*
 lws_session(struct lws* wsi) {

@@ -98,12 +98,8 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
   {
     JSBuffer jsbuf = js_input_args(ctx, argc, argv);
-    ByteBlock buffer = block_copy(jsbuf.data, jsbuf.size, ctx);
-    js_buffer_free(&jsbuf, ctx);
 
-    ringbuffer_insert(&ws->sendq, &buffer, 1);
-
-    lws_callback_on_writable(ws->lwsi);
+    ws_enqueue(ws, jsbuf.data, jsbuf.size);
   }
 
   return ret;

@@ -33,7 +33,7 @@ js_object_classname(JSContext* ctx, JSValueConst value) {
     ctor = js_object_constructor(ctx, proto);
   }
   if((name = js_function_name(ctx, ctor))) {
-    s = js_strdup(ctx, name);
+    s = name && name[0] ? js_strdup(ctx, name) : 0;
     JS_FreeCString(ctx, name);
   }
 
@@ -168,10 +168,13 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, 
   if(JS_IsException(result))
     return JS_EXCEPTION;
 
+  if(js_is_promise(ctx, result))
+    return result;
+
   done = JS_GetPropertyStr(ctx, result, "done");
   value = JS_GetPropertyStr(ctx, result, "value");
-  JS_FreeValue(ctx, result);
   *done_p = JS_ToBool(ctx, done);
+  JS_FreeValue(ctx, result);
   JS_FreeValue(ctx, done);
   return value;
 }
@@ -535,6 +538,11 @@ js_promise_pending(ResolveFunctions const* funcs) {
 BOOL
 js_promise_done(ResolveFunctions const* funcs) {
   return js_resolve_functions_is_null(funcs);
+}
+
+JSValue
+js_promise_then(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
+  return js_invoke(ctx, promise, "then", 1, &handler);
 }
 
 BOOL
@@ -995,12 +1003,38 @@ BOOL
 js_is_generator(JSContext* ctx, JSValueConst value) {
   const char* str;
   BOOL ret = FALSE;
+
   if((str = JS_ToCString(ctx, value))) {
     const char* s = str;
-    if(!strncmp(s, "function ", 9))
-      s += 9;
 
-    if(*s == '*')
+    if(!strncmp(s, "async ", 6))
+      s += 6;
+
+    if(!strncmp(s, "function", 8)) {
+      s += 8;
+
+      while(*s == ' ') ++s;
+
+      if(*s == '*')
+        ret = TRUE;
+    }
+
+    JS_FreeCString(ctx, str);
+  }
+  return ret;
+}
+
+BOOL
+js_is_async(JSContext* ctx, JSValueConst value) {
+  const char* str;
+  BOOL ret = FALSE;
+  if((str = JS_ToCString(ctx, value))) {
+    const char* s = str;
+
+    if(!strncmp(s, "async ", 6))
+      ret = TRUE;
+
+    else if(!strncmp(s, "[object Async", 13))
       ret = TRUE;
 
     JS_FreeCString(ctx, str);

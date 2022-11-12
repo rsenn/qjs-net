@@ -125,9 +125,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
       int status;
-         MinnetResponse* resp;
+      MinnetResponse* resp;
 
-   
       if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
 
