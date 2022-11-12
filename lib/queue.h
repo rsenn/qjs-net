@@ -2,20 +2,15 @@
 #define QUICKJS_NET_LIB_QUEUE_H
 
 #include <quickjs.h>
+#include <list.h>
+#include <cutils.h>
 
 struct queue {
   struct list_head items;
 };
 
-struct item {
-  JSValue value;
-  BOOL done;
-  struct list_head link;
-};
-
 void queue_zero(struct queue*);
-void queue_destroy(struct queue**);
-BOOL queue_free(struct queue*);
+void queue_free(struct queue*, JSContext*);
 struct queue* queue_new(JSContext*);
 JSValue queue_next(struct queue*, BOOL* done_p);
 int queue_put(struct queue*, JSValueConst value);

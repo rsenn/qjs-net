@@ -1,26 +1,30 @@
 #include "queue.h"
 
+struct item {
+  JSValue value;
+  BOOL done;
+  struct list_head link;
+};
+
 void
 queue_zero(struct queue* q) {
   init_list_head(&q->items);
 }
 
 void
-queue_destroy(struct queue** gen_p) {
-  struct queue* q;
+queue_free(struct queue* q, JSContext* ctx) {
 
-  if((q = *gen_p)) {
-    if(queue_free(q))
-      *gen_p = 0;
-  }
-}
+  struct list_head *p, *p2;
+  list_for_each_safe(p, p2, &q->items) {
+    struct item* i = list_entry(p, struct item, link);
 
-BOOL
-queue_free(struct queue* q) {
-  if(--q->ref_count == 0) {
-    return TRUE;
+    list_del(p);
+    JS_FreeValue(ctx, i->value);
+
+    free(p);
   }
-  return FALSE;
+
+  js_free(ctx, q);
 }
 
 struct queue*
