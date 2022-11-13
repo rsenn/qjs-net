@@ -2,7 +2,7 @@
 #define QUICKJS_NET_LIB_GENERATOR_H
 
 #include "buffer.h"
-#include "asynciterator.h" // for AsyncIterator
+#include "asynciterator.h"
 
 struct generator {
   ByteBuffer buffer;
@@ -24,7 +24,7 @@ struct generator* generator_new(JSContext*);
 JSValue generator_next(struct generator*, JSContext*);
 ssize_t generator_queue(struct generator*, const void*, size_t);
 ssize_t generator_write(struct generator*, const void*, size_t);
-BOOL generator_close(struct generator*, JSContext* ctx);
+BOOL generator_close(struct generator*);
 
 static inline struct generator*
 generator_dup(struct generator* gen) {

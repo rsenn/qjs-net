@@ -30,7 +30,6 @@ struct session_data {
   int64_t written;
   struct server_context* server;
   struct client_context* client;
-  // ByteBuffer send_buf;
   struct list_head link;
 };
 

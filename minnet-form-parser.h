@@ -1,13 +1,13 @@
 #ifndef MINNET_FORM_PARSER_H
 #define MINNET_FORM_PARSER_H
 
-#include <cutils.h>           // for BOOL
-#include <libwebsockets.h>    // for lws_spa_create_info
-#include <quickjs.h>          // for JSValueConst, JSContext, JSValue, JS_G...
-#include <stddef.h>           // for size_t
-#include "callback.h"         // for JSCallback
-#include "minnet-websocket.h" // for MinnetWebsocket
-#include "utils.h"            // for THREAD_LOCAL
+#include <cutils.h>
+#include <libwebsockets.h>
+#include <quickjs.h>
+#include <stddef.h>
+#include "callback.h"
+#include "minnet-websocket.h"
+#include "utils.h"
 
 typedef struct form_parser {
   int ref_count;

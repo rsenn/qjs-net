@@ -53,8 +53,8 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     return JS_EXCEPTION;
 
   switch(magic) {
-    case RESPONSE_ARRAYBUFFER: {
-      result = JS_NewArrayBuffer /*Copy*/ (ctx, block_BEGIN(resp->body), block_SIZE(resp->body), 0, 0, 0);
+    /*case RESPONSE_ARRAYBUFFER: {
+      result = JS_NewArrayBuffer(ctx, block_BEGIN(resp->body), block_SIZE(resp->body), 0, 0, 0);
       break;
     }
     case RESPONSE_TEXT: {
@@ -64,7 +64,7 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     case RESPONSE_JSON: {
       result = JS_ParseJSON(ctx, block_BEGIN(resp->body), buffer_HEAD(resp->body), resp->url.path);
       break;
-    }
+    }*/
   }
 
   ret = js_promise_create(ctx, &funcs);
@@ -191,12 +191,12 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       break;
     }
     case RESPONSE_BODY: {
-      if(!resp->body)
-        response_generator(resp, ctx);
+      /* if(!resp->body)
+         response_generator(resp, ctx);
 
-      resp->body->read = resp->body->write = resp->body->start;
+       resp->body->read = resp->body->write = resp->body->start;
 
-      buffer_fromvalue(resp->body, value, ctx);
+       buffer_fromvalue(resp->body, value, ctx);*/
       break;
     }
     case RESPONSE_HEADERS: {

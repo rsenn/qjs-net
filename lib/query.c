@@ -77,19 +77,3 @@ query_from(JSValueConst obj, JSContext* ctx) {
   js_free(ctx, tab);
   return (char*)out.buf;
 }
-
-/*void
-minnet_query_entry(char* start, size_t len, JSContext* ctx, JSValueConst obj) {
-  size_t namelen, valuelen;
-  const char* value;
-
-  namelen = byte_chr(start, len, '=');
-
-  if(namelen < len)
-    start[namelen] = '\0';
-
-  value = start + namelen + 1;
-  valuelen = len - (namelen + 1);
-
-  JS_SetPropertyStr(ctx, obj, start, JS_NewStringLen(ctx, value, valuelen));
-}*/

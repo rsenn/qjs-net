@@ -8,7 +8,6 @@ asynciterator_zero(AsyncIterator* it) {
   it->closed = FALSE;
   it->closing = FALSE;
   init_list_head(&it->reads);
-  //  init_list_head(&it->values);
 }
 
 void
@@ -21,8 +20,6 @@ asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
     js_promise_free_rt(rt, &rd->promise);
     js_free_rt(rt, rd);
   }
-
-  // js_free_rt(rt, it);
 }
 
 AsyncIterator*
@@ -56,7 +53,6 @@ asynciterator_next(AsyncIterator* it, JSContext* ctx) {
 
 BOOL
 asynciterator_check_closing(AsyncIterator* it, JSContext* ctx) {
-
   if(it->closing) {
     asynciterator_stop(it, JS_UNDEFINED, ctx);
     it->closing = FALSE;
@@ -70,7 +66,7 @@ asynciterator_check_closing(AsyncIterator* it, JSContext* ctx) {
 static AsyncRead*
 asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
   if(!list_empty(&it->reads)) {
-    AsyncRead* rd = (AsyncRead*)it->reads.prev;
+    AsyncRead* rd = list_entry(it->reads.prev, AsyncRead, link);
     list_del(&rd->link);
     return rd;
   }
@@ -123,11 +119,13 @@ asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
 BOOL
 asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx) {
   AsyncRead* rd;
+
   if((rd = asynciterator_shift(it, ctx))) {
     js_promise_resolve(ctx, &rd->promise, obj);
     js_free(ctx, rd);
     return TRUE;
   }
+
   return FALSE;
 }
 

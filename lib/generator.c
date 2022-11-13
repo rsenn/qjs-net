@@ -64,6 +64,7 @@ generator_next(struct generator* gen, JSContext* ctx) {
 ssize_t
 generator_write(struct generator* gen, const void* data, size_t len) {
   ssize_t ret = -1;
+
   if(list_empty(&gen->iterator.reads))
     return generator_queue(gen, data, len);
 
@@ -77,8 +78,8 @@ generator_write(struct generator* gen, const void* data, size_t len) {
 }
 
 BOOL
-generator_close(struct generator* gen, JSContext* ctx) {
-  return asynciterator_stop(&gen->iterator, JS_UNDEFINED, ctx);
+generator_close(struct generator* gen) {
+  return asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx);
 }
 
 ssize_t

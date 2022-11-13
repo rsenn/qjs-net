@@ -16,4 +16,9 @@ JSValue queue_next(struct queue*, BOOL* done_p);
 int queue_put(struct queue*, JSValueConst value);
 void queue_close(struct queue*);
 
+static inline BOOL
+queue_empty(struct queue* q) {
+  return list_empty(&q->items);
+}
+
 #endif /* QUICKJS_NET_LIB_QUEUE_H */

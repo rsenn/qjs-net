@@ -287,6 +287,12 @@ wsi_cert(struct lws* wsi) {
 
 char*
 wsi_query_string_len(struct lws* wsi, size_t* len_p, JSContext* ctx) {
+  if(!wsi_token_exists(wsi, WSI_TOKEN_HTTP_URI_ARGS)) {
+    if(len_p)
+      *len_p = 0;
+    return 0;
+  }
+
   return wsi_token_len(wsi, ctx, WSI_TOKEN_HTTP_URI_ARGS, len_p);
 }
 

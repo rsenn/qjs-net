@@ -1,13 +1,13 @@
 #ifndef QJSNET_LIB_BUFFER_H
 #define QJSNET_LIB_BUFFER_H
 
-#include <cutils.h>        // for BOOL
-#include <libwebsockets.h> // for LWS_PRE
-#include <quickjs.h>       // for JSContext, JSValue, JS_GetRuntime, JSRuntime
-#include <stdarg.h>        // for va_list
-#include <stdint.h>        // for uint8_t
-#include <string.h>        // for size_t, memcpy
-#include <sys/types.h>     // for ssize_t
+#include <cutils.h>
+#include <libwebsockets.h>
+#include <quickjs.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/types.h>
 
 typedef struct byte_block {
   uint8_t* start;
@@ -127,5 +127,22 @@ buffer_reset(ByteBuffer* buf) {
 buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx) {
   return block_grow(&buf->block, size, ctx);
 }*/
+
+typedef struct writer {
+  uint8_t **write, *end;
+} BufferWriter;
+
+static inline BufferWriter
+buffer_writer(ByteBuffer* bb) {
+  return (BufferWriter){&bb->write, bb->end};
+}
+typedef struct reader {
+  uint8_t **read, *write;
+} BufferReader;
+
+static inline BufferReader
+buffer_reader(ByteBuffer* bb) {
+  return (BufferReader){&bb->read, bb->write};
+}
 
 #endif /* QJSNET_LIB_BUFFER_H */
