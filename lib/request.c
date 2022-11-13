@@ -2,8 +2,7 @@
 #include <quickjs.h>
 #include <cutils.h>
 #include "../minnet-request.h"
-#include "../minnet-ringbuffer.h"
-#include "../minnet.h"
+#include "ringbuffer.h"
 #include "headers.h"
 #include "jsutils.h"
 #include <ctype.h>
@@ -208,29 +207,6 @@ request_free_rt(struct http_request* req, JSRuntime* rt) {
     js_free_rt(rt, req);
   }
 }
-
-/*static const char*
-header_get(JSContext* ctx, size_t* lenp, ByteBuffer* buf, const char* name) {
-  size_t len, namelen = strlen(name);
-  uint8_t *x, *end;
-
-  for(x = buf->start, end = buf->write; x < end; x += len + 1) {
-    len = byte_chr(x, end - x, '\n');
-
-    if(byte_chr(x, len, ':') != namelen || strncasecmp(name, (const char*)x, namelen))
-      continue;
-
-    if(x[namelen] == ':')
-      namelen++;
-    if(isspace(x[namelen]))
-      namelen++;
-
-    if(lenp)
-      *lenp = len - namelen;
-    return (const char*)x + namelen;
-  }
-  return 0;
-}*/
 
 struct http_request*
 request_from(int argc, JSValueConst argv[], JSContext* ctx) {

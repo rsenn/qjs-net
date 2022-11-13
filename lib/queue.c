@@ -33,7 +33,7 @@ queue_new(JSContext* ctx) {
 
   if((q = js_malloc(ctx, sizeof(struct queue))))
     queue_zero(q);
-  
+
   return q;
 }
 
@@ -53,10 +53,10 @@ queue_next(struct queue* q, BOOL* done_p) {
 
     free(i);
   }
-  
+
   if(done_p)
     *done_p = done;
-  
+
   return ret;
 }
 

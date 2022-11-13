@@ -3,6 +3,7 @@
 #include <cutils.h>
 #include "minnet-request.h"
 #include "minnet-ringbuffer.h"
+#include "minnet-generator.h"
 #include "minnet.h"
 #include "headers.h"
 #include "jsutils.h"

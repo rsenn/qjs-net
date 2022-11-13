@@ -451,7 +451,6 @@ serve_generator(JSContext* ctx, struct session_data* session, MinnetResponse* re
         out = js_buffer_new(ctx, ret);
 
         if(out.data) {
-
           // LOGCB("HTTP-WRITEABLE", "size=%zu, out='%.*s'", out.size, (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data);
           DEBUG("\x1b[2K\ryielded %.*s %zu\n", (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data, out.size);
 
@@ -476,6 +475,9 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
   int is_ssl = wsi_tls(wsi);
   int h2 = wsi_http2(wsi);
 
+  if(session->response_sent)
+    return 0;
+
   LOG("SERVER-HTTP",
       FG("%d") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s length=%zu",
       165,
@@ -498,15 +500,8 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
                                  resp->type,
                                  LWS_ILLEGAL_HTTP_CONTENT_LEN /*is_ssl || h2 || js_is_async(ctx, session->generator) ? LWS_ILLEGAL_HTTP_CONTENT_LEN : buffer_HEAD(resp->body)*/,
                                  &buf->write,
-                                 buf->end)) {
+                                 buf->end))
     return 1;
-  }
-  /*  {
-      char* b = buffer_escaped(buf, ctx);
-
-      lwsl_user("lws_add_http_common_headers %td '%s'", buf->write - buf->start, b);
-      js_free(ctx, b);
-    }*/
 
   {
     size_t len, n;
@@ -531,13 +526,10 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
 
   DEBUG("HTTP headers '%.*s'\n", (int)buffer_HEAD(buf), buf->start);
 
-  /* {
-     char* b = buffer_escaped(buf, ctx);
-     lwsl_user("lws_finalize_write_http_header '%s' %td ret=%d", b, buf->write - buf->start, ret);
-      js_free(ctx, b);
-   }*/
   if(ret)
     return 2;
+
+  session->response_sent = TRUE;
 
   return 0;
 }
@@ -668,7 +660,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   if(reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
     if(session && session->serial != opaque->serial) {
       session->serial = opaque->serial;
-      session->h2 = wsi_http2(wsi);
+      // session->h2 = wsi_http2(wsi);
     }
   }
 
@@ -827,6 +819,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       lws_callback_on_writable(wsi);
+      return 0;
       break;
     }
 
@@ -880,7 +873,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             session->mount = mount_find(mounts, req->url.path, 0);
       }
 
-      session->h2 = wsi_http2(wsi);
+      // session->h2 = wsi_http2(wsi);
       {
         MinnetHttpMount* mount;
 
@@ -958,8 +951,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
                 session->generator = gen;
                 session->next = JS_UNDEFINED;
 
-                /* lws_callback_on_writable(wsi);
-                 return 0;*/
+                lws_callback_on_writable(wsi);
+                /* return 0;*/
               } else {
                 LOGCB("HTTP(6)", "gen=%s", JS_ToCString(ctx, gen));
               }
@@ -983,9 +976,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
            }*/
       }
 
-      if(!(req->method != METHOD_GET && wsi_http2(wsi)))
+      /*if(!(req->method != METHOD_GET && wsi_http2(wsi)))
         if(req->method == METHOD_GET || wsi_http2(wsi))
-          lws_callback_on_writable(wsi);
+          lws_callback_on_writable(wsi);*/
 
       return ret;
       break;
@@ -996,18 +989,22 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(opaque->upstream)
         return lws_callback_http_dummy(wsi, reason, user, in, len);
 
-      if(session->in_body)
-        break;
+      /*  if(session->in_body)
+          break;*/
 
       MinnetResponse* resp;
       BOOL done = FALSE;
 
-      LOGCB("HTTP", "%smnt=%s", session->h2 ? "h2, " : "", session->mount ? session->mount->mnt : 0);
+      LOGCB("HTTP", "%smnt=%s", wsi_http2(wsi) ? "h2, " : "", session->mount ? session->mount->mnt : 0);
       if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
         session->resp_obj = minnet_response_wrap(ctx, resp);
       }
 
+      if(!session->response_sent) {
+        ByteBuffer b = BUFFER(buf);
+        session->response_sent = !serve_response(wsi, &b, opaque->resp, ctx, session);
+      }
       ret = serve_generator(ctx, session, resp, wsi, &done);
 
       if(resp->body)
@@ -1076,14 +1073,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
   // int ret = 0;
   if(/*reason != LWS_CALLBACK_HTTP_WRITEABLE &&*/ (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
-    LOGCB("HTTP",
-          "fd=%i %s%sin='%.*s' ret=%d\n",
-          lws_get_socket_fd(wsi),
-          (session && session->h2) || wsi_http2(wsi) ? "h2, " : "http/1.1, ",
-          wsi_tls(wsi) ? "TLS, " : "plain, ",
-          (int)len,
-          (char*)in,
-          ret);
+    LOGCB("HTTP", "fd=%i %s%sin='%.*s' ret=%d\n", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "http/1.1, ", wsi_tls(wsi) ? "TLS, " : "plain, ", (int)len, (char*)in, ret);
   }
 
   if(ret == 0)

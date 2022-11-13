@@ -14,9 +14,9 @@ session_zero(struct session_data* session) {
   session->generator = JS_NULL;
   session->next = JS_NULL;
   session->serial = ++session_serial;
-  session->h2 = FALSE;
+  // session->h2 = FALSE;
   session->in_body = FALSE;
-  session->written = 0;
+  session->response_sent = FALSE;
   session->server = NULL;
   session->client = NULL;
   // buffer_init(&session->send_buf, 0, 0);

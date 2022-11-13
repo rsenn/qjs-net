@@ -1,5 +1,6 @@
 #include "minnet-websocket.h"
 #include "minnet-response.h"
+#include "minnet-generator.h"
 #include "minnet.h"
 #include "buffer.h"
 #include "jsutils.h"

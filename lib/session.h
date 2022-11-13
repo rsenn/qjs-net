@@ -26,8 +26,8 @@ struct session_data {
   struct proxy_connection* proxy;
   JSValue generator, next;
   int serial;
-  BOOL h2, in_body;
-  int64_t written;
+  BOOL /*h2,*/ in_body, response_sent;
+  // int64_t written;
   struct server_context* server;
   struct client_context* client;
   struct list_head link;

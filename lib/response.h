@@ -6,7 +6,7 @@
 #include <libwebsockets.h>
 #include "url.h"
 #include "buffer.h"
-#include "../minnet-generator.h"
+#include "generator.h"
 #include "session.h"
 
 struct http_response {

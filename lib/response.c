@@ -109,6 +109,7 @@ response_redirect(struct http_response* resp, const char* location, JSContext* c
   headers_set(ctx, &resp->headers, "Location", location);
   return resp;
 }
+
 struct http_response*
 session_response(struct session_data* session, JSCallback* cb) {
   struct http_response* resp = minnet_response_data2(cb->ctx, session->resp_obj);
