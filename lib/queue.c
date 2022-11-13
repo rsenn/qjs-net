@@ -13,8 +13,8 @@ queue_zero(struct queue* q) {
 
 void
 queue_free(struct queue* q, JSContext* ctx) {
-
   struct list_head *p, *p2;
+
   list_for_each_safe(p, p2, &q->items) {
     struct item* i = list_entry(p, struct item, link);
 
@@ -31,9 +31,9 @@ struct queue*
 queue_new(JSContext* ctx) {
   struct queue* q;
 
-  if((q = js_malloc(ctx, sizeof(struct queue)))) {
+  if((q = js_malloc(ctx, sizeof(struct queue))))
     queue_zero(q);
-  }
+  
   return q;
 }
 
@@ -53,12 +53,14 @@ queue_next(struct queue* q, BOOL* done_p) {
 
     free(i);
   }
+  
   if(done_p)
     *done_p = done;
+  
   return ret;
 }
 
-int
+BOOL
 queue_put(struct queue* q, JSValueConst value) {
   struct item* i;
 
@@ -67,9 +69,9 @@ queue_put(struct queue* q, JSValueConst value) {
     i->done = FALSE;
 
     list_add_tail(&i->link, &q->items);
-    return 1;
   }
-  return 0;
+
+  return !!i;
 }
 
 void

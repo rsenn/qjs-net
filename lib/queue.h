@@ -13,7 +13,7 @@ void queue_zero(struct queue*);
 void queue_free(struct queue*, JSContext*);
 struct queue* queue_new(JSContext*);
 JSValue queue_next(struct queue*, BOOL* done_p);
-int queue_put(struct queue*, JSValueConst value);
+BOOL queue_put(struct queue*, JSValueConst value);
 void queue_close(struct queue*);
 
 static inline BOOL
