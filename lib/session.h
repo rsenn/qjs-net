@@ -12,6 +12,7 @@ struct proxy_connection;
 struct server_context;
 struct client_context;
 struct wsi_opaque_user_data;
+struct ringbuffer;
 
 struct session_data {
   JSValue ws_obj;
@@ -26,10 +27,10 @@ struct session_data {
   struct proxy_connection* proxy;
   JSValue generator, next;
   int serial;
-  BOOL /*h2,*/ in_body, response_sent;
-  // int64_t written;
+  BOOL in_body, response_sent;
   struct server_context* server;
   struct client_context* client;
+  struct ringbuffer* sendq;
   struct list_head link;
 };
 

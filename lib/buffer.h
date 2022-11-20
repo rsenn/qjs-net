@@ -54,6 +54,11 @@ block_move(ByteBlock* blk) {
   return ret;
 }
 
+static inline ByteBlock
+block_from(void* data, size_t size) {
+  return (ByteBlock){data, (uint8_t*)data + size};
+}
+
 typedef union byte_buffer {
   struct {
     uint8_t *start, *end, *read, *write, *alloc;

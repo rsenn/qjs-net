@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include "jsutils.h"
+#include "buffer.h"
 
 JSValue
 vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
@@ -230,6 +231,13 @@ js_buffer_new(JSContext* ctx, JSValueConst value) {
   return ret;
 }
 
+JSBuffer
+js_buffer_fromblock(JSContext* ctx, struct byte_block* blk) {
+  JSValue buf = block_toarraybuffer(blk, ctx);
+
+  return js_buffer_new(ctx, buf);
+}
+
 void
 js_buffer_to(JSBuffer buf, void** pptr, size_t* plen) {
   if(pptr)
@@ -268,13 +276,18 @@ js_buffer_dump(const JSBuffer* in, DynBuf* db) {
 }
 
 void
-js_buffer_free(JSBuffer* in, JSContext* ctx) {
+js_buffer_free_rt(JSBuffer* in, JSRuntime* rt) {
   if(in->data) {
-    in->free(JS_GetRuntime(ctx), in, in->data);
+    in->free(rt, in, in->data);
     in->data = 0;
     in->size = 0;
     in->value = JS_UNDEFINED;
   }
+}
+
+void
+js_buffer_free(JSBuffer* in, JSContext* ctx) {
+  js_buffer_free_rt(in, JS_GetRuntime(ctx));
 }
 
 BOOL

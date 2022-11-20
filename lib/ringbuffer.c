@@ -40,7 +40,6 @@ ringbuffer_new(JSContext* ctx) {
 
 void
 ringbuffer_init2(struct ringbuffer* strm, size_t element_len, size_t count) {
-
   const char* type = "application/binary";
   ringbuffer_init(strm, element_len, count, type, strlen(type));
 }
@@ -50,7 +49,6 @@ ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
   struct ringbuffer* strm;
 
   if((strm = ringbuffer_new(ctx)))
-
     ringbuffer_init2(strm, element_len, count);
 
   return strm;

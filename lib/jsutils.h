@@ -96,6 +96,8 @@ js_vector_free(JSContext* ctx, int argc, JSValue argv[]) {
   }
 }
 
+struct byte_block;
+
 JSValue js_object_constructor(JSContext* ctx, JSValueConst value);
 char* js_object_classname(JSContext* ctx, JSValueConst value);
 void js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log);
@@ -108,12 +110,14 @@ JSValue js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* 
 int js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags);
 void js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
 JSBuffer js_buffer_new(JSContext* ctx, JSValueConst value);
+JSBuffer js_buffer_fromblock(JSContext* ctx, struct byte_block* blk);
 void js_buffer_to(JSBuffer buf, void** pptr, size_t* plen);
 void js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen);
 BOOL js_buffer_valid(const JSBuffer* in);
 JSBuffer js_buffer_clone(const JSBuffer* in, JSContext* ctx);
 void js_buffer_dump(const JSBuffer* in, DynBuf* db);
 void js_buffer_free(JSBuffer* in, JSContext* ctx);
+void js_buffer_free_rt(JSBuffer* in, JSRuntime* rt);
 BOOL js_is_iterable(JSContext* ctx, JSValueConst obj);
 BOOL js_is_iterator(JSContext* ctx, JSValueConst obj);
 JSAtom js_symbol_static_atom(JSContext* ctx, const char* name);

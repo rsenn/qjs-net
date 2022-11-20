@@ -2,11 +2,13 @@
 
 void
 generator_zero(struct generator* gen) {
-  gen->buffer = BUFFER_0();
   asynciterator_zero(&gen->iterator);
-  gen->ref_count = 0;
+  gen->rbuf = 0;
   gen->bytes_written = 0;
   gen->bytes_read = 0;
+  gen->chunks_written = 0;
+  gen->chunks_read = 0;
+  gen->ref_count = 0;
 }
 
 void
@@ -23,7 +25,14 @@ BOOL
 generator_free(struct generator* gen) {
   if(--gen->ref_count == 0) {
     asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
-    buffer_free_rt(&gen->buffer, JS_GetRuntime(gen->ctx));
+
+    while(ringbuffer_size(gen->rbuf)) {
+      ByteBlock blk;
+      if(ringbuffer_consume(gen->rbuf, &blk, 1))
+        block_free(&blk, gen->ctx);
+    }
+
+    ringbuffer_free(gen->rbuf, JS_GetRuntime(gen->ctx));
     js_free(gen->ctx, gen);
     return TRUE;
   }
@@ -38,6 +47,7 @@ generator_new(JSContext* ctx) {
     generator_zero(gen);
     gen->ctx = ctx;
     gen->ref_count = 1;
+    gen->rbuf = ringbuffer_new2(sizeof(ByteBlock), 1024, ctx);
     // gen->iterator.ctx = ctx;
   }
   return gen;
@@ -49,14 +59,23 @@ generator_next(struct generator* gen, JSContext* ctx) {
 
   ret = asynciterator_next(&gen->iterator, ctx);
 
-  if(buffer_HEAD(&gen->buffer)) {
+  if(ringbuffer_size(gen->rbuf)) {
+    ByteBlock blk;
+    if(ringbuffer_consume(gen->rbuf, &blk, 1)) {
+      JSValue value = block_toarraybuffer(&blk, ctx);
+
+      asynciterator_yield(&gen->iterator, value, ctx);
+      gen->bytes_read += block_SIZE(&blk);
+      gen->chunks_read += 1;
+    }
+  }
+  /*if(buffer_HEAD(&gen->buffer)) {
     size_t len;
     JSValue value = buffer_toarraybuffer_size(&gen->buffer, &len, ctx);
     gen->buffer = BUFFER_0();
 
     asynciterator_yield(&gen->iterator, value, ctx);
-    gen->bytes_read += len;
-  }
+  }*/
 
   return ret;
 }
@@ -73,6 +92,8 @@ generator_write(struct generator* gen, const void* data, size_t len) {
   asynciterator_yield(&gen->iterator, buf, gen->ctx);
   gen->bytes_written += len;
   gen->bytes_read += len;
+  gen->chunks_written += 1;
+  gen->chunks_read += 1;
 
   return ret;
 }
@@ -86,8 +107,9 @@ ssize_t
 generator_queue(struct generator* gen, const void* data, size_t len) {
   ssize_t ret;
 
-  if((ret = buffer_append(&gen->buffer, data, len, gen->ctx)) > 0)
-    gen->bytes_written += len;
+  ByteBlock blk = block_copy(data, len, gen->ctx);
+
+  ret = ringbuffer_insert(gen->rbuf, &blk, 1) ? len : 0;
 
   return ret;
 }

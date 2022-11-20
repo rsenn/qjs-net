@@ -23,7 +23,7 @@
   } while(0);
 
 #define LOG(name, fmt, args...) \
-  lwsl_user("%-11s" \
+  lwsl_user("%-15s" \
             " " fmt "\n", \
             (char*)(name), \
             args);

@@ -41,6 +41,11 @@ asynciterator_next(AsyncIterator* it, JSContext* ctx) {
   if(it->closed)
     return JS_ThrowInternalError(ctx, "%s: iterator closed", __func__);
 
+  /* if(!list_empty(&it->reads)) {
+     rd = list_entry(it->reads.next, AsyncRead, link);
+
+   } else */
+
   if((rd = js_malloc(ctx, sizeof(AsyncRead)))) {
     list_add(&rd->link, &it->reads);
     ret = js_promise_create(ctx, &rd->promise);

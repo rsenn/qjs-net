@@ -93,7 +93,7 @@ minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   clone->type = js_strdup(ctx, resp->type);
 
   buffer_clone(&clone->headers, &resp->headers, ctx);
-  buffer_clone(clone->body, resp->body, ctx);
+  // buffer_clone(clone->body, resp->body, ctx);
 
   return minnet_response_wrap(ctx, clone);
 }
@@ -136,17 +136,17 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case RESPONSE_BODYUSED: {
-      ret = JS_NewBool(ctx, resp->body ? buffer_SIZE(resp->body) > 0 : FALSE);
+      ret = JS_NewBool(ctx, resp->generator != NULL);
       break;
     }
     case RESPONSE_BODY: {
-      if(resp->body && buffer_SIZE(resp->body)) {
+      /*  if(resp->body && buffer_SIZE(resp->body)) {
 
-        if(resp->type && !strncmp("text/", resp->type, 5))
-          ret = JS_NewStringLen(ctx, buffer_BEGIN(resp->body), buffer_SIZE(resp->body));
-        else
-          ret = JS_NewArrayBufferCopy(ctx, buffer_BEGIN(resp->body), buffer_SIZE(resp->body));
-      }
+          if(resp->type && !strncmp("text/", resp->type, 5))
+            ret = JS_NewStringLen(ctx, buffer_BEGIN(resp->body), buffer_SIZE(resp->body));
+          else
+            ret = JS_NewArrayBufferCopy(ctx, buffer_BEGIN(resp->body), buffer_SIZE(resp->body));
+        }*/
       break;
     }
   }
@@ -255,7 +255,7 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
   if(argc >= 1 && argc < 3) {
 
     if(!js_is_nullish(argv[0])) {
-      buffer_fromvalue(resp->body, argv[0], ctx);
+      // XXXX buffer_fromvalue(resp->body, argv[0], ctx);
     }
 
     argc--;

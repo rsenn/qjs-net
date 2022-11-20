@@ -20,7 +20,7 @@ struct http_response {
   ByteBuffer headers;
   union {
     struct generator* generator;
-    ByteBuffer* body;
+    // ByteBuffer* body;
   };
 };
 

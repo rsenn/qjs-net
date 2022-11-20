@@ -34,7 +34,7 @@ response_init(struct http_response* resp, struct url url, int32_t status, char* 
   resp->url = url;
   resp->type = type;
   resp->headers = BUFFER_0();
-  resp->body = 0; // BUFFER_0();
+  resp->generator = NULL;
 }
 
 struct http_response*
@@ -45,8 +45,8 @@ response_dup(struct http_response* resp) {
 
 ssize_t
 response_write(struct http_response* resp, const void* x, size_t n, JSContext* ctx) {
-  assert(resp->body);
-  return buffer_append(resp->body, x, n, ctx);
+  assert(resp->generator);
+  return generator_write(resp->generator, x, n);
 }
 
 void

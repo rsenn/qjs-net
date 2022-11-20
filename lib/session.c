@@ -1,5 +1,7 @@
 #include "session.h"
 #include "opaque.h"
+#include "ringbuffer.h"
+#include "jsutils.h"
 
 static THREAD_LOCAL uint32_t session_serial = 0;
 THREAD_LOCAL struct list_head session_list = {0, 0};
@@ -21,6 +23,7 @@ session_zero(struct session_data* session) {
   session->client = NULL;
   // buffer_init(&session->send_buf, 0, 0);
   session->link.prev = session->link.next = NULL;
+  session->sendq = 0;
 }
 
 void
@@ -56,8 +59,15 @@ session_clear_rt(struct session_data* session, JSRuntime* rt) {
   JS_FreeValueRT(rt, session->next);
   session->next = JS_UNDEFINED;
 
-  // buffer_free_rt(&session->send_buf, rt);
+  if(session->sendq) {
+    while(ringbuffer_size(session->sendq)) {
+      JSBuffer buf;
+      if(ringbuffer_consume(session->sendq, &buf, 1))
+        js_buffer_free_rt(&buf, rt);
+    }
 
+    ringbuffer_free(session->sendq, rt);
+  }
   // printf("%s #%i %p\n", __func__, session->serial, session);
 }
 

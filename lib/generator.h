@@ -3,9 +3,9 @@
 
 #include "buffer.h"
 #include "asynciterator.h"
+#include "ringbuffer.h"
 
 struct generator {
-  ByteBuffer buffer;
   union {
     AsyncIterator iterator;
     struct {
@@ -13,7 +13,9 @@ struct generator {
       BOOL closed, closing;
     };
   };
+  struct ringbuffer* rbuf;
   uint64_t bytes_written, bytes_read;
+  uint64_t chunks_written, chunks_read;
   int ref_count;
 };
 
