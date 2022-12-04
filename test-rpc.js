@@ -92,6 +92,7 @@ function main(...args) {
   let repl = new REPL(`\x1b[38;5;165m${prefix} \x1b[38;5;39m${suffix}\x1b[0m`, fs, false);
 
   repl.historyLoad(null, false);
+  repl.loadSaveOptions();
 
   repl.help = () => {};
   let { log } = console;

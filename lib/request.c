@@ -61,6 +61,9 @@ request_init(struct http_request* req, struct url url, enum http_method method) 
   req->url = url;
   req->method = method;
   req->body = 0;
+  req->ip = 0;
+  req->read_only = FALSE;
+  req->secure = FALSE;
 }
 
 struct http_request*
@@ -127,10 +130,17 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
   struct http_request* ret = 0;
   HTTPMethod method = wsi_method(wsi);
   struct url url = URL_INIT();
+  char ipaddr[16];
 
   url_fromwsi(&url, wsi, ctx);
 
   ret = request_new(url, method, ctx);
+
+  if(lws_get_peer_simple(wsi, ipaddr, sizeof(ipaddr))) {
+    ret->ip = js_strdup(ctx, ipaddr);
+  }
+
+  ret->secure = wsi_tls(wsi);
 
   /*const char* uri;
     HTTPMethod method = -1;
@@ -180,6 +190,10 @@ void
 request_clear(struct http_request* req, JSContext* ctx) {
   url_free(&req->url, ctx);
   buffer_free_rt(&req->headers, JS_GetRuntime(ctx));
+  if(req->ip) {
+    js_free(ctx, req->ip);
+    req->ip = 0;
+  }
   if(req->body)
     generator_destroy(&req->body);
 }
@@ -188,6 +202,10 @@ void
 request_clear_rt(struct http_request* req, JSRuntime* rt) {
   url_free_rt(&req->url, rt);
   buffer_free_rt(&req->headers, rt);
+  if(req->ip) {
+    js_free_rt(rt, req->ip);
+    req->ip = 0;
+  }
   if(req->body)
     generator_destroy(&req->body);
 }

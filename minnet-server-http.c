@@ -458,8 +458,15 @@ serve_generator(JSContext* ctx, struct session_data* session, MinnetResponse* re
           // LOGCB("HTTP-WRITEABLE", "size=%zu, out='%.*s'", out.size, (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data);
           DEBUG("\x1b[2K\ryielded %.*s %zu\n", (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data, out.size);
 
-          generator_write(resp->generator, out.data, out.size);
-          js_buffer_free(&out, ctx);
+          if(!session->sendq)
+            session->sendq = ringbuffer_new2(sizeof(JSBuffer), 128, ctx);
+
+          ringbuffer_insert(session->sendq, &out, 1);
+
+          lws_callback_on_writable(wsi);
+
+          /*          generator_write(resp->generator, out.data, out.size);
+                    js_buffer_free(&out, ctx);*/
         }
       }
       JS_FreeValue(ctx, ret);
@@ -593,7 +600,7 @@ serve_file(struct http_closure* closure, const char* path, MinnetHttpMount* moun
     const char* body = "<html>\n  <head>\n    <title>404 Not Found</title>\n    <meta charset=utf-8 http-equiv=\"Content-Language\" content=\"en\"/>\n  </head>\n  <body>\n    <h1>404 Not "
                        "Found</h1>\n  </body>\n</html>\n";
     closure->opaque->resp->status = 404;
-    closure->opaque->resp->ok = FALSE;
+    // closure->opaque->resp->ok = FALSE;
 
     response_write(closure->opaque->resp, body, strlen(body), closure->ctx);
   }
@@ -619,12 +626,15 @@ http_server_writable(struct http_closure* closure, BOOL done) {
   n = (done || resp->generator->closing) ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
 
   if(closure->session->sendq && ringbuffer_size(closure->session->sendq)) {
-    JSBuffer buf;
+    JSBuffer* buf;
 
-    if(ringbuffer_consume(closure->session->sendq, &buf, 1)) {
+    if((buf = (JSBuffer*)ringbuffer_next(closure->session->sendq))) {
 
-      if((remain = buf.size)) {
-        uint8_t* x = buf.data;
+      //    if(ringbuffer_consume(closure->session->sendq, &buf, 1)) {
+      remain = buf->size - buf->pos;
+
+      if(remain > 0) {
+        uint8_t* x = buf->data + buf->pos;
         size_t l = wsi_http2(closure->wsi) ? (remain > 1024 ? 1024 : remain) : remain;
 
         if(l > 0) {
@@ -632,11 +642,16 @@ http_server_writable(struct http_closure* closure, BOOL done) {
           ret = lws_write(closure->wsi, x, l, wp);
           LOG("SERVER-HTTP(2)", FG("%d") "%-38s" NC " wsi#%" PRIi64 " len=%zu final=%d ret=%zd", 112, __func__ + 12, opaque->serial, l, wp == LWS_WRITE_HTTP_FINAL, ret);
 
+          remain -= l;
+          buf->pos += l;
           // buffer_skip(resp->body, ret);
         }
       }
 
-      js_buffer_free(&buf, closure->ctx);
+      if(remain == 0) {
+        js_buffer_free(buf, closure->ctx);
+        ringbuffer_skip(closure->session->sendq, 1);
+      }
     }
   }
 
@@ -644,16 +659,15 @@ http_server_writable(struct http_closure* closure, BOOL done) {
 
   LOG("SERVER-HTTP(3)", FG("%d") "%-38s" NC " wsi#%" PRIi64 " done=%i remain=%zu final=%d", 112, __func__ + 12, opaque->serial, done, remain, wp == LWS_WRITE_HTTP_FINAL);
 
-  if(wp == LWS_WRITE_HTTP_FINAL || (done && remain == 0)) {
+  if(remain > 0 || !done || (closure->session->sendq && ringbuffer_size(closure->session->sendq)))
+    lws_callback_on_writable(closure->wsi);
+  else if(wp == LWS_WRITE_HTTP_FINAL || (done && remain == 0)) {
 
     if(lws_http_transaction_completed(closure->wsi))
       return 1;
 
     return 0;
   }
-
-  if(remain > 0 || !done || (closure->session->sendq && ringbuffer_size(closure->session->sendq)))
-    lws_callback_on_writable(closure->wsi);
 
   return 0;
 }

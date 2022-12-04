@@ -8,7 +8,7 @@
 
 void
 response_format(struct http_response const* resp, char* buf, size_t len) {
-  snprintf(buf, len, FGC(226, "struct http_response") " { url.path: '%s', status: %d, ok: %s, type: '%s' }", resp->url.path, resp->status, resp->ok ? "true" : "false", resp->type);
+  snprintf(buf, len, FGC(226, "struct http_response") " { url.path: '%s', status: %d, headers_sent: %s, type: '%s' }", resp->url.path, resp->status, resp->headers_sent ? "true" : "false", resp->type);
 }
 
 char*
@@ -25,12 +25,12 @@ response_zero(struct http_response* resp) {
 }*/
 
 void
-response_init(struct http_response* resp, struct url url, int32_t status, char* status_text, BOOL ok, char* type) {
+response_init(struct http_response* resp, struct url url, int32_t status, char* status_text, BOOL headers_sent, char* type) {
   // memset(resp, 0, sizeof(struct http_response));
 
   resp->status = status;
   resp->status_text = status_text;
-  resp->ok = ok;
+  resp->headers_sent = headers_sent;
   resp->url = url;
   resp->type = type;
   resp->headers = BUFFER_0();

@@ -15,11 +15,12 @@ int method_number(const char*);
 
 struct http_request {
   int ref_count;
-  BOOL read_only;
+  BOOL read_only, secure;
   enum http_method method;
   struct url url;
   ByteBuffer headers;
   struct generator* body;
+  char* ip;
 };
 
 const char* method_string(enum http_method);

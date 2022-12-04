@@ -16,7 +16,7 @@ struct http_response {
   char* type;
   int status;
   char* status_text;
-  BOOL ok;
+  BOOL headers_sent;
   ByteBuffer headers;
   union {
     struct generator* generator;
@@ -26,7 +26,7 @@ struct http_response {
 
 void response_format(struct http_response const*, char*, size_t);
 char* response_dump(struct http_response const*);
-void response_init(struct http_response*, struct url, int32_t, char* status_text, BOOL ok, char* type);
+void response_init(struct http_response*, struct url, int32_t, char* status_text, BOOL headers_sent, char* type);
 struct http_response* response_dup(struct http_response*);
 struct http_response* response_redirect(struct http_response* resp, const char* location, JSContext* ctx);
 ssize_t response_write(struct http_response*, const void*, size_t, JSContext* ctx);
