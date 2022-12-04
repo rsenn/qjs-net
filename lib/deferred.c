@@ -10,13 +10,15 @@ deferred_clear(Deferred* def) {
 
   for(int i = 0; i < 8; i++) { def->args[i] = 0; }
   def->opaque = 0;
+  def->finalize = 0;
 }
 
 void
 deferred_free(Deferred* def) {
   if(--def->ref_count == 0) {
     JSContext* ctx = def->opaque;
-    def->finalize(def);
+    if(def->finalize)
+      def->finalize(def);
     deferred_clear(def);
     js_free(ctx, def);
   }
@@ -29,12 +31,12 @@ deferred_new(ptr_t fn, int argc, ptr_t argv[], JSContext* ctx) {
   if(!(def = js_malloc(ctx, sizeof(Deferred))))
     return 0;
 
+  deferred_init(def, fn, argc, argv);
+
   def->ref_count = 1;
   def->num_calls = 0;
   def->only_once = FALSE;
   def->opaque = ctx;
-
-  deferred_init(def, fn, argc, argv);
 
   return def;
 }
@@ -46,37 +48,45 @@ deferred_freejs(Deferred* def) {
   JS_FreeValue(def->args[0], value);
 }
 
+static void
+deferred_freejs_rt(Deferred* def) {
+  JSValue value = deferred_getjs(def);
+
+  JS_FreeValueRT(def->args[0], value);
+}
 
 Deferred*
-deferred_newjs(ptr_t fn, JSValue  v, JSContext* ctx) {
-  Deferred* ret;
-   ptr_t args[] = {
+deferred_newjs(js_ctx_function_t fn, JSValue v, JSContext* ctx) {
+  Deferred* def;
+  ptr_t args[] = {
       ctx,
       ((ptr_t*)&v)[0],
       ((ptr_t*)&v)[1],
   };
 
-  ret = deferred_new(fn, 3, args, ctx);
-  ret->finalize = deferred_freejs;
-  return ret;
+  def = deferred_new(fn, 3, args, ctx);
+  def->finalize = deferred_freejs;
+  return def;
 }
 
 Deferred*
-deferred_dupjs(ptr_t fn, JSValueConst value, JSContext* ctx) {
+deferred_dupjs(js_ctx_function_t fn, JSValueConst value, JSContext* ctx) {
   JSValue v = JS_DupValue(ctx, value);
-  return deferred_newjs(fn,v,ctx);
+  return deferred_newjs(fn, v, ctx);
 }
 
-
 Deferred*
-deferred_newjs_rt(ptr_t fn, JSValue value, JSContext* ctx) {
+deferred_newjs_rt(js_rt_function_t fn, JSValue value, JSContext* ctx) {
+  Deferred* def;
   ptr_t args[] = {
       JS_GetRuntime(ctx),
       ((ptr_t*)&value)[0],
       ((ptr_t*)&value)[1],
   };
 
-  return deferred_new(fn, 3, args, ctx);
+  def = deferred_new(fn, 3, args, ctx);
+  def->finalize = deferred_freejs_rt;
+  return def;
 }
 
 void
@@ -90,6 +100,9 @@ deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
 
   def->num_calls = 0;
   def->only_once = FALSE;
+  def->retval = 0;
+  def->opaque = 0;
+  def->finalize = 0;
 }
 
 ptr_t
