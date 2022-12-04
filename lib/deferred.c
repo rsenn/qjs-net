@@ -16,6 +16,7 @@ void
 deferred_free(Deferred* def) {
   if(--def->ref_count == 0) {
     JSContext* ctx = def->opaque;
+    def->finalize(def);
     deferred_clear(def);
     js_free(ctx, def);
   }
@@ -38,10 +39,39 @@ deferred_new(ptr_t fn, int argc, ptr_t argv[], JSContext* ctx) {
   return def;
 }
 
+static void
+deferred_freejs(Deferred* def) {
+  JSValue value = deferred_getjs(def);
+
+  JS_FreeValue(def->args[0], value);
+}
+
+
 Deferred*
-deferred_newjs(ptr_t fn, JSValue value, JSContext* ctx) {
-  ptr_t args[] = {
+deferred_newjs(ptr_t fn, JSValue  v, JSContext* ctx) {
+  Deferred* ret;
+   ptr_t args[] = {
       ctx,
+      ((ptr_t*)&v)[0],
+      ((ptr_t*)&v)[1],
+  };
+
+  ret = deferred_new(fn, 3, args, ctx);
+  ret->finalize = deferred_freejs;
+  return ret;
+}
+
+Deferred*
+deferred_dupjs(ptr_t fn, JSValueConst value, JSContext* ctx) {
+  JSValue v = JS_DupValue(ctx, value);
+  return deferred_newjs(fn,v,ctx);
+}
+
+
+Deferred*
+deferred_newjs_rt(ptr_t fn, JSValue value, JSContext* ctx) {
+  ptr_t args[] = {
+      JS_GetRuntime(ctx),
       ((ptr_t*)&value)[0],
       ((ptr_t*)&value)[1],
   };

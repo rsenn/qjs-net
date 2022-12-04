@@ -15,7 +15,6 @@ Ref* ref_new2(ptr_t dup, ptr_t free, ptr_t a1, ptr_t a2, JSContext* ctx);
 Ref* ref_new3(ptr_t dup, ptr_t free, ptr_t a1, ptr_t a2, ptr_t a3, JSContext* ctx);
 Ref* ref_newjs(ptr_t dup, ptr_t free, JSValueConst arg, JSContext* ctx);
 
-
 static inline Ref*
 ref_dup(Ref* r) {
   ++r->ref_count;
