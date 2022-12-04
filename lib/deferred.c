@@ -1,21 +1,94 @@
+#include <assert.h>
 #include "deferred.h"
 
 void
 deferred_clear(Deferred* def) {
+  def->num_calls = 0;
+  def->only_once = FALSE;
   def->func = 0;
-  for(int i = 0; i < 8; i++) def->args[i] = 0;
+  def->retval = 0;
+
+  for(int i = 0; i < 8; i++) { def->args[i] = 0; }
+  def->opaque = 0;
 }
 
 void
-deferred_init(Deferred* def, void* fn, int argc, void* argv[]) {
-  int i;
-  def->func = fn;
-
-  for(i = 0; i < argc; i++) def->args[i] = argv[i];
-  for(; i < 8; i++) def->args[i] = 0;
+deferred_free(Deferred* def) {
+  if(--def->ref_count == 0) {
+    JSContext* ctx = def->opaque;
+    deferred_clear(def);
+    js_free(ctx, def);
+  }
 }
 
-void*
-deferred_call(const Deferred* def) {
-  return def->func(def->args[0], def->args[1], def->args[2], def->args[2], def->args[4], def->args[5], def->args[6], def->args[7]);
+Deferred*
+deferred_new(ptr_t fn, int argc, ptr_t argv[], JSContext* ctx) {
+  Deferred* def;
+
+  if(!(def = js_malloc(ctx, sizeof(Deferred))))
+    return 0;
+
+  def->ref_count = 1;
+  def->num_calls = 0;
+  def->only_once = FALSE;
+  def->opaque = ctx;
+
+  deferred_init(def, fn, argc, argv);
+
+  return def;
+}
+
+Deferred*
+deferred_newjs(ptr_t fn, JSValue value, JSContext* ctx) {
+  ptr_t args[] = {
+      ctx,
+      ((ptr_t*)&value)[0],
+      ((ptr_t*)&value)[1],
+  };
+
+  return deferred_new(fn, 3, args, ctx);
+}
+
+void
+deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
+  int i;
+
+  def->ref_count = 0;
+  def->func = fn;
+
+  for(i = 0; i < 8; i++) { def->args[i] = i < argc ? argv[i] : 0; }
+
+  def->num_calls = 0;
+  def->only_once = FALSE;
+}
+
+ptr_t
+deferred_call(Deferred* def) {
+  ptr_t const* av = def->args;
+
+  assert(!def->only_once || def->num_calls < 1);
+
+  if(!def->only_once || def->num_calls < 1) {
+    def->retval = def->func(av[0], av[1], av[2], av[2], av[4], av[5], av[6], av[7]);
+
+    ++def->num_calls;
+  }
+
+  return def->retval;
+}
+
+static JSValue
+deferred_js_call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, ptr_t ptr) {
+  Deferred* def = ptr;
+
+  deferred_call(def);
+
+  return JS_UNDEFINED;
+}
+
+JSValue
+deferred_js(Deferred* def, JSContext* ctx) {
+  deferred_dup(def);
+
+  return JS_NewCClosure(ctx, deferred_js_call, 0, 0, def, (void (*)(ptr_t))deferred_free);
 }
