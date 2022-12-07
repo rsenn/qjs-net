@@ -128,6 +128,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       if(!opaque->req) {
         opaque->req = request_new(url, METHOD_GET, ctx);
+        opaque->req->secure = wsi_tls(wsi);
         headers_tobuffer(ctx, &opaque->req->headers, wsi);
       } else {
         url_free(&url, ctx);

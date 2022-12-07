@@ -231,6 +231,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   session_zero(&client->session);
 
   client->request = request_from(argc, argv, ctx);
+  enum protocol p = url_protocol(client->request->url);
+  client->request->secure = protocol_is_tls(p);
+
   js_promise_zero(&client->promise);
 
   if(argc >= 2) {

@@ -50,7 +50,9 @@ function WriteJSON(name, data) {
 function main(...args) {
   const base = path.basename(process.argv[1], '.js').replace(/\.[a-z]*$/, '');
   const config = ReadJSON(`.${base}-config`) ?? {};
-  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true } });
+  globalThis.console = new Console({
+    inspectOptions: { compact: 2, customInspect: true }
+  });
   let params = getOpt(
     {
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],
@@ -89,14 +91,23 @@ function main(...args) {
 
   let [prefix, suffix] = name.split(' ');
 
-  let repl = new REPL(`\x1b[38;5;165m${prefix} \x1b[38;5;39m${suffix}\x1b[0m`, fs, false);
+  let repl = new REPL(
+    `\x1b[38;5;165m${prefix} \x1b[38;5;39m${suffix}\x1b[0m`,
+    fs,
+    false
+  );
 
   repl.historyLoad(null, false);
   repl.loadSaveOptions();
 
   repl.help = () => {};
   let { log } = console;
-  repl.show = arg => std.puts((typeof arg == 'string' ? arg : inspect(arg, globalThis.console.options)) + '\n');
+  repl.show = arg =>
+    std.puts(
+      (typeof arg == 'string'
+        ? arg
+        : inspect(arg, globalThis.console.options)) + '\n'
+    );
 
   repl.cleanup = () => {
     repl.readlineRemovePrompt();
@@ -124,10 +135,14 @@ function main(...args) {
     console.log('createWS', { url, callbacks, listen });
     const { protocol, host, port, path } = url;
     console.log('createWS', { protocol, host, port, path });
-    setLog((params.debug ? LLL_USER : 0) | (((params.debug ? LLL_NOTICE : LLL_WARN) << 1) - 1), (level, ...args) => {
-      repl.printStatus(...args);
-      //if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
-    });
+    setLog(
+      (params.debug ? LLL_USER : 0) |
+        (((params.debug ? LLL_NOTICE : LLL_WARN) << 1) - 1),
+      (level, ...args) => {
+        repl.printStatus(...args);
+        //if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
+      }
+    );
 
     return [client, server][+listen]({
       protocol,
@@ -173,7 +188,11 @@ function main(...args) {
           const { url, method, headers } = req;
           const { status, ok, type } = res;
 
-          console.log('proxy', { url, method, headers }, { status, ok, url, type });
+          console.log(
+            'proxy',
+            { url, method, headers },
+            { status, ok, url, type }
+          );
         },
         *config(req, res) {
           console.log('/config', { req, res });
@@ -197,9 +216,14 @@ function main(...args) {
           let components = absdir.split(path.sep);
 
           if(components.length && components[0] === '') components.shift();
-          if(components.length < 2 || components[0] != 'home') throw new Error(`Access error`);
+          if(components.length < 2 || components[0] != 'home')
+            throw new Error(`Access error`);
 
-          console.log('\x1b[38;5;215m*files\x1b[0m', { dir, components, absdir });
+          console.log('\x1b[38;5;215m*files\x1b[0m', {
+            dir,
+            components,
+            absdir
+          });
           console.log('\x1b[38;5;215m*files\x1b[0m', { absdir });
 
           let names = fs.readdirSync(absdir) ?? [];
@@ -208,7 +232,10 @@ function main(...args) {
             names = names.filter(name => re.test(name));
           }
 
-          let entries = names.map(file => [file, fs.statSync(`${dir}/${file}`)]);
+          let entries = names.map(file => [
+            file,
+            fs.statSync(`${dir}/${file}`)
+          ]);
 
           entries = entries.reduce((acc, [file, st]) => {
             let name = file + (st.isDirectory() ? '/' : '');
@@ -260,7 +287,13 @@ function main(...args) {
       },
       onHttp(ws, req, rsp) {
         const { url, method, headers } = req;
-        console.log('\x1b[38;5;33monHttp\x1b[0m [\n  ', req, ',\n  ', rsp, '\n]');
+        console.log(
+          '\x1b[38;5;33monHttp\x1b[0m [\n  ',
+          req,
+          ',\n  ',
+          rsp,
+          '\n]'
+        );
         return rsp;
       },
       onMessage(ws, data) {

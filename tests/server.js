@@ -1,13 +1,17 @@
 import { exit } from 'std';
 import { close, exec, open, realpath, O_RDWR, setReadHandler, setWriteHandler, Worker } from 'os';
 import { server, URL, setLog, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
-import { Levels, DefaultLevels, Init, isDebug } from './log.js';
+import { Levels, DefaultLevels, Init, isDebug, log } from './log.js';
 import { getpid, once, exists } from './common.js';
 
 const w = Worker.parent;
 const name = w ? 'CHILD\t' : 'PARENT\t';
-const log = (...args) => console.log(name, ...args);
+//let log = (...args) => console.log(name, ...args);
 const connections = new Set();
+
+/*import('console').then(({ Console }) => { globalThis.console = new Console(err, { inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100 } });
+  log = (...args) => globalThis.console.log(name, ...args);
+});*/
 
 const MimeTypes = [
   ['.svgz', 'application/gzip'],
@@ -156,10 +160,19 @@ export class MinnetServer {
       mimetypes,
       mounts,
       onConnect: (ws, req) => {
+        log('onConnect', { ws, req });
         const { url, path } = req;
         const { family, address, port } = ws;
 
-        w.postMessage({ type: 'connect', id: this.id(ws), url, path, family, address, port });
+        w.postMessage({
+          type: 'connect',
+          id: this.id(ws),
+          url,
+          path,
+          family,
+          address,
+          port
+        });
         connections.add(ws);
       },
       onClose: (ws, status) => {
@@ -217,7 +230,10 @@ export class MinnetServer {
       //log('worker.onmessage', ev);
       switch (ev.type) {
         case 'ready':
-          worker.postMessage({ type: 'start', ...opts.reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {}) });
+          worker.postMessage({
+            type: 'start',
+            ...opts.reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {})
+          });
           break;
 
         default:
@@ -325,6 +341,7 @@ if(w) {
           /*const { url, path } = req;
           const { family, address, port } = ws;
           log('onConnect', { url, path, family, address, port });*/
+          log('onConnect', { ws, req });
         },
         onClose: (ws, status, reason) => {
           log('onClose', { ws, status, reason });
