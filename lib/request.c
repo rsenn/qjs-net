@@ -130,16 +130,12 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
   struct http_request* ret = 0;
   HTTPMethod method = wsi_method(wsi);
   struct url url = URL_INIT();
-  char ipaddr[16];
 
   url_fromwsi(&url, wsi, ctx);
 
   ret = request_new(url, method, ctx);
 
-  if(lws_get_peer_simple(wsi, ipaddr, sizeof(ipaddr))) {
-    ret->ip = js_strdup(ctx, ipaddr);
-  }
-
+  ret->ip = wsi_ipaddr(wsi, ctx);
   ret->secure = wsi_tls(wsi);
 
   /*const char* uri;

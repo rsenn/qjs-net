@@ -64,7 +64,7 @@ export function MakeCert(sslCert, sslPrivateKey) {
   return ret;
 }
 
-export class MinnetServer {
+/*export class MinnetServer {
   static ws2id = new WeakMap();
 
   constructor(options = {}) {
@@ -107,7 +107,7 @@ export class MinnetServer {
     let { ws2id } = MinnetServer;
     return Object.fromEntries(
       [...connections].reduce((acc, wr) => {
-        let ws = wr; /*.deref()*/
+        let ws = wr; 
         if(ws !== undefined) acc.push([ws2id.get(ws), ws]);
         return acc;
       }, [])
@@ -281,7 +281,7 @@ export class MinnetServer {
 
     w.postMessage({ type: 'ready' });
   }
-}
+}*/
 
 if(w) {
   try {

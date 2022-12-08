@@ -247,10 +247,10 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
 
     // printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
     if(opaque->status < CLOSING) {
-      const struct lws_protocols* protocol = lws_get_protocol(ws->lwsi);
+      // const struct lws_protocols* protocol = lws_get_protocol(ws->lwsi);
 
-      if(!strncmp(protocol->name, "ws", 2))
-        lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
+      // if(!strncmp(protocol->name, "ws", 2))
+      lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
     }
 
     opaque->status = CLOSED;

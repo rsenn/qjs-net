@@ -7,17 +7,27 @@
 
 struct deferred;
 typedef void* ptr_t;
-typedef ptr_t DeferredFunction(ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t);
 typedef void FinalizerFunction(struct deferred*);
 typedef void js_ctx_function_t(JSContext*, JSValueConst);
 typedef void js_rt_function_t(JSRuntime*, JSValueConst);
+
+typedef union dword {
+  struct {
+    ptr_t lo, hi;
+  };
+  ptr_t word[2];
+  JSValueConst js;
+} DoubleWord;
+
+typedef DoubleWord DeferredFunction(ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t);
 
 typedef struct deferred {
   int ref_count, num_calls;
   BOOL only_once;
   DeferredFunction* func;
   // FinalizerFunction* finalize;
-  ptr_t args[8], retval, opaque;
+  ptr_t args[8], opaque;
+  DoubleWord retval;
   struct deferred* next;
 } Deferred;
 
@@ -28,7 +38,7 @@ Deferred* deferred_newjs(js_ctx_function_t, JSValueConst v, JSContext* ctx);
 Deferred* deferred_dupjs(js_ctx_function_t, JSValueConst value, JSContext* ctx);
 Deferred* deferred_newjs_rt(js_rt_function_t, JSValueConst value, JSContext* ctx);
 void deferred_init(Deferred*, ptr_t fn, int argc, ptr_t argv[]);
-ptr_t deferred_call(Deferred*);
+DoubleWord deferred_call(Deferred*);
 JSValue deferred_js(Deferred*, JSContext* ctx);
 
 static inline Deferred*

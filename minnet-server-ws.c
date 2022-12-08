@@ -42,12 +42,9 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       break;
     }
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
-    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
-      /* if(!opaque->req)
-         opaque->req = request_fromwsi(wsi, ctx);*/
-
+    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
       break;
-
+    }
     case LWS_CALLBACK_PROTOCOL_INIT: {
       break;
     }
@@ -128,6 +125,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       if(!opaque->req) {
         opaque->req = request_new(url, METHOD_GET, ctx);
+        opaque->req->ip = wsi_ipaddr(wsi, ctx);
         opaque->req->secure = wsi_tls(wsi);
         headers_tobuffer(ctx, &opaque->req->headers, wsi);
       } else {
@@ -143,8 +141,10 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       MinnetHttpMount* mount = 0;
       MinnetURL* url;
 
-      if(!opaque->req)
+      if(!opaque->req) {
         opaque->req = request_fromwsi(wsi, ctx);
+        opaque->req->ip = wsi_ipaddr(wsi, ctx);
+      }
 
       if(opaque->req) {
         url = &opaque->req->url;

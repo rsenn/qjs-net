@@ -443,9 +443,10 @@ url_fromwsi(struct url* url, struct lws* wsi, JSContext* ctx) {
         if(url->host)
           js_free(ctx, url->host);
         url->host = p;
-        if(port >= 0 && port <= 65535)
+        if(port >= 0 && port <= 65535) {
           url->port = port;
-        break;
+          break;
+        }
       } else {
         js_free(ctx, p);
       }

@@ -268,7 +268,33 @@ link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR}
 include_directories(lib ${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIR}
                     ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
 
-file(GLOB JS_BINDINGS_SOURCES lib/*.[ch] minnet*.[ch])
+file(
+  GLOB
+  JS_BINDINGS_SOURCES
+  lib/allocated.*
+  lib/assure.*
+  lib/asynciterator.*
+  lib/buffer.*
+  lib/callback.*
+  lib/closure.*
+  lib/context.*
+  lib/deferred.*
+  lib/generator.*
+  lib/headers.*
+  lib/jsutils.*
+  lib/opaque.*
+  #lib/poll.*
+  lib/query.*
+  lib/queue.*
+  #lib/ref.*
+  lib/request.*
+  lib/response.*
+  lib/ringbuffer.*
+  lib/session.*
+  lib/url.*
+  lib/utils.*
+  lib/ws.*
+  minnet*.[ch])
 list(FILTER JS_BINDINGS_SOURCES EXCLUDE REGEX ".*-plugin-.*")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -356,9 +382,9 @@ macro(TARGET_LINK TARGET)
                           ${LIBWEBSOCKETS_LIBRARY_DIR})
 
   target_link_libraries(
-    ${TARGET} ${LIBWEBSOCKETS_LIBRARIES}
-    ${MBEDTLS_LIBRARIES} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES}
-    ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY})
+    ${TARGET} ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES}
+    ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES} ${BROTLI_LIBRARIES}
+    ${ZLIB_LIBRARY})
 endmacro(TARGET_LINK TARGET)
 
 target_link(quickjs-minnet net)

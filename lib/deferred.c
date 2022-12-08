@@ -6,7 +6,8 @@ deferred_clear(Deferred* def) {
   def->num_calls = 0;
   def->only_once = FALSE;
   def->func = 0;
-  def->retval = 0;
+  def->retval.lo = 0;
+  def->retval.hi = 0;
 
   for(int i = 0; i < 8; i++) { def->args[i] = 0; }
   def->opaque = 0;
@@ -103,12 +104,12 @@ deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
 
   def->num_calls = 0;
   def->only_once = FALSE;
-  def->retval = 0;
+  def->retval = (DoubleWord){{0, 0}};
   def->opaque = 0;
   // def->finalize = 0;
 }
 
-ptr_t
+DoubleWord
 deferred_call(Deferred* def) {
   ptr_t const* av = def->args;
 
@@ -129,7 +130,7 @@ deferred_js_call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
 
   deferred_call(def);
 
-  return JS_UNDEFINED;
+  return def->retval.js;
 }
 
 JSValue

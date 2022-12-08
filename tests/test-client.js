@@ -16,16 +16,17 @@ function main(...args) {
     pid = spawn(
       'server.js',
       ['localhost', 30000],
-null//      scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log')
+      null //      scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log')
     );
-    sleep(100);
+    sleep(1000);
     args.push('wss://localhost:30000/ws');
   }
 
   for(let arg of args) {
-    Client(
+    let pr = Client(
       arg,
       {
+        block: false,
         onConnect(ws, req) {
           log('onConnect', { ws, req });
           const { protocol } = req.url;
@@ -83,6 +84,7 @@ null//      scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log')
       },
       debug ? LLL_INFO - 1 : LLL_USER
     );
+    console.log('pr', pr);
   }
 
   function terminate(code = 0, ex = true) {

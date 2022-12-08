@@ -458,6 +458,16 @@ wsi_method(struct lws* wsi) {
   return -1;
 }
 
+char*
+wsi_ipaddr(struct lws* wsi, JSContext* ctx) {
+  char ipaddr[16], *ret = 0;
+
+  if(lws_get_peer_simple(wsi, ipaddr, sizeof(ipaddr)))
+    ret = js_strdup(ctx, ipaddr);
+
+  return ret;
+}
+
 void
 js_value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
   const char* str = JS_ToCString(ctx, *v);
