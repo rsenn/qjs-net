@@ -315,7 +315,7 @@ async function main(...args) {
         }
       },
       onFd(fd, rd, wr) {
-        //console.log('onFd', fd, rd, wr);
+       //console.log('onFd', fd, rd, wr);
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
       },
@@ -347,6 +347,7 @@ async function main(...args) {
     await createWS(urls.shift(), {})
       .then(() => {
         console.log('FINISHED');
+        quit('FINISHED');
       })
       .catch(err => {
         console.log('Failed', err);

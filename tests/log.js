@@ -52,8 +52,8 @@ export const log = (() => {
   const name = scriptArgs[0].replace(/.*\//g, '');
   let cons = console;
   import('console').then(({ Console }) => {
-    globalThis.console = cons = new Console(err, {
-      inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100, colors: true }
+    globalThis.console = cons = new Console(/*err, */{
+      inspectOptions: { compact: 1,depth:10, customInspect: true, maxStringLength: 100, colors: true }
     });
   });
   return (...args) => cons.log(name + ':', ...args);

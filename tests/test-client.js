@@ -40,7 +40,10 @@ function main(...args) {
                 let line = stdin.getline();
 
                 if(line.length) {
-                  ws.send(line);
+                  let s=line;
+                  let pr=ws.send(line);
+                  log('pr:',{pr,s})
+                  pr.then(() => log('Sent:', {s}))
                   stdout.puts(`\x1b[0m\n`);
                   stdout.flush();
                 }

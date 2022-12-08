@@ -596,7 +596,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       buffer_reset(buf);*/
 
-      ws_write(opaque->ws, opaque->binary, ctx);
+      session_writable(&client->session, opaque->binary, ctx);
       break;
     }
 

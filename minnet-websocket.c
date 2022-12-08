@@ -98,8 +98,16 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
   {
     JSBuffer jsbuf = js_input_args(ctx, argc, argv);
+    QueueItem* item;
 
-    ws_enqueue(ws, jsbuf.data, jsbuf.size);
+    if((item = ws_send(ws, jsbuf.data, jsbuf.size, ctx))) {
+      ResolveFunctions fns;
+
+      ret = js_promise_create(ctx, &fns);
+
+      item->resolve = deferred_newjs(&JS_FreeValue, fns.resolve, ctx);
+      JS_FreeValue(ctx, fns.reject);
+    }
   }
 
   return ret;
@@ -437,7 +445,7 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
     JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
     JS_CFUNC_DEF("close", 1, minnet_ws_close),
-    JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_ws_get, 0, WEBSOCKET_PROTOCOL, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_ws_get, 0, WEBSOCKET_PROTOCOL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_get, 0, WEBSOCKET_ADDRESS, 0),
     JS_ALIAS_DEF("remoteAddress", "address"),
@@ -447,7 +455,7 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("ssl", minnet_ws_get, 0, WEBSOCKET_SSL, 0),
     JS_ALIAS_DEF("tls", "ssl"),
     JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_get, minnet_ws_set, WEBSOCKET_BINARY, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, JS_PROP_ENUMERABLE),
     /*JS_CGETSET_MAGIC_FLAGS_DEF("reservedBits", minnet_ws_get, 0, WEBSOCKET_RESERVED_BITS, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("firstFragment", minnet_ws_get, 0, WEBSOCKET_FIRST_FRAGMENT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("finalFragment", minnet_ws_get, 0, WEBSOCKET_FINAL_FRAGMENT, 0),

@@ -3,21 +3,34 @@
 void
 queue_zero(Queue* q) {
   init_list_head(&q->items);
+  q->size = 0;
 }
 
 void
-queue_free(Queue* q, JSContext* ctx) {
+queue_clear(Queue* q, JSContext* ctx) {
+  queue_clear_rt(q, JS_GetRuntime(ctx));
+}
+
+void
+queue_clear_rt(Queue* q, JSRuntime* rt) {
   struct list_head *p, *p2;
 
   list_for_each_safe(p, p2, &q->items) {
     QueueItem* i = list_entry(p, QueueItem, link);
 
     list_del(p);
-    JS_FreeValue(ctx, i->value);
+    block_free_rt(&i->block, rt);
+    // JS_FreeValueRT(rt, i->value);
 
     free(p);
   }
 
+  q->size = 0;
+}
+
+void
+queue_free(Queue* q, JSContext* ctx) {
+  queue_clear(q, ctx);
   js_free(ctx, q);
 }
 
@@ -31,9 +44,9 @@ queue_new(JSContext* ctx) {
   return q;
 }
 
-JSValue
+ByteBlock
 queue_next(Queue* q, BOOL* done_p) {
-  JSValue ret = JS_UNDEFINED;
+  ByteBlock ret = {0, 0};
   QueueItem* i;
   BOOL done = FALSE;
 
@@ -42,10 +55,17 @@ queue_next(Queue* q, BOOL* done_p) {
 
     list_del(&i->link);
 
-    ret = i->value;
+    --q->size;
+
+    ret = i->block;
     done = i->done;
 
     if(i->resolve) {
+      JSContext* ctx = deferred_getctx(i->resolve);
+      JSValue fn = deferred_getjs(i->resolve);
+
+      JS_FreeValue(ctx, JS_Call(ctx, fn, JS_UNDEFINED, 0, 0));
+
       DoubleWord retval = deferred_call(i->resolve);
       JS_FreeValue(i->resolve->args[0], retval.js);
       deferred_free(i->resolve);
@@ -61,27 +81,47 @@ queue_next(Queue* q, BOOL* done_p) {
 }
 
 QueueItem*
-queue_put(Queue* q, JSValueConst value) {
+queue_put(Queue* q, ByteBlock chunk) {
   QueueItem* i;
 
+  if(q->items.next == 0 && q->items.prev == 0)
+    init_list_head(&q->items);
+
   if((i = malloc(sizeof(QueueItem)))) {
-    i->value = value;
+    i->block = chunk;
     i->done = FALSE;
+    i->resolve = 0;
+    i->unref = 0;
 
     list_add_tail(&i->link, &q->items);
+
+    ++q->size;
   }
 
   return i;
 }
 
-void
+QueueItem*
+queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
+  ByteBlock chunk = block_copy(data, size, ctx);
+
+  return queue_put(q, chunk);
+}
+
+QueueItem*
 queue_close(Queue* q) {
   QueueItem* i;
 
   if((i = malloc(sizeof(QueueItem)))) {
-    i->value = JS_UNINITIALIZED;
+    i->block = (ByteBlock){0, 0};
     i->done = TRUE;
+    i->resolve = 0;
+    i->unref = 0;
 
     list_add_tail(&i->link, &q->items);
+
+    ++q->size;
   }
+
+  return i;
 }

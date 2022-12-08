@@ -3,9 +3,10 @@
 
 #include <libwebsockets.h>
 #include <quickjs.h>
-#include "ringbuffer.h"
 #include <cutils.h>
 #include "opaque.h"
+#include "jsutils.h"
+#include "queue.h"
 
 #if(defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)) && !defined(__MSYS__)
 #warning winsock2
@@ -19,19 +20,18 @@ struct http_response;
 struct socket {
   int ref_count;
   struct lws* lwsi;
-  // struct wsi_opaque_user_data* opaque;
-  struct ringbuffer sendq;
 };
 
-struct socket* ws_new(struct lws*, JSContext*);
-void ws_clear_rt(struct socket*, JSRuntime*);
-void ws_clear(struct socket*, JSContext*);
-void ws_free_rt(struct socket*, JSRuntime*);
-void ws_free(struct socket*, JSContext*);
+struct socket* ws_new(struct lws*, JSContext* ctx);
+void ws_clear_rt(struct socket*, JSRuntime* rt);
+void ws_clear(struct socket*, JSContext* ctx);
+void ws_free_rt(struct socket*, JSRuntime* rt);
+void ws_free(struct socket*, JSContext* ctx);
 struct socket* ws_dup(struct socket*);
-int ws_write(struct socket* ws, BOOL binary, JSContext* ctx);
+int ws_writable(struct socket*, BOOL binary, JSContext* ctx);
 JSValue ws_want_write(struct socket*, JSContext* ctx);
-int ws_enqueue(struct socket*, const void* data, size_t size);
+QueueItem* ws_enqueue(struct socket*, ByteBlock);
+QueueItem* ws_send(struct socket*, const void* data, size_t size, JSContext* ctx);
 
 static inline struct session_data*
 lws_session(struct lws* wsi) {

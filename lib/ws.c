@@ -2,6 +2,8 @@
 #include "buffer.h"
 #include "jsutils.h"
 #include "opaque.h"
+#include "session.h"
+#include "ringbuffer.h"
 #include <strings.h>
 #include <assert.h>
 #include <libwebsockets.h>
@@ -16,14 +18,12 @@ ws_new(struct lws* wsi, JSContext* ctx) {
 
   ws->lwsi = wsi;
   ws->ref_count = 2;
-  ringbuffer_init2(&ws->sendq, sizeof(ByteBlock), 65536 * 2);
+  // ringbuffer_init2(&ws->sendq, sizeof(ByteBlock), 65536 * 2);
 
   if((opaque = lws_opaque(wsi, ctx))) {
     opaque->ws = ws;
     opaque->status = 0;
     opaque->handler = JS_NULL;
-    /*opaque->handlers[0] = JS_NULL;
-    opaque->handlers[1] = JS_NULL;*/
   }
 
   return ws;
@@ -47,7 +47,7 @@ ws_clear_rt(struct socket* ws, JSRuntime* rt) {
     }
   }
 
-  ringbuffer_zero(&ws->sendq);
+  // ringbuffer_zero(&ws->sendq);
 }
 
 void
@@ -78,22 +78,15 @@ ws_dup(struct socket* ws) {
 }
 
 int
-ws_write(struct socket* ws, BOOL binary, JSContext* ctx) {
+ws_writable(struct socket* ws, BOOL binary, JSContext* ctx) {
+  struct wsi_opaque_user_data* opaque;
   int ret = 0;
-  size_t size;
 
-  if((size = ringbuffer_size(&ws->sendq))) {
-    ByteBlock buf;
-    ringbuffer_consume(&ws->sendq, &buf, 1);
+  if((opaque = lws_get_opaque_user_data(ws->lwsi))) {
+    struct session_data* session = opaque->sess;
 
-    ret = lws_write(ws->lwsi, block_BEGIN(&buf), block_SIZE(&buf), binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
-
-    block_free(&buf, ctx);
+    ret = session_writable(session, binary, ctx);
   }
-
-  if(size > 1)
-    lws_callback_on_writable(ws->lwsi);
-
   return ret;
 }
 
@@ -131,12 +124,26 @@ ws_want_write(struct socket* ws, JSContext* ctx) {
   return JS_NewCClosure(ctx, want_write, 0, 0, h, ws_want_write_free);
 }
 
-int
-ws_enqueue(struct socket* ws, const void* data, size_t size) {
-  ByteBlock buffer = {(uint8_t*)data, (uint8_t*)data + size};
+QueueItem*
+ws_enqueue(struct socket* ws, ByteBlock chunk) {
+  struct wsi_opaque_user_data* opaque;
+  QueueItem* item = 0;
 
-  ringbuffer_insert(&ws->sendq, &buffer, 1);
-  lws_callback_on_writable(ws->lwsi);
+  if((opaque = lws_get_opaque_user_data(ws->lwsi))) {
+    struct session_data* session = opaque->sess;
 
-  return 1;
+    if((item = queue_put(&session->sendq, chunk))) {
+
+      lws_callback_on_writable(ws->lwsi);
+    }
+  }
+
+  return item;
+}
+
+QueueItem*
+ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
+  ByteBlock chunk = block_copy(data, size, ctx);
+
+  return ws_enqueue(ws, chunk);
 }

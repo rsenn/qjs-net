@@ -20,13 +20,22 @@ typedef union dword {
 } DoubleWord;
 
 typedef DoubleWord DeferredFunction(ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t);
+typedef JSValue DeferredJSFunction(JSContext*, JSValueConst, JSValueConst, int, JSValueConst[]);
 
 typedef struct deferred {
   int ref_count, num_calls;
-  BOOL only_once;
-  DeferredFunction* func;
+  BOOL only_once, js_call;
+  union {
+    DeferredFunction* func;
+    DeferredJSFunction* jscall;
+  };
   // FinalizerFunction* finalize;
-  ptr_t args[8], opaque;
+  int argc;
+  union {
+    ptr_t args[8];
+    JSValueConst jsargs[4];
+  };
+  ptr_t opaque;
   DoubleWord retval;
   struct deferred* next;
 } Deferred;
@@ -55,10 +64,32 @@ deferred_new_va(ptr_t fn, JSContext* ctx, ...) {
   return deferred_new(fn, argc, args, ctx);
 }
 
+/*static inline Deferred*
+deferred_new_jscall(JSValueConst fn, JSContext* ctx, ...) {
+  va_list a;
+  int argc = 0;
+  ptr_t args[8] = {0}, arg;
+  va_start(a, ctx);
+
+  while((arg = va_arg(a, void*))) { args[argc++] = arg; }
+
+  va_end(a);
+
+  Deferred*def= deferred_new(fn, argc, args, ctx);
+def->js_call=TRUE;
+
+  return def;
+}*/
+
 static inline Deferred*
 deferred_dup(Deferred* def) {
   ++def->ref_count;
   return def;
+}
+
+static inline JSContext*
+deferred_getctx(Deferred* def) {
+  return (JSContext*)def->args[0];
 }
 
 static inline JSValue
