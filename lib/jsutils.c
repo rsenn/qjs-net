@@ -211,9 +211,10 @@ js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr) {
   ol_init(&buf->range);
 }
 
-void
+BOOL
 js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
   *buf = js_input_chars(ctx, value);
+  return !!buf->data;
 }
 
 JSBuffer
@@ -240,7 +241,7 @@ js_buffer_fromblock(JSContext* ctx, struct byte_block* blk) {
 
 JSBuffer
 js_buffer_data(JSContext* ctx, const void* data, size_t size) {
-  ByteBlock block = {data, (uint8_t*)data + size};
+  ByteBlock block = {(uint8_t*)data, (uint8_t*)data + size};
 
   return js_buffer_fromblock(ctx, &block);
 }

@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_REF_H
-#define QUICKJS_NET_LIB_REF_H
+#ifndef QJSNET_LIB_REF_H
+#define QJSNET_LIB_REF_H
 
 #include "deferred.h"
 
@@ -21,4 +21,4 @@ ref_dup(Ref* r) {
   return r;
 }
 
-#endif /* QUICKJS_NET_LIB_REF_H */
+#endif /* QJSNET_LIB_REF_H */

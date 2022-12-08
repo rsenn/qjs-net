@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_RINGBUFFER_H
-#define QUICKJS_NET_LIB_RINGBUFFER_H
+#ifndef QJSNET_LIB_RINGBUFFER_H
+#define QJSNET_LIB_RINGBUFFER_H
 
 #include <quickjs.h>
 #include <cutils.h>
@@ -38,4 +38,4 @@ static inline int
 ringbuffer_unlock(struct ringbuffer* strm) {
   return pthread_mutex_unlock(&strm->lock_ring);
 }
-#endif /* QUICKJS_NET_LIB_RINGBUFFER_H */
+#endif /* QJSNET_LIB_RINGBUFFER_H */

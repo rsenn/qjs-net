@@ -412,17 +412,18 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 static JSValue
 serve_promise(JSContext* ctx, struct session_data* session, MinnetResponse* resp, struct lws* wsi, JSValueConst value) {
   HTTPAsyncResolveClosure* p;
+  JSValue ret = JS_UNDEFINED;
 
   if((p = js_malloc(ctx, sizeof(HTTPAsyncResolveClosure)))) {
     *p = (HTTPAsyncResolveClosure){1, ctx, session, response_dup(resp), wsi};
     JSValue fn = JS_NewCClosure(ctx, serve_resolved, 1, 0, p, serve_resolved_free);
     JSValue tmp = js_promise_then(ctx, value, fn);
     JS_FreeValue(ctx, fn);
-    value = tmp;
+    ret = tmp;
   } else {
-    value = JS_ThrowOutOfMemory(ctx);
+    ret = JS_ThrowOutOfMemory(ctx);
   }
-  return value;
+  return ret;
 }
 
 static int
@@ -432,50 +433,48 @@ serve_generator(JSContext* ctx, struct session_data* session, MinnetResponse* re
     response_generator(resp, ctx);
 
   if(JS_IsObject(session->generator)) {
-    JSValue ret = JS_UNDEFINED;
-    JSBuffer out = JS_BUFFER(0, 0, 0);
-
     session->next = JS_UNDEFINED;
 
-    DEBUG("LWS_CALLBACK_HTTP_WRITEABLE: %s\n", JS_ToCString(ctx, session->generator));
+    DEBUG("%s session->generator=%s\n", __func__, JS_ToCString(ctx, session->generator));
 
     while(!*done_p) {
-      ret = js_iterator_next(ctx, session->generator, &session->next, done_p, 0, 0);
+      JSValue ret = js_iterator_next(ctx, session->generator, &session->next, done_p, 0, 0);
 
-      lwsl_user("%s i=%" PRIi64 " ret=%s", __func__, resp->generator->chunks_read, JS_ToCString(ctx, ret));
+      DEBUG("%s i=%" PRIi64 " done=%s ret=%s", __func__, resp->generator->chunks_read, *done_p ? "TRUE" : "FALSE", JS_ToCString(ctx, ret));
+
       if(js_is_promise(ctx, ret)) {
-
-        ret = serve_promise(ctx, session, resp, wsi, ret);
-
+        JSValue promise = serve_promise(ctx, session, resp, wsi, ret);
+        JS_FreeValue(ctx, promise);
       } else if(JS_IsException(ret)) {
         JSValue exception = JS_GetException(ctx);
         js_error_print(ctx, exception);
         *done_p = TRUE;
-      } else if(!*done_p) {
-        out = js_buffer_new(ctx, ret);
+      } else {
+        JSBuffer out = JS_BUFFER_DEFAULT();
 
-        if(out.data) {
-          // LOGCB("HTTP-WRITEABLE", "size=%zu, out='%.*s'", out.size, (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data);
-          DEBUG("\x1b[2K\ryielded %.*s %zu\n", (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data, out.size);
+        if(js_buffer_from(ctx, &out, ret)) {
+          DEBUG("%s out={ .data = '%.*s', .size = %zu }\n", __func__, (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data, out.size);
 
-          /*   if(!session->sendq)
-               session->sendq = ringbuffer_new2(sizeof(JSBuffer), 128, ctx);
-
-             ringbuffer_insert(session->sendq, &out, 1);*/
           queue_write(&session->sendq, out.data, out.size, ctx);
 
           lws_callback_on_writable(wsi);
-
-          /*          generator_write(resp->generator, out.data, out.size);
-                    js_buffer_free(&out, ctx);*/
         }
+
+        js_buffer_free(&out, ctx);
       }
+
       JS_FreeValue(ctx, ret);
-      break;
+
+      if(*done_p)
+        queue_close(&session->sendq);
     }
 
   } else {
     *done_p = TRUE;
+  }
+
+  if(queue_closed(&session->sendq)) {
+    lws_callback_on_writable(wsi);
   }
 
   return 0;
@@ -495,10 +494,10 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
   // resp->read_only = TRUE;
   response_generator(resp, ctx);
 
-  if(!wsi_http2(wsi)) {
+  /*if(!wsi_http2(wsi)) {
     BOOL done = FALSE;
-    /*while(!done)*/ serve_generator(ctx, session, resp, wsi, &done);
-  }
+    serve_generator(ctx, session, resp, wsi, &done);
+  }*/
 
   if(lws_add_http_common_headers(wsi,
                                  resp->status,
@@ -631,7 +630,7 @@ http_server_writable(struct http_closure* closure, BOOL done) {
   if(queue_size(&closure->session->sendq)) {
     ByteBlock buf;
     size_t pos = 0;
- 
+
     buf = queue_next(&closure->session->sendq, &done);
 
     while((remain = block_SIZE(&buf) - pos) > 0) {
@@ -660,16 +659,20 @@ http_server_writable(struct http_closure* closure, BOOL done) {
 
   LOG("SERVER-HTTP(3)", FG("%d") "%-38s" NC " wsi#%" PRIi64 " done=%i remain=%zu final=%d", 112, __func__ + 12, opaque->serial, done, remain, wp == LWS_WRITE_HTTP_FINAL);
 
-  if(remain > 0 || !done || queue_size(&closure->session->sendq))
-    lws_callback_on_writable(closure->wsi);
-  else if(wp == LWS_WRITE_HTTP_FINAL || (done && remain == 0)) {
-
+  if(queue_closed(&closure->session->sendq)) {
     if(lws_http_transaction_completed(closure->wsi))
       return 1;
 
-    return 0;
-  }
+  } else if(/*remain > 0 || !done ||*/ queue_size(&closure->session->sendq))
+    lws_callback_on_writable(closure->wsi);
+  /* else if(wp == LWS_WRITE_HTTP_FINAL || (done && remain == 0)) {
 
+     if(lws_http_transaction_completed(closure->wsi))
+       return 1;
+
+     return 0;
+   }
+ */
   return 0;
 }
 
@@ -1036,9 +1039,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         ByteBuffer b = BUFFER(buf);
         session->response_sent = !serve_response(wsi, &b, opaque->resp, ctx, session);
       }
-      ret = serve_generator(ctx, session, resp, wsi, &done);
 
-      if(queue_size(&session->sendq))
+      if(!queue_closed(&session->sendq))
+        ret = serve_generator(ctx, session, resp, wsi, &done);
+
+      if(queue_closed(&session->sendq) || queue_size(&session->sendq))
         if(http_server_writable(&closure, done) == 1)
           return http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, session, in, len);
 

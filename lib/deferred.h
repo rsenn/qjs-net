@@ -1,5 +1,5 @@
-#ifndef QUICKJS_NET_LIB_DEFERRED_H
-#define QUICKJS_NET_LIB_DEFERRED_H
+#ifndef QJSNET_LIB_DEFERRED_H
+#define QJSNET_LIB_DEFERRED_H
 
 #include <quickjs.h>
 #include <cutils.h>
@@ -120,4 +120,4 @@ deferred_new3(ptr_t fn, ptr_t arg1, ptr_t arg2, ptr_t arg3, JSContext* ctx) {
   };
   return deferred_new(fn, 3, args, ctx);
 }
-#endif /* QUICKJS_NET_LIB_DEFERRED_H */
+#endif /* QJSNET_LIB_DEFERRED_H */

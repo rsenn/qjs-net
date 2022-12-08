@@ -1,5 +1,5 @@
-#ifndef WJSNET_LIBQJSNET_LIB_REQUEST_H
-#define WJSNET_LIBQJSNET_LIB_REQUEST_H
+#ifndef QJSNET_LIB_REQUEST_H
+#define QJSNET_LIB_REQUEST_H
 
 #include <quickjs.h>
 #include <cutils.h>
@@ -13,33 +13,33 @@ struct http_response;
 const char* method_string(enum http_method);
 int method_number(const char*);
 
-struct http_request {
+typedef struct http_request {
   int ref_count;
   BOOL read_only, secure;
   enum http_method method;
   struct url url;
   ByteBuffer headers;
-  struct generator* body;
+  Generator* body;
   char* ip;
-};
+} Request;
 
 const char* method_string(enum http_method);
 int method_number(const char*);
-void request_format(struct http_request const*, char* buf, size_t len, JSContext* ctx);
-char* request_dump(struct http_request const*, JSContext* ctx);
-void request_init(struct http_request*, struct url url, enum http_method method);
-struct http_request* request_alloc(JSContext*);
-struct http_request* request_new(struct url, HTTPMethod method, JSContext* ctx);
-struct http_request* request_dup(struct http_request*);
-struct http_request* request_fromobj(JSValueConst, JSContext* ctx);
-struct http_request* request_fromwsi(struct lws*, JSContext* ctx);
-struct http_request* request_fromurl(const char*, JSContext* ctx);
-void request_zero(struct http_request*);
-void request_clear(struct http_request*, JSContext* ctx);
-void request_clear_rt(struct http_request*, JSRuntime* rt);
-void request_free(struct http_request*, JSContext* ctx);
-void request_free_rt(struct http_request*, JSRuntime* rt);
-struct http_request* request_from(int, JSValueConst argv[], JSContext* ctx);
+void request_format(Request const*, char* buf, size_t len, JSContext* ctx);
+char* request_dump(Request const*, JSContext* ctx);
+void request_init(Request*, struct url url, enum http_method method);
+Request* request_alloc(JSContext*);
+Request* request_new(struct url, HTTPMethod method, JSContext* ctx);
+Request* request_dup(Request*);
+Request* request_fromobj(JSValueConst, JSContext* ctx);
+Request* request_fromwsi(struct lws*, JSContext* ctx);
+Request* request_fromurl(const char*, JSContext* ctx);
+void request_zero(Request*);
+void request_clear(Request*, JSContext* ctx);
+void request_clear_rt(Request*, JSRuntime* rt);
+void request_free(Request*, JSContext* ctx);
+void request_free_rt(Request*, JSRuntime* rt);
+Request* request_from(int, JSValueConst argv[], JSContext* ctx);
 
 static inline const char*
 method_name(int m) {
@@ -47,4 +47,5 @@ method_name(int m) {
     return "-1";
   return ((const char* const[]){"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE", "CONNECT", "HEAD"})[m];
 }
-#endif /* WJSNET_LIBQJSNET_LIB_REQUEST_H */
+
+#endif /* QJSNET_LIB_REQUEST_H */

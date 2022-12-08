@@ -68,11 +68,7 @@ const SourceLine = ({ lineno, text, active, children }) =>
     h(
       'pre',
       {
-        class: classNames(
-          'lineno',
-          active && 'active',
-          ['even', 'odd'][lineno % 2]
-        )
+        class: classNames('lineno', active && 'active', ['even', 'odd'][lineno % 2])
       },
       h('a', { name: `line-${lineno}` }, [lineno + ''])
     ),
@@ -99,22 +95,12 @@ const SourceText = ({ text, filename }) => {
       const text = tokens
         .map(([type, token]) => [type, token.replace(/ /g, '\xa0')])
         .reduce((acc, [type, token]) => {
-          acc.push(
-            type == 'whitespace'
-              ? token
-              : `<span class="${type}">${token}</span>`
-          );
+          acc.push(type == 'whitespace' ? token : `<span class="${type}">${token}</span>`);
           return acc;
         }, []);
 
       //console.log('text',text);
-      acc.push(
-        h(
-          SourceLine,
-          { lineno: i + 1, text: text.join(''), active: activeLine == i + 1 },
-          text
-        )
-      );
+      acc.push(h(SourceLine, { lineno: i + 1, text: text.join(''), active: activeLine == i + 1 }, text));
 
       return acc;
     }, [])
@@ -130,11 +116,7 @@ const SourceFile = props => {
     (file &&
       !/^<.*>$/.test(file) &&
       useFetch(filename, resp => {
-        console.log(
-          'Fetch',
-          resp.status,
-          Util.makeURL({ location: '/' + filename })
-        );
+        console.log('Fetch', resp.status, Util.makeURL({ location: '/' + filename }));
         return resp.text();
       })) ||
     '';

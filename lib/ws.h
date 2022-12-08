@@ -1,5 +1,5 @@
-#ifndef WJSNET_LIBQJSNET_LIB_WS_H
-#define WJSNET_LIBQJSNET_LIB_WS_H
+#ifndef QJSNET_LIB_WS_H
+#define QJSNET_LIB_WS_H
 
 #include <libwebsockets.h>
 #include <quickjs.h>
@@ -59,4 +59,4 @@ ws_from_wsi(struct lws* wsi) {
   return (opaque = lws_get_opaque_user_data(wsi)) ? opaque->ws : 0;
 }
 
-#endif /* WJSNET_LIBQJSNET_LIB_WS_H */
+#endif /* QJSNET_LIB_WS_H */

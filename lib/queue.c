@@ -1,4 +1,5 @@
 #include "queue.h"
+#include <assert.h>
 
 void
 queue_zero(Queue* q) {
@@ -44,6 +45,16 @@ queue_new(JSContext* ctx) {
   return q;
 }
 
+QueueItem*
+queue_front(Queue* q) {
+  return list_empty(&q->items) ? 0 : list_entry(q->items.next, QueueItem, link);
+}
+
+QueueItem*
+queue_back(Queue* q) {
+  return list_empty(&q->items) ? 0 : list_entry(q->items.prev, QueueItem, link);
+}
+
 ByteBlock
 queue_next(Queue* q, BOOL* done_p) {
   ByteBlock ret = {0, 0};
@@ -52,10 +63,6 @@ queue_next(Queue* q, BOOL* done_p) {
 
   if(!list_empty(&q->items)) {
     i = list_entry(q->items.next, QueueItem, link);
-
-    list_del(&i->link);
-
-    --q->size;
 
     ret = i->block;
     done = i->done;
@@ -71,7 +78,12 @@ queue_next(Queue* q, BOOL* done_p) {
       deferred_free(i->resolve);
     }
 
-    free(i);
+    if(!done) {
+      list_del(&i->link);
+
+      --q->size;
+      free(i);
+    }
   }
 
   if(done_p)
@@ -112,6 +124,11 @@ QueueItem*
 queue_close(Queue* q) {
   QueueItem* i;
 
+  assert(!queue_closed(q));
+
+  if(q->items.next == 0 && q->items.prev == 0)
+    init_list_head(&q->items);
+
   if((i = malloc(sizeof(QueueItem)))) {
     i->block = (ByteBlock){0, 0};
     i->done = TRUE;
@@ -120,7 +137,7 @@ queue_close(Queue* q) {
 
     list_add_tail(&i->link, &q->items);
 
-    ++q->size;
+    // ++q->size;
   }
 
   return i;

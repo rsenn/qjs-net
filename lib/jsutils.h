@@ -109,7 +109,7 @@ const char* js_function_name(JSContext* ctx, JSValueConst value);
 JSValue js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags);
 void js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr);
-void js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
+BOOL js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
 JSBuffer js_buffer_new(JSContext* ctx, JSValueConst value);
 JSBuffer js_buffer_fromblock(JSContext* ctx, struct byte_block* blk);
 JSBuffer js_buffer_data(JSContext*, const void* data, size_t size);
