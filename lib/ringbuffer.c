@@ -18,8 +18,6 @@ ringbuffer_destroy_element(void* element) {}
 
 void
 ringbuffer_init(struct ringbuffer* strm, size_t element_len, size_t count, const char* type, size_t typelen) {
-  //  memset(strm, 0, sizeof(*strm));
-
   if(type)
     pstrcpy(strm->type, MIN(typelen + 1, sizeof(strm->type)), type);
 

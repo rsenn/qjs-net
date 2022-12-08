@@ -67,7 +67,9 @@ const SourceLine = ({ lineno, text, active, children }) =>
   h(Fragment, {}, [
     h(
       'pre',
-      { class: classNames('lineno', active && 'active', ['even', 'odd'][lineno % 2]) },
+      {
+        class: classNames('lineno', active && 'active', ['even', 'odd'][lineno % 2])
+      },
       h('a', { name: `line-${lineno}` }, [lineno + ''])
     ),
     h('pre', { class: classNames('text', active && 'active'), innerHTML: text })
@@ -220,7 +222,12 @@ function* TokenizeJS(data, filename) {
   out += '</pre>';
 }
 
-Object.assign(globalThis, { responses, currentLine, currentSource, TokenizeJS });
+Object.assign(globalThis, {
+  responses,
+  currentLine,
+  currentSource,
+  TokenizeJS
+});
 Object.assign(globalThis, { Start, Initiate, LoadSource, GetVariables });
 
 async function CreateSocket(endpoint) {

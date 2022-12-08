@@ -1,13 +1,17 @@
 import { exit } from 'std';
 import { close, exec, open, realpath, O_RDWR, setReadHandler, setWriteHandler, Worker } from 'os';
-import { server, URL, setLog, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
-import { Levels, DefaultLevels, Init, isDebug } from './log.js';
+import { server, URL, setLog, logLevels, LLL_ALL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
+import { Levels, DefaultLevels, Init, isDebug, log } from './log.js';
 import { getpid, once, exists } from './common.js';
 
 const w = Worker.parent;
 const name = w ? 'CHILD\t' : 'PARENT\t';
-const log = (...args) => console.log(name, ...args);
+//let log = (...args) => console.log(name, ...args);
 const connections = new Set();
+
+/*import('console').then(({ Console }) => { globalThis.console = new Console(err, { inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100 } });
+  log = (...args) => globalThis.console.log(name, ...args);
+});*/
 
 const MimeTypes = [
   ['.svgz', 'application/gzip'],
@@ -60,7 +64,7 @@ export function MakeCert(sslCert, sslPrivateKey) {
   return ret;
 }
 
-export class MinnetServer {
+/*export class MinnetServer {
   static ws2id = new WeakMap();
 
   constructor(options = {}) {
@@ -103,7 +107,7 @@ export class MinnetServer {
     let { ws2id } = MinnetServer;
     return Object.fromEntries(
       [...connections].reduce((acc, wr) => {
-        let ws = wr; /*.deref()*/
+        let ws = wr; 
         if(ws !== undefined) acc.push([ws2id.get(ws), ws]);
         return acc;
       }, [])
@@ -156,10 +160,19 @@ export class MinnetServer {
       mimetypes,
       mounts,
       onConnect: (ws, req) => {
+        log('onConnect', { ws, req });
         const { url, path } = req;
         const { family, address, port } = ws;
 
-        w.postMessage({ type: 'connect', id: this.id(ws), url, path, family, address, port });
+        w.postMessage({
+          type: 'connect',
+          id: this.id(ws),
+          url,
+          path,
+          family,
+          address,
+          port
+        });
         connections.add(ws);
       },
       onClose: (ws, status) => {
@@ -217,7 +230,10 @@ export class MinnetServer {
       //log('worker.onmessage', ev);
       switch (ev.type) {
         case 'ready':
-          worker.postMessage({ type: 'start', ...opts.reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {}) });
+          worker.postMessage({
+            type: 'start',
+            ...opts.reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {})
+          });
           break;
 
         default:
@@ -265,7 +281,7 @@ export class MinnetServer {
 
     w.postMessage({ type: 'ready' });
   }
-}
+}*/
 
 if(w) {
   try {
@@ -291,7 +307,9 @@ if(w) {
 
       log('MinnetServer', { host, port });
 
-      Init('server.js');
+      setLog(LLL_WARN | LLL_USER, (level, message) => log(`${logLevels[level].padEnd(10)} ${message}`));
+
+      // Init('server.js');
 
       server({
         tls: true,
@@ -325,6 +343,7 @@ if(w) {
           /*const { url, path } = req;
           const { family, address, port } = ws;
           log('onConnect', { url, path, family, address, port });*/
+          log('onConnect', { ws, req });
         },
         onClose: (ws, status, reason) => {
           log('onClose', { ws, status, reason });
@@ -334,7 +353,7 @@ if(w) {
         onError: (ws, error) => {
           log('onError', { ws, error });
         },
-        onHttp: (req, rsp) => {
+        onHttp: (ws, req, rsp) => {
           log('onHttp', { req, rsp });
         },
         onFd: (fd, rd, wr) => {

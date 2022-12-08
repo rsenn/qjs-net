@@ -195,25 +195,26 @@ js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags
   return i;
 }
 
-/*void
-js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
+void
+js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr) {
+  JSBuffer* buf = opaque;
+
+  if(JS_IsString(buf->value))
+    JS_FreeValueRT(rt, buf->value);
+  else if(!JS_IsUndefined(buf->value))
+    JS_FreeValueRT(rt, buf->value);
+
+  buf->value = JS_UNDEFINED;
   buf->data = 0;
   buf->size = 0;
   buf->pos = 0;
-  buf->free = &js_buffer_free_default;
-  buf->value = JS_UNDEFINED;
-  buf->range = (OffsetLength){0,-1};
+  ol_init(&buf->range);
+}
 
-  if(JS_IsString(value)) {
-    buf->data = (uint8_t*)JS_ToCStringLen(ctx, &buf->size, value);
-    buf->value = value;
-  } else if((buf->data = JS_GetArrayBuffer(ctx, &buf->size, value))) {
-    buf->value = JS_DupValue(ctx, value);
-  }
-}*/
-void
+BOOL
 js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
   *buf = js_input_chars(ctx, value);
+  return !!buf->data;
 }
 
 JSBuffer
@@ -236,6 +237,13 @@ js_buffer_fromblock(JSContext* ctx, struct byte_block* blk) {
   JSValue buf = block_toarraybuffer(blk, ctx);
 
   return js_buffer_new(ctx, buf);
+}
+
+JSBuffer
+js_buffer_data(JSContext* ctx, const void* data, size_t size) {
+  ByteBlock block = {(uint8_t*)data, (uint8_t*)data + size};
+
+  return js_buffer_fromblock(ctx, &block);
 }
 
 void

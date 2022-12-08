@@ -183,7 +183,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_IP: {
-      ret = JS_NewString(ctx, req->ip);
+      ret = req->ip ? JS_NewString(ctx, req->ip) : JS_NULL;
       break;
     }
     case REQUEST_PROTOCOL: {

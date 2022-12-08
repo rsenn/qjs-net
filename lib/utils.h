@@ -87,8 +87,8 @@ char* wsi_host_and_port(struct lws* wsi, JSContext* ctx, int* port);
 char* wsi_vhost_and_port(struct lws* wsi, JSContext* ctx, int* port);
 const char* wsi_vhost_name(struct lws* wsi);
 const char* wsi_protocol_name(struct lws* wsi);
-
 const char* lws_callback_name(int reason);
+char* wsi_ipaddr(struct lws*, JSContext* ctx);
 
 static inline BOOL
 has_query(const char* str) {

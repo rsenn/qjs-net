@@ -347,6 +347,7 @@ async function main(...args) {
     await createWS(urls.shift(), {})
       .then(() => {
         console.log('FINISHED');
+        quit('FINISHED');
       })
       .catch(err => {
         console.log('Failed', err);

@@ -1,9 +1,10 @@
 #ifndef QJSNET_LIB_OPAQUE_H
 #define QJSNET_LIB_OPAQUE_H
 
-#include "utils.h"
 #include <list.h>
 #include <libwebsockets.h>
+#include <stdint.h>
+#include "utils.h"
 
 enum socket_state {
   CONNECTING = 0,

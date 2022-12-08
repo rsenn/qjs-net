@@ -48,10 +48,15 @@ export const SetLog = (name, maxLevel = LLL_CLIENT) =>
     err.puts(('X', l).padEnd(9) + msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
   });
 
-import('console').then(({ Console }) => { globalThis.console = new Console(err, { inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100 } });
-});
-
 export const log = (() => {
   const name = scriptArgs[0].replace(/.*\//g, '');
-  return (...args) => console.log(name + ':', ...args);
+  let cons = console;
+  import('console').then(({ Console }) => {
+    globalThis.console = cons = new Console(
+      /*err, */ {
+        inspectOptions: { compact: 0, depth: 10, customInspect: true, maxStringLength: 100, colors: true }
+      }
+    );
+  });
+  return (...args) => cons.log(name + ':', ...args);
 })();

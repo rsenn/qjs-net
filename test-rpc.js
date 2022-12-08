@@ -50,7 +50,9 @@ function WriteJSON(name, data) {
 function main(...args) {
   const base = path.basename(process.argv[1], '.js').replace(/\.[a-z]*$/, '');
   const config = ReadJSON(`.${base}-config`) ?? {};
-  globalThis.console = new Console({ inspectOptions: { compact: 2, customInspect: true } });
+  globalThis.console = new Console({
+    inspectOptions: { compact: 2, customInspect: true }
+  });
   let params = getOpt(
     {
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],
@@ -199,7 +201,11 @@ function main(...args) {
           if(components.length && components[0] === '') components.shift();
           if(components.length < 2 || components[0] != 'home') throw new Error(`Access error`);
 
-          console.log('\x1b[38;5;215m*files\x1b[0m', { dir, components, absdir });
+          console.log('\x1b[38;5;215m*files\x1b[0m', {
+            dir,
+            components,
+            absdir
+          });
           console.log('\x1b[38;5;215m*files\x1b[0m', { absdir });
 
           let names = fs.readdirSync(absdir) ?? [];

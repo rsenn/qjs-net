@@ -1,7 +1,7 @@
 #include "generator.h"
 
 void
-generator_zero(struct generator* gen) {
+generator_zero(Generator* gen) {
   asynciterator_zero(&gen->iterator);
   gen->rbuf = 0;
   gen->bytes_written = 0;
@@ -12,8 +12,8 @@ generator_zero(struct generator* gen) {
 }
 
 void
-generator_destroy(struct generator** gen_p) {
-  struct generator* gen;
+generator_destroy(Generator** gen_p) {
+  Generator* gen;
 
   if((gen = *gen_p)) {
     if(generator_free(gen))
@@ -22,7 +22,7 @@ generator_destroy(struct generator** gen_p) {
 }
 
 BOOL
-generator_free(struct generator* gen) {
+generator_free(Generator* gen) {
   if(--gen->ref_count == 0) {
     asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
 
@@ -39,22 +39,21 @@ generator_free(struct generator* gen) {
   return FALSE;
 }
 
-struct generator*
+Generator*
 generator_new(JSContext* ctx) {
-  struct generator* gen;
+  Generator* gen;
 
-  if((gen = js_malloc(ctx, sizeof(struct generator)))) {
+  if((gen = js_malloc(ctx, sizeof(Generator)))) {
     generator_zero(gen);
     gen->ctx = ctx;
     gen->ref_count = 1;
     gen->rbuf = ringbuffer_new2(sizeof(ByteBlock), 1024, ctx);
-    // gen->iterator.ctx = ctx;
   }
   return gen;
 }
 
 JSValue
-generator_next(struct generator* gen, JSContext* ctx) {
+generator_next(Generator* gen, JSContext* ctx) {
   JSValue ret = JS_UNDEFINED;
 
   ret = asynciterator_next(&gen->iterator, ctx);
@@ -81,9 +80,7 @@ generator_next(struct generator* gen, JSContext* ctx) {
 }
 
 ssize_t
-generator_write(struct generator* gen, const void* data, size_t len) {
-  ssize_t ret = -1;
-
+generator_write(Generator* gen, const void* data, size_t len) {
   if(list_empty(&gen->iterator.reads))
     return generator_queue(gen, data, len);
 
@@ -91,25 +88,19 @@ generator_write(struct generator* gen, const void* data, size_t len) {
 
   asynciterator_yield(&gen->iterator, buf, gen->ctx);
   gen->bytes_written += len;
-  gen->bytes_read += len;
   gen->chunks_written += 1;
-  gen->chunks_read += 1;
 
-  return ret;
+  return len;
 }
 
 BOOL
-generator_close(struct generator* gen) {
+generator_close(Generator* gen) {
   return asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx);
 }
 
 ssize_t
-generator_queue(struct generator* gen, const void* data, size_t len) {
-  ssize_t ret;
-
+generator_queue(Generator* gen, const void* data, size_t len) {
   ByteBlock blk = block_copy(data, len, gen->ctx);
 
-  ret = ringbuffer_insert(gen->rbuf, &blk, 1) ? len : 0;
-
-  return ret;
+  return ringbuffer_insert(gen->rbuf, &blk, 1) ? len : 0;
 }

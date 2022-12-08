@@ -13,7 +13,7 @@ int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, s
 char* lws_hdr_simple_ptr(struct lws*, int);
 
 int
-js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   struct session_data* session = user;
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
@@ -42,12 +42,9 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       break;
     }
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
-    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
-      /* if(!opaque->req)
-         opaque->req = request_fromwsi(wsi, ctx);*/
-
+    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
       break;
-
+    }
     case LWS_CALLBACK_PROTOCOL_INIT: {
       break;
     }
@@ -128,6 +125,8 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       if(!opaque->req) {
         opaque->req = request_new(url, METHOD_GET, ctx);
+        opaque->req->ip = wsi_ipaddr(wsi, ctx);
+        opaque->req->secure = wsi_tls(wsi);
         headers_tobuffer(ctx, &opaque->req->headers, wsi);
       } else {
         url_free(&url, ctx);
@@ -142,8 +141,10 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       MinnetHttpMount* mount = 0;
       MinnetURL* url;
 
-      if(!opaque->req)
+      if(!opaque->req) {
         opaque->req = request_fromwsi(wsi, ctx);
+        opaque->req->ip = wsi_ipaddr(wsi, ctx);
+      }
 
       if(opaque->req) {
         url = &opaque->req->url;
@@ -207,7 +208,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
       // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));
-      ws_write(opaque->ws, opaque->binary, ctx);
+      session_writable(session, opaque->binary, ctx);
       break;
     }
 
@@ -246,7 +247,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       return 0;
     }
     default: {
-      // printf("js_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
+      // printf("ws_server_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
       minnet_lws_unhandled(__func__, reason);
       break;
     }

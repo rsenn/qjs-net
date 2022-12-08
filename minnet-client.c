@@ -231,6 +231,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   session_zero(&client->session);
 
   client->request = request_from(argc, argv, ctx);
+  enum protocol p = url_protocol(client->request->url);
+  client->request->secure = protocol_is_tls(p);
+
   js_promise_zero(&client->promise);
 
   if(argc >= 2) {
@@ -556,12 +559,13 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_CONNECTED: {
       if(opaque->status < OPEN) {
         JSContext* ctx;
+
         /* int status;
          status = lws_http_client_http_response(wsi);*/
 
         opaque->status = OPEN;
         if((ctx = client->on.connect.ctx)) {
-
+          client->request->ip = wsi_ipaddr(wsi, ctx);
           client->session.ws_obj = minnet_ws_fromwsi(ctx, wsi);
 
           if(reason != LWS_CALLBACK_RAW_CONNECTED) {
@@ -592,7 +596,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       buffer_reset(buf);*/
 
-      ws_write(opaque->ws, opaque->binary, ctx);
+      session_writable(&client->session, opaque->binary, ctx);
       break;
     }
 

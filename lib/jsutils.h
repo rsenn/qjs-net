@@ -108,9 +108,11 @@ JSValue js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst th
 const char* js_function_name(JSContext* ctx, JSValueConst value);
 JSValue js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags);
-void js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
+void js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr);
+BOOL js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
 JSBuffer js_buffer_new(JSContext* ctx, JSValueConst value);
 JSBuffer js_buffer_fromblock(JSContext* ctx, struct byte_block* blk);
+JSBuffer js_buffer_data(JSContext*, const void* data, size_t size);
 void js_buffer_to(JSBuffer buf, void** pptr, size_t* plen);
 void js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen);
 BOOL js_buffer_valid(const JSBuffer* in);
@@ -372,16 +374,6 @@ js_replace_string(JSContext* ctx, JSValueConst value, char** sptr) {
 static inline BOOL
 js_is_nullish(JSValueConst value) {
   return JS_IsNull(value) || JS_IsUndefined(value);
-}
-
-static inline void
-js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr) {
-  JSBuffer* buf = opaque;
-
-  if(JS_IsString(buf->value))
-    JS_FreeValueRT(rt, buf->value);
-  else if(!JS_IsUndefined(buf->value))
-    JS_FreeValueRT(rt, buf->value);
 }
 
 static inline const uint8_t*

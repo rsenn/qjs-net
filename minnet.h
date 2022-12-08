@@ -9,7 +9,7 @@
 #include "utils.h"
 
 #ifdef DEBUG_OUTPUT
-#define DEBUG(x...) printf(x)
+#define DEBUG(x...) minnet_debug(x)
 #else
 #define DEBUG(x...)
 #endif
@@ -40,6 +40,7 @@ typedef enum socket_state MinnetStatus;
 void minnet_io_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValueConst out[2]);
 void minnet_log_callback(int, const char* line);
 int minnet_lws_unhandled(const char*, int reason);
+void minnet_debug(const char*, ...);
 
 struct js_callback;
 
