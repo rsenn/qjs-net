@@ -1,6 +1,6 @@
 import { exit } from 'std';
 import { close, exec, open, realpath, O_RDWR, setReadHandler, setWriteHandler, Worker } from 'os';
-import { server, URL, setLog, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
+import { server, URL, setLog,logLevels,LLL_ALL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
 import { Levels, DefaultLevels, Init, isDebug, log } from './log.js';
 import { getpid, once, exists } from './common.js';
 
@@ -307,7 +307,9 @@ if(w) {
 
       log('MinnetServer', { host, port });
 
-      Init('server.js');
+setLog(LLL_WARN|LLL_USER, (level,message) => log(`${logLevels[level].padEnd(10)} ${message}`));
+
+     // Init('server.js');
 
       server({
         tls: true,
@@ -351,7 +353,7 @@ if(w) {
         onError: (ws, error) => {
           log('onError', { ws, error });
         },
-        onHttp: (req, rsp) => {
+        onHttp: (ws,req, rsp) => {
           log('onHttp', { req, rsp });
         },
         onFd: (fd, rd, wr) => {

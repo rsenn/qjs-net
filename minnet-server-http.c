@@ -631,8 +631,7 @@ http_server_writable(struct http_closure* closure, BOOL done) {
   if(queue_size(&closure->session->sendq)) {
     ByteBlock buf;
     size_t pos = 0;
-    //    if((buf = (JSBuffer*)ringbuffer_next(closure->session->sendq))) {
-
+ 
     buf = queue_next(&closure->session->sendq, &done);
 
     while((remain = block_SIZE(&buf) - pos) > 0) {
