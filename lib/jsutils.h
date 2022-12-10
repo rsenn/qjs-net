@@ -110,6 +110,7 @@ JSValue js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSVal
 JSValue js_function_bind(JSContext* ctx, JSValueConst func, int flags, JSValueConst argv[]);
 JSValue js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg);
 JSValue js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val);
+JSValue js_function_bind_this_1(JSContext* ctx, JSValueConst func, JSValueConst this_val, JSValueConst arg);
 const char* js_function_name(JSContext* ctx, JSValueConst value);
 JSValue js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done);
 JSValue js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
@@ -400,5 +401,8 @@ typedef void js_closure_finalizer_t(void*, JSContext*);
 void* js_closure_new(JSContext*, void* opaque, void (*free_func)(void*, JSContext*));
 void js_closure_free(void*);
 void js_closure_free_ab(JSRuntime*, void* opaque, void* ptr);
+
+JSValue js_typedarray_constructor(JSContext*, int bits, BOOL floating, BOOL sign);
+JSValue js_typedarray_new(JSContext*, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length);
 
 #endif /* QJSNET_LIB_JS_UTILS_H */

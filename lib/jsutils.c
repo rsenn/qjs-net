@@ -90,6 +90,12 @@ js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val) 
   return js_function_bind(ctx, func, 1 | JS_BIND_THIS, &this_val);
 }
 
+JSValue
+js_function_bind_this_1(JSContext* ctx, JSValueConst func, JSValueConst this_val, JSValueConst arg) {
+  JSValueConst bound[] = {this_val, arg};
+  return js_function_bind(ctx, func, countof(bound) | JS_BIND_THIS, &bound);
+}
+
 /*JSValue
 js_function_bind_v(JSContext* ctx, JSValueConst func, ...) {
   va_list args;
@@ -1129,4 +1135,24 @@ js_closure_free(void* ptr) {
 void
 js_closure_free_ab(JSRuntime* rt, void* opaque, void* ptr) {
   js_closure_free(opaque);
+}
+
+JSValue
+js_typedarray_constructor(JSContext* ctx, int bits, BOOL floating, BOOL sign) {
+  char class_name[64];
+
+  sprintf(class_name, "%s%s%dArray", (!floating && bits >= 64) ? "Big" : "", floating ? "Float" : sign ? "Int" : "Uint", bits);
+
+  return js_global_get(ctx, class_name);
+}
+
+JSValue
+js_typedarray_new(JSContext* ctx, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length) {
+  JSValue ctor = js_typedarray_constructor(ctx, bits, floating, sign);
+  JSValue args[3] = {buffer, JS_NewUint32(ctx, byte_offset), JS_NewUint32(ctx, length)};
+  JSValue ret = JS_CallConstructor(ctx, ctor, 1, &buffer);
+  JS_FreeValue(ctx, args[1]);
+  JS_FreeValue(ctx, args[2]);
+  JS_FreeValue(ctx, ctor);
+  return ret;
 }

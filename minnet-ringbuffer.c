@@ -5,27 +5,28 @@
 #include <libwebsockets.h>
 #include <pthread.h>
 
-THREAD_LOCAL JSClassID minnet_ringbuffer_class_id, minnet_ringbuffer_tail_class_id;
-THREAD_LOCAL JSValue minnet_ringbuffer_proto, minnet_ringbuffer_tail_proto, minnet_ringbuffer_ctor;
+THREAD_LOCAL JSClassID minnet_ringbuffer_class_id;
+THREAD_LOCAL JSValue minnet_ringbuffer_proto, minnet_ringbuffer_ctor;
 
 enum {
-  RINGBUFFER_TYPE,
-  RINGBUFFER_LENGTH,
-  RINGBUFFER_SIZE,
-  RINGBUFFER_AVAIL,
-  RINGBUFFER_ELEMENT_LENGTH,
-  RINGBUFFER_OLDEST_TAIL,
   RINGBUFFER_WAITING_ELEMENTS,
-  RINGBUFFER_BUMP_HEAD,
-  RINGBUFFER_CREATE_TAIL,
-  RINGBUFFER_UPDATE_OLDEST_TAIL,
-  RINGBUFFER_CONSUME_AND_UPDATE_OLDEST_TAIL,
-  RINGBUFFER_INSERT,
+  RINGBUFFER_GET_ELEMENT,
   RINGBUFFER_CONSUME,
   RINGBUFFER_SKIP,
+  RINGBUFFER_UPDATE_OLDEST_TAIL,
+  RINGBUFFER_CREATE_TAIL,
+  RINGBUFFER_INSERT,
+  RINGBUFFER_BUMP_HEAD,
+  RINGBUFFER_TYPE,
+  RINGBUFFER_COUNT,
+  RINGBUFFER_BYTELEN,
+  RINGBUFFER_SIZE,
+  RINGBUFFER_ELEMENTLEN,
+  RINGBUFFER_AVAIL,
   RINGBUFFER_BUFFER,
-  RINGBUFFER_GET_ELEMENT,
-  RINGBUFFER_NEXT_LINEAR_INSERT_RANGE,
+  RINGBUFFER_HEAD,
+  RINGBUFFER_OLDEST_TAIL,
+  RINGBUFFER_INSERTRANGE,
 };
 
 JSValue
@@ -80,20 +81,7 @@ fail:
   return JS_EXCEPTION;
 }
 
-JSValue
-minnet_ringbuffer_new(JSContext* ctx, const char* type, size_t typelen, const void* x, size_t n) {
-  struct ringbuffer* rb;
-
-  if(!(rb = ringbuffer_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
-
-  // buffer_alloc(&rb->buffer, n ? n : 1024, ctx);
-  // ringbuffer_init(rb, x,n, type, typelen);
-
-  return minnet_ringbuffer_wrap(ctx, rb);
-}
-
-JSValue
+/*JSValue
 minnet_ringbuffer_wrap(JSContext* ctx, struct ringbuffer* rb) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_ringbuffer_proto, minnet_ringbuffer_class_id);
 
@@ -105,60 +93,7 @@ minnet_ringbuffer_wrap(JSContext* ctx, struct ringbuffer* rb) {
   ++rb->ref_count;
 
   return ret;
-}
-
-/*static void
-minnet_ringbuffer_free_ab(JSRuntime* rt, void* opaque, void* ptr) {
-  MinnetRingbuffer* rb = opaque;
-
-  if(rb) {}
 }*/
-
-static JSValue
-minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
-  MinnetRingbuffer* rb;
-  if(!(rb = JS_GetOpaque2(ctx, this_val, minnet_ringbuffer_class_id)))
-    return JS_EXCEPTION;
-
-  JSValue ret = JS_UNDEFINED;
-  switch(magic) {
-
-    case RINGBUFFER_TYPE: {
-      ret = JS_NewStringLen(ctx, rb->type, strlen(rb->type));
-      break;
-    }
-    case RINGBUFFER_LENGTH: {
-      ret = JS_NewUint32(ctx, ringbuffer_size(rb));
-      break;
-    }
-    case RINGBUFFER_SIZE: {
-      ret = JS_NewUint32(ctx, rb->size);
-      break;
-    }
-    case RINGBUFFER_ELEMENT_LENGTH: {
-      ret = JS_NewUint32(ctx, ringbuffer_element_len(rb));
-      break;
-    }
-    case RINGBUFFER_AVAIL: {
-      ret = JS_NewUint32(ctx, ringbuffer_avail(rb));
-      break;
-    }
-    case RINGBUFFER_BUFFER: {
-      uint8_t* data;
-      size_t size;
-
-      if(!lws_ring_next_linear_insert_range(rb->ring, (void**)&data, &size)) {
-        ret = JS_NewArrayBuffer(ctx, data, size, js_closure_free_ab, js_closure_new(ctx, ringbuffer_dup(rb), (js_closure_finalizer_t*)ringbuffer_free), FALSE);
-      }
-      break;
-    }
-    case RINGBUFFER_OLDEST_TAIL: {
-      ret = JS_NewUint32(ctx, lws_ring_get_oldest_tail(rb->ring));
-      break;
-    }
-  }
-  return ret;
-}
 
 struct ringbuffer_tail {
   union {
@@ -191,16 +126,42 @@ tail_new(JSContext* ctx, struct ringbuffer* rb, JSValueConst tail_value) {
 }
 
 static JSValue
+tail_consume(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+  JSValue ret = JS_UNDEFINED;
+  struct ringbuffer_tail* tail = opaque;
+  struct lws_ring* r = tail->rb->ring;
+  uint32_t wanted;
+  JSBuffer buf;
+
+  int index = js_buffer_fromargs(ctx, argc, argv, &buf);
+
+  js_input_args(ctx, argc, argv);
+
+  if(buf.size) {
+    wanted = buf.size / ringbuffer_element_len(tail->rb);
+  } else {
+    if(index == argc || JS_ToUint32(ctx, &wanted, argv[index]))
+      return JS_ThrowRangeError(ctx, "need buffer or element count");
+  }
+
+  ret = JS_NewUint32(ctx, lws_ring_consume(r, tail->ptr, buf.data, wanted));
+
+  js_buffer_free(&buf, ctx);
+
+  return ret;
+}
+
+static JSValue
 tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   JSValue ret = JS_UNDEFINED;
   struct ringbuffer_tail* tail = opaque;
-  MinnetRingbuffer* rb = tail->rb;
-  uint32_t *tail_ptr = tail->ptr, consumed, nelem = lws_ring_get_count_waiting_elements(rb->ring, tail->ptr);
+  struct lws_ring* r = tail->rb->ring;
+  uint32_t consumed, nelem = lws_ring_get_count_waiting_elements(r, tail->ptr);
 
-  JSBuffer buf = js_buffer_alloc(ctx, nelem * ringbuffer_element_len(rb));
+  JSBuffer buf = js_buffer_alloc(ctx, nelem * ringbuffer_element_len(tail->rb));
 
-  if((consumed = lws_ring_consume(rb->ring, tail_ptr, buf.data, nelem)) == nelem) {
-    lws_ring_update_oldest_tail(rb->ring, *tail_ptr);
+  if((consumed = lws_ring_consume(r, tail->ptr, buf.data, nelem)) == nelem) {
+    lws_ring_update_oldest_tail(r, *tail->ptr);
 
     ret = js_iterator_result(ctx, buf.value, FALSE);
   }
@@ -211,99 +172,143 @@ tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], 
 }
 
 static JSValue
+minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  MinnetRingbuffer* rb;
+  JSValue ret = JS_UNDEFINED;
+  JSBuffer tail_buf;
+  uint32_t new_tail, *tail_ptr = 0;
+  int index = 0;
+
+  if(!(rb = JS_GetOpaque2(ctx, this_val, minnet_ringbuffer_class_id)))
+    return JS_EXCEPTION;
+
+  index += js_buffer_fromargs(ctx, argc, argv, &tail_buf);
+
+  if(tail_buf.data) {
+    if(tail_buf.size < sizeof(uint32_t)) {
+      js_buffer_free(&tail_buf, ctx);
+      ret = JS_ThrowRangeError(ctx, "invalid tail");
+      goto fail;
+    }
+
+    tail_ptr = (uint32_t*)tail_buf.data;
+    new_tail = *tail_ptr;
+
+  } else if(argc < 1 || JS_ToUint32(ctx, &new_tail, argv[index++])) {
+    ret = JS_ThrowRangeError(ctx, "invalid tail");
+    goto fail;
+  }
+
+  switch(magic) {
+    case RINGBUFFER_WAITING_ELEMENTS: {
+      ret = JS_NewUint32(ctx, lws_ring_get_count_waiting_elements(rb->ring, &new_tail));
+      break;
+    }
+
+    case RINGBUFFER_GET_ELEMENT: {
+      ret = JS_NewArrayBuffer(ctx,
+                              (uint8_t*)lws_ring_get_element(rb->ring, &new_tail),
+                              ringbuffer_element_len(rb),
+                              js_closure_free_ab,
+                              js_closure_new(ctx, ringbuffer_dup(rb), (js_closure_finalizer_t*)ringbuffer_free),
+                              FALSE);
+      break;
+    }
+
+    case RINGBUFFER_CONSUME: {
+      JSBuffer buf;
+      uint32_t count;
+
+      index += js_buffer_fromargs(ctx, argc - index, argv + index, &buf);
+
+      if(buf.data) {
+        size_t elem_len = ringbuffer_element_len(rb);
+        if((buf.size % elem_len) != 0) {
+          ret = JS_ThrowRangeError(ctx, "buffer size not a multiple of element length (%zu)", elem_len);
+          break;
+        }
+        count = buf.size / elem_len;
+      } else if(argc - index < 1 || JS_ToUint32(ctx, &count, argv[index++])) {
+        ret = JS_ThrowRangeError(ctx, "invalid tail");
+        break;
+      }
+      ret = JS_NewUint32(ctx, lws_ring_consume(rb->ring, tail_ptr, buf.data, count));
+      js_buffer_free(&buf, ctx);
+      break;
+    }
+
+    case RINGBUFFER_SKIP: {
+      uint32_t n;
+
+      if(argc - index < 1 || JS_ToUint32(ctx, &n, argv[index])) {
+        ret = JS_ThrowRangeError(ctx, "invalid count");
+        break;
+      }
+      ret = JS_NewUint32(ctx, lws_ring_consume(rb->ring, tail_ptr, 0, n));
+      break;
+    }
+
+    case RINGBUFFER_UPDATE_OLDEST_TAIL: {
+      lws_ring_update_oldest_tail(rb->ring, new_tail);
+      break;
+    }
+  }
+
+fail:
+  js_buffer_free(&tail_buf, ctx);
+  return ret;
+}
+
+/*static JSValue
+tail_bind(JSContext* ctx, JSValue func, JSValueConst this_val, JSValueConst arg) {
+  JSValue ret = js_function_bind_this_1(ctx, func, this_val, arg);
+  JS_FreeValue(ctx, func);
+  return ret;
+}*/
+
+static void
+tail_decorate(JSContext* ctx, JSValueConst obj, JSValueConst ringbuffer, const char* name, int argc, int magic) {
+  JSValue func = JS_NewCFunctionMagic(ctx, minnet_ringbuffer_multitail, name, 0, JS_CFUNC_generic_magic, magic);
+  JS_SetPropertyStr(ctx, obj, name, js_function_bind_this_1(ctx, func, ringbuffer, obj));
+  JS_FreeValue(ctx, func);
+}
+
+static JSValue
 minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetRingbuffer* rb;
+
   if(!(rb = JS_GetOpaque2(ctx, this_val, minnet_ringbuffer_class_id)))
     return JS_EXCEPTION;
 
   JSValue ret = JS_UNDEFINED;
   switch(magic) {
-    case RINGBUFFER_WAITING_ELEMENTS: {
-      uint32_t* tail_ptr = 0;
-      JSBuffer buf;
 
-      if(argc > 0) {
-        buf = js_input_args(ctx, argc, argv);
-        if(buf.size >= sizeof(uint32_t))
-          tail_ptr = (uint32_t*)buf.data;
-      }
-
-      ret = JS_NewUint32(ctx, lws_ring_get_count_waiting_elements(rb->ring, tail_ptr));
-
-      if(tail_ptr)
-        js_buffer_free(&buf, ctx);
-      break;
-    }
-    case RINGBUFFER_GET_ELEMENT: {
-      uint32_t* tail_ptr = 0;
-      JSBuffer buf;
-
-      if(argc > 0) {
-        buf = js_input_args(ctx, argc, argv);
-        if(buf.size >= sizeof(uint32_t))
-          tail_ptr = (uint32_t*)buf.data;
-      }
-      {
-        const void* data = lws_ring_get_element(rb->ring, tail_ptr);
-        size_t size = ringbuffer_element_len(rb);
-
-        ret = JS_NewArrayBufferCopy(ctx, data, size);
-      }
-
-      if(tail_ptr)
-        js_buffer_free(&buf, ctx);
-      break;
-    }
     case RINGBUFFER_CREATE_TAIL: {
       uint32_t tail = lws_ring_get_oldest_tail(rb->ring);
 
       ret = JS_NewArrayBufferCopy(ctx, (const uint8_t*)&tail, sizeof(uint32_t));
 
+      tail_decorate(ctx, ret, this_val, "getWaitingElements", 0, RINGBUFFER_WAITING_ELEMENTS);
+      tail_decorate(ctx, ret, this_val, "getElement", 0, RINGBUFFER_GET_ELEMENT);
+      tail_decorate(ctx, ret, this_val, "consume", 1, RINGBUFFER_CONSUME);
+
       JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, tail_next, 0, 0, tail_new(ctx, rb, ret), tail_finalize));
-      JS_SetPropertyStr(ctx, ret, "consume", JS_NewCClosure(ctx, tail_consume, 0, 0, tail_new(ctx, rb, ret), tail_finalize));
       break;
     }
+
     case RINGBUFFER_INSERT: {
-      JSBuffer data = js_input_args(ctx, argc, argv);
+      JSBuffer buf = js_input_args(ctx, argc, argv);
       size_t elem_len = ringbuffer_element_len(rb);
 
-      // printf("data.size=%zu elem_len=%zu\n", data.size, elem_len);
-
-      if((data.size % elem_len) != 0) {
+      if((buf.size % elem_len) != 0) {
         ret = JS_ThrowRangeError(ctx, "input argument size not a multiple of element length (%zu)", elem_len);
         break;
       }
-
-      ret = JS_NewUint32(ctx, ringbuffer_insert(rb, data.data, data.size / elem_len));
-
-      js_buffer_free(&data, ctx);
+      ret = JS_NewUint32(ctx, ringbuffer_insert(rb, buf.data, buf.size / elem_len));
+      js_buffer_free(&buf, ctx);
       break;
     }
-    case RINGBUFFER_CONSUME: {
-      JSBuffer data = js_input_args(ctx, argc, argv);
-      size_t elem_len = ringbuffer_element_len(rb);
 
-      // printf("data.size=%zu elem_len=%zu\n", data.size, elem_len);
-
-      if((data.size % elem_len) != 0) {
-        ret = JS_ThrowRangeError(ctx, "buffer size not a multiple of element length (%zu)", elem_len);
-        break;
-      }
-
-      ret = JS_NewUint32(ctx, ringbuffer_consume(rb, data.data, data.size / elem_len));
-
-      js_buffer_free(&data, ctx);
-      break;
-    }
-    case RINGBUFFER_SKIP: {
-      uint32_t n = 1;
-
-      if(argc > 0)
-        JS_ToUint32(ctx, &n, argv[0]);
-
-      ret = JS_NewUint32(ctx, ringbuffer_skip(rb, n));
-      break;
-    }
     case RINGBUFFER_BUMP_HEAD: {
       uint64_t n;
 
@@ -313,12 +318,94 @@ minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValu
       lws_ring_bump_head(rb->ring, n);
       break;
     }
-    case RINGBUFFER_NEXT_LINEAR_INSERT_RANGE: {
-      void* data = 0;
+  }
+  return ret;
+}
+
+static JSValue
+minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
+  MinnetRingbuffer* rb;
+
+  if(!(rb = JS_GetOpaque2(ctx, this_val, minnet_ringbuffer_class_id)))
+    return JS_EXCEPTION;
+
+  JSValue ret = JS_UNDEFINED;
+  switch(magic) {
+
+    case RINGBUFFER_TYPE: {
+      ret = JS_NewStringLen(ctx, rb->type, strlen(rb->type));
+      break;
+    }
+
+    case RINGBUFFER_COUNT: {
+      ret = JS_NewUint32(ctx, ringbuffer_size(rb));
+      break;
+    }
+
+    case RINGBUFFER_BYTELEN: {
+      ret = JS_NewInt64(ctx, ringbuffer_size(rb) * ringbuffer_element_len(rb));
+      break;
+    }
+
+    case RINGBUFFER_SIZE: {
+      ret = JS_NewUint32(ctx, rb->size);
+      break;
+    }
+
+    case RINGBUFFER_ELEMENTLEN: {
+      ret = JS_NewUint32(ctx, ringbuffer_element_len(rb));
+      break;
+    }
+
+    case RINGBUFFER_AVAIL: {
+      ret = JS_NewUint32(ctx, ringbuffer_avail(rb));
+      break;
+    }
+
+    case RINGBUFFER_BUFFER: {
+      struct {
+        void* buf;
+        void (*destroy)(void*);
+        uint32_t buflen;
+      }* r = (void*)rb->ring;
+
+      ret = JS_NewArrayBuffer(ctx, r->buf, r->buflen, js_closure_free_ab, js_closure_new(ctx, ringbuffer_dup(rb), (js_closure_finalizer_t*)ringbuffer_free), FALSE);
+      break;
+    }
+
+    case RINGBUFFER_HEAD: {
+      struct {
+        void* buf;
+        void (*destroy_element)(void* element);
+        uint32_t buflen, element_len, head, oldest_tail;
+      }* r = (void*)rb->ring;
+
+      ret = JS_NewUint32(ctx, r->head);
+      break;
+    }
+
+    case RINGBUFFER_OLDEST_TAIL: {
+      ret = JS_NewUint32(ctx, lws_ring_get_oldest_tail(rb->ring));
+      break;
+    }
+
+    case RINGBUFFER_INSERTRANGE: {
+      struct {
+        void* buf;
+        void (*destroy_element)(void*);
+        uint32_t buflen, element_len, head;
+      }* r = (void*)rb->ring;
+
+      JSValue ab = JS_GetPropertyStr(ctx, this_val, "buffer");
+
+      ret = js_typedarray_new(ctx, 8, FALSE, FALSE, ab, r->head, (r->buflen - r->head) / r->element_len);
+      JS_FreeValue(ctx, ab);
+
+      /*void* data = 0;
       size_t size = 0;
 
       if(!lws_ring_next_linear_insert_range(rb->ring, &data, &size))
-        ret = JS_NewArrayBuffer(ctx, data, size, js_closure_free_ab, js_closure_new(ctx, ringbuffer_dup(rb), (js_closure_finalizer_t*)ringbuffer_free), FALSE);
+        ret = JS_NewArrayBuffer(ctx, data, size, js_closure_free_ab, js_closure_new(ctx, ringbuffer_dup(rb), (js_closure_finalizer_t*)ringbuffer_free), FALSE);*/
       break;
     }
   }
@@ -326,46 +413,55 @@ minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValu
 }
 
 static JSValue
-minnet_ringbuffer_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  return JS_DupValue(ctx, this_val);
-}
-
-static JSValue
-minnet_ringbuffer_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], BOOL* pdone, int magic) {
+minnet_ringbuffer_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetRingbuffer* rb;
-  JSValue ret = JS_UNDEFINED;
+  struct {
+    void* buf;
+    void (*destroy_element)(void*);
+    uint32_t buflen, element_len, head;
+  }* r = 0;
 
-  if(!(rb = minnet_ringbuffer_data(ctx, this_val)))
+  if(!(rb = JS_GetOpaque2(ctx, this_val, minnet_ringbuffer_class_id)))
     return JS_EXCEPTION;
-  /*
-    len = buffer_REMAIN(&rb->buffer);
-    ptr = rb->buffer.read;
 
-    if(argc >= 1) {
-      uint32_t n = len;
-      JS_ToUint32(ctx, &n, argv[0]);
-      if(n < len)
-        len = n;
+  r = (void*)rb->ring;
+
+  JSValue ret = JS_UNDEFINED;
+  switch(magic) {
+    case RINGBUFFER_HEAD: {
+      uint32_t n;
+
+      if(JS_ToUint32(ctx, &n, value))
+        return JS_ThrowRangeError(ctx, "expecting byte offset");
+
+      r->head = n % r->buflen;
+      break;
     }
 
-    if(len) {
-      ret = JS_NewStringLen(ctx, (const char*)ptr, len);
-      rb->buffer.read += len;
-    } else {
-      *pdone = TRUE;
-    }*/
+    case RINGBUFFER_OLDEST_TAIL: {
+      uint32_t n;
+
+      if(JS_ToUint32(ctx, &n, value))
+        return JS_ThrowRangeError(ctx, "expecting byte offset");
+
+      if(n > r->buflen)
+        return JS_ThrowRangeError(ctx, "out of range (0-%" PRIu32 ") byte offset", r->buflen);
+
+      lws_ring_update_oldest_tail(rb->ring, n);
+      break;
+    }
+  }
 
   return ret;
 }
 
 static void
 minnet_ringbuffer_finalizer(JSRuntime* rt, JSValue val) {
-  MinnetRingbuffer* rb = JS_GetOpaque(val, minnet_ringbuffer_class_id);
-  if(rb && --rb->ref_count == 0) {
+  MinnetRingbuffer* rb;
 
-    // buffer_free_rt(&rb->buffer, rt);
+  if((rb = JS_GetOpaque(val, minnet_ringbuffer_class_id))) {
 
-    js_free_rt(rt, rb);
+    ringbuffer_free_rt(rb, rt);
   }
 }
 
@@ -375,34 +471,25 @@ JSClassDef minnet_ringbuffer_class = {
 };
 
 const JSCFunctionListEntry minnet_ringbuffer_proto_funcs[] = {
-    JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_ringbuffer_get, 0, RINGBUFFER_BUFFER, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_ringbuffer_get, 0, RINGBUFFER_TYPE, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("length", minnet_ringbuffer_get, 0, RINGBUFFER_LENGTH, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("size", minnet_ringbuffer_get, 0, RINGBUFFER_SIZE, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("avail", minnet_ringbuffer_get, 0, RINGBUFFER_AVAIL, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("elementLength", minnet_ringbuffer_get, 0, RINGBUFFER_ELEMENT_LENGTH, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("oldestTail", minnet_ringbuffer_get, 0, RINGBUFFER_OLDEST_TAIL, JS_PROP_ENUMERABLE),
-    JS_CFUNC_MAGIC_DEF("getWaitingElements", 0, minnet_ringbuffer_method, RINGBUFFER_WAITING_ELEMENTS),
-    JS_CFUNC_MAGIC_DEF("getElement", 0, minnet_ringbuffer_method, RINGBUFFER_WAITING_ELEMENTS),
-    JS_CFUNC_MAGIC_DEF("bumpHead", 1, minnet_ringbuffer_method, RINGBUFFER_BUMP_HEAD),
+    JS_CFUNC_MAGIC_DEF("getWaitingElements", 0, minnet_ringbuffer_multitail, RINGBUFFER_WAITING_ELEMENTS),
+    JS_CFUNC_MAGIC_DEF("getElement", 0, minnet_ringbuffer_multitail, RINGBUFFER_GET_ELEMENT),
+    JS_CFUNC_MAGIC_DEF("consume", 1, minnet_ringbuffer_multitail, RINGBUFFER_CONSUME),
+    JS_CFUNC_MAGIC_DEF("skip", 0, minnet_ringbuffer_multitail, RINGBUFFER_SKIP),
+    JS_CFUNC_MAGIC_DEF("updateOldestTail", 0, minnet_ringbuffer_multitail, RINGBUFFER_UPDATE_OLDEST_TAIL),
     JS_CFUNC_MAGIC_DEF("createTail", 0, minnet_ringbuffer_method, RINGBUFFER_CREATE_TAIL),
-    JS_CFUNC_MAGIC_DEF("updateOldestTail", 0, minnet_ringbuffer_method, RINGBUFFER_UPDATE_OLDEST_TAIL),
-    JS_CFUNC_MAGIC_DEF("consumeAndUpdateOldestTail", 0, minnet_ringbuffer_method, RINGBUFFER_CONSUME_AND_UPDATE_OLDEST_TAIL),
     JS_CFUNC_MAGIC_DEF("insert", 1, minnet_ringbuffer_method, RINGBUFFER_INSERT),
-    JS_CFUNC_MAGIC_DEF("consume", 1, minnet_ringbuffer_method, RINGBUFFER_CONSUME),
-    JS_CFUNC_MAGIC_DEF("skip", 0, minnet_ringbuffer_method, RINGBUFFER_SKIP),
-    JS_CFUNC_MAGIC_DEF("nextLinearInsertRange", 0, minnet_ringbuffer_method, RINGBUFFER_NEXT_LINEAR_INSERT_RANGE),
-    JS_ITERATOR_NEXT_DEF("next", 0, minnet_ringbuffer_next, 0),
-
-    JS_CFUNC_DEF("[Symbol.iterator]", 0, minnet_ringbuffer_iterator),
+    JS_CFUNC_MAGIC_DEF("bumpHead", 1, minnet_ringbuffer_method, RINGBUFFER_BUMP_HEAD),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_ringbuffer_get, 0, RINGBUFFER_TYPE, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("length", minnet_ringbuffer_get, 0, RINGBUFFER_COUNT, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("byteLength", minnet_ringbuffer_get, 0, RINGBUFFER_BYTELEN, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("size", minnet_ringbuffer_get, 0, RINGBUFFER_SIZE, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("elementLength", minnet_ringbuffer_get, 0, RINGBUFFER_ELEMENTLEN, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("avail", minnet_ringbuffer_get, 0, RINGBUFFER_AVAIL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("buffer", minnet_ringbuffer_get, 0, RINGBUFFER_BUFFER, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("head", minnet_ringbuffer_get, minnet_ringbuffer_set, RINGBUFFER_HEAD, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("oldestTail", minnet_ringbuffer_get, minnet_ringbuffer_set, RINGBUFFER_OLDEST_TAIL, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("linearInsertRange", minnet_ringbuffer_get, 0, RINGBUFFER_INSERTRANGE, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRingbuffer", JS_PROP_CONFIGURABLE),
 };
-/*
-const JSCFunctionListEntry minnet_ringbuffer_proto_tail[] = {
-    JS_ITERATOR_NEXT_DEF("next", 0, minnet_ringbuffer_next, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("elementLength", minnet_ringbuffer_get, 0, TAIL_WAITING_ELEMENTS, JS_PROP_ENUMERABLE),
-    JS_CFUNC_DEF("[Symbol.iterator]", 0, minnet_ringbuffer_iterator),
-};
-*/
+
 const size_t minnet_ringbuffer_proto_funcs_size = countof(minnet_ringbuffer_proto_funcs);
