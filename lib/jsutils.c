@@ -1003,6 +1003,21 @@ js_input_args(JSContext* ctx, int argc, JSValueConst argv[]) {
   return input;
 }
 
+int
+js_buffer_fromargs(JSContext* ctx, int argc, JSValueConst argv[], JSBuffer* buf) {
+  int ret = 0;
+  *buf = js_input_chars(ctx, argv[0]);
+
+  if(buf->size) {
+    ++ret;
+
+    if(argc > 1)
+      ret += js_offset_length(ctx, buf->size, argc - 1, argv + 1, &buf->range);
+  }
+
+  return ret;
+}
+
 BOOL
 js_is_arraybuffer(JSContext* ctx, JSValueConst value) {
   if(JS_IsObject(value)) {

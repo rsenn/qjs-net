@@ -160,30 +160,42 @@ minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-struct tail_closure {
+struct ringbuffer_tail {
   union {
-    JSBuffer tail;
-    uint32_t* tail_ptr;
+    JSBuffer buf;
+    uint32_t* ptr;
   };
   MinnetRingbuffer* rb;
   JSContext* ctx;
 };
 
 static void
-minnet_ringbuffer_tail_finalize(void* ptr) {
-  struct tail_closure* closure = ptr;
+tail_finalize(void* ptr) {
+  struct ringbuffer_tail* tail = ptr;
 
-  ringbuffer_free(closure->rb, closure->ctx);
-  js_buffer_free(&closure->tail, closure->ctx);
-  js_free(closure->ctx, closure);
+  ringbuffer_free(tail->rb, tail->ctx);
+  js_buffer_free(&tail->buf, tail->ctx);
+  js_free(tail->ctx, tail);
+}
+
+static struct ringbuffer_tail*
+tail_new(JSContext* ctx, struct ringbuffer* rb, JSValueConst tail_value) {
+  struct ringbuffer_tail* tail;
+
+  if((tail = js_malloc(ctx, sizeof(struct ringbuffer_tail)))) {
+    tail->ctx = ctx;
+    tail->rb = ringbuffer_dup(rb);
+    tail->buf = js_input_chars(ctx, tail_value);
+  }
+  return tail;
 }
 
 static JSValue
-minnet_ringbuffer_tail(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   JSValue ret = JS_UNDEFINED;
-  struct tail_closure* closure = opaque;
-  MinnetRingbuffer* rb = closure->rb;
-  uint32_t *tail_ptr = closure->tail_ptr, consumed, nelem = lws_ring_get_count_waiting_elements(rb->ring, closure->tail_ptr);
+  struct ringbuffer_tail* tail = opaque;
+  MinnetRingbuffer* rb = tail->rb;
+  uint32_t *tail_ptr = tail->ptr, consumed, nelem = lws_ring_get_count_waiting_elements(rb->ring, tail->ptr);
 
   JSBuffer buf = js_buffer_alloc(ctx, nelem * ringbuffer_element_len(rb));
 
@@ -244,19 +256,11 @@ minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValu
     }
     case RINGBUFFER_CREATE_TAIL: {
       uint32_t tail = lws_ring_get_oldest_tail(rb->ring);
-      struct tail_closure* closure;
 
       ret = JS_NewArrayBufferCopy(ctx, (const uint8_t*)&tail, sizeof(uint32_t));
 
-      if((closure = js_malloc(ctx, sizeof(struct tail_closure)))) {
-        closure->ctx = ctx;
-        closure->rb = ringbuffer_dup(rb);
-        closure->tail = js_input_chars(ctx, ret);
-
-        JSValue func = JS_NewCClosure(ctx, minnet_ringbuffer_tail, 0, 0, closure, minnet_ringbuffer_tail_finalize);
-        JS_SetPropertyStr(ctx, ret, "next", func);
-      }
-
+      JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, tail_next, 0, 0, tail_new(ctx, rb, ret), tail_finalize));
+      JS_SetPropertyStr(ctx, ret, "consume", JS_NewCClosure(ctx, tail_consume, 0, 0, tail_new(ctx, rb, ret), tail_finalize));
       break;
     }
     case RINGBUFFER_INSERT: {

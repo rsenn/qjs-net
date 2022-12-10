@@ -118,6 +118,8 @@ void js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr);
 BOOL js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
 JSBuffer js_buffer_new(JSContext* ctx, JSValueConst value);
 JSBuffer js_buffer_fromblock(JSContext* ctx, struct byte_block* blk);
+
+int js_buffer_fromargs(JSContext* ctx, int argc, JSValueConst argv[], JSBuffer* buf);
 JSBuffer js_buffer_alloc(JSContext*, size_t size);
 JSBuffer js_buffer_data(JSContext*, const void* data, size_t size);
 void js_buffer_to(JSBuffer buf, void** pptr, size_t* plen);
