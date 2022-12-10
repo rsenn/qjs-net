@@ -4,15 +4,15 @@
 #include <stddef.h>
 
 typedef struct allocated {
-  void* pointer;
-  void (*free_func)(void*);
+  void *pointer, *opaque;
+  void (*free_func)(void* ptr, void* opaque);
 } Allocated;
 
 #define ALLOCATED(ptr, free_func) \
   (Allocated) { (ptr), (free_func) }
 
 static inline void
-allocated_init(Allocated* alloc, void* ptr, void (*free_func)()) {
+allocated_init(Allocated* alloc, void* ptr, void (*free_func)(void* ptr, void* opaque)) {
   alloc->pointer = ptr;
   alloc->free_func = free_func;
 }
@@ -20,7 +20,7 @@ allocated_init(Allocated* alloc, void* ptr, void (*free_func)()) {
 static inline void
 allocated_free(Allocated* alloc) {
   if(alloc->pointer) {
-    alloc->free_func(alloc->pointer);
+    alloc->free_func(alloc->pointer, alloc->opaque);
     alloc->pointer = NULL;
   }
 }

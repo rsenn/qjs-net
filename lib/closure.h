@@ -4,6 +4,8 @@
 #include <quickjs.h>
 #include "allocated.h"
 
+typedef void closure_free_t(void*, JSRuntime*);
+
 union closure {
   struct {
     void* pointer;

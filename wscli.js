@@ -9,7 +9,8 @@ import { quote, toString, toArrayBuffer } from 'util';
 
 const connections = new Set();
 let debug = 0,
-  params;
+  params,
+  repl;
 
 function MakePrompt(prefix, suffix, commandMode = false) {
   return `\x1b[38;5;40m${prefix} \x1b[38;5;33m${suffix}\x1b[0m ${commandMode ? 'COMMAND' : 'DATA'} > `;
@@ -125,8 +126,9 @@ class CLI extends REPL {
 
       this.printStatus(args.map(arg => inspect(arg, console.options)));
     };
-    this.commandMode = false;
+    this.commandMode = true;
     this.commands['\x1b'] ??= this.escape;
+    //this.commands['\x11'] = this.escape;
     this.commands['§'] = this.escape;
     this.runSync();
   }
@@ -241,7 +243,7 @@ async function main(...args) {
       },
       ...callbacks,
       onConnect(ws, req) {
-        //console.log('onConnect', { ws, req });
+        console.log('onConnect', { ws, req });
         connections.add(ws);
 
         Object.assign(globalThis, { ws, req });
@@ -265,7 +267,12 @@ async function main(...args) {
         }
       },
       onClose(ws, status, reason, error) {
-        //console.log('onClose', { ws, status, reason, error });
+        if(error) {
+          quit(`Connection error: ${reason}`);
+          //throw new Error(`Connection error: ${reason}`);
+        }
+        console.log('onClose', { ws, status, reason, error });
+
         connections.delete(ws);
         if(repl) {
           repl.printStatus(`Closed (${status}): ${reason}`);
@@ -343,7 +350,7 @@ async function main(...args) {
     }
   });
 
-  /*while(urls.length) */ {
+  try {
     await createWS(urls.shift(), {})
       .then(() => {
         console.log('FINISHED');
@@ -352,11 +359,16 @@ async function main(...args) {
       .catch(err => {
         console.log('Failed', err);
       });
+  } catch(error) {
+    console.log(error.message);
+    quit(error.message);
   }
 
   function quit(why) {
-    //console.log(`quit('${why}')`);
-    repl.cleanup(why);
+    if(why) std.err.puts(why + '\n');
+
+    if(repl) repl.cleanup(why);
+    std.exit(0);
   }
 }
 

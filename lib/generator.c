@@ -32,7 +32,7 @@ generator_free(Generator* gen) {
         block_free(&blk, gen->ctx);
     }
 
-    ringbuffer_free(gen->rbuf, JS_GetRuntime(gen->ctx));
+    ringbuffer_free_rt(gen->rbuf, JS_GetRuntime(gen->ctx));
     js_free(gen->ctx, gen);
     return TRUE;
   }

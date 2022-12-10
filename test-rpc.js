@@ -6,7 +6,7 @@ import REPL from 'repl';
 import inspect from 'inspect';
 import { types, define, filter, split, getOpt, toUnixTime } from 'util';
 import * as fs from 'fs';
-import { setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server } from 'net';
+import { setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server, URL } from 'net';
 import { Socket } from 'sockets';
 import { EventEmitter } from 'events';
 import { Repeater } from 'repeater';
@@ -51,7 +51,7 @@ function main(...args) {
   const base = path.basename(process.argv[1], '.js').replace(/\.[a-z]*$/, '');
   const config = ReadJSON(`.${base}-config`) ?? {};
   globalThis.console = new Console({
-    inspectOptions: { compact: 2, customInspect: true }
+    inspectOptions: { compact: 1, customInspect: true }
   });
   let params = getOpt(
     {
@@ -72,16 +72,18 @@ function main(...args) {
     args
   );
   if(params['no-tls'] === true) params.tls = false;
+
   console.log('params', params);
-  console.log('server', server);
   console.log('setLog', setLog);
   const {
-    '@': [url = 'wss://127.0.0.1:8999/ws'],
+    '@': [url = 'wss://127.0.0.1:8993/ws'],
     'ssl-cert': sslCert = 'localhost.crt',
     'ssl-private-key': sslPrivateKey = 'localhost.key'
   } = params;
+
   const listen = params.connect && !params.listen ? false : true;
-  const server = !params.client || params.server;
+  const serve = !params.client || params.server;
+
   Object.assign(globalThis, { ...rpc2, rpc });
   let name = process.argv[1];
   name = name
@@ -115,14 +117,14 @@ function main(...args) {
 
   let cli = (globalThis.sock = new rpc.Socket(
     uri,
-    rpc[`RPC${server ? 'Server' : 'Client'}Connection`],
+    rpc[`RPC${serve ? 'Server' : 'Client'}Connection`],
     +params.verbose
   ));
 
   cli.register({ Socket, Worker: os.Worker, Repeater, REPL, EventEmitter });
 
   let connections = new Set();
-  const createWS = (globalThis.createWS = (url, callbacks, listen) => {
+  function createWS(url, callbacks, listen) {
     console.log('createWS', { url, callbacks, listen });
     const { protocol, host, port, path } = url;
     console.log('createWS', { protocol, host, port, path });
@@ -259,7 +261,8 @@ function main(...args) {
 
         return callbacks.onConnect(ws, req);
       },
-      onClose(ws) {
+      onClose(ws, status, reason, error) {
+        console.log('\x1b[38;5;165monClose\x1b[0m [\n  ', req, ',\n  ', rsp, '\n]');
         connections.delete(ws);
 
         return callbacks.onClose(ws, req);
@@ -279,12 +282,12 @@ function main(...args) {
       },
       ...(url && url.host ? url : {})
     });
-  });
+  }
   globalThis[['connection', 'listener'][+listen]] = cli;
 
   define(globalThis, {
     get connections() {
-      return [...connections];
+      return [...connections].filter(c => c.fd !== null);
     }
   });
 
@@ -295,7 +298,6 @@ function main(...args) {
     exit: quit,
     Socket,
     cli,
-    net,
     std,
     os,
     fs,

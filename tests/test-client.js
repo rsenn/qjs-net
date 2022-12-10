@@ -22,78 +22,86 @@ function main(...args) {
     args.push('wss://localhost:30000/ws');
   }
 
-  for(let arg of args) {
-    let pr = Client(
-      arg,
-      {
-        block: false,
-        onConnect(ws, req) {
-          log('onConnect', { ws, req });
-          const { protocol } = req.url;
-          log('protocol', protocol);
+  (async function() {
+    for(let arg of args) {
+      let pr = Client(
+        arg,
+        {
+          block: false,
+          onConnect(ws, req) {
+            log('onConnect', { ws, req });
 
-          if(!protocol.startsWith('http')) {
-            if(protocol.startsWith('ws')) {
-              setReadHandler(0, () => {
-                stdout.puts(`\r\x1b[0;37m>`);
-                stdout.flush();
-                let line = stdin.getline();
+            if(req?.url?.protocol) {
+              const { protocol } = req.url;
+              log('protocol', protocol);
 
-                if(line.length) {
-                  let s=line;
-                  let pr=ws.send(line);
-                  log('pr:',{pr,s})
-                  pr.then(() => log('Sent:', {s}))
-                  stdout.puts(`\x1b[0m\n`);
-                  stdout.flush();
+              if(!protocol.startsWith('http')) {
+                if(protocol.startsWith('ws')) {
+                  setReadHandler(0, () => {
+                    stdout.puts(`\r\x1b[0;37m>`);
+                    stdout.flush();
+                    let line = stdin.getline();
+
+                    if(line.length) {
+                      let s = line;
+                      let pr = ws.send(line);
+                      log('pr:', { pr, s });
+                      pr.then(() => log('Sent:', { s }));
+                      stdout.puts(`\x1b[0m\n`);
+                      stdout.flush();
+                    }
+                  });
+                } else {
+                  ttySetRaw(0);
+                  setReadHandler(0, () => {
+                    let b = stdin.getByte();
+                    if(b == 13) b = 10;
+                    else if(b == 127) b = 8;
+                    else if(b < 32 || b > 'z'.charCodeAt(0)) stdout.puts('char: ' + b);
+                    stdout.putByte(b);
+                    stdout.flush();
+
+                    ws.send(String.fromCharCode(b));
+                  });
                 }
-              });
-            } else {
-              ttySetRaw(0);
-              setReadHandler(0, () => {
-                let b = stdin.getByte();
-                if(b == 13) b = 10;
-                else if(b == 127) b = 8;
-                else if(b < 32 || b > 'z'.charCodeAt(0))
-                  stdout.puts('char: ' + b);
-                stdout.putByte(b);
-                stdout.flush();
-
-                ws.send(String.fromCharCode(b));
-              });
+              }
             }
-          }
 
-          signal(SIGINT, () => {
-            console.log('SIGINT', terminate(0, false));
-            ws.close();
-            exit(0);
-          });
+            signal(SIGINT, () => {
+              console.log('SIGINT', terminate(0, false));
+              ws.close();
+              exit(0);
+            });
+          },
+          onClose(ws, status, reason, error) {
+            log('onClose', { ws, status, reason, error });
+            terminate(0);
+          },
+          onError(ws, error) {
+            log('onError', { ws, error });
+            terminate(1);
+          },
+          onMessage(ws, msg) {
+            log('onMessage', { ws, msg });
+            stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
+            stdout.flush();
+            // ws.close(1000);
+          }
         },
-        onClose(ws, reason) {
-          log('onClose', { ws, reason });
-          terminate(0);
-        },
-        onError(ws, error) {
-          log('onError', { ws, error });
-          terminate(1);
-        },
-        onMessage(ws, msg) {
-          log('onMessage', { ws, msg });
-          stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
-          stdout.flush();
-          // ws.close(1000);
-        }
-      },
-      debug ? LLL_INFO - 1 : LLL_USER
-    );
-    console.log('pr', pr);
-  }
+        debug ? LLL_INFO - 1 : LLL_USER
+      );
+      console.log('pr', pr);
+      console.log('pr[Symbol.asyncIterator]', pr[Symbol.asyncIterator]);
+      await pr;
+    }
+  })();
 
   function terminate(code = 0, ex = true) {
     let status;
-    kill(pid, 9);
-    wait4(pid, st => ((status = st), console.log(`exited: status=${status}`)));
+    if(pid > 0) {
+      kill(pid, 9);
+      wait4(pid, st => ((status = st), console.log(`exited: status=${status}`)));
+    }
     if(ex) exit(code);
     else return status;
   }

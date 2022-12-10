@@ -63,6 +63,11 @@ typedef struct input_buffer {
     (data), (size), 0, (free), JS_UNDEFINED, { 0, -1 } \
   }
 
+#define JS_BUFFER_VALUE(data, size, value) \
+  (JSBuffer) { \
+    (data), (size), 0, (&js_buffer_free_default), (value), { 0, -1 } \
+  }
+
 typedef struct key_value {
   JSAtom key;
   JSValue value;
@@ -106,12 +111,14 @@ JSValue js_function_bind(JSContext* ctx, JSValueConst func, int flags, JSValueCo
 JSValue js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg);
 JSValue js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val);
 const char* js_function_name(JSContext* ctx, JSValueConst value);
+JSValue js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done);
 JSValue js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags);
 void js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr);
 BOOL js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
 JSBuffer js_buffer_new(JSContext* ctx, JSValueConst value);
 JSBuffer js_buffer_fromblock(JSContext* ctx, struct byte_block* blk);
+JSBuffer js_buffer_alloc(JSContext*, size_t size);
 JSBuffer js_buffer_data(JSContext*, const void* data, size_t size);
 void js_buffer_to(JSBuffer buf, void** pptr, size_t* plen);
 void js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen);
@@ -385,5 +392,11 @@ static inline const uint8_t*
 js_buffer_end(const JSBuffer* in) {
   return in->data + in->size;
 }
+
+typedef void js_closure_finalizer_t(void*, JSContext*);
+
+void* js_closure_new(JSContext*, void* opaque, void (*free_func)(void*, JSContext*));
+void js_closure_free(void*);
+void js_closure_free_ab(JSRuntime*, void* opaque, void* ptr);
 
 #endif /* QJSNET_LIB_JS_UTILS_H */

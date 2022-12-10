@@ -17,7 +17,8 @@ export default function Client(url, options, debug) {
 
   err.puts(`Client connecting to ${url} ...\n`);
 
-  return client(url, {
+  let pr, resolve, reject;
+  let c = client(url, {
     /*  tls: true,
     sslCert,
     sslPrivateKey,*/
@@ -30,12 +31,15 @@ export default function Client(url, options, debug) {
       connections.add(ws);
       onConnect ? onConnect(ws, req) : console.log('onConnect', ws, req);
     },
-    onClose(ws, reason) {
+    onClose(ws, status, reason, error) {
       connections.delete(ws);
 
+      if(resolve) resolve({ value: { status, reason, error }, done: true });
+
       onClose
-        ? onClose(ws, reason)
+        ? onClose(ws, status, reason, error)
         : (console.log('onClose', { ws, reason }), exit(reason != 1000 && reason != 0 ? 1 : 0));
+      pr = reject = resolve = null;
     },
     onError(ws, error) {
       connections.delete(ws);
@@ -52,12 +56,25 @@ export default function Client(url, options, debug) {
       setWriteHandler(fd, wr);
     },
     onMessage(ws, msg) {
+      if(resolve) resolve({ value: msg, done: false });
+      pr = reject = resolve = null;
+
       onMessage
         ? onMessage(ws, msg)
         : (console.log('onMessage', console.config({ maxStringLen: 100 }), { ws, msg }),
           puts(escape(abbreviate(msg)) + '\n'));
     }
   });
+
+  c[Symbol.asyncIterator] = async function() {
+    return {
+      next() {
+        return (pr ??= new Promise((r, e) => ((resolve = r), (reject = e))));
+      }
+    };
+  };
+
+  return c;
 }
 
 Object.defineProperty(Client, 'connections', {

@@ -242,7 +242,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(ptr) {
     union closure* closure = ptr;
     closure->pointer = server;
-    closure->free_func = &server_free;
+    closure->free_func = (closure_free_t*)server_free;
   }
 
   info = &server->context.info;

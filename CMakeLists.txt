@@ -421,7 +421,7 @@ endif(NOT QUICKJS_C_MODULE_DIR)
 install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}"
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE
                     GROUP_READ WORLD_READ WORLD_EXECUTE)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc.js
+install(FILES rpc.js debugger-client.js event-emitter.js
         DESTINATION "${QUICKJS_JS_MODULE_DIR}")
 #dump_target(quickjs-minnet)
 

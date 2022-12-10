@@ -6,9 +6,9 @@
 #include <pthread.h>
 
 void
-ringbuffer_dump(struct ringbuffer const* strm) {
-  /*  printf("\nstruct ringbuffer {\n\tref_count = %zu", strm->ref_count);
-    buffer_dump("buffer", &strm->buffer);
+ringbuffer_dump(struct ringbuffer const* rb) {
+  /*  printf("\nstruct ringbuffer {\n\tref_count = %zu", rb->ref_count);
+    buffer_dump("buffer", &rb->buffer);
     fputs("\n}", stderr);
     fflush(stderr);*/
 }
@@ -17,104 +17,116 @@ void
 ringbuffer_destroy_element(void* element) {}
 
 void
-ringbuffer_init(struct ringbuffer* strm, size_t element_len, size_t count, const char* type, size_t typelen) {
+ringbuffer_init(struct ringbuffer* rb, size_t element_len, size_t count, const char* type, size_t typelen) {
   if(type)
-    pstrcpy(strm->type, MIN(typelen + 1, sizeof(strm->type)), type);
+    pstrcpy(rb->type, MIN(typelen + 1, sizeof(rb->type)), type);
 
-  strm->ring = lws_ring_create(element_len, count, ringbuffer_destroy_element);
+  rb->size = count;
+  rb->element_len = element_len;
+  rb->ring = lws_ring_create(element_len, count, ringbuffer_destroy_element);
 
-  pthread_mutex_init(&strm->lock_ring, 0);
+  pthread_mutex_init(&rb->lock_ring, 0);
 }
 
 struct ringbuffer*
 ringbuffer_new(JSContext* ctx) {
-  struct ringbuffer* strm;
+  struct ringbuffer* rb;
 
-  if((strm = js_mallocz(ctx, sizeof(struct ringbuffer))))
-    strm->ref_count = 1;
+  if((rb = js_mallocz(ctx, sizeof(struct ringbuffer))))
+    rb->ref_count = 1;
 
-  return strm;
+  return rb;
 }
 
 void
-ringbuffer_init2(struct ringbuffer* strm, size_t element_len, size_t count) {
+ringbuffer_init2(struct ringbuffer* rb, size_t element_len, size_t count) {
   const char* type = "application/binary";
-  ringbuffer_init(strm, element_len, count, type, strlen(type));
+  ringbuffer_init(rb, element_len, count, type, strlen(type));
 }
 
 struct ringbuffer*
 ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
-  struct ringbuffer* strm;
+  struct ringbuffer* rb;
 
-  if((strm = ringbuffer_new(ctx)))
-    ringbuffer_init2(strm, element_len, count);
+  if((rb = ringbuffer_new(ctx)))
+    ringbuffer_init2(rb, element_len, count);
 
-  return strm;
+  return rb;
 }
 
 size_t
-ringbuffer_insert(struct ringbuffer* strm, const void* ptr, size_t n) {
+ringbuffer_insert(struct ringbuffer* rb, const void* ptr, size_t n) {
   size_t ret;
-  assert(strm->ring);
+  assert(rb->ring);
 
-  pthread_mutex_lock(&strm->lock_ring);
+  pthread_mutex_lock(&rb->lock_ring);
 
-  ret = lws_ring_insert(strm->ring, ptr, n);
-  pthread_mutex_unlock(&strm->lock_ring);
+  ret = lws_ring_insert(rb->ring, ptr, n);
+  pthread_mutex_unlock(&rb->lock_ring);
 
   return ret;
 }
 
 size_t
-ringbuffer_consume(struct ringbuffer* strm, void* ptr, size_t n) {
+ringbuffer_consume(struct ringbuffer* rb, void* ptr, size_t n) {
   size_t ret;
-  assert(strm->ring);
-  pthread_mutex_lock(&strm->lock_ring);
+  assert(rb->ring);
+  pthread_mutex_lock(&rb->lock_ring);
 
-  ret = lws_ring_consume(strm->ring, 0, ptr, n);
+  ret = lws_ring_consume(rb->ring, 0, ptr, n);
 
-  pthread_mutex_unlock(&strm->lock_ring);
+  pthread_mutex_unlock(&rb->lock_ring);
   return ret;
 }
 
 size_t
-ringbuffer_skip(struct ringbuffer* strm, size_t n) {
+ringbuffer_skip(struct ringbuffer* rb, size_t n) {
   size_t ret;
-  assert(strm->ring);
-  pthread_mutex_lock(&strm->lock_ring);
+  assert(rb->ring);
+  pthread_mutex_lock(&rb->lock_ring);
 
-  ret = lws_ring_consume(strm->ring, 0, 0, n);
+  ret = lws_ring_consume(rb->ring, 0, 0, n);
 
-  pthread_mutex_unlock(&strm->lock_ring);
+  pthread_mutex_unlock(&rb->lock_ring);
   return ret;
 }
 
 const void*
-ringbuffer_next(struct ringbuffer* strm) {
-  assert(strm->ring);
-  return lws_ring_get_element(strm->ring, 0);
+ringbuffer_next(struct ringbuffer* rb) {
+  assert(rb->ring);
+  return lws_ring_get_element(rb->ring, 0);
 }
 
 size_t
-ringbuffer_size(struct ringbuffer* strm) {
-  assert(strm->ring);
-  return lws_ring_get_count_waiting_elements(strm->ring, 0);
+ringbuffer_size(struct ringbuffer* rb) {
+  assert(rb->ring);
+  return lws_ring_get_count_waiting_elements(rb->ring, 0);
 }
 
 size_t
-ringbuffer_avail(struct ringbuffer* strm) {
-  assert(strm->ring);
-  return lws_ring_get_count_free_elements(strm->ring);
+ringbuffer_avail(struct ringbuffer* rb) {
+  assert(rb->ring);
+  return lws_ring_get_count_free_elements(rb->ring);
 }
 
 void
-ringbuffer_zero(struct ringbuffer* strm) {
-  lws_ring_destroy(strm->ring);
-  memset(strm, 0, sizeof(struct ringbuffer));
+ringbuffer_zero(struct ringbuffer* rb) {
+  lws_ring_destroy(rb->ring);
+  memset(rb, 0, sizeof(struct ringbuffer));
 }
 
 void
-ringbuffer_free(struct ringbuffer* strm, JSRuntime* rt) {
-  ringbuffer_zero(strm);
-  js_free_rt(rt, strm);
+ringbuffer_free(struct ringbuffer* rb, JSContext* ctx) {
+  if(--rb->ref_count == 0) {
+    ringbuffer_zero(rb);
+    js_free(ctx, rb);
+  }
+}
+
+void
+ringbuffer_free_rt(struct ringbuffer* rb, JSRuntime* rt) {
+  if(--rb->ref_count == 0) {
+    ringbuffer_zero(rb);
+    js_free_rt(rt, rb);
+  }
 }

@@ -131,6 +131,16 @@ js_function_name(JSContext* ctx, JSValueConst value) {
 }
 
 JSValue
+js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done) {
+  JSValue ret = JS_NewObject(ctx);
+
+  JS_SetPropertyStr(ctx, ret, "done", JS_NewBool(ctx, done));
+  JS_SetPropertyStr(ctx, ret, "value", JS_DupValue(ctx, value));
+
+  return ret;
+}
+
+JSValue
 js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
   JSValue fn, result, done, value;
 
@@ -242,6 +252,16 @@ js_buffer_fromblock(JSContext* ctx, struct byte_block* blk) {
 JSBuffer
 js_buffer_data(JSContext* ctx, const void* data, size_t size) {
   ByteBlock block = {(uint8_t*)data, (uint8_t*)data + size};
+
+  return js_buffer_fromblock(ctx, &block);
+}
+
+JSBuffer
+js_buffer_alloc(JSContext* ctx, size_t size) {
+  ByteBlock block = {0, 0};
+
+  if((block.start = js_malloc(ctx, size)))
+    block.end = block.start + size;
 
   return js_buffer_fromblock(ctx, &block);
 }
@@ -1061,4 +1081,37 @@ js_is_async(JSContext* ctx, JSValueConst value) {
     JS_FreeCString(ctx, str);
   }
   return ret;
+}
+
+struct generic_closure {
+  JSContext* ctx;
+  void *ptr, (*free_func)(void*, JSContext*);
+};
+
+void*
+js_closure_new(JSContext* ctx, void* opaque, void (*free_func)(void*, JSContext*)) {
+  struct generic_closure* closure;
+
+  if((closure = js_malloc(ctx, sizeof(*closure)))) {
+    closure->ctx = ctx;
+    closure->ptr = opaque;
+    closure->free_func = free_func;
+  }
+
+  return closure;
+};
+
+void
+js_closure_free(void* ptr) {
+  struct generic_closure* closure = ptr;
+
+  if(closure->free_func)
+    closure->free_func(closure->ptr, closure->ctx);
+
+  js_free(closure->ctx, closure->ptr);
+};
+
+void
+js_closure_free_ab(JSRuntime* rt, void* opaque, void* ptr) {
+  js_closure_free(opaque);
 }
