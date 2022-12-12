@@ -173,8 +173,6 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, 
       return JS_ThrowTypeError(ctx, "object.next is not asynciterator_shift function");
 
     *next = js_function_bind_this(ctx, fn, obj);
-    /* if(thisObj)
-     *thisObj = JS_DupValue(ctx, obj);*/
     JS_FreeValue(ctx, fn);
     fn = *next;
   }
@@ -1149,8 +1147,12 @@ js_typedarray_constructor(JSContext* ctx, int bits, BOOL floating, BOOL sign) {
 JSValue
 js_typedarray_new(JSContext* ctx, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length) {
   JSValue ctor = js_typedarray_constructor(ctx, bits, floating, sign);
-  JSValue args[3] = {buffer, JS_NewUint32(ctx, byte_offset), JS_NewUint32(ctx, length)};
-  JSValue ret = JS_CallConstructor(ctx, ctor, 1, &buffer);
+  JSValue args[] = {
+      buffer,
+      JS_NewUint32(ctx, byte_offset),
+      JS_NewUint32(ctx, length),
+  };
+  JSValue ret = JS_CallConstructor(ctx, ctor, countof(args), args);
   JS_FreeValue(ctx, args[1]);
   JS_FreeValue(ctx, args[2]);
   JS_FreeValue(ctx, ctor);

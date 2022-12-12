@@ -31,6 +31,7 @@ ByteBlock queue_next(Queue*, BOOL* done_p);
 QueueItem* queue_put(Queue*, ByteBlock chunk);
 QueueItem* queue_write(Queue*, const void* data, size_t size, JSContext* ctx);
 QueueItem* queue_close(Queue*);
+int64_t queue_bytes(Queue*);
 
 static inline BOOL
 queue_empty(Queue* q) {
@@ -41,6 +42,12 @@ static inline BOOL
 queue_closed(Queue* q) {
   QueueItem* i;
   return (i = queue_front(q)) ? i->done : FALSE;
+}
+
+static inline BOOL
+queue_complete(Queue* q) {
+  QueueItem* i;
+  return (i = queue_back(q)) ? i->done : FALSE;
 }
 
 static inline size_t

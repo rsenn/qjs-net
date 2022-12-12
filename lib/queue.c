@@ -61,9 +61,7 @@ queue_next(Queue* q, BOOL* done_p) {
   QueueItem* i;
   BOOL done = FALSE;
 
-  if(!list_empty(&q->items)) {
-    i = list_entry(q->items.next, QueueItem, link);
-
+  if((i = queue_front(q))) {
     ret = i->block;
     done = i->done;
 
@@ -95,6 +93,8 @@ queue_next(Queue* q, BOOL* done_p) {
 QueueItem*
 queue_put(Queue* q, ByteBlock chunk) {
   QueueItem* i;
+
+  assert(!queue_closed(q));
 
   if(q->items.next == 0 && q->items.prev == 0)
     init_list_head(&q->items);
@@ -136,9 +136,25 @@ queue_close(Queue* q) {
     i->unref = 0;
 
     list_add_tail(&i->link, &q->items);
-
-    // ++q->size;
   }
 
   return i;
+}
+
+int64_t
+queue_bytes(Queue* q) {
+  QueueItem* i;
+  struct list_head* el;
+  size_t bytes = 0;
+
+  if(!queue_complete(q))
+    return -1;
+
+  list_for_each(el, &q->items) {
+    i = list_entry(el, QueueItem, link);
+
+    bytes += block_SIZE(&i->block);
+  }
+
+  return bytes;
 }

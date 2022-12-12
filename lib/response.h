@@ -11,12 +11,11 @@
 
 typedef struct http_response {
   int ref_count;
-  BOOL read_only;
+  BOOL read_only, headers_sent, compress;
   struct url url;
   char* type;
   int status;
   char* status_text;
-  BOOL headers_sent;
   ByteBuffer headers;
   Generator* generator;
 } Response;

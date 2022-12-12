@@ -98,9 +98,14 @@ ringbuffer_next(struct ringbuffer* rb) {
 }
 
 size_t
-ringbuffer_size(struct ringbuffer* rb) {
+ringbuffer_waiting(struct ringbuffer* rb) {
   assert(rb->ring);
   return lws_ring_get_count_waiting_elements(rb->ring, 0);
+}
+
+size_t
+ringbuffer_bytelength(struct ringbuffer* rb) {
+  return rb->size * rb->element_len;
 }
 
 size_t

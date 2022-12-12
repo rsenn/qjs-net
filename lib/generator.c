@@ -26,7 +26,7 @@ generator_free(Generator* gen) {
   if(--gen->ref_count == 0) {
     asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
 
-    while(ringbuffer_size(gen->rbuf)) {
+    while(ringbuffer_waiting(gen->rbuf)) {
       ByteBlock blk;
       if(ringbuffer_consume(gen->rbuf, &blk, 1))
         block_free(&blk, gen->ctx);
@@ -58,7 +58,7 @@ generator_next(Generator* gen, JSContext* ctx) {
 
   ret = asynciterator_next(&gen->iterator, ctx);
 
-  if(ringbuffer_size(gen->rbuf)) {
+  if(ringbuffer_waiting(gen->rbuf)) {
     ByteBlock blk;
     if(ringbuffer_consume(gen->rbuf, &blk, 1)) {
       JSValue value = block_toarraybuffer(&blk, ctx);

@@ -27,6 +27,7 @@ enum {
   RINGBUFFER_HEAD,
   RINGBUFFER_OLDEST_TAIL,
   RINGBUFFER_INSERTRANGE,
+  RINGBUFFER_CONSUMERANGE,
 };
 
 JSValue
@@ -237,6 +238,14 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
       break;
     }
 
+    case RINGBUFFER_CONSUMERANGE: {
+      JSValue ab = JS_GetPropertyStr(ctx, this_val, "buffer");
+
+      ret = js_typedarray_new(ctx, 8, FALSE, FALSE, ab, new_tail, (ringbuffer_bytelength(rb) - new_tail) / rb->element_len);
+      JS_FreeValue(ctx, ab);
+
+      break;
+    }
     case RINGBUFFER_SKIP: {
       uint32_t n;
 
@@ -338,12 +347,12 @@ minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
     }
 
     case RINGBUFFER_COUNT: {
-      ret = JS_NewUint32(ctx, ringbuffer_size(rb));
+      ret = JS_NewUint32(ctx, ringbuffer_waiting(rb));
       break;
     }
 
     case RINGBUFFER_BYTELEN: {
-      ret = JS_NewInt64(ctx, ringbuffer_size(rb) * ringbuffer_element_len(rb));
+      ret = JS_NewInt64(ctx, ringbuffer_waiting(rb) * ringbuffer_element_len(rb));
       break;
     }
 
@@ -476,6 +485,7 @@ const JSCFunctionListEntry minnet_ringbuffer_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("consume", 1, minnet_ringbuffer_multitail, RINGBUFFER_CONSUME),
     JS_CFUNC_MAGIC_DEF("skip", 0, minnet_ringbuffer_multitail, RINGBUFFER_SKIP),
     JS_CFUNC_MAGIC_DEF("updateOldestTail", 0, minnet_ringbuffer_multitail, RINGBUFFER_UPDATE_OLDEST_TAIL),
+    JS_CFUNC_MAGIC_DEF("getConsumeRange", 0, minnet_ringbuffer_multitail, RINGBUFFER_CONSUMERANGE),
     JS_CFUNC_MAGIC_DEF("createTail", 0, minnet_ringbuffer_method, RINGBUFFER_CREATE_TAIL),
     JS_CFUNC_MAGIC_DEF("insert", 1, minnet_ringbuffer_method, RINGBUFFER_INSERT),
     JS_CFUNC_MAGIC_DEF("bumpHead", 1, minnet_ringbuffer_method, RINGBUFFER_BUMP_HEAD),
