@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(qjs-net C)
 
+cmake_policy(SET CMP0007 OLD)
+
 message("Building project [1;31m${PROJECT_NAME}[0m")
 
 set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag")
@@ -421,8 +423,24 @@ endif(NOT QUICKJS_C_MODULE_DIR)
 install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}"
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE
                     GROUP_READ WORLD_READ WORLD_EXECUTE)
-install(FILES rpc.js debugger-client.js event-emitter.js
-        DESTINATION "${QUICKJS_JS_MODULE_DIR}")
+file(GLOB JSLIB js/*.js)
+list(FILTER JSLIB EXCLUDE REGEX "debugger-client")
+
+install(FILES ${JSLIB} DESTINATION "${QUICKJS_JS_MODULE_DIR}")
+
+foreach(SRC ${JSLIB})
+  #string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" SRC "${SRC}")
+
+  file(RELATIVE_PATH SRC "${CMAKE_CURRENT_SOURCE_DIR}" "${SRC}")
+  string(REGEX REPLACE "\\.js$" "" BASE "${SRC}")
+  string(REGEX REPLACE ".*/" "" BASE "${BASE}")
+  message("Compiling module ${SRC}")
+
+  compile_module(${SRC} ${CMAKE_CURRENT_BINARY_DIR}/${BASE}.c)
+  make_module_header(${CMAKE_CURRENT_BINARY_DIR}/${BASE}.c)
+
+  #make_module(${NAME} ${SRC})
+endforeach()
 #dump_target(quickjs-minnet)
 
 file(GLOB TESTS tests/test-*.js)
