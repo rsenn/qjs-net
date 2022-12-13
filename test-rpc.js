@@ -11,8 +11,8 @@ import { Socket } from 'sockets';
 import { EventEmitter } from 'events';
 import { Repeater } from 'repeater';
 
-import rpc from './rpc.js';
-import * as rpc2 from './rpc.js';
+import rpc from './js/rpc.js';
+import * as rpc2 from './js/rpc.js';
 
 globalThis.fs = fs;
 
