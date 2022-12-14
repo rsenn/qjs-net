@@ -18,6 +18,7 @@ session_zero(struct session_data* session) {
   session->next = JS_NULL;
   session->in_body = FALSE;
   session->response_sent = FALSE;
+  session->wait_resolve = FALSE;
   session->server = NULL;
   session->client = NULL;
 

@@ -83,7 +83,7 @@ JSValue
 minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
   JSValue ret = JS_NewObject(ctx);
 
-  JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, gen, (void*)&generator_free));
+  JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, generator_dup(gen), (void*)&generator_free));
   JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
 
   return ret;
@@ -93,7 +93,7 @@ JSValue
 minnet_generator_reader(JSContext* ctx, MinnetGenerator* gen) {
   JSValue ret = JS_NewObject(ctx);
 
-  JS_SetPropertyStr(ctx, ret, "read", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, gen, (void*)&generator_free));
+  JS_SetPropertyStr(ctx, ret, "read", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, generator_dup(gen), (void*)&generator_free));
   JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
 
   return ret;

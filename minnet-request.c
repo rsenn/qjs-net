@@ -171,15 +171,18 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_BODY: {
-      ret = minnet_generator_create(ctx, &req->body); /* if(buffer_HEAD(&req->body)  {
-            size_t typelen;
-            const char* type = header_get(ctx, &typelen, &req->headers, "content-type");
+      switch(req->method) {
+        case METHOD_GET:
+        case METHOD_OPTIONS:
+        case METHOD_PATCH:
+        case METHOD_PUT:
+        case METHOD_DELETE:
+        case METHOD_HEAD:
+          if(!req->body)
+            break;
 
-            ret = buffer_tostring(&req->body, ctx);
-            //  ret = minnet_ringbuffer_new(ctx, type, typelen, block_BEGIN(&req->body), buffer_HEAD(&req->body));
-          }  else {
-            ret = JS_NULL;
-          }*/
+        case METHOD_POST: ret = minnet_generator_create(ctx, &req->body); break;
+      }
       break;
     }
     case REQUEST_IP: {
