@@ -436,14 +436,12 @@ serve_generator(JSContext* ctx, struct session_data* session, MinnetResponse* re
   if(JS_IsObject(session->generator)) {
     session->next = JS_UNDEFINED;
 
-    LOG("SERVER-HTTP(2)", FG("%d") "%-38s" NC " wsi#%" PRIi64 "", 112, __func__ + 6, opaque->serial);
-
-    // DEBUG("%s session->generator=%s\n", __func__, JS_ToCString(ctx, session->generator));
+    // LOG("SERVER-HTTP(2)", FG("%d") "%-38s" NC " wsi#%" PRIi64 "", 112, __func__ + 6, opaque->serial);
 
     while(!*done_p) {
       JSValue ret = js_iterator_next(ctx, session->generator, &session->next, done_p, 0, 0);
 
-      LOG("SERVER-HTTP(3)", FG("%d") "%-38s" NC " i=%" PRIi64 " done=%s ret=%s", 112, __func__ + 6, resp->generator->chunks_read, *done_p ? "TRUE" : "FALSE", JS_ToCString(ctx, ret));
+      LOG("SERVER-HTTP(3)", FG("%d") "%-38s" NC " i=%" PRIi64 " done=%s ret=%s", 214, __func__ + 6, resp->generator->chunks_read, *done_p ? "TRUE" : "FALSE", JS_ToCString(ctx, ret));
       // DEBUG("%s i=%" PRIi64 " done=%s ret=%s", __func__, resp->generator->chunks_read, *done_p ? "TRUE" : "FALSE", JS_ToCString(ctx, ret));
 
       if(js_is_promise(ctx, ret)) {
@@ -631,7 +629,7 @@ http_server_writable(struct http_closure* closure, BOOL done) {
   size_t remain = 0;
   ssize_t ret = 0;
 
-  LOG("SERVER-HTTP(1)", FG("%d") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s generator=%d done=%d", 112, __func__ + 12, opaque->serial, resp->status, resp->type, resp->generator != NULL, done);
+  LOG("SERVER-HTTP(1)", FG("%d") "%-38s" NC " wsi#%" PRId64 " status=%d type=%s generator=%d done=%d", 207, __func__ + 12, opaque->serial, resp->status, resp->type, resp->generator != NULL, done);
 
   n = (done || resp->generator->closing) ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
 
@@ -659,7 +657,7 @@ http_server_writable(struct http_closure* closure, BOOL done) {
     block_free(&buf, closure->ctx);
   }
 
-  LOG("SERVER-HTTP(3)", FG("%d") "%-38s" NC " wsi#%" PRIi64 " done=%i remain=%zu closed=%d", 112, __func__ + 12, opaque->serial, done, remain, queue_closed(&closure->session->sendq));
+  LOG("SERVER-HTTP(3)", FG("%d") "%-38s" NC " wsi#%" PRIi64 " done=%i remain=%zu closed=%d", 39, __func__ + 12, opaque->serial, done, remain, queue_closed(&closure->session->sendq));
 
   if(done || queue_closed(&closure->session->sendq))
     return lws_http_transaction_completed(closure->wsi);
@@ -967,7 +965,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetResponse* resp;
       BOOL done = FALSE;
 
-      LOGCB("HTTP(2)", "%smnt=%s closed=%d size=%zu", wsi_http2(wsi) ? "h2, " : "", session->mount ? session->mount->mnt : 0, queue_closed(&session->sendq), queue_size(&session->sendq));
+      // LOGCB("HTTP(2)", "%smnt=%s closed=%d size=%zu", wsi_http2(wsi) ? "h2, " : "", session->mount ? session->mount->mnt : 0, queue_closed(&session->sendq), queue_size(&session->sendq));
+
       if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
         session->resp_obj = minnet_response_wrap(ctx, resp);
@@ -989,12 +988,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
-      opaque_clear(opaque, ctx);
+      // opaque_clear(opaque, ctx);
       break;
     }
 
     case LWS_CALLBACK_HTTP_FILE_COMPLETION: {
-      opaque_clear(opaque, ctx);
+      // opaque_clear(opaque, ctx);
 
       return lws_callback_http_dummy(wsi, reason, user, in, len);
       break;
