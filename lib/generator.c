@@ -80,9 +80,9 @@ generator_next(Generator* gen, JSContext* ctx) {
 
 ssize_t
 generator_write(Generator* gen, const void* data, size_t len, JSValueConst callback) {
-  ssize_t ret = -1;
   ByteBlock blk = block_copy(data, len, gen->ctx);
-  size_t size = block_SIZE(&blk);
+  ssize_t ret = -1, size = block_SIZE(&blk);
+
   if(!list_empty(&gen->iterator.reads)) {
     JSValue chunk = gen->block_fn(&blk, gen->ctx);
     if(asynciterator_yield(&gen->iterator, chunk, gen->ctx))
