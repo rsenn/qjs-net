@@ -24,8 +24,8 @@ uint8_t* block_alloc(ByteBlock*, size_t, JSContext*);
 uint8_t* block_realloc(ByteBlock*, size_t, JSContext*);
 void block_free_rt(ByteBlock*, JSRuntime*);
 int block_fromarraybuffer(ByteBlock*, JSValue, JSContext*);
-JSValue block_toarraybuffer(ByteBlock const*, JSContext*);
-JSValue block_tostring(ByteBlock const*, JSContext*);
+JSValue block_toarraybuffer(ByteBlock*, JSContext*);
+JSValue block_tostring(ByteBlock*, JSContext*);
 
 static inline void
 block_free(ByteBlock* b, JSContext* ctx) {

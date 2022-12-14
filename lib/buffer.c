@@ -64,14 +64,17 @@ block_fromarraybuffer(ByteBlock* blk, JSValueConst value, JSContext* ctx) {
 }
 
 JSValue
-block_toarraybuffer(ByteBlock const* blk, JSContext* ctx) {
-  ByteBlock mem = block_move(blk);
+block_toarraybuffer(ByteBlock* blk, JSContext* ctx) {
+  ByteBlock mem = block_move((ByteBlock*)blk);
   return JS_NewArrayBuffer(ctx, block_BEGIN(&mem), block_SIZE(&mem), block_finalizer, block_ALLOC(&mem), FALSE);
 }
 
 JSValue
-block_tostring(ByteBlock const* blk, JSContext* ctx) {
-  return JS_NewStringLen(ctx, block_BEGIN(blk), block_SIZE(blk));
+block_tostring(ByteBlock* blk, JSContext* ctx) {
+  ByteBlock mem = block_move((ByteBlock*)blk);
+  JSValue str = JS_NewStringLen(ctx, block_BEGIN(&mem), block_SIZE(&mem));
+  block_free(&mem, ctx);
+  return str;
 }
 
 void

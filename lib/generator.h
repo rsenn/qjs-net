@@ -16,8 +16,7 @@ typedef struct generator {
   Queue* q;
   uint64_t bytes_written, bytes_read;
   uint64_t chunks_written, chunks_read;
-  JSValue (*block_fn)(ByteBlock const*, JSContext*);
-
+  JSValue (*block_fn)(ByteBlock*, JSContext*);
   int ref_count;
 } Generator;
 
