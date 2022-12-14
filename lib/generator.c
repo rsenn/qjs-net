@@ -1,7 +1,7 @@
 #include "generator.h"
 
-static ssize_t generator_put(Generator* gen, ByteBlock blk, JSValueConst callback);
-static ssize_t generator_queue(Generator* gen, const void* data, size_t len);
+static ssize_t push_block(Generator* gen, ByteBlock blk, JSValueConst callback);
+static ssize_t push_value(Generator* gen, JSValueConst value, JSValueConst callback);
 
 void
 generator_zero(Generator* gen) {
@@ -59,20 +59,15 @@ generator_next(Generator* gen, JSContext* ctx) {
 
   if(queue_closed(gen->q)) {
     ByteBlock blk = queue_next(gen->q, NULL);
-
     JSValue chunk = block_SIZE(&blk) ? block_toarraybuffer(&blk, ctx) : JS_UNDEFINED;
-
     asynciterator_stop(&gen->iterator, chunk, ctx);
     JS_FreeValue(ctx, chunk);
 
   } else if(queue_size(gen->q)) {
     BOOL done = FALSE;
     ByteBlock blk = queue_next(gen->q, &done);
-
     JSValue chunk = block_SIZE(&blk) ? block_toarraybuffer(&blk, ctx) : JS_UNDEFINED;
-
     asynciterator_yield(&gen->iterator, chunk, ctx);
-
     JS_FreeValue(gen->ctx, chunk);
 
     gen->bytes_read += block_SIZE(&blk);
@@ -85,18 +80,14 @@ generator_next(Generator* gen, JSContext* ctx) {
 ssize_t
 generator_write(Generator* gen, const void* data, size_t len, JSValueConst callback) {
   ByteBlock blk = block_new(data, len, gen->ctx);
-  ssize_t ret = -1;
+  JSValue chunk = block_toarraybuffer(&blk, gen->ctx);
+  ssize_t ret = generator_enqueue(gen, chunk, callback) ? block_SIZE(&blk) : -1;
 
-  if(!list_empty(&gen->iterator.reads)) {
-    JSValue chunk = block_SIZE(&blk) ? block_toarraybuffer(&blk, gen->ctx) : JS_UNDEFINED;
+  JS_FreeValue(gen->ctx, chunk);
 
-    if((asynciterator_yield(&gen->iterator, chunk, gen->ctx)))
-      ret = block_SIZE(&blk);
-
-    JS_FreeValue(gen->ctx, chunk);
-
-  } else {
-    ret = generator_put(gen, blk, callback);
+  if(ret >= 0) {
+    gen->bytes_written += block_SIZE(&blk);
+    gen->chunks_written += 1;
   }
 
   return ret;
@@ -117,15 +108,25 @@ generator_push(Generator* gen, JSValueConst value) {
 
 BOOL
 generator_enqueue(Generator* gen, JSValueConst value, JSValueConst callback) {
-  if(!asynciterator_yield(&gen->iterator, value, gen->ctx)) {
-    JSBuffer buf = js_input_chars(gen->ctx, value);
-    ByteBlock blk = block_new(buf.data, buf.size, gen->ctx);
-    js_buffer_free(&buf, gen->ctx);
+  ssize_t ret;
 
-    return generator_put(gen, blk, callback) != -1;
+  if(asynciterator_yield(&gen->iterator, value, gen->ctx)) {
+    JSBuffer buf = js_input_chars(gen->ctx, value);
+    ret = buf.size;
+    js_buffer_free(&buf, gen->ctx);
+  } else {
+    if((ret = push_value(gen, value, callback)) < 0)
+      return FALSE;
   }
 
-  JS_FreeValue(gen->ctx, JS_Call(gen->ctx, callback, JS_UNDEFINED, 0, 0));
+  if(ret >= 0) {
+    gen->bytes_written += ret;
+    gen->chunks_written += 1;
+  }
+
+  if(JS_IsFunction(gen->ctx, callback))
+    JS_FreeValue(gen->ctx, JS_Call(gen->ctx, callback, JS_UNDEFINED, 0, 0));
+
   return TRUE;
 }
 
@@ -159,13 +160,7 @@ generator_stop(Generator* gen) {
 }
 
 static ssize_t
-generator_queue(Generator* gen, const void* data, size_t len) {
-  ByteBlock blk = block_new(data, len, gen->ctx);
-  return generator_put(gen, blk, JS_UNDEFINED);
-}
-
-static ssize_t
-generator_put(Generator* gen, ByteBlock blk, JSValueConst callback) {
+push_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
   QueueItem* item;
   ssize_t ret = -1;
 
@@ -175,5 +170,18 @@ generator_put(Generator* gen, ByteBlock blk, JSValueConst callback) {
     if(JS_IsFunction(gen->ctx, callback))
       item->resolve = deferred_newjs(JS_FreeValue, JS_DupValue(gen->ctx, callback), gen->ctx);
   }
+  return ret;
+}
+
+static ssize_t
+push_value(Generator* gen, JSValueConst value, JSValueConst callback) {
+  JSBuffer buf = js_input_chars(gen->ctx, value);
+  ByteBlock blk = block_new(buf.data, buf.size, gen->ctx);
+  ssize_t ret;
+  js_buffer_free(&buf, gen->ctx);
+
+  if((ret = push_block(gen, blk, callback)) == -1)
+    block_free(&blk, gen->ctx);
+
   return ret;
 }
