@@ -200,7 +200,11 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
         LOGCB("ws", "fd=%d, status=%d code=%d", lws_get_socket_fd(wsi), opaque->status, code);
 
         if(ctx) {
-          JSValue cb_argv[3] = {session->ws_obj, code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED, why};
+          JSValue cb_argv[3] = {
+              session->ws_obj,
+              code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED,
+              why,
+          };
           server_exception(server, callback_emit(&server->cb.close, code != -1 ? 3 : 1, cb_argv));
           JS_FreeValue(ctx, cb_argv[1]);
         }
@@ -221,7 +225,10 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       if(ctx) {
         BOOL binary = lws_frame_is_binary(wsi);
         JSValue msg = binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
-        JSValue cb_argv[2] = {JS_DupValue(ctx, session->ws_obj), msg};
+        JSValue cb_argv[2] = {
+            JS_DupValue(ctx, session->ws_obj),
+            msg,
+        };
         server_exception(server, callback_emit(&server->cb.message, 2, cb_argv));
         JS_FreeValue(ctx, cb_argv[0]);
         JS_FreeValue(ctx, cb_argv[1]);
@@ -232,7 +239,10 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       if(server->cb.pong.ctx) {
         // ws_obj = minnet_ws_fromwsi(server->cb.pong.ctx, wsi);
         JSValue msg = JS_NewArrayBufferCopy(server->cb.pong.ctx, in, len);
-        JSValue cb_argv[2] = {JS_DupValue(server->cb.pong.ctx, session->ws_obj), msg};
+        JSValue cb_argv[2] = {
+            JS_DupValue(server->cb.pong.ctx, session->ws_obj),
+            msg,
+        };
         server_exception(server, callback_emit(&server->cb.pong, 2, cb_argv));
         JS_FreeValue(server->cb.pong.ctx, cb_argv[0]);
         JS_FreeValue(server->cb.pong.ctx, cb_argv[1]);

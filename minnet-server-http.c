@@ -366,7 +366,7 @@ serve_resolved_free(void* ptr) {
 static JSValue
 serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   HTTPAsyncResolveClosure* closure = ptr;
-
+  struct session_data* session = closure->session;
   JSValue value = JS_GetPropertyStr(ctx, argv[0], "value");
   JSValue done_prop = JS_GetPropertyStr(ctx, argv[0], "done");
   BOOL done = JS_ToBool(ctx, done_prop);
@@ -376,19 +376,12 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   lwsl_user("%s value=%s done=%i data='%.*s' size=%zx", __func__, JS_ToCString(ctx, value), done, (int)out.size, out.data, out.size);
 
   if(out.data) {
-
-    /*    if(!closure->session->sendq)
-          closure->session->sendq = ringbuffer_new2(sizeof(JSBuffer), 128, ctx);
-
-        ringbuffer_insert(closure->session->sendq, &out, 1);*/
-    queue_write(&closure->session->sendq, out.data, out.size, ctx);
+    queue_write(&session->sendq, out.data, out.size, ctx);
 
     lws_callback_on_writable(closure->wsi);
-
-    js_buffer_free(&out, ctx);
-  } else {
-    js_buffer_free(&out, ctx);
   }
+
+  js_buffer_free(&out, ctx);
 
   if(done) {
     generator_close(closure->resp->generator, JS_UNDEFINED);
@@ -397,7 +390,7 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   JS_FreeValue(ctx, value);
 
   if(!done) {
-    value = js_iterator_next(ctx, closure->session->generator, &closure->session->next, &done, 0, 0);
+    value = js_iterator_next(ctx, session->generator, &session->next, &done, 0, 0);
     ++closure->ref_count;
     JSValue fn = JS_NewCClosure(ctx, serve_resolved, 1, 0, closure, serve_resolved_free);
     JSValue tmp = js_promise_then(ctx, value, fn);
@@ -447,6 +440,7 @@ serve_generator(JSContext* ctx, struct session_data* session, MinnetResponse* re
       if(js_is_promise(ctx, ret)) {
         JSValue promise = serve_promise(ctx, session, resp, wsi, ret);
         JS_FreeValue(ctx, promise);
+        return 0;
       } else if(JS_IsException(ret)) {
         JSValue exception = JS_GetException(ctx);
         js_error_print(ctx, exception);
@@ -647,7 +641,16 @@ http_server_writable(struct http_closure* closure, BOOL done) {
       if(l > 0) {
         wp = queue_size(&closure->session->sendq) || remain > l ? LWS_WRITE_HTTP : queue_closed(&closure->session->sendq) ? LWS_WRITE_HTTP_FINAL : n;
         ret = lws_write(closure->wsi, x, l, wp);
-        LOG("SERVER-HTTP(2)", FG("%d") "%-38s" NC " wsi#%" PRIi64 " len=%zu final=%d ret=%zd", 112, __func__ + 12, opaque->serial, l, wp == LWS_WRITE_HTTP_FINAL, ret);
+        LOG("SERVER-HTTP(2)",
+            FG("%d") "%-38s" NC " wsi#%" PRIi64 " len=%zu final=%d ret=%zd data='%.*s'",
+            112,
+            __func__ + 12,
+            opaque->serial,
+            l,
+            wp == LWS_WRITE_HTTP_FINAL,
+            ret,
+            (int)(l > 32 ? 32 : l),
+            x);
 
         remain -= l;
         pos += l;
@@ -676,7 +679,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   struct session_data* session = user;
   JSContext* ctx = server ? server->context.js : 0;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-  struct http_closure closure = {wsi, server, session, ctx, opaque};
+  struct http_closure closure = {
+      wsi,
+      server,
+      session,
+      ctx,
+      opaque,
+  };
 
   if(lws_reason_poll(reason)) {
     assert(server);
@@ -770,7 +779,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         }
       }
       if(server->cb.read.ctx) {
-        JSValue args[] = {JS_NewStringLen(server->cb.read.ctx, in, len)};
+        JSValue args[] = {
+            JS_NewStringLen(server->cb.read.ctx, in, len),
+        };
         JSValue ret = server_exception(server, callback_emit_this(&server->cb.read, session->req_obj, countof(args), args));
         JS_FreeValue(server->cb.read.ctx, ret);
       }
@@ -811,7 +822,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       if(server->cb.post.ctx) {
-        JSValue args[] = {minnet_generator_iterator(server->cb.post.ctx, opaque->req->body)};
+        JSValue args[] = {
+            minnet_generator_iterator(server->cb.post.ctx, opaque->req->body),
+        };
         JSValue ret = server_exception(server, callback_emit_this(&server->cb.post, session->req_obj, countof(args), args));
         JS_FreeValue(server->cb.post.ctx, ret);
 
