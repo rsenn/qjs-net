@@ -696,7 +696,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     opaque = closure.opaque = lws_opaque(wsi, ctx);
   }
   assert(opaque);
-  opaque->sess = session;
+
+  if(session)
+    opaque->sess = session;
 
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE)
     LOGCB("HTTP(1)",
@@ -923,7 +925,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
           if(cb && cb->ctx) {
             if(req->method == METHOD_GET) {
-              resp = session_response(session, cb);
+              resp = response_session(resp, session, cb);
               JSValue gen = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &args[1]));
               LOGCB("HTTP(5)", "gen=%s next=%s is_iterator=%d", JS_ToCString(ctx, gen), JS_ToCString(ctx, JS_GetPropertyStr(ctx, gen, "next")), js_is_iterator(ctx, gen));
               if(js_is_iterator(ctx, gen)) {

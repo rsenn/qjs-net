@@ -13,6 +13,12 @@ enum socket_state {
   CLOSED = 3,
 };
 
+struct socket;
+struct http_request;
+struct http_response;
+struct session_data;
+struct form_parser;
+
 struct wsi_opaque_user_data {
   int ref_count;
   struct socket* ws;
@@ -29,6 +35,7 @@ struct wsi_opaque_user_data {
 };
 
 extern THREAD_LOCAL int64_t serial;
+extern THREAD_LOCAL struct list_head opaque_list;
 
 void opaque_clear_rt(struct wsi_opaque_user_data*, JSRuntime* rt);
 void opaque_free_rt(struct wsi_opaque_user_data*, JSRuntime* rt);
@@ -39,7 +46,7 @@ struct wsi_opaque_user_data* lws_opaque(struct lws*, JSContext* ctx);
 
 static inline struct wsi_opaque_user_data*
 opaque_dup(struct wsi_opaque_user_data* opaque) {
-  opaque->ref_count++;
+  ++opaque->ref_count;
   return opaque;
 }
 #endif /* QJSNET_LIB_OPAQUE_H */

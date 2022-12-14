@@ -19,11 +19,9 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
   JSContext* ctx = server->context.js;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 
-  if(!opaque && ctx)
-    opaque = lws_opaque(wsi, ctx);
-
   if(lws_reason_poll(reason))
     return wsi_handle_poll(wsi, reason, &server->cb.fd, in);
+
   if(lws_reason_http(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
@@ -73,24 +71,31 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
     }
 
     case LWS_CALLBACK_WSI_CREATE: {
+      if(!opaque && ctx)
+        opaque = lws_opaque(wsi, ctx);
+
+      if(opaque && session)
+        opaque->sess = session;
+
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);
       /*      if(session)
               session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);*/
+      break;
       return 0;
     }
 
     case LWS_CALLBACK_WSI_DESTROY: {
-      /*   if(opaque && opaque->ws) {
-           ws_free(opaque->ws, ctx);
-           opaque->ws = 0;
-         }*/
-      if((opaque = lws_get_opaque_user_data(wsi))) {
+
+      /*   if((opaque = lws_get_opaque_user_data(wsi)))*/ {
         if(opaque->ws)
           opaque->ws->lwsi = 0;
 
+        opaque->sess = 0;
+
         lws_set_opaque_user_data(wsi, 0);
-        // opaque_free(opaque, ctx);
+
+        opaque_free(opaque, ctx);
       }
       return 0;
     }
@@ -235,6 +240,9 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       return 0;
     }
     case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL: {
+      if(opaque)
+        opaque->sess = 0;
+
       return 0;
     }
     case LWS_CALLBACK_VHOST_CERT_AGING:

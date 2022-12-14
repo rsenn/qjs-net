@@ -28,12 +28,12 @@ struct session_data {
   Queue sendq;
 };
 
-extern THREAD_LOCAL struct list_head session_list;
+// extern THREAD_LOCAL struct list_head session_list;
 
 void session_zero(struct session_data*);
 void session_clear(struct session_data*, JSContext* ctx);
 void session_clear_rt(struct session_data*, JSRuntime* rt);
-JSValue session_object(struct wsi_opaque_user_data*, JSContext*);
+JSValue session_object(struct session_data* session, JSContext* ctx);
 int session_writable(struct session_data*, BOOL binary, JSContext* ctx);
 
 #endif /* QJSNET_LIB_SESSION_H */

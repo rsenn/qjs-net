@@ -5,17 +5,12 @@
 #include "../minnet-form-parser.h"
 #include <assert.h>
 
-static THREAD_LOCAL void* prev_ptr = 0;
+// static THREAD_LOCAL void* prev_ptr = 0;
 THREAD_LOCAL int64_t serial = 0;
-THREAD_LOCAL struct list_head sockets = {0, 0};
+THREAD_LOCAL struct list_head opaque_list = {0, 0};
 
 void
 opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
-
-  // printf("%s opaque=%p link=[%p, %p]\n", __func__, opaque, opaque->link.next, opaque->link.prev);
-
-  prev_ptr = opaque;
-
   if(opaque->ws) {
     struct socket* ws = opaque->ws;
     opaque->ws = 0;
@@ -68,10 +63,10 @@ opaque_new(JSContext* ctx) {
     opaque->status = CONNECTING;
     opaque->ref_count = 1;
 
-    if(sockets.prev == NULL)
-      init_list_head(&sockets);
+    if(opaque_list.prev == NULL)
+      init_list_head(&opaque_list);
 
-    list_add(&opaque->link, &sockets);
+    list_add(&opaque->link, &opaque_list);
   }
 
   return opaque;

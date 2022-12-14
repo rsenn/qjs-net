@@ -242,11 +242,11 @@ minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
   ret = JS_NewArray(ctx);
 
-  list_for_each(el, &session_list) {
-    struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
-    DEBUG("%s @%u #%" PRId64 " %p\n", __func__, i, session->serial, session);
+  list_for_each_prev(el, &opaque_list) {
+    struct wsi_opaque_user_data* opaque = list_entry(el, struct wsi_opaque_user_data, link);
+    DEBUG("%s @%u #%" PRId64 " %p\n", __func__, i, opaque->serial, opaque);
 
-    JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
+    JS_SetPropertyUint32(ctx, ret, i++, opaque->sess ? session_object(opaque->sess, ctx) : JS_NewInt64(ctx, opaque->serial));
   }
   return ret;
 }
