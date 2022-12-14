@@ -391,7 +391,7 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   }
 
   if(done) {
-    generator_close(closure->resp->generator);
+    generator_close(closure->resp->generator, JS_UNDEFINED);
   }
 
   JS_FreeValue(ctx, value);
@@ -685,12 +685,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     return wsi_handle_poll(wsi, reason, &server->cb.fd, in);
   }
 
-  if(reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
+  /*if(reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
     if(session && session->serial != opaque->serial) {
-      session->serial = opaque->serial;
+      //session->serial = opaque->serial;
       // session->h2 = wsi_http2(wsi);
     }
-  }
+  }*/
 
   if(!opaque && ctx) {
     opaque = closure.opaque = lws_opaque(wsi, ctx);
@@ -700,21 +700,19 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE)
     LOGCB("HTTP(1)",
-          "%s%sfd=%d in='%.*s' url=%s session#%d",
+          "%s%sfd=%d in='%.*s' url=%s",
           wsi_http2(wsi) ? "h2, " : "http/1.1, ",
           wsi_tls(wsi) ? "TLS, " : "plain, ",
           lws_get_socket_fd(lws_get_network_wsi(wsi)),
           (int)MIN(32, len),
           (char*)in,
-          opaque && opaque->req ? url_string(&opaque->req->url) : 0,
-          session ? session->serial : 0);
+          opaque && opaque->req ? url_string(&opaque->req->url) : 0);
 
   if(opaque->upstream) {
     if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION) {
       printf("FILTER(2)\n");
-    }
-
-    return lws_callback_http_dummy(wsi, reason, user, in, len);
+    } else
+      return lws_callback_http_dummy(wsi, reason, user, in, len);
   }
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
@@ -729,15 +727,17 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if((session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, in, len)))
         if(mount_is_proxy(session->mount))
           lws_hdr_simple_create(wsi, wsi_http2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST, "");
+
       if(opaque->upstream)
         return lws_callback_http_dummy(wsi, reason, user, in, len);
+
       if(ctx && opaque->ws)
         session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
       if(!opaque->req)
         opaque->req = request_fromwsi(wsi, ctx);
       if(in) {
-        opaque->uri = in;
-        opaque->uri_len = len ? len : strlen(in);
+        /* opaque->uri = in;
+         opaque->uri_len = len ? len : strlen(in);*/
         url_set_path_len(&opaque->req->url, in, len, ctx);
       }
       url_set_protocol(&opaque->req->url, wsi_tls(wsi) ? "https" : "http");
@@ -757,8 +757,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_HTTP_BODY: {
       // LOGCB("HTTP", "%slen: %zu parser: %p", wsi_http2(wsi) ? "h2, " : "", len, opaque->form_parser);
-      if(opaque->upstream)
-        return lws_callback_http_dummy(wsi, reason, user, in, len);
+
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
       session->in_body = TRUE;
       if(len) {
@@ -767,7 +766,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         } else {
           if(!req->body)
             req->body = generator_new(ctx);
-          generator_write(req->body, in, len);
+          generator_write(req->body, in, len, JS_UNDEFINED);
         }
       }
       if(server->cb.read.ctx) {
@@ -808,11 +807,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       req = minnet_request_data2(ctx, session->req_obj);
       if(req->body && ctx) {
         DEBUG("POST body: %p\n", req->body);
-        generator_close(req->body);
+        generator_close(req->body, JS_UNDEFINED);
       }
 
       if(server->cb.post.ctx) {
-        JSValue args[] = {minnet_generator_wrap(server->cb.post.ctx, opaque->req->body)};
+        JSValue args[] = {minnet_generator_iterator(server->cb.post.ctx, opaque->req->body)};
         JSValue ret = server_exception(server, callback_emit_this(&server->cb.post, session->req_obj, countof(args), args));
         JS_FreeValue(server->cb.post.ctx, ret);
 
@@ -840,17 +839,18 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!(req = opaque->req))
         req = opaque->req = request_fromwsi(wsi, ctx);
 
-      if(opaque->uri)
-        url_set_path_len(&req->url, opaque->uri, opaque->uri_len, ctx);
+      /*if(opaque->uri)
+        url_set_path_len(&req->url, opaque->uri, opaque->uri_len, ctx);*/
 
       assert(req);
       assert(req->url.path);
 
       pathlen = req->url.path ? strlen(req->url.path) : 0;
 
-      if(opaque->uri)
+      /*if(opaque->uri)
         mountpoint_len = (char*)in - opaque->uri;
-      else if(req->url.path && in && len < pathlen)
+      else */
+      if(req->url.path && in && len < pathlen)
         mountpoint_len = pathlen - len;
 
       LOGCB("HTTP(2)", "mountpoint='%.*s' path='%s'", (int)mountpoint_len, req->url.path, path);
@@ -964,9 +964,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_WRITEABLE: {
       MinnetResponse* resp;
       BOOL done = FALSE;
-
-      if(opaque->upstream)
-        return lws_callback_http_dummy(wsi, reason, user, in, len);
 
       LOGCB("HTTP(2)", "%smnt=%s closed=%d size=%zu", wsi_http2(wsi) ? "h2, " : "", session->mount ? session->mount->mnt : 0, queue_closed(&session->sendq), queue_size(&session->sendq));
       if(!(resp = opaque->resp)) {

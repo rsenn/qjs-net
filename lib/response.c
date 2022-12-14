@@ -46,7 +46,7 @@ response_dup(Response* resp) {
 ssize_t
 response_write(Response* resp, const void* x, size_t n, JSContext* ctx) {
   assert(resp->generator);
-  return generator_write(resp->generator, x, n);
+  return generator_write(resp->generator, x, n, JS_UNDEFINED);
 }
 
 void

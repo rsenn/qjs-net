@@ -3,7 +3,7 @@
 
 #include "buffer.h"
 #include "asynciterator.h"
-#include "ringbuffer.h"
+#include "queue.h"
 
 typedef struct generator {
   union {
@@ -13,7 +13,7 @@ typedef struct generator {
       BOOL closed, closing;
     };
   };
-  struct ringbuffer* rbuf;
+  Queue* q;
   uint64_t bytes_written, bytes_read;
   uint64_t chunks_written, chunks_read;
   int ref_count;
@@ -23,10 +23,12 @@ void generator_zero(Generator*);
 void generator_destroy(Generator**);
 BOOL generator_free(Generator*);
 Generator* generator_new(JSContext*);
-JSValue generator_next(Generator*, JSContext*);
-ssize_t generator_queue(Generator*, const void*, size_t);
-ssize_t generator_write(Generator*, const void*, size_t);
-BOOL generator_close(Generator*);
+JSValue generator_next(Generator*, JSContext* ctx);
+ssize_t generator_write(Generator*, const void* data, size_t len, JSValueConst callback);
+JSValue generator_push(Generator*, JSValueConst value);
+BOOL generator_enqueue(Generator*, JSValueConst value, JSValueConst callback);
+BOOL generator_close(Generator*, JSValueConst callback);
+JSValue generator_stop(Generator*);
 
 static inline Generator*
 generator_dup(Generator* gen) {

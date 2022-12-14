@@ -513,11 +513,11 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       if(opaque->status < CLOSING) {
         JSContext* ctx;
-        int32_t result = -1, err = opaque ? opaque->error : 0;
+        int32_t result = -1, err = /*opaque ? opaque->error :*/ 0;
 
         if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in) {
           if(!strncmp("conn fail: ", in, 11)) {
-            err = opaque->error = atoi(&((const char*)in)[11]);
+            err = /*opaque->error =*/atoi(&((const char*)in)[11]);
             client->context.error = JS_NewString(client->context.js, strerror(err));
           } else {
             client->context.error = JS_NewStringLen(client->context.js, in, len);

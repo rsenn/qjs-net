@@ -23,7 +23,6 @@ ws_new(struct lws* wsi, JSContext* ctx) {
   if((opaque = lws_opaque(wsi, ctx))) {
     opaque->ws = ws;
     opaque->status = 0;
-    opaque->handler = JS_NULL;
   }
 
   return ws;
@@ -143,7 +142,7 @@ ws_enqueue(struct socket* ws, ByteBlock chunk) {
 
 QueueItem*
 ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
-  ByteBlock chunk = block_copy(data, size, ctx);
+  ByteBlock chunk = block_new(data, size, ctx);
 
   return ws_enqueue(ws, chunk);
 }

@@ -7,6 +7,53 @@
 #include "jsutils.h"
 #include <libwebsockets.h>
 
+typedef struct {
+  int ref_count;
+  JSContext* ctx;
+  struct session_data* session;
+  MinnetResponse* resp;
+  struct lws* wsi;
+} HTTPAsyncResolveClosure;
+
+static void
+client_resolved_free(void* ptr) {
+  HTTPAsyncResolveClosure* closure = ptr;
+  if(--closure->ref_count == 0) {
+    response_free(closure->resp, closure->ctx);
+    js_free(closure->ctx, ptr);
+  }
+}
+
+static JSValue
+client_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  HTTPAsyncResolveClosure* closure = ptr;
+
+  const char* val = JS_ToCString(ctx, argv[0]);
+
+  printf("value=%s\n", val);
+  LOG(__func__, "value=%s", val);
+  JS_FreeCString(ctx, val);
+
+  return JS_UNDEFINED;
+}
+
+static JSValue
+client_promise(JSContext* ctx, struct session_data* session, MinnetResponse* resp, struct lws* wsi, JSValueConst value) {
+  HTTPAsyncResolveClosure* p;
+  JSValue ret = JS_UNDEFINED;
+
+  if((p = js_malloc(ctx, sizeof(HTTPAsyncResolveClosure)))) {
+    *p = (HTTPAsyncResolveClosure){1, ctx, session, response_dup(resp), wsi};
+    JSValue fn = JS_NewCClosure(ctx, client_resolved, 1, 0, p, client_resolved_free);
+    JSValue tmp = js_promise_then(ctx, value, fn);
+    JS_FreeValue(ctx, fn);
+    ret = tmp;
+  } else {
+    ret = JS_ThrowOutOfMemory(ctx);
+  }
+  return ret;
+}
+
 int
 http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
 
@@ -27,7 +74,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
 
   // lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, wsi_tls(wsi), len, (int)MIN(len, 32), (char*)in);
-  LOGCB("CLIENT-HTTP ", "fd=%d, h2=%i, tls=%i%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), (in && len) ? ", in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
+  if(reason != LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ)
+    LOGCB("CLIENT-HTTP ", "fd=%d, h2=%i, tls=%i%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), (in && len) ? ", in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {
@@ -113,11 +161,17 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(opaque->status < CLOSED) {
         opaque->status = CLOSED;
         if(client->on.close.ctx) {
-          JSValueConst cb_argv[] = {JS_DupValue(client->on.close.ctx, session->ws_obj), JS_NewInt32(client->on.close.ctx, opaque->error)};
+          JSValueConst cb_argv[] = {
+              JS_DupValue(client->on.close.ctx, session->ws_obj),
+              JS_NewInt32(client->on.close.ctx, 0),
+          };
           client_exception(client, callback_emit(&client->on.close, countof(cb_argv), cb_argv));
           JS_FreeValue(client->on.close.ctx, cb_argv[0]);
           JS_FreeValue(client->on.close.ctx, cb_argv[1]);
         }
+
+        if(opaque->resp->generator)
+          generator_close(opaque->resp->generator, JS_UNDEFINED);
       }
       lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
       return -1;
@@ -224,6 +278,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ: {
       // lwsl_user("http-read #1  " FGC(171, "%-38s") " " FGC(226, "fd=%d") " " FGC(87, "len=%zu") " " FGC(125, "in='%.*s'") "\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), len,
+
+      LOGCB("CLIENT-HTTP(2)", "len=%zu in='%.*s'", len, len > 30 ? 30 : (int)len, (char*)in);
+
       // (int)MIN(len, 32), (char*)in);
       MinnetResponse* resp = opaque->resp;
 
@@ -235,10 +292,11 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
       }
+
       if(!JS_IsObject(session->resp_obj))
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
 
-      generator_write(resp->generator, in, len);
+      generator_write(resp->generator, in, len, JS_UNDEFINED);
 
       /*  if(!JS_IsObject(session->resp_obj))
           session->resp_obj=minnet_response_wrap(ctx, resp);*/
@@ -268,7 +326,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           printf("onHttp() returned: %" PRId32 "\n", result);
           client->wsi = wsi;
 
-        } else if((req = minnet_request_data2(client->on.http.ctx, ret))) {
+        } else if((req = minnet_request_data(ret))) {
           url_info(req->url, &client->connect_info);
           client->connect_info.pwsi = &client->wsi;
           client->connect_info.context = client->context.lws;
@@ -295,9 +353,15 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           lws_client_connect_via_info(&client->connect_info);
 
           result = 0;
-        } else
+        } else if(js_is_promise(ctx, ret)) {
+          JSValue promise = client_promise(ctx, session, resp, wsi, ret);
 
-          JS_ThrowInternalError(client->on.http.ctx, "onHttp didn't return a number");
+        } else {
+          const char* str = JS_ToCString(ctx, ret);
+          JS_ThrowInternalError(client->on.http.ctx, "onHttp didn't return a number: %s", str);
+          if(str)
+            JS_FreeCString(ctx, str);
+        }
 
         if(result != 0) {
           lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */

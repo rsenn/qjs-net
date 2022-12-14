@@ -7,6 +7,7 @@ import { getpid, once, exists } from './common.js';
 const w = Worker.parent;
 const name = w ? 'CHILD\t' : 'PARENT\t';
 //let log = (...args) => console.log(name, ...args);
+let log = (...args) => console.log(...args);
 const connections = new Set();
 
 /*import('console').then(({ Console }) => { globalThis.console = new Console(err, { inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100 } });
@@ -307,9 +308,15 @@ if(w) {
 
       log('MinnetServer', { host, port });
 
-      setLog(LLL_WARN | LLL_USER, (level, message) => log(`${logLevels[level].padEnd(10)} ${message}`));
+      setLog(
+        LLL_WARN | LLL_USER,
+        (level, message) =>
+          !/LOAD_EXTRA|VHOST_CERT_AGING|EVENT_WAIT/.test(message) &&
+          log(`${logLevels[level].padEnd(10)} ${message.trim()}`)
+      );
+      //  setLog(0, (level, message) => {});
 
-      // Init('server.js');
+      Init('server.js');
 
       server({
         tls: true,

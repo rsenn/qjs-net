@@ -81,9 +81,10 @@ lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(p->revents & PIO) {
     struct lws_pollfd x = {p->fd, magic, p->revents & PIO};
 
-    if(p->revents & (POLLERR | POLLHUP))
-      closure->opaque->error = errno;
-
+    if(p->revents & (POLLERR | POLLHUP)) {
+      closure->opaque->poll = *p;
+      // closure->opaque->error = errno;
+    }
     /*if(x.revents & POLLOUT)
       if(x.revents & POLLIN)
         x.revents &= ~(POLLOUT);*/
@@ -354,18 +355,18 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
     JS_SetModuleExport(ctx, m, "Ringbuffer", minnet_ringbuffer_ctor);
 
   // Add class Generator
-  /* JS_NewClassID(&minnet_generator_class_id);
+  JS_NewClassID(&minnet_generator_class_id);
 
-   JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
-   minnet_generator_proto = JS_NewObject(ctx);
-   JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, minnet_generator_proto_funcs_size);
-   JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
+  minnet_generator_proto = JS_NewObject(ctx);
+  // JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, minnet_generator_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
 
-   minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
-   JS_SetConstructor(ctx, minnet_generator_ctor, minnet_generator_proto);
+  minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_generator_ctor, minnet_generator_proto);
 
-   if(m)
-     JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);*/
+  if(m)
+    JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
 
   // Add class URL
   minnet_url_init(ctx, m);
@@ -416,11 +417,6 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Hash", minnet_hash_ctor);
 
-  minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetHash", 0, JS_CFUNC_constructor, 0);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
-
   {
     JSValue minnet_default = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, minnet_default, minnet_funcs, countof(minnet_funcs));
@@ -439,10 +435,10 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Response");
   JS_AddModuleExport(ctx, m, "Request");
   JS_AddModuleExport(ctx, m, "Ringbuffer");
+  JS_AddModuleExport(ctx, m, "Generator");
   JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExport(ctx, m, "FormParser");
   JS_AddModuleExport(ctx, m, "Hash");
-  JS_AddModuleExport(ctx, m, "Generator");
   JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExport(ctx, m, "default");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));

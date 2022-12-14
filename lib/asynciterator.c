@@ -110,6 +110,7 @@ asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   if(!list_empty(&it->reads)) {
     JSValue obj = asynciterator_obj(value, TRUE, ctx);
     asynciterator_emplace(it, obj, ctx);
+    JS_FreeValue(ctx, obj);
     it->closed = TRUE;
 
     asynciterator_reject_all(it, JS_NULL, ctx);

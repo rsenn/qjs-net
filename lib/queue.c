@@ -94,7 +94,8 @@ QueueItem*
 queue_put(Queue* q, ByteBlock chunk) {
   QueueItem* i;
 
-  assert(!queue_closed(q));
+  if(queue_complete(q))
+    return 0;
 
   if(q->items.next == 0 && q->items.prev == 0)
     init_list_head(&q->items);
@@ -115,7 +116,7 @@ queue_put(Queue* q, ByteBlock chunk) {
 
 QueueItem*
 queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
-  ByteBlock chunk = block_copy(data, size, ctx);
+  ByteBlock chunk = block_new(data, size, ctx);
 
   return queue_put(q, chunk);
 }
@@ -124,10 +125,13 @@ QueueItem*
 queue_close(Queue* q) {
   QueueItem* i;
 
-  assert(!queue_closed(q));
-
   if(q->items.next == 0 && q->items.prev == 0)
     init_list_head(&q->items);
+
+  if(queue_complete(q))
+    return queue_back(q);
+
+  assert(!queue_closed(q));
 
   if((i = malloc(sizeof(QueueItem)))) {
     i->block = (ByteBlock){0, 0};

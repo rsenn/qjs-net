@@ -16,28 +16,15 @@ session_zero(struct session_data* session) {
   session->proxy = 0;
   session->generator = JS_NULL;
   session->next = JS_NULL;
-  session->serial = ++session_serial;
-  // session->h2 = FALSE;
+  // session->serial = ++session_serial;
+  //  session->h2 = FALSE;
   session->in_body = FALSE;
   session->response_sent = FALSE;
   session->server = NULL;
   session->client = NULL;
   // buffer_init(&session->send_buf, 0, 0);
-  session->link.prev = session->link.next = NULL;
+  //  session->link.prev = session->link.next = NULL;
   queue_zero(&session->sendq);
-}
-
-void
-session_add(struct session_data* session) {
-  if(session_list.prev == NULL)
-    init_list_head(&session_list);
-
-  list_add(&session->link, &session_list);
-}
-
-void
-session_remove(struct session_data* session) {
-  list_del(&session->link);
 }
 
 void

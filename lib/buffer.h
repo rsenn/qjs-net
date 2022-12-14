@@ -33,7 +33,7 @@ block_free(ByteBlock* b, JSContext* ctx) {
 }
 
 static inline ByteBlock
-block_copy(const void* ptr, size_t size, JSContext* ctx) {
+block_new(const void* ptr, size_t size, JSContext* ctx) {
   ByteBlock ret = {0, 0};
   if(block_alloc(&ret, size, ctx)) {
     memcpy(ret.start, ptr, size);

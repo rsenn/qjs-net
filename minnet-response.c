@@ -156,13 +156,8 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case RESPONSE_BODY: {
-      /*  if(resp->body && buffer_SIZE(resp->body)) {
-
-          if(resp->type && !strncmp("text/", resp->type, 5))
-            ret = JS_NewStringLen(ctx, buffer_BEGIN(resp->body), buffer_SIZE(resp->body));
-          else
-            ret = JS_NewArrayBufferCopy(ctx, buffer_BEGIN(resp->body), buffer_SIZE(resp->body));
-        }*/
+      if(resp->generator)
+        ret = minnet_generator_iterator(ctx, generator_dup(resp->generator));
       break;
     }
   }

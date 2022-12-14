@@ -1,9 +1,12 @@
 #include "generator.h"
 
+static ssize_t generator_put(Generator* gen, ByteBlock blk, JSValueConst callback);
+static ssize_t generator_queue(Generator* gen, const void* data, size_t len);
+
 void
 generator_zero(Generator* gen) {
   asynciterator_zero(&gen->iterator);
-  gen->rbuf = 0;
+  gen->q = 0;
   gen->bytes_written = 0;
   gen->bytes_read = 0;
   gen->chunks_written = 0;
@@ -26,13 +29,8 @@ generator_free(Generator* gen) {
   if(--gen->ref_count == 0) {
     asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
 
-    while(ringbuffer_waiting(gen->rbuf)) {
-      ByteBlock blk;
-      if(ringbuffer_consume(gen->rbuf, &blk, 1))
-        block_free(&blk, gen->ctx);
-    }
+    queue_free(gen->q, gen->ctx);
 
-    ringbuffer_free_rt(gen->rbuf, JS_GetRuntime(gen->ctx));
     js_free(gen->ctx, gen);
     return TRUE;
   }
@@ -47,7 +45,8 @@ generator_new(JSContext* ctx) {
     generator_zero(gen);
     gen->ctx = ctx;
     gen->ref_count = 1;
-    gen->rbuf = ringbuffer_new2(sizeof(ByteBlock), 1024, ctx);
+    // gen->rbuf = ringbuffer_new2(sizeof(ByteBlock), 1024, ctx);
+    gen->q = queue_new(ctx);
   }
   return gen;
 }
@@ -58,49 +57,123 @@ generator_next(Generator* gen, JSContext* ctx) {
 
   ret = asynciterator_next(&gen->iterator, ctx);
 
-  if(ringbuffer_waiting(gen->rbuf)) {
-    ByteBlock blk;
-    if(ringbuffer_consume(gen->rbuf, &blk, 1)) {
-      JSValue value = block_toarraybuffer(&blk, ctx);
+  if(queue_closed(gen->q)) {
+    ByteBlock blk = queue_next(gen->q, NULL);
 
-      asynciterator_yield(&gen->iterator, value, ctx);
-      gen->bytes_read += block_SIZE(&blk);
-      gen->chunks_read += 1;
-    }
+    JSValue chunk = block_SIZE(&blk) ? block_toarraybuffer(&blk, ctx) : JS_UNDEFINED;
+
+    asynciterator_stop(&gen->iterator, chunk, ctx);
+    JS_FreeValue(ctx, chunk);
+
+  } else if(queue_size(gen->q)) {
+    BOOL done = FALSE;
+    ByteBlock blk = queue_next(gen->q, &done);
+
+    JSValue chunk = block_SIZE(&blk) ? block_toarraybuffer(&blk, ctx) : JS_UNDEFINED;
+
+    asynciterator_yield(&gen->iterator, chunk, ctx);
+
+    JS_FreeValue(gen->ctx, chunk);
+
+    gen->bytes_read += block_SIZE(&blk);
+    gen->chunks_read += 1;
   }
-  /*if(buffer_HEAD(&gen->buffer)) {
-    size_t len;
-    JSValue value = buffer_toarraybuffer_size(&gen->buffer, &len, ctx);
-    gen->buffer = BUFFER_0();
-
-    asynciterator_yield(&gen->iterator, value, ctx);
-  }*/
 
   return ret;
 }
 
 ssize_t
-generator_write(Generator* gen, const void* data, size_t len) {
-  if(list_empty(&gen->iterator.reads))
-    return generator_queue(gen, data, len);
+generator_write(Generator* gen, const void* data, size_t len, JSValueConst callback) {
+  ByteBlock blk = block_new(data, len, gen->ctx);
+  ssize_t ret = -1;
 
-  JSValue buf = JS_NewArrayBufferCopy(gen->ctx, data, len);
+  if(!list_empty(&gen->iterator.reads)) {
+    JSValue chunk = block_SIZE(&blk) ? block_toarraybuffer(&blk, gen->ctx) : JS_UNDEFINED;
 
-  asynciterator_yield(&gen->iterator, buf, gen->ctx);
-  gen->bytes_written += len;
-  gen->chunks_written += 1;
+    if((asynciterator_yield(&gen->iterator, chunk, gen->ctx)))
+      ret = block_SIZE(&blk);
 
-  return len;
+    JS_FreeValue(gen->ctx, chunk);
+
+  } else {
+    ret = generator_put(gen, blk, callback);
+  }
+
+  return ret;
+}
+
+JSValue
+generator_push(Generator* gen, JSValueConst value) {
+  ResolveFunctions funcs = {JS_NULL, JS_NULL};
+  JSValue ret = js_promise_create(gen->ctx, &funcs);
+
+  if(!generator_enqueue(gen, value, funcs.resolve)) {
+    JS_FreeValue(gen->ctx, JS_Call(gen->ctx, funcs.reject, JS_UNDEFINED, 0, 0));
+  }
+
+  js_promise_free(gen->ctx, &funcs);
+  return ret;
 }
 
 BOOL
-generator_close(Generator* gen) {
-  return asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx);
+generator_enqueue(Generator* gen, JSValueConst value, JSValueConst callback) {
+  if(!asynciterator_yield(&gen->iterator, value, gen->ctx)) {
+    JSBuffer buf = js_input_chars(gen->ctx, value);
+    ByteBlock blk = block_new(buf.data, buf.size, gen->ctx);
+    js_buffer_free(&buf, gen->ctx);
+
+    return generator_put(gen, blk, callback) != -1;
+  }
+
+  JS_FreeValue(gen->ctx, JS_Call(gen->ctx, callback, JS_UNDEFINED, 0, 0));
+  return TRUE;
 }
 
-ssize_t
-generator_queue(Generator* gen, const void* data, size_t len) {
-  ByteBlock blk = block_copy(data, len, gen->ctx);
+BOOL
+generator_close(Generator* gen, JSValueConst callback) {
+  BOOL ret = FALSE;
+  QueueItem* item = 0;
 
-  return ringbuffer_insert(gen->rbuf, &blk, 1) ? len : 0;
+  if(!queue_complete(gen->q)) {
+    item = queue_close(gen->q);
+    ret = TRUE;
+  }
+
+  if(asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx))
+    ret = TRUE;
+
+  return ret;
+}
+
+JSValue
+generator_stop(Generator* gen) {
+  ResolveFunctions funcs = {JS_NULL, JS_NULL};
+  JSValue ret = js_promise_create(gen->ctx, &funcs);
+
+  if(!generator_close(gen, funcs.resolve)) {
+    JS_FreeValue(gen->ctx, JS_Call(gen->ctx, funcs.reject, JS_UNDEFINED, 0, 0));
+  }
+
+  js_promise_free(gen->ctx, &funcs);
+  return ret;
+}
+
+static ssize_t
+generator_queue(Generator* gen, const void* data, size_t len) {
+  ByteBlock blk = block_new(data, len, gen->ctx);
+  return generator_put(gen, blk, JS_UNDEFINED);
+}
+
+static ssize_t
+generator_put(Generator* gen, ByteBlock blk, JSValueConst callback) {
+  QueueItem* item;
+  ssize_t ret = -1;
+
+  if((item = queue_put(gen->q, blk))) {
+    ret = block_SIZE(&item->block);
+
+    if(JS_IsFunction(gen->ctx, callback))
+      item->resolve = deferred_newjs(JS_FreeValue, JS_DupValue(gen->ctx, callback), gen->ctx);
+  }
+  return ret;
 }

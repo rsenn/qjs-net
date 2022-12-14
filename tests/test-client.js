@@ -24,7 +24,9 @@ function main(...args) {
 
   (async function() {
     for(let arg of args) {
-      let pr = Client(
+      let pr, gen;
+
+      pr = Client(
         arg,
         {
           block: false,
@@ -90,9 +92,14 @@ function main(...args) {
         },
         debug ? LLL_INFO - 1 : LLL_USER
       );
+
       console.log('pr', pr);
       console.log('pr[Symbol.asyncIterator]', pr[Symbol.asyncIterator]);
-      await pr;
+
+      for await(let chunk of pr) {
+        console.log('chunk', chunk);
+      }
+      //    await pr;
     }
   })();
 

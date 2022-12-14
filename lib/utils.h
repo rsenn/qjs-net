@@ -53,7 +53,9 @@ size_t str_chr(const char*, char);
 size_t byte_chr(const void*, size_t, char);
 size_t byte_chrs(const void*, size_t, const char[], size_t);
 size_t byte_rchr(const void*, size_t, char);
-size_t byte_findb(const void* haystack, size_t hlen, const void* what, size_t wlen);
+int byte_diff(const void*, size_t len, const void* b);
+size_t byte_equal(const void*, size_t n, const void* t);
+size_t byte_findb(const void*, size_t hlen, const void* what, size_t wlen);
 
 static inline size_t
 byte_finds(const void* haystack, size_t hlen, const char* what) {

@@ -86,6 +86,8 @@ static JSValue
 minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
+  JSBuffer jsbuf;
+  QueueItem* item;
 
   if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
@@ -96,18 +98,16 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   if(argc == 0)
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
-  {
-    JSBuffer jsbuf = js_input_args(ctx, argc, argv);
-    QueueItem* item;
 
-    if((item = ws_send(ws, jsbuf.data, jsbuf.size, ctx))) {
-      ResolveFunctions fns;
+  jsbuf = js_input_args(ctx, argc, argv);
 
-      ret = js_promise_create(ctx, &fns);
+  if((item = ws_send(ws, jsbuf.data, jsbuf.size, ctx))) {
+    ResolveFunctions fns;
 
-      item->resolve = deferred_newjs(&JS_FreeValue, fns.resolve, ctx);
-      JS_FreeValue(ctx, fns.reject);
-    }
+    ret = js_promise_create(ctx, &fns);
+
+    item->resolve = deferred_newjs(&JS_FreeValue, fns.resolve, ctx);
+    JS_FreeValue(ctx, fns.reject);
   }
 
   return ret;
@@ -410,9 +410,7 @@ minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValue
   if(ws->lwsi) {
     struct wsi_opaque_user_data* opaque = opaque_new(ctx);
     // opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, obj));
-    opaque->handler = JS_NULL;
-    /*opaque->handlers[0] = JS_NULL;
-    opaque->handlers[1] = JS_NULL;*/
+    // opaque->handler = JS_NULL;
     lws_set_opaque_user_data(ws->lwsi, opaque);
   }
 

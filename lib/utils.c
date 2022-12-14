@@ -46,6 +46,37 @@ byte_rchr(const void* x, size_t len, char needle) {
   return len;
 }
 
+int
+byte_diff(const void* a, size_t len, const void* b) {
+  size_t i;
+  for(i = 0; i < len; ++i) {
+    int r = ((unsigned char*)a)[i] - ((unsigned char*)b)[i];
+    if(r)
+      return r;
+  }
+  return 0;
+}
+
+size_t
+byte_equal(const void* s, size_t n, const void* t) {
+  return byte_diff(s, n, t) == 0;
+}
+
+size_t
+byte_findb(const void* haystack, size_t hlen, const void* what, size_t wlen) {
+  size_t i, last;
+  const char* s = (const char*)haystack;
+  if(hlen < wlen)
+    return hlen;
+  last = hlen - wlen;
+  for(i = 0; i <= last; i++) {
+    if(byte_equal(s, wlen, what))
+      return i;
+    s++;
+  }
+  return hlen;
+}
+
 size_t
 scan_whitenskip(const void* s, size_t limit) {
   const char *t = s, *u = t + limit;

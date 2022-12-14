@@ -7,7 +7,7 @@ import { assert, getpid, exists, randStr, abbreviate, escape } from './common.js
 import { spawn, wait4 } from './spawn.js';
 import { log } from './log.js';
 
-function main(...args) {
+async function main(...args) {
   const debug = args.indexOf('-x') != -1;
   args = args.filter(arg => !/^-[x]/.test(arg));
   let pid;
@@ -19,21 +19,28 @@ function main(...args) {
   }
 
   for(let arg of args) {
-    Client(
+    let cli;
+
+    cli = Client(
       arg,
       {
+        block: false,
         onHttp(req, resp) {
-          log('onHttp', { req, resp });
+          //log('onHttp', { req, resp });
 
-          let body = resp.text();
-
-          puts(body);
-
+          /*  let body = resp.text();
+          puts(body);*/
           log(`Headers:`, resp.headers);
         }
       },
       debug ? LLL_INFO - 1 : LLL_USER
     );
+
+    console.log('cli', cli);
+    console.log('cli.readable', cli.readable);
+    for await(let chunk of cli.readable) {
+      console.log('chunk', chunk);
+    }
   }
 
   function terminate(code = 0, ex = true) {

@@ -19,16 +19,12 @@ struct wsi_opaque_user_data {
   struct http_request* req;
   struct http_response* resp;
   struct session_data* sess;
-  JSValue handler;
   int64_t serial;
   enum socket_state status;
   struct pollfd poll;
-  int error;
   BOOL binary;
   struct list_head link;
   struct form_parser* form_parser;
-  char* uri;
-  size_t uri_len;
   struct lws* upstream;
 };
 
