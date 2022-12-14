@@ -406,13 +406,14 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     } else {
       serve_generator(ctx, session, opaque->resp, closure->wsi, &done);
 
-      /*      value = js_iterator_next(ctx, session->generator, &session->next, &done, 0, 0);
-            ++closure->ref_count;
-            JSValue fn = JS_NewCClosure(ctx, serve_resolved, 1, 0, closure, serve_resolved_free);
-            JSValue tmp = js_promise_then(ctx, value, fn);
-            JS_FreeValue(ctx, value);
-            JS_FreeValue(ctx, fn);
-            JS_FreeValue(ctx, tmp);*/
+      /*
+      value = js_iterator_next(ctx, session->generator, &session->next, &done, 0, 0);
+      ++closure->ref_count;
+      JSValue fn = JS_NewCClosure(ctx, serve_resolved, 1, 0, closure, serve_resolved_free);
+      JSValue tmp = js_promise_then(ctx, value, fn);
+      JS_FreeValue(ctx, value);
+      JS_FreeValue(ctx, fn);
+      JS_FreeValue(ctx, tmp);*/
       assert(session->wait_resolve);
     }
   }

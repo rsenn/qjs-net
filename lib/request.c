@@ -138,32 +138,6 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
   ret->ip = wsi_ipaddr(wsi, ctx);
   ret->secure = wsi_tls(wsi);
 
-  /*const char* uri;
-    HTTPMethod method = -1;
-
-    if((uri = wsi_uri_and_method(wsi, ctx, &method))) {
-      struct url url = url_create(uri, ctx);
-      struct lws_vhost* vhost;
-
-      if((vhost = lws_get_vhost(wsi))) {
-        const char* name;
-
-        if((name = lws_get_vhost_name(vhost)))
-          url_parse(&url, name, ctx);
-      }
-
-      ret = request_new(url, method, ctx);
-    }
-
-    if(ret && url_query(ret->url) == NULL) {
-      char* q;
-      size_t qlen;
-      if((q = wsi_query_string_len(wsi, &qlen, ctx))) {
-        url_set_query_len(&ret->url, q, qlen, ctx);
-        js_free(ctx, q);
-      }
-    }
-  */
   return ret;
 }
 
