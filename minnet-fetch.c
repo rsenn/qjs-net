@@ -105,8 +105,3 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   return ret;
 }
-<<<<<<< HEAD
-=======
-
-#endif
->>>>>>> dc50cd44b0d7ad10c73989e6aa7c9301acf0aa9e
