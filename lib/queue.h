@@ -32,6 +32,7 @@ QueueItem* queue_put(Queue*, ByteBlock chunk);
 QueueItem* queue_write(Queue*, const void* data, size_t size, JSContext* ctx);
 QueueItem* queue_close(Queue*);
 int64_t queue_bytes(Queue*);
+ByteBlock queue_concat(Queue*, JSContext* ctx);
 
 static inline BOOL
 queue_empty(Queue* q) {

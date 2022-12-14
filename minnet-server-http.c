@@ -803,8 +803,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if(opaque->form_parser) {
           form_parser_process(opaque->form_parser, in, len);
         } else {
-          if(!req->body)
+          if(!req->body) {
             req->body = generator_new(ctx);
+            req->body->block_fn = &block_tostring;
+          }
         }
 
         if(req->body) {

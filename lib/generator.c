@@ -47,6 +47,7 @@ generator_new(JSContext* ctx) {
     gen->ref_count = 1;
     // gen->rbuf = ringbuffer_new2(sizeof(ByteBlock), 1024, ctx);
     gen->q = queue_new(ctx);
+    gen->block_fn = &block_toarraybuffer;
   }
   return gen;
 }
@@ -59,14 +60,14 @@ generator_next(Generator* gen, JSContext* ctx) {
 
   if(queue_closed(gen->q)) {
     ByteBlock blk = queue_next(gen->q, NULL);
-    JSValue chunk = block_SIZE(&blk) ? block_toarraybuffer(&blk, ctx) : JS_UNDEFINED;
+    JSValue chunk = block_SIZE(&blk) ? gen->block_fn(&blk, ctx) : JS_UNDEFINED;
     asynciterator_stop(&gen->iterator, chunk, ctx);
     JS_FreeValue(ctx, chunk);
 
   } else if(queue_size(gen->q)) {
     BOOL done = FALSE;
     ByteBlock blk = queue_next(gen->q, &done);
-    JSValue chunk = block_SIZE(&blk) ? block_toarraybuffer(&blk, ctx) : JS_UNDEFINED;
+    JSValue chunk = block_SIZE(&blk) ? gen->block_fn(&blk, ctx) : JS_UNDEFINED;
     asynciterator_yield(&gen->iterator, chunk, ctx);
     JS_FreeValue(gen->ctx, chunk);
 
@@ -79,8 +80,8 @@ generator_next(Generator* gen, JSContext* ctx) {
 
 ssize_t
 generator_write(Generator* gen, const void* data, size_t len, JSValueConst callback) {
-  ByteBlock blk = block_new(data, len, gen->ctx);
-  JSValue chunk = block_toarraybuffer(&blk, gen->ctx);
+  ByteBlock blk = block_copy(data, len, gen->ctx);
+  JSValue chunk = gen->block_fn(&blk, gen->ctx);
   ssize_t ret = generator_enqueue(gen, chunk, callback) ? block_SIZE(&blk) : -1;
 
   JS_FreeValue(gen->ctx, chunk);
@@ -131,7 +132,7 @@ generator_enqueue(Generator* gen, JSValueConst value, JSValueConst callback) {
 }
 
 BOOL
-generator_close(Generator* gen, JSValueConst callback) {
+generator_cancel(Generator* gen) {
   BOOL ret = FALSE;
   QueueItem* item = 0;
 
@@ -142,6 +143,22 @@ generator_close(Generator* gen, JSValueConst callback) {
 
   if(asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx))
     ret = TRUE;
+
+  return ret;
+}
+
+BOOL
+generator_close(Generator* gen, JSValueConst callback) {
+  BOOL ret = FALSE;
+  QueueItem* item = 0;
+
+  if(!queue_complete(gen->q)) {
+    item = queue_close(gen->q);
+    ret = TRUE;
+  }
+
+  /* if(asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx))
+     ret = TRUE;*/
 
   return ret;
 }
@@ -176,7 +193,7 @@ push_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
 static ssize_t
 push_value(Generator* gen, JSValueConst value, JSValueConst callback) {
   JSBuffer buf = js_input_chars(gen->ctx, value);
-  ByteBlock blk = block_new(buf.data, buf.size, gen->ctx);
+  ByteBlock blk = block_copy(buf.data, buf.size, gen->ctx);
   ssize_t ret;
   js_buffer_free(&buf, gen->ctx);
 

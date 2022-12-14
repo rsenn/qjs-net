@@ -16,6 +16,8 @@ typedef struct generator {
   Queue* q;
   uint64_t bytes_written, bytes_read;
   uint64_t chunks_written, chunks_read;
+  JSValue (*block_fn)(ByteBlock const*, JSContext*);
+
   int ref_count;
 } Generator;
 
@@ -27,6 +29,7 @@ JSValue generator_next(Generator*, JSContext* ctx);
 ssize_t generator_write(Generator*, const void* data, size_t len, JSValueConst callback);
 JSValue generator_push(Generator*, JSValueConst value);
 BOOL generator_enqueue(Generator*, JSValueConst value, JSValueConst callback);
+BOOL generator_cancel(Generator*);
 BOOL generator_close(Generator*, JSValueConst callback);
 JSValue generator_stop(Generator*);
 
