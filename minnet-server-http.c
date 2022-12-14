@@ -952,12 +952,22 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             /*if(req->method == METHOD_GET)*/ {
               resp = response_session(resp, session, cb);
               JSValue gen = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &args[1]));
-              LOGCB("HTTP(5)", "gen=%s next=%s is_iterator=%d", JS_ToCString(ctx, gen), JS_ToCString(ctx, JS_GetPropertyStr(ctx, gen, "next")), js_is_iterator(ctx, gen));
+              LOGCB("HTTP(5)",
+                    "gen=%s next=%s is_iterator=%d is_async_generator=%d",
+                    JS_ToCString(ctx, gen),
+                    JS_ToCString(ctx, JS_GetPropertyStr(ctx, gen, "next")),
+                    js_is_iterator(ctx, gen),
+                    js_is_async_generator(ctx, gen));
               if(js_is_iterator(ctx, gen)) {
                 assert(js_is_iterator(ctx, gen));
                 session->generator = gen;
                 session->next = JS_UNDEFINED;
-                lws_callback_on_writable(wsi);
+
+                if(js_is_async_generator(ctx, gen)) {
+                  BOOL done = FALSE;
+                  ret = serve_generator(ctx, session, resp, wsi, &done);
+                } else
+                  lws_callback_on_writable(wsi);
               } else {
                 LOGCB("HTTP(6)", "gen=%s", JS_ToCString(ctx, gen));
               }

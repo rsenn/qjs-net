@@ -352,6 +352,18 @@ js_is_iterator(JSContext* ctx, JSValueConst obj) {
   return FALSE;
 }
 
+BOOL
+js_is_async_generator(JSContext* ctx, JSValueConst obj) {
+  BOOL ret = FALSE;
+  const char* str;
+
+  if((str = JS_ToCString(ctx, obj))) {
+    ret = !!strstr(str, "AsyncGenerator");
+    JS_FreeCString(ctx, str);
+  }
+  return ret;
+}
+
 JSAtom
 js_symbol_static_atom(JSContext* ctx, const char* name) {
   JSValue sym = js_symbol_static_value(ctx, name);

@@ -132,6 +132,7 @@ void js_buffer_free(JSBuffer* in, JSContext* ctx);
 void js_buffer_free_rt(JSBuffer* in, JSRuntime* rt);
 BOOL js_is_iterable(JSContext* ctx, JSValueConst obj);
 BOOL js_is_iterator(JSContext* ctx, JSValueConst obj);
+BOOL js_is_async_generator(JSContext* ctx, JSValueConst obj);
 JSAtom js_symbol_static_atom(JSContext* ctx, const char* name);
 JSValue js_symbol_static_value(JSContext* ctx, const char* name);
 JSValue js_symbol_for_value(JSContext* ctx, const char* name);
