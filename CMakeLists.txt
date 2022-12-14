@@ -267,7 +267,7 @@ endif(USE_CURL)
 
 link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR}
                  ${OPENSSL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
-include_directories(lib ${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIR}
+include_directories(lib ${CMAKE_CURRENT_BINARY_DIR} ${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIR}
                     ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
 
 file(
@@ -297,6 +297,9 @@ file(
   lib/utils.*
   lib/ws.*
   minnet*.[ch])
+
+#list(APPEND JS_BINDINGS_SOURCES )
+
 list(FILTER JS_BINDINGS_SOURCES EXCLUDE REGEX ".*-plugin-.*")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -336,6 +339,9 @@ if(WIN32)
 else(WIN32)
   add_library(quickjs-minnet SHARED ${JS_BINDINGS_SOURCES})
 endif(WIN32)
+
+
+#add_dependencies(quickjs-minnet minnet.c)
 
 target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY})
 
@@ -430,6 +436,7 @@ install(FILES ${JSLIB} DESTINATION "${QUICKJS_JS_MODULE_DIR}")
 
 foreach(SRC ${JSLIB})
   #string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" SRC "${SRC}")
+message("Compile module '${SRC}' ...")
 
   file(RELATIVE_PATH SRC "${CMAKE_CURRENT_SOURCE_DIR}" "${SRC}")
   string(REGEX REPLACE "\\.js$" "" BASE "${SRC}")
@@ -439,8 +446,11 @@ foreach(SRC ${JSLIB})
   compile_module(${SRC} ${CMAKE_CURRENT_BINARY_DIR}/${BASE}.c)
   make_module_header(${CMAKE_CURRENT_BINARY_DIR}/${BASE}.c)
 
+
   #make_module(${NAME} ${SRC})
 endforeach()
+
+
 #dump_target(quickjs-minnet)
 
 file(GLOB TESTS tests/test-*.js)

@@ -12,6 +12,8 @@
 #include "jsutils.h"
 #include "utils.h"
 #include "buffer.h"
+#include "modules/minnet.h"
+#include "modules/minnet.c"
 #include <libwebsockets.h>
 #include <assert.h>
 #include <errno.h>
@@ -28,6 +30,7 @@
 static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 static THREAD_LOCAL int32_t minnet_log_level = 0;
 static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
+static THREAD_LOCAL JSValue minnet_js_module;
 
 #ifndef POLLIN
 #define POLLIN 1
@@ -309,6 +312,8 @@ static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   /*  minnet_log_cb = JS_UNDEFINED;
     minnet_log_this = JS_UNDEFINED;*/
+
+  minnet_js_module = JS_ReadObject(ctx, qjsc_minnet, qjsc_minnet_size, JS_READ_OBJ_BYTECODE);
 
   JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
