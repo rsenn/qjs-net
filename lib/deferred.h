@@ -19,22 +19,41 @@ typedef union dword {
   JSValueConst js;
 } DoubleWord;
 
+/*typedef struct jscall_args {
+  JSContext* ctx;
+  JSValueConst func_obj;
+  JSValueConst this_val;
+  int argc;
+  JSValueConst* argv;
+  int magic;
+  ptr_t ptr;
+} JSCallArgs;
+
+typedef struct jsfn_args {
+  JSContext* ctx;
+  JSValueConst this_val;
+  int argc;
+  JSValueConst* argv;
+  int magic;
+  ptr_t ptr;
+} JSFunctionArgs;*/
+
 typedef DoubleWord DeferredFunction(ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t, ptr_t);
-typedef JSValue DeferredJSFunction(JSContext*, JSValueConst, JSValueConst, int, JSValueConst[]);
+// typedef JSValue DeferredJSFunction(JSContext*, JSValueConst, JSValueConst, int, JSValueConst[]);
 
 typedef struct deferred {
   int ref_count, num_calls;
-  BOOL only_once, js_call;
+  BOOL only_once, js;
   union {
     DeferredFunction* func;
-    DeferredJSFunction* jscall;
+    // DeferredJSFunction* jscall;
   };
   // FinalizerFunction* finalize;
   int argc;
-  union {
-    ptr_t args[8];
-    JSValueConst jsargs[4];
-  };
+  // union {
+  ptr_t argv[8];
+  // JSValueConst jsargs[4];
+  //};
   ptr_t opaque;
   DoubleWord retval;
   struct deferred* next;
@@ -42,44 +61,27 @@ typedef struct deferred {
 
 void deferred_clear(Deferred*);
 void deferred_free(Deferred*);
-Deferred* deferred_new(ptr_t, int argc, ptr_t argv[], JSContext* ctx);
+Deferred* deferred_new(ptr_t, int argc, ptr_t argv[]);
 Deferred* deferred_newjs(js_ctx_function_t, JSValueConst v, JSContext* ctx);
 Deferred* deferred_dupjs(js_ctx_function_t, JSValueConst value, JSContext* ctx);
 Deferred* deferred_newjs_rt(js_rt_function_t, JSValueConst value, JSContext* ctx);
 void deferred_init(Deferred*, ptr_t fn, int argc, ptr_t argv[]);
 DoubleWord deferred_call(Deferred*);
-JSValue deferred_js(Deferred*, JSContext* ctx);
+JSValue deferred_tojs(Deferred*, JSContext* ctx);
 
 static inline Deferred*
-deferred_new_va(ptr_t fn, JSContext* ctx, ...) {
+deferred_new_va(ptr_t fn, ...) {
   va_list a;
   int argc = 0;
   ptr_t args[8] = {0}, arg;
-  va_start(a, ctx);
+  va_start(a, fn);
 
   while((arg = va_arg(a, void*))) { args[argc++] = arg; }
 
   va_end(a);
 
-  return deferred_new(fn, argc, args, ctx);
+  return deferred_new(fn, argc, args);
 }
-
-/*static inline Deferred*
-deferred_new_jscall(JSValueConst fn, JSContext* ctx, ...) {
-  va_list a;
-  int argc = 0;
-  ptr_t args[8] = {0}, arg;
-  va_start(a, ctx);
-
-  while((arg = va_arg(a, void*))) { args[argc++] = arg; }
-
-  va_end(a);
-
-  Deferred*def= deferred_new(fn, argc, args, ctx);
-def->js_call=TRUE;
-
-  return def;
-}*/
 
 static inline Deferred*
 deferred_dup(Deferred* def) {
@@ -89,35 +91,35 @@ deferred_dup(Deferred* def) {
 
 static inline JSContext*
 deferred_getctx(Deferred* def) {
-  return (JSContext*)def->args[0];
+  return (JSContext*)def->argv[0];
 }
 
 static inline JSValue
 deferred_getjs(Deferred* def) {
-  return *(JSValue*)&def->args[1];
+  return *(JSValue*)&def->argv[1];
 }
 
 static inline Deferred*
-deferred_new1(ptr_t fn, ptr_t arg1, JSContext* ctx) {
-  return deferred_new(fn, 1, &arg1, ctx);
+deferred_new1(ptr_t fn, ptr_t arg1) {
+  return deferred_new(fn, 1, &arg1);
 }
 
 static inline Deferred*
-deferred_new2(ptr_t fn, ptr_t arg1, ptr_t arg2, JSContext* ctx) {
+deferred_new2(ptr_t fn, ptr_t arg1, ptr_t arg2) {
   ptr_t args[] = {
       arg1,
       arg2,
   };
-  return deferred_new(fn, 2, args, ctx);
+  return deferred_new(fn, 2, args);
 }
 
 static inline Deferred*
-deferred_new3(ptr_t fn, ptr_t arg1, ptr_t arg2, ptr_t arg3, JSContext* ctx) {
+deferred_new3(ptr_t fn, ptr_t arg1, ptr_t arg2, ptr_t arg3) {
   ptr_t args[] = {
       arg1,
       arg2,
       arg3,
   };
-  return deferred_new(fn, 3, args, ctx);
+  return deferred_new(fn, 3, args);
 }
 #endif /* QJSNET_LIB_DEFERRED_H */

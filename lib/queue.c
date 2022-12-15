@@ -87,7 +87,7 @@ queue_next(Queue* q, BOOL* done_p) {
       JS_FreeValue(ctx, JS_Call(ctx, fn, JS_UNDEFINED, 0, 0));
 
       DoubleWord retval = deferred_call(i->resolve);
-      JS_FreeValue(i->resolve->args[0], retval.js);
+      JS_FreeValue(ctx, retval.js);
       deferred_free(i->resolve);
     }
 

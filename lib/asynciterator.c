@@ -1,10 +1,17 @@
 #include "asynciterator.h"
 
-static AsyncRead* asynciterator_shift(AsyncIterator*, JSContext*);
+static AsyncRead*
+asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
+  if(!list_empty(&it->reads)) {
+    AsyncRead* rd = list_entry(it->reads.prev, AsyncRead, link);
+    list_del(&rd->link);
+    return rd;
+  }
+  return 0;
+}
 
 void
 asynciterator_zero(AsyncIterator* it) {
-  it->ctx = 0;
   it->closed = FALSE;
   it->closing = FALSE;
   init_list_head(&it->reads);
@@ -28,8 +35,8 @@ asynciterator_new(JSContext* ctx) {
 
   if((it = js_malloc(ctx, sizeof(AsyncIterator)))) {
     asynciterator_zero(it);
-    it->ctx = ctx;
   }
+
   return it;
 }
 
@@ -40,11 +47,6 @@ asynciterator_next(AsyncIterator* it, JSContext* ctx) {
 
   if(it->closed)
     return JS_ThrowInternalError(ctx, "%s: iterator closed", __func__);
-
-  /* if(!list_empty(&it->reads)) {
-     rd = list_entry(it->reads.next, AsyncRead, link);
-
-   } else */
 
   if((rd = js_malloc(ctx, sizeof(AsyncRead)))) {
     list_add(&rd->link, &it->reads);
@@ -68,26 +70,6 @@ asynciterator_check_closing(AsyncIterator* it, JSContext* ctx) {
   return FALSE;
 }
 
-static AsyncRead*
-asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
-  if(!list_empty(&it->reads)) {
-    AsyncRead* rd = list_entry(it->reads.prev, AsyncRead, link);
-    list_del(&rd->link);
-    return rd;
-  }
-  return 0;
-}
-
-BOOL
-asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
-  if(!list_empty(&it->reads)) {
-    JSValue obj = asynciterator_obj(value, FALSE, ctx);
-
-    return asynciterator_emplace(it, obj, ctx);
-  }
-  return FALSE;
-}
-
 int
 asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   int ret = 0;
@@ -95,7 +77,6 @@ asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx) 
 
   while((rd = asynciterator_shift(it, ctx))) {
     js_promise_reject(ctx, &rd->promise, value);
-    list_del(&rd->link);
     js_free(ctx, rd);
     ret++;
   }
@@ -108,9 +89,7 @@ asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   BOOL ret = FALSE;
 
   if(!list_empty(&it->reads)) {
-    JSValue obj = asynciterator_obj(value, TRUE, ctx);
-    asynciterator_emplace(it, obj, ctx);
-    JS_FreeValue(ctx, obj);
+    asynciterator_emplace(it, value, TRUE, ctx);
     it->closed = TRUE;
 
     asynciterator_reject_all(it, JS_NULL, ctx);
@@ -123,11 +102,13 @@ asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
 }
 
 BOOL
-asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx) {
+asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContext* ctx) {
   AsyncRead* rd;
 
   if((rd = asynciterator_shift(it, ctx))) {
+    JSValue obj = asynciterator_object(value, done, ctx);
     js_promise_resolve(ctx, &rd->promise, obj);
+    JS_FreeValue(ctx, obj);
     js_free(ctx, rd);
     return TRUE;
   }
@@ -136,7 +117,7 @@ asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx) {
 }
 
 JSValue
-asynciterator_obj(JSValueConst value, BOOL done, JSContext* ctx) {
+asynciterator_object(JSValueConst value, BOOL done, JSContext* ctx) {
   JSValue obj = JS_NewObject(ctx);
 
   JS_SetPropertyStr(ctx, obj, "value", JS_DupValue(ctx, value));
