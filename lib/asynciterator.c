@@ -10,6 +10,18 @@ asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
   return 0;
 }
 
+static BOOL
+asynciterator_check_closing(AsyncIterator* it, JSContext* ctx) {
+  if(it->closing) {
+    asynciterator_stop(it, JS_UNDEFINED, ctx);
+    it->closing = FALSE;
+    it->closed = TRUE;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
 void
 asynciterator_zero(AsyncIterator* it) {
   it->closed = FALSE;
@@ -59,45 +71,33 @@ asynciterator_next(AsyncIterator* it, JSContext* ctx) {
 }
 
 BOOL
-asynciterator_check_closing(AsyncIterator* it, JSContext* ctx) {
-  if(it->closing) {
-    asynciterator_stop(it, JS_UNDEFINED, ctx);
-    it->closing = FALSE;
+asynciterator_stop(AsyncIterator* it, JSContext* ctx) {
+
+  if(!list_empty(&it->reads)) {
+    asynciterator_emplace(it, JS_UNDEFINED, TRUE, ctx);
     it->closed = TRUE;
-    return TRUE;
+
+    asynciterator_cancel(it, JS_NULL, ctx);
+  } else {
+    it->closing = TRUE;
   }
 
-  return FALSE;
+  return it->closed;
 }
 
 int
-asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
+asynciterator_cancel(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
   int ret = 0;
   AsyncRead* rd;
 
   while((rd = asynciterator_shift(it, ctx))) {
-    js_promise_reject(ctx, &rd->promise, value);
+    js_promise_reject(ctx, &rd->promise, error);
     js_free(ctx, rd);
     ret++;
   }
 
-  return ret;
-}
+  it->closed = TRUE;
 
-BOOL
-asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
-  BOOL ret = FALSE;
-
-  if(!list_empty(&it->reads)) {
-    asynciterator_emplace(it, value, TRUE, ctx);
-    it->closed = TRUE;
-
-    asynciterator_reject_all(it, JS_NULL, ctx);
-  } else {
-    it->closing = TRUE;
-  }
-  if(it->closed)
-    ret = TRUE;
   return ret;
 }
 

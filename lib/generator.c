@@ -60,7 +60,7 @@ generator_dequeue(Generator* gen) {
     BOOL done = FALSE;
     ByteBlock blk = queue_next(gen->q, &done);
     JSValue chunk = block_SIZE(&blk) ? gen->block_fn(&blk, gen->ctx) : JS_UNDEFINED;
-    (done ? asynciterator_stop : asynciterator_yield)(&gen->iterator, chunk, gen->ctx);
+    done ? asynciterator_stop(&gen->iterator,  gen->ctx) : asynciterator_yield(&gen->iterator, chunk, gen->ctx);
     JS_FreeValue(gen->ctx, chunk);
 
     if(!done)
@@ -149,7 +149,7 @@ generator_cancel(Generator* gen) {
     item = queue_close(gen->q);
     ret = TRUE;
   }
-  if(asynciterator_reject_all(&gen->iterator, JS_UNDEFINED, gen->ctx))
+  if(asynciterator_cancel(&gen->iterator, JS_UNDEFINED, gen->ctx))
     ret = TRUE;
 
   return ret;
@@ -165,7 +165,9 @@ generator_close(Generator* gen, JSValueConst callback) {
     ret = TRUE;
   }
 
-  if(asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx))
+  gen->iterator.closing = TRUE;
+
+  if(asynciterator_stop(&gen->iterator, gen->ctx))
     ret = TRUE;
 
   return ret;

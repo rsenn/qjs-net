@@ -14,14 +14,13 @@ typedef struct async_iterator {
 } AsyncIterator;
 
 void asynciterator_zero(AsyncIterator*);
-void asynciterator_clear(AsyncIterator*, JSRuntime*);
+void asynciterator_clear(AsyncIterator*, JSRuntime* rt);
 AsyncIterator* asynciterator_new(JSContext*);
-JSValue asynciterator_next(AsyncIterator*, JSContext*);
-BOOL asynciterator_check_closing(AsyncIterator*, JSContext*);
-int asynciterator_reject_all(AsyncIterator*, JSValueConst, JSContext*);
-BOOL asynciterator_stop(AsyncIterator*, JSValueConst, JSContext*);
-BOOL asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContext* ctx);
-JSValue asynciterator_object(JSValueConst, BOOL, JSContext*);
+JSValue asynciterator_next(AsyncIterator*, JSContext* ctx);
+BOOL asynciterator_stop(AsyncIterator*, JSContext* ctx);
+int asynciterator_cancel(AsyncIterator*, JSValueConst error, JSContext* ctx);
+BOOL asynciterator_emplace(AsyncIterator*, JSValueConst value, BOOL done, JSContext* ctx);
+JSValue asynciterator_object(JSValueConst, BOOL done, JSContext* ctx);
 
 static inline BOOL
 asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
