@@ -83,7 +83,7 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
   ByteBlock blk = block_copy(data, len, gen->ctx);
   ssize_t ret = -1, size = block_SIZE(&blk);
 
-  if(!list_empty(&gen->iterator.reads)) {
+  if(!list_empty(&gen->iterator.reads) && !(gen->q && gen->q->continuous)) {
     JSValue chunk = gen->block_fn(&blk, gen->ctx);
     if(asynciterator_yield(&gen->iterator, chunk, gen->ctx))
       ret = size;
@@ -173,6 +173,16 @@ generator_stop(Generator* gen) {
   return ret;
 }
 
+BOOL
+generator_continuous(Generator* gen) {
+  Queue* q;
+  if(!(q = gen->q))
+    q = gen->q = queue_new(gen->ctx);
+  if(q)
+    q->continuous = TRUE;
+  return q != NULL;
+}
+
 static ssize_t
 enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
   QueueItem* item;
@@ -181,7 +191,7 @@ enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
   if(!gen->q)
     gen->q = queue_new(gen->ctx);
 
-  if((item = queue_put(gen->q, blk))) {
+  if((item = queue_put(gen->q, blk, gen->ctx))) {
     ret = block_SIZE(&item->block);
 
     if(JS_IsFunction(gen->ctx, callback))

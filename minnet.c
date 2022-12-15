@@ -274,14 +274,14 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("server", 1, minnet_server),
     JS_CFUNC_DEF("client", 1, minnet_client),
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
-    JS_CFUNC_SPECIAL_DEF("formParser", 0, constructor, minnet_form_parser_constructor),
-    JS_CFUNC_SPECIAL_DEF("generator", 0, constructor, minnet_generator_constructor),
-    JS_CFUNC_SPECIAL_DEF("hash", 0, constructor, minnet_hash_constructor),
-    JS_CFUNC_SPECIAL_DEF("request", 0, constructor, minnet_request_constructor),
-    JS_CFUNC_SPECIAL_DEF("response", 0, constructor, minnet_response_constructor),
-    JS_CFUNC_SPECIAL_DEF("ringbuffer", 0, constructor, minnet_ringbuffer_constructor),
-    JS_CFUNC_SPECIAL_DEF("url", 0, constructor, minnet_url_constructor),
-    JS_CFUNC_SPECIAL_DEF("socket", 0, constructor, minnet_ws_constructor),
+    // JS_CFUNC_SPECIAL_DEF("formParser", 0, constructor, minnet_form_parser_constructor),
+    // JS_CFUNC_SPECIAL_DEF("generator", 0, constructor, minnet_generator_constructor),
+    // JS_CFUNC_SPECIAL_DEF("hash", 0, constructor, minnet_hash_constructor),
+    // JS_CFUNC_SPECIAL_DEF("request", 0, constructor, minnet_request_constructor),
+    // JS_CFUNC_SPECIAL_DEF("response", 0, constructor, minnet_response_constructor),
+    // JS_CFUNC_SPECIAL_DEF("ringbuffer", 0, constructor, minnet_ringbuffer_constructor),
+    // JS_CFUNC_SPECIAL_DEF("url", 0, constructor, minnet_url_constructor),
+    // JS_CFUNC_SPECIAL_DEF("socket", 0, constructor, minnet_ws_constructor),
     JS_CFUNC_DEF("getSessions", 0, minnet_get_sessions),
     JS_CFUNC_DEF("setLog", 1, minnet_set_log),
     JS_PROP_INT32_DEF("METHOD_GET", METHOD_GET, 0),
@@ -310,10 +310,8 @@ static const JSCFunctionListEntry minnet_funcs[] = {
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
-  /*  minnet_log_cb = JS_UNDEFINED;
-    minnet_log_this = JS_UNDEFINED;*/
 
-  minnet_js_module = JS_ReadObject(ctx, qjsc_minnet, qjsc_minnet_size, JS_READ_OBJ_BYTECODE);
+  // minnet_js_module = JS_ReadObject(ctx, qjsc_minnet, qjsc_minnet_size, JS_READ_OBJ_BYTECODE);
 
   JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 

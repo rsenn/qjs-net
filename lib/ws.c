@@ -131,7 +131,7 @@ ws_enqueue(struct socket* ws, ByteBlock chunk) {
   if((opaque = lws_get_opaque_user_data(ws->lwsi))) {
     struct session_data* session = opaque->sess;
 
-    if((item = queue_put(&session->sendq, chunk))) {
+    if((item = queue_add(&session->sendq, chunk))) {
 
       lws_callback_on_writable(ws->lwsi);
     }

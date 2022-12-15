@@ -4,6 +4,7 @@
 void
 queue_zero(Queue* q) {
   init_list_head(&q->items);
+  q->continuous = FALSE;
   q->size = 0;
 }
 
@@ -55,6 +56,20 @@ queue_back(Queue* q) {
   return list_empty(&q->items) ? 0 : list_entry(q->items.prev, QueueItem, link);
 }
 
+QueueItem*
+queue_last_chunk(Queue* q) {
+  struct list_head* el;
+
+  list_for_each_prev(el, &q->items) {
+    QueueItem* i = list_entry(el, QueueItem, link);
+
+    if(block_SIZE(&i->block))
+      return i;
+  }
+
+  return 0;
+}
+
 ByteBlock
 queue_next(Queue* q, BOOL* done_p) {
   ByteBlock ret = {0, 0};
@@ -91,7 +106,7 @@ queue_next(Queue* q, BOOL* done_p) {
 }
 
 QueueItem*
-queue_put(Queue* q, ByteBlock chunk) {
+queue_add(Queue* q, ByteBlock chunk) {
   QueueItem* i;
 
   if(queue_complete(q))
@@ -115,10 +130,34 @@ queue_put(Queue* q, ByteBlock chunk) {
 }
 
 QueueItem*
-queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
-  ByteBlock chunk = block_copy(data, size, ctx);
+queue_put(Queue* q, ByteBlock chunk, JSContext* ctx) {
+  QueueItem* i;
 
-  return queue_put(q, chunk);
+  if(q->continuous && (i = queue_last_chunk(q))) {
+    if(block_append(&i->block, block_BEGIN(&chunk), block_SIZE(&chunk), ctx) == -1)
+      i = 0;
+
+    block_free(&chunk, ctx);
+  } else {
+    i = queue_add(q, chunk);
+  }
+  return i;
+}
+
+QueueItem*
+queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
+  QueueItem* i;
+
+  if(q->continuous && (i = queue_last_chunk(q))) {
+    if(block_append(&i->block, data, size, ctx) == -1)
+      i = 0;
+  } else {
+    ByteBlock chunk = block_copy(data, size, ctx);
+
+    i = queue_add(q, chunk);
+  }
+
+  return i;
 }
 
 QueueItem*
@@ -163,7 +202,7 @@ queue_bytes(Queue* q) {
   return bytes;
 }
 
-ByteBlock
+/*ByteBlock
 queue_concat(Queue* q, JSContext* ctx) {
   size_t size = queue_bytes(q);
   ByteBlock blk = block_new(size, ctx);
@@ -182,3 +221,4 @@ queue_concat(Queue* q, JSContext* ctx) {
 
   return blk;
 }
+*/

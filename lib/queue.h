@@ -11,6 +11,7 @@
 typedef struct queue {
   struct list_head items;
   size_t size;
+  BOOL continuous;
 } Queue;
 
 typedef struct queue_item {
@@ -27,12 +28,13 @@ void queue_free(Queue*, JSContext* ctx);
 Queue* queue_new(JSContext*);
 QueueItem* queue_front(Queue*);
 QueueItem* queue_back(Queue*);
+QueueItem* queue_last_chunk(Queue*);
 ByteBlock queue_next(Queue*, BOOL* done_p);
-QueueItem* queue_put(Queue*, ByteBlock chunk);
+QueueItem* queue_add(Queue*, ByteBlock chunk);
+QueueItem* queue_put(Queue*, ByteBlock chunk, JSContext* ctx);
 QueueItem* queue_write(Queue*, const void* data, size_t size, JSContext* ctx);
 QueueItem* queue_close(Queue*);
 int64_t queue_bytes(Queue*);
-ByteBlock queue_concat(Queue*, JSContext* ctx);
 
 static inline BOOL
 queue_empty(Queue* q) {

@@ -14,6 +14,11 @@ typedef struct byte_block {
   uint8_t* end;
 } ByteBlock;
 
+#define BLOCK_0() \
+  (ByteBlock) { \
+    { 0, 0 } \
+  }
+
 #define block_SIZE(b) (size_t)((b)->end - (b)->start)
 #define block_BEGIN(b) (void*)(b)->start
 #define block_END(b) (void*)(b)->end
@@ -23,29 +28,17 @@ void block_init(ByteBlock*, uint8_t*, size_t);
 uint8_t* block_alloc(ByteBlock*, size_t, JSContext*);
 uint8_t* block_realloc(ByteBlock*, size_t, JSContext*);
 void block_free_rt(ByteBlock*, JSRuntime*);
+ByteBlock block_new(size_t, JSContext* ctx);
+ByteBlock block_copy(const void*, size_t size, JSContext* ctx);
+ByteBlock block_from(void*, size_t size);
 int block_fromarraybuffer(ByteBlock*, JSValue, JSContext*);
 JSValue block_toarraybuffer(ByteBlock*, JSContext*);
 JSValue block_tostring(ByteBlock*, JSContext*);
+ssize_t block_append(ByteBlock*, const void* data, size_t size, JSContext* ctx);
 
 static inline void
 block_free(ByteBlock* b, JSContext* ctx) {
   block_free_rt(b, JS_GetRuntime(ctx));
-}
-
-static inline ByteBlock
-block_new(size_t size, JSContext* ctx) {
-  ByteBlock ret = {0, 0};
-  block_alloc(&ret, size, ctx);
-  return ret;
-}
-
-static inline ByteBlock
-block_copy(const void* ptr, size_t size, JSContext* ctx) {
-  ByteBlock ret = {0, 0};
-  if(block_alloc(&ret, size, ctx)) {
-    memcpy(ret.start, ptr, size);
-  }
-  return ret;
 }
 
 static inline uint8_t*
@@ -61,9 +54,12 @@ block_move(ByteBlock* blk) {
   return ret;
 }
 
-static inline ByteBlock
-block_from(void* data, size_t size) {
-  return (ByteBlock){data, (uint8_t*)data + size};
+static inline ssize_t
+block_concat(ByteBlock* blk, ByteBlock other, JSContext* ctx) {
+  if(block_append(blk, block_BEGIN(&other), block_SIZE(&other), ctx) == -1)
+    return -1;
+
+  return block_SIZE(blk);
 }
 
 typedef union byte_buffer {

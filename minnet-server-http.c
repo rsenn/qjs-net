@@ -613,7 +613,7 @@ serve_file(struct http_closure* closure, const char* path, MinnetHttpMount* moun
 
     block_alloc(&blk, n, closure->ctx);
     if(fread(blk.start, n, 1, fp) == 1) {
-      queue_put(&closure->session->sendq, blk);
+      queue_put(&closure->session->sendq, blk, closure->ctx);
       queue_close(&closure->session->sendq);
     } else {
       block_free(&blk, closure->ctx);
@@ -876,19 +876,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP: {
-      MinnetRequest* req;
+      MinnetRequest* req = opaque->req ? opaque->req : (opaque->req = request_fromwsi(wsi, ctx));
       MinnetResponse* resp;
       JSValue* args = &session->ws_obj;
       char* path = in;
       size_t mountpoint_len = 0, pathlen = 0;
       MinnetHttpMount *mounts, *mount;
       JSCallback* cb;
-
-      if(!(req = opaque->req))
-        req = opaque->req = request_fromwsi(wsi, ctx);
-
-      /*if(opaque->uri)
-        url_set_path_len(&req->url, opaque->uri, opaque->uri_len, ctx);*/
 
       assert(req);
       assert(req->url.path);
