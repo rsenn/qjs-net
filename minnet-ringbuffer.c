@@ -1,5 +1,6 @@
 #include "minnet-ringbuffer.h"
 #include "jsutils.h"
+#include "deferred.h"
 #include <quickjs.h>
 #include <assert.h>
 #include <libwebsockets.h>
@@ -207,12 +208,8 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
     }
 
     case RINGBUFFER_GET_ELEMENT: {
-      ret = JS_NewArrayBuffer(ctx,
-                              (uint8_t*)lws_ring_get_element(rb->ring, &new_tail),
-                              ringbuffer_element_len(rb),
-                              js_closure_free_ab,
-                              js_closure_new(ctx, ringbuffer_dup(rb), (js_closure_finalizer_t*)ringbuffer_free),
-                              FALSE);
+      ret = JS_NewArrayBuffer(
+          ctx, (uint8_t*)lws_ring_get_element(rb->ring, &new_tail), ringbuffer_element_len(rb), &deferred_finalizer, deferred_new(&ringbuffer_free, ringbuffer_dup(rb), ctx), FALSE);
       break;
     }
 
@@ -378,7 +375,7 @@ minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
         uint32_t buflen;
       }* r = (void*)rb->ring;
 
-      ret = JS_NewArrayBuffer(ctx, r->buf, r->buflen, js_closure_free_ab, js_closure_new(ctx, ringbuffer_dup(rb), (js_closure_finalizer_t*)ringbuffer_free), FALSE);
+      ret = JS_NewArrayBuffer(ctx, r->buf, r->buflen, &deferred_finalizer, deferred_new(ringbuffer_free, ctx, ringbuffer_dup(rb)), FALSE);
       break;
     }
 

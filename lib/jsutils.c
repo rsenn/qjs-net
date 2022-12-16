@@ -1114,39 +1114,6 @@ js_is_async(JSContext* ctx, JSValueConst value) {
   return ret;
 }
 
-struct generic_closure {
-  JSContext* ctx;
-  void *ptr, (*free_func)(void*, JSContext*);
-};
-
-void*
-js_closure_new(JSContext* ctx, void* opaque, void (*free_func)(void*, JSContext*)) {
-  struct generic_closure* closure;
-
-  if((closure = js_malloc(ctx, sizeof(*closure)))) {
-    closure->ctx = ctx;
-    closure->ptr = opaque;
-    closure->free_func = free_func;
-  }
-
-  return closure;
-};
-
-void
-js_closure_free(void* ptr) {
-  struct generic_closure* closure = ptr;
-
-  if(closure->free_func)
-    closure->free_func(closure->ptr, closure->ctx);
-
-  js_free(closure->ctx, closure->ptr);
-};
-
-void
-js_closure_free_ab(JSRuntime* rt, void* opaque, void* ptr) {
-  js_closure_free(opaque);
-}
-
 JSValue
 js_typedarray_constructor(JSContext* ctx, int bits, BOOL floating, BOOL sign) {
   char class_name[64];

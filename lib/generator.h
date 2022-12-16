@@ -9,10 +9,11 @@ typedef struct generator {
   union {
     AsyncIterator iterator;
     struct {
-      JSContext* ctx;
+      struct list_head reads;
       BOOL closed, closing;
     };
   };
+  JSContext* ctx;
   Queue* q;
   uint64_t bytes_written, bytes_read;
   uint32_t chunks_written, chunks_read;
@@ -31,7 +32,7 @@ BOOL generator_yield(Generator*, JSValueConst value, JSValueConst callback);
 BOOL generator_cancel(Generator*);
 BOOL generator_close(Generator*, JSValueConst callback);
 JSValue generator_stop(Generator*);
-BOOL generator_continuous(Generator*);
+BOOL generator_continuous(Generator*, JSValueConst callback);
 
 static inline Generator*
 generator_dup(Generator* gen) {

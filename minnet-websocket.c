@@ -106,7 +106,8 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
     ret = js_promise_create(ctx, &fns);
 
-    item->resolve = deferred_newjs(&JS_FreeValue, fns.resolve, ctx);
+    item->unref = deferred_newjs(fns.resolve, ctx);
+    // item->unref = deferred_new(&JS_FreeValue, fns.resolve, ctx);
     JS_FreeValue(ctx, fns.reject);
   }
 

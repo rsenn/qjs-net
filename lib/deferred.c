@@ -6,16 +6,15 @@ deferred_clear(Deferred* def) {
   def->num_calls = 0;
   def->only_once = FALSE;
   def->func = 0;
-  def->retval.lo = 0;
-  def->retval.hi = 0;
 
   for(int i = 0; i < 8; i++) { def->argv[i] = 0; }
-  def->opaque = 0;
-  // def->finalize = 0;
 }
 
 void
 deferred_free(Deferred* def) {
+  if(def->next)
+    deferred_destructor(def->next);
+
   if(--def->ref_count == 0) {
     deferred_clear(def);
     free(def);
@@ -23,7 +22,7 @@ deferred_free(Deferred* def) {
 }
 
 Deferred*
-deferred_new(ptr_t fn, int argc, ptr_t argv[]) {
+deferred_newv(ptr_t fn, int argc, ptr_t argv[]) {
   Deferred* def;
 
   if(!(def = malloc(sizeof(Deferred))))
@@ -38,7 +37,7 @@ deferred_new(ptr_t fn, int argc, ptr_t argv[]) {
   return def;
 }
 
-static void
+/*static void
 deferred_freejs(Deferred* def) {
   JSValue value = deferred_getjs(def);
 
@@ -50,47 +49,39 @@ deferred_freejs_rt(Deferred* def) {
   JSValue value = deferred_getjs(def);
 
   JS_FreeValueRT(def->argv[0], value);
-}
+}*/
 
 Deferred*
-deferred_newjs(js_ctx_function_t fn, JSValue v, JSContext* ctx) {
+deferred_newjs(JSValue func, JSContext* ctx) {
   Deferred* def;
   /*ptr_t args[] = {
       ctx,
       ((ptr_t*)&v)[0],
       ((ptr_t*)&v)[1],
   };
-  def = deferred_new(fn, 3, args);*/
+  def = deferred_newv(fn, 3, args);*/
+  def = deferred_new(&JS_Call, ctx, func, JS_UNDEFINED);
 
-  def = deferred_new_va(fn, ctx, v);
-
-  def->next = deferred_new_va(deferred_freejs, def);
+  def->next = deferred_new(&JS_FreeValue, ctx, func);
   return def;
 }
 
 Deferred*
-deferred_dupjs(js_ctx_function_t fn, JSValueConst value, JSContext* ctx) {
+deferred_dupjs(JSValueConst value, JSContext* ctx) {
   JSValue v = JS_DupValue(ctx, value);
-  return deferred_newjs(fn, v, ctx);
+  return deferred_newjs(v, ctx);
 }
 
-Deferred*
-deferred_newjs_rt(js_rt_function_t fn, JSValue value, JSContext* ctx) {
+/*Deferred*
+deferred_newjs_rt(  JSValue value, JSContext* ctx) {
   Deferred* def;
-  JSRuntime* rt = JS_GetRuntime(ctx);
-  /*ptr_t args[] = {
-      rt,
-      ((ptr_t*)&value)[0],
-      ((ptr_t*)&value)[1],
-  };
-  def = deferred_new(fn, 3, args);*/
 
-  def = deferred_new_va(fn, rt, value);
+  if((def = deferred_new(fn, JS_GetRuntime(ctx), value)))
+    def->next = deferred_new(deferred_freejs_rt, def);
 
-  def->next = deferred_new_va(deferred_freejs_rt, def);
   return def;
 }
-
+*/
 void
 deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
   int i;
@@ -100,36 +91,67 @@ deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
 
   for(i = 0; i < 8; i++) { def->argv[i] = i < argc ? argv[i] : 0; }
 
+  def->argc = argc;
   def->num_calls = 0;
   def->only_once = FALSE;
-  def->retval = (DoubleWord){{0, 0}};
-  def->opaque = 0;
-  // def->js = FALSE;
   def->next = 0;
 }
 
 DoubleWord
-deferred_call(Deferred* def) {
+deferred_call_x(Deferred* def, ...) {
   ptr_t const* av = def->argv;
+  DoubleWord ret = {{0, 0}};
+  va_list a;
+  int argc = def->argc;
+  ptr_t arg;
+
+  va_start(a, def);
+
+  while(argc < countof(def->argv) && (arg = va_arg(a, void*))) {
+    if(arg == DEFERRED_SENTINEL)
+      break;
+    def->argv[argc++] = arg;
+  }
+
+  va_end(a);
 
   assert(!def->only_once || def->num_calls < 1);
 
   if(!def->only_once || def->num_calls < 1) {
-    def->retval = def->func(av[0], av[1], av[2], av[2], av[4], av[5], av[6], av[7]);
+
+    if(def->func == (void*)&JS_Call)
+      ret = def->func(av[0], av[1], av[2], av[3], av[4], (ptr_t)(size_t)((argc - def->argc) > 0 ? 1 : 0), (ptr_t)&av[def->argc], 0);
+    else
+      ret = def->func(av[0], av[1], av[2], av[3], av[4], av[5], av[6], av[7]);
 
     ++def->num_calls;
   }
 
-  return def->retval;
+  return ret;
+}
+
+void
+deferred_destructor(void* ptr) {
+  Deferred* def = ptr;
+
+  do {
+    ptr = def->next;
+    def->next = NULL;
+    deferred_call(def);
+    deferred_free(def);
+  } while((def = ptr));
+}
+
+void
+deferred_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
+  deferred_destructor(opaque);
 }
 
 static JSValue
 deferred_js_call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, ptr_t ptr) {
   Deferred* def = ptr;
 
-  deferred_call(def);
-
-  return def->retval.js;
+  return deferred_call(def).js;
 }
 
 JSValue

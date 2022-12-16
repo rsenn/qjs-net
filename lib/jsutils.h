@@ -397,12 +397,6 @@ js_buffer_end(const JSBuffer* in) {
   return in->data + in->size;
 }
 
-typedef void js_closure_finalizer_t(void*, JSContext*);
-
-void* js_closure_new(JSContext*, void* opaque, void (*free_func)(void*, JSContext*));
-void js_closure_free(void*);
-void js_closure_free_ab(JSRuntime*, void* opaque, void* ptr);
-
 JSValue js_typedarray_constructor(JSContext*, int bits, BOOL floating, BOOL sign);
 JSValue js_typedarray_new(JSContext*, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length);
 

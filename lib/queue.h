@@ -18,7 +18,7 @@ typedef struct queue_item {
   struct list_head link;
   ByteBlock block;
   BOOL done;
-  Deferred *unref, *resolve;
+  Deferred* unref;
 } QueueItem;
 
 void queue_zero(Queue*);
@@ -35,6 +35,7 @@ QueueItem* queue_put(Queue*, ByteBlock chunk, JSContext* ctx);
 QueueItem* queue_write(Queue*, const void* data, size_t size, JSContext* ctx);
 QueueItem* queue_close(Queue*);
 int64_t queue_bytes(Queue*);
+QueueItem* queue_continuous(Queue* q);
 
 static inline BOOL
 queue_empty(Queue* q) {

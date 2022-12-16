@@ -63,7 +63,7 @@ queue_last_chunk(Queue* q) {
   list_for_each_prev(el, &q->items) {
     QueueItem* i = list_entry(el, QueueItem, link);
 
-    if(block_SIZE(&i->block))
+    if(block_SIZE(&i->block) || !i->done)
       return i;
   }
 
@@ -80,15 +80,14 @@ queue_next(Queue* q, BOOL* done_p) {
     ret = i->block;
     done = i->done;
 
-    if(i->resolve) {
-      JSContext* ctx = deferred_getctx(i->resolve);
-      JSValue fn = deferred_getjs(i->resolve);
+    if(i->unref) {
+      JSContext* ctx = deferred_getctx(i->unref);
+      JSValue fn = deferred_getjs(i->unref);
 
       JS_FreeValue(ctx, JS_Call(ctx, fn, JS_UNDEFINED, 0, 0));
 
-      /*DoubleWord retval =*/ deferred_call(i->resolve);
-      /*JS_FreeValue(ctx, retval.js);*/
-      deferred_free(i->resolve);
+      deferred_call(i->unref);
+      deferred_free(i->unref);
     }
 
     if(!done) {
@@ -118,7 +117,7 @@ queue_add(Queue* q, ByteBlock chunk) {
   if((i = malloc(sizeof(QueueItem)))) {
     i->block = chunk;
     i->done = FALSE;
-    i->resolve = 0;
+    i->unref = 0;
     i->unref = 0;
 
     list_add_tail(&i->link, &q->items);
@@ -175,7 +174,6 @@ queue_close(Queue* q) {
   if((i = malloc(sizeof(QueueItem)))) {
     i->block = (ByteBlock){0, 0};
     i->done = TRUE;
-    i->resolve = 0;
     i->unref = 0;
 
     list_add_tail(&i->link, &q->items);
@@ -222,3 +220,22 @@ queue_concat(Queue* q, JSContext* ctx) {
   return blk;
 }
 */
+
+QueueItem*
+queue_continuous(Queue* q) {
+  QueueItem* i;
+
+  q->continuous = TRUE;
+
+  if(!(i = queue_last_chunk(q))) {
+    if((i = malloc(sizeof(QueueItem)))) {
+      i->block = (ByteBlock){0, 0};
+      i->done = FALSE;
+      i->unref = 0;
+
+      list_add_tail(&i->link, &q->items);
+    }
+  }
+
+  return i;
+}

@@ -161,12 +161,28 @@ generator_close(Generator* gen, JSValueConst callback) {
   BOOL ret = FALSE;
   QueueItem* item = 0;
 
-  if(!queue_complete(gen->q)) {
-    item = queue_close(gen->q);
-    ret = TRUE;
+  if(gen->q) {
+    if(!queue_complete(gen->q)) {
+      item = queue_close(gen->q);
+      ret = TRUE;
+    }
+
+    if(gen->q->continuous) {
+      if((item = queue_last_chunk(gen->q))) {
+        if(item->unref) {
+          JSValue chunk = block_SIZE(&item->block) ? gen->block_fn(&item->block, gen->ctx) : JS_UNDEFINED;
+          deferred_call(item->unref, chunk);
+          JS_FreeValue(gen->ctx, chunk);
+
+          // queue_next(gen->q, NULL);
+          gen->closed = TRUE;
+          return TRUE;
+        }
+      }
+    }
   }
 
-  gen->iterator.closing = TRUE;
+  gen->closing = TRUE;
 
   if(asynciterator_stop(&gen->iterator, gen->ctx))
     ret = TRUE;
@@ -188,12 +204,23 @@ generator_stop(Generator* gen) {
 }
 
 BOOL
-generator_continuous(Generator* gen) {
+generator_continuous(Generator* gen, JSValueConst callback) {
   Queue* q;
   if(!(q = gen->q))
     q = gen->q = queue_new(gen->ctx);
-  if(q)
-    q->continuous = TRUE;
+
+  if(q) {
+    QueueItem* item;
+
+    if((item = queue_continuous(q))) {
+
+      if(JS_IsFunction(gen->ctx, callback))
+        // item->unref = deferred_newjs(JS_DupValue(gen->ctx, callback), gen->ctx);
+        item->unref = deferred_new(&JS_Call, gen->ctx, JS_DupValue(gen->ctx, callback), JS_UNDEFINED);
+    }
+
+    return item != NULL;
+  }
   return q != NULL;
 }
 
@@ -209,7 +236,7 @@ enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
     ret = block_SIZE(&item->block);
 
     if(JS_IsFunction(gen->ctx, callback))
-      item->resolve = deferred_newjs(JS_FreeValue, JS_DupValue(gen->ctx, callback), gen->ctx);
+      item->unref = deferred_newjs(JS_DupValue(gen->ctx, callback), gen->ctx);
   }
   return ret;
 }
