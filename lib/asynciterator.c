@@ -13,7 +13,7 @@ asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
 static BOOL
 asynciterator_check_closing(AsyncIterator* it, JSContext* ctx) {
   if(it->closing) {
-    asynciterator_stop(it, JS_UNDEFINED, ctx);
+    asynciterator_stop(it, ctx);
     it->closing = FALSE;
     it->closed = TRUE;
     return TRUE;

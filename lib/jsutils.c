@@ -170,7 +170,7 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, 
       return JS_ThrowTypeError(ctx, "object does not have 'next' method");
 
     if(!JS_IsFunction(ctx, fn))
-      return JS_ThrowTypeError(ctx, "object.next is not asynciterator_shift function");
+      return JS_ThrowTypeError(ctx, "object.next is not a function");
 
     *next = js_function_bind_this(ctx, fn, obj);
     JS_FreeValue(ctx, fn);

@@ -29,7 +29,7 @@ enum {
   POLLMSG = 0x0400,
 #define POLLMSG POLLMSG
   /* POLLREMOVE is for /dev/epoll (/dev/misc/eventpoll),
-   * asynciterator_shift new event notification mechanism for 2.6 */
+   * a new event notification mechanism for 2.6 */
   POLLREMOVE = 0x1000,
 #define POLLREMOVE POLLREMOVE
 };

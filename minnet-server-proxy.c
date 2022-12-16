@@ -87,7 +87,7 @@ proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* u
     case LWS_CALLBACK_SERVER_WRITEABLE: {
       proxy_msg_t* msg;
       uint8_t* data;
-      int m, asynciterator_shift;
+      int m, a;
 
       if(!pc || !pc->pending_msg_to_ws.count)
         break;
@@ -96,11 +96,11 @@ proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* u
       data = (uint8_t*)&msg[1] + LWS_PRE;
 
       m = lws_write(wsi, data, msg->len, LWS_WRITE_TEXT);
-      asynciterator_shift = (int)msg->len;
+      a = (int)msg->len;
       lws_dll2_remove(&msg->list);
       free(msg);
 
-      if(m < asynciterator_shift) {
+      if(m < a) {
         lwsl_err("ERROR %d writing to ws\n", m);
         return -1;
       }
@@ -146,7 +146,7 @@ proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reason, void
   proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);
   proxy_msg_t* msg;
   uint8_t* data;
-  int m, asynciterator_shift;
+  int m, a;
   LOG("PROXY-RAW-CLIENT", "in=%.*s len=%d", (int)len, (char*)in, (int)len);
 
   switch(reason) {
@@ -215,11 +215,11 @@ proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reason, void
       data = (uint8_t*)&msg[1] + LWS_PRE;
 
       m = lws_write(wsi, data, msg->len, LWS_WRITE_TEXT);
-      asynciterator_shift = (int)msg->len;
+      a = (int)msg->len;
       lws_dll2_remove(&msg->list);
       free(msg);
 
-      if(m < asynciterator_shift) {
+      if(m < a) {
         lwsl_err("ERROR %d writing to raw\n", m);
         return -1;
       }

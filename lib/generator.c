@@ -60,7 +60,7 @@ generator_dequeue(Generator* gen) {
     BOOL done = FALSE;
     ByteBlock blk = queue_next(gen->q, &done);
     JSValue chunk = block_SIZE(&blk) ? gen->block_fn(&blk, gen->ctx) : JS_UNDEFINED;
-    done ? asynciterator_stop(&gen->iterator,  gen->ctx) : asynciterator_yield(&gen->iterator, chunk, gen->ctx);
+    done ? asynciterator_stop(&gen->iterator, gen->ctx) : asynciterator_yield(&gen->iterator, chunk, gen->ctx);
     JS_FreeValue(gen->ctx, chunk);
 
     if(!done)
@@ -124,6 +124,10 @@ generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
     JSBuffer buf = js_input_chars(gen->ctx, value);
     ret = buf.size;
     js_buffer_free(&buf, gen->ctx);
+
+    if(JS_IsFunction(gen->ctx, callback))
+      JS_FreeValue(gen->ctx, JS_Call(gen->ctx, callback, JS_UNDEFINED, 0, 0));
+
   } else {
     if((ret = enqueue_value(gen, value, callback)) < 0)
       return FALSE;
@@ -133,9 +137,6 @@ generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
     gen->bytes_written += ret;
     gen->chunks_written += 1;
   }
-
-  if(JS_IsFunction(gen->ctx, callback))
-    JS_FreeValue(gen->ctx, JS_Call(gen->ctx, callback, JS_UNDEFINED, 0, 0));
 
   return TRUE;
 }
