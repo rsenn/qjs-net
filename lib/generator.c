@@ -88,7 +88,7 @@ generator_next(Generator* gen, JSContext* ctx) {
 
 ssize_t
 generator_write(Generator* gen, const void* data, size_t len, JSValueConst callback) {
-  ByteBlock blk = block_copy(data, len, gen->ctx);
+  ByteBlock blk = block_copy(data, len);
   ssize_t ret = -1, size = block_SIZE(&blk);
 
   if(!list_empty(&gen->iterator.reads) && !(gen->q && gen->q->continuous)) {
@@ -244,12 +244,12 @@ enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
 static ssize_t
 enqueue_value(Generator* gen, JSValueConst value, JSValueConst callback) {
   JSBuffer buf = js_input_chars(gen->ctx, value);
-  ByteBlock blk = block_copy(buf.data, buf.size, gen->ctx);
+  ByteBlock blk = block_copy(buf.data, buf.size);
   ssize_t ret;
   js_buffer_free(&buf, gen->ctx);
 
   if((ret = enqueue_block(gen, blk, callback)) == -1)
-    block_free(&blk, gen->ctx);
+    block_free(&blk);
 
   return ret;
 }

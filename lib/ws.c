@@ -142,7 +142,7 @@ ws_enqueue(struct socket* ws, ByteBlock chunk) {
 
 QueueItem*
 ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
-  ByteBlock chunk = block_copy(data, size, ctx);
+  ByteBlock chunk = block_copy(data, size);
 
   return ws_enqueue(ws, chunk);
 }

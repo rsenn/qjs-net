@@ -58,7 +58,7 @@ response_clear(struct http_response* resp, JSContext* ctx) {
     resp->type = 0;
   }
 
-  buffer_free_rt(&resp->headers, JS_GetRuntime(ctx));
+  buffer_free(&resp->headers);
   generator_destroy(&resp->generator);
 }
 
@@ -70,7 +70,7 @@ response_clear_rt(struct http_response* resp, JSRuntime* rt) {
     resp->type = 0;
   }
 
-  buffer_free_rt(&resp->headers, rt);
+  buffer_free(&resp->headers);
   generator_destroy(&resp->generator);
 }
 

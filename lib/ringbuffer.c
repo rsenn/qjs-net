@@ -122,10 +122,7 @@ ringbuffer_zero(struct ringbuffer* rb) {
 
 void
 ringbuffer_free(struct ringbuffer* rb, JSContext* ctx) {
-  if(--rb->ref_count == 0) {
-    ringbuffer_zero(rb);
-    js_free(ctx, rb);
-  }
+  ringbuffer_free_rt(rb, JS_GetRuntime(ctx));
 }
 
 void

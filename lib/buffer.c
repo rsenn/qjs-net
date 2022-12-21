@@ -9,10 +9,10 @@ block_init(ByteBlock* blk, uint8_t* start, size_t len) {
 }
 
 uint8_t*
-block_alloc(ByteBlock* blk, size_t size, JSContext* ctx) {
+block_alloc(ByteBlock* blk, size_t size) {
   uint8_t* ptr;
 
-  if((ptr = js_malloc(ctx, size + LWS_PRE))) {
+  if((ptr = malloc(size + LWS_PRE))) {
     blk->start = ptr + LWS_PRE;
     blk->end = blk->start + size;
   }
@@ -21,15 +21,15 @@ block_alloc(ByteBlock* blk, size_t size, JSContext* ctx) {
 }
 
 uint8_t*
-block_realloc(ByteBlock* blk, size_t size, JSContext* ctx) {
+block_realloc(ByteBlock* blk, size_t size) {
   uint8_t* ptr;
 
   if(!size) {
-    block_free(blk, ctx);
+    block_free(blk);
     return 0;
   }
 
-  if((ptr = js_realloc(ctx, block_ALLOC(blk), size + LWS_PRE))) {
+  if((ptr = realloc(block_ALLOC(blk), size + LWS_PRE))) {
     blk->start = ptr + LWS_PRE;
     blk->end = blk->start + size;
   } else {
@@ -40,29 +40,42 @@ block_realloc(ByteBlock* blk, size_t size, JSContext* ctx) {
 }
 
 void
-block_free_rt(ByteBlock* blk, JSRuntime* rt) {
+block_free(ByteBlock* blk) {
   if(blk->start)
-    js_free_rt(rt, blk->start - LWS_PRE);
+    free(blk->start - LWS_PRE);
 
   blk->start = blk->end = 0;
 }
 
+uint8_t*
+block_grow(ByteBlock* blk, size_t size) {
+  return realloc(block_ALLOC(blk), block_SIZE(blk) + LWS_PRE + size);
+}
+
+ssize_t
+block_concat(ByteBlock* blk, ByteBlock other) {
+  if(block_append(blk, block_BEGIN(&other), block_SIZE(&other)) == -1)
+    return -1;
+
+  return block_SIZE(blk);
+}
+
 static void
 block_finalizer(JSRuntime* rt, void* alloc, void* start) {
-  js_free_rt(rt, alloc);
+  free(alloc);
 }
 
 ByteBlock
-block_new(size_t size, JSContext* ctx) {
+block_new(size_t size) {
   ByteBlock ret = {0, 0};
-  block_alloc(&ret, size, ctx);
+  block_alloc(&ret, size);
   return ret;
 }
 
 ByteBlock
-block_copy(const void* ptr, size_t size, JSContext* ctx) {
+block_copy(const void* ptr, size_t size) {
   ByteBlock ret = {0, 0};
-  if(block_alloc(&ret, size, ctx)) {
+  if(block_alloc(&ret, size)) {
     memcpy(ret.start, ptr, size);
   }
   return ret;
@@ -94,16 +107,16 @@ JSValue
 block_tostring(ByteBlock* blk, JSContext* ctx) {
   ByteBlock mem = block_move((ByteBlock*)blk);
   JSValue str = JS_NewStringLen(ctx, block_BEGIN(&mem), block_SIZE(&mem));
-  block_free(&mem, ctx);
+  block_free(&mem);
   return str;
 }
 
 ssize_t
-block_append(ByteBlock* blk, const void* data, size_t size, JSContext* ctx) {
+block_append(ByteBlock* blk, const void* data, size_t size) {
   size_t offset = block_SIZE(blk);
   uint8_t* start;
 
-  if((start = block_grow(blk, size, ctx))) {
+  if((start = block_grow(blk, size))) {
     memcpy(start + offset, data, size);
     return size;
   }
@@ -120,9 +133,9 @@ buffer_init(ByteBuffer* buf, uint8_t* start, size_t len) {
 }
 
 uint8_t*
-buffer_alloc(ByteBuffer* buf, size_t size, JSContext* ctx) {
+buffer_alloc(ByteBuffer* buf, size_t size) {
   uint8_t* ret;
-  if((ret = block_alloc(&buf->block, size, ctx))) {
+  if((ret = block_alloc(&buf->block, size))) {
     buf->alloc = ret;
     buf->read = buf->start;
     buf->write = buf->start;
@@ -131,9 +144,9 @@ buffer_alloc(ByteBuffer* buf, size_t size, JSContext* ctx) {
 }
 
 ssize_t
-buffer_append(ByteBuffer* buf, const void* x, size_t n, JSContext* ctx) {
+buffer_append(ByteBuffer* buf, const void* x, size_t n) {
   if((size_t)buffer_AVAIL(buf) < n + 1) {
-    if(!buffer_realloc(buf, buffer_HEAD(buf) + n + 1, ctx))
+    if(!buffer_realloc(buf, buffer_HEAD(buf) + n + 1))
       return -1;
   }
   memcpy(buf->write, x, n);
@@ -143,9 +156,9 @@ buffer_append(ByteBuffer* buf, const void* x, size_t n, JSContext* ctx) {
 }
 
 void
-buffer_free_rt(ByteBuffer* buf, JSRuntime* rt) {
+buffer_free(ByteBuffer* buf) {
   if(buf->alloc)
-    block_free_rt(&buf->block, rt);
+    block_free(&buf->block);
   buf->read = buf->write = buf->alloc = 0;
 }
 
@@ -180,12 +193,12 @@ buffer_printf(ByteBuffer* buf, const char* format, ...) {
 }
 
 uint8_t*
-buffer_realloc(ByteBuffer* buf, size_t size, JSContext* ctx) {
+buffer_realloc(ByteBuffer* buf, size_t size) {
   size_t rd, wr;
   uint8_t* x;
 
   if(!size) {
-    buffer_free_rt(buf, JS_GetRuntime(ctx));
+    buffer_free(buf);
     return 0;
   }
 
@@ -193,7 +206,7 @@ buffer_realloc(ByteBuffer* buf, size_t size, JSContext* ctx) {
   wr = buffer_HEAD(buf);
   assert(size >= wr);
 
-  if((x = block_realloc(&buf->block, size, ctx))) {
+  if((x = block_realloc(&buf->block, size))) {
     if(buf->alloc == 0 && buf->start && wr)
       memcpy(x + LWS_PRE, buf->start, wr);
 
@@ -223,7 +236,7 @@ buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
 
   if(input.data == 0 || input.size == 0) {
     ret = 0;
-  } else if(buffer_append(buf, input.data, input.size, ctx) == input.size) {
+  } else if(buffer_append(buf, input.data, input.size) == input.size) {
     ret = 1;
   }
 
@@ -237,7 +250,7 @@ buffer_tostring(ByteBuffer const* buf, JSContext* ctx) {
 }
 
 size_t
-buffer_escape(ByteBuffer* buf, const void* x, size_t len, JSContext* ctx) {
+buffer_escape(ByteBuffer* buf, const void* x, size_t len) {
   const uint8_t *ptr, *end;
 
   size_t prev = buffer_REMAIN(buf);
@@ -303,19 +316,19 @@ buffer_escape(ByteBuffer* buf, const void* x, size_t len, JSContext* ctx) {
 }
 
 char*
-buffer_escaped(ByteBuffer const* buf, JSContext* ctx) {
+buffer_escaped(ByteBuffer const* buf) {
   char* ptr;
   ByteBuffer out;
   size_t size = buffer_REMAIN(buf) * 4;
 
   size = (size + 8) & (~7);
 
-  if(!(ptr = js_malloc(ctx, size)))
+  if(!(ptr = malloc(size)))
     return 0;
 
   out = BUFFER_N(ptr, size - 1);
 
-  ptr[buffer_escape(&out, buf->read, buffer_REMAIN(buf), ctx)] = '\0';
+  ptr[buffer_escape(&out, buf->read, buffer_REMAIN(buf))] = '\0';
 
   return ptr;
 }
@@ -346,8 +359,8 @@ buffer_dump(const char* n, ByteBuffer const* buf) {
 }
 
 BOOL
-buffer_clone(ByteBuffer* buf, const ByteBuffer* other, JSContext* ctx) {
-  if(!buffer_alloc(buf, block_SIZE(other), ctx))
+buffer_clone(ByteBuffer* buf, const ByteBuffer* other) {
+  if(!buffer_alloc(buf, block_SIZE(other)))
     return FALSE;
   memcpy(buf->start, other->start, buffer_HEAD(other));
 
@@ -381,7 +394,7 @@ buffer_move(ByteBuffer* buf) {
 }
 
 uint8_t*
-buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx) {
+buffer_grow(ByteBuffer* buf, size_t size) {
   size += buffer_SIZE(buf);
-  return buffer_realloc(buf, size, ctx);
+  return buffer_realloc(buf, size);
 }

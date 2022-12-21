@@ -121,7 +121,7 @@ headers_fromobj(ByteBuffer* buffer, JSValueConst obj, JSContext* ctx) {
     prop = JS_AtomToCString(ctx, tab[i].atom);
     prop_len = strlen(prop);
 
-    buffer_grow(buffer, prop_len + 2 + value_len + 2, ctx);
+    buffer_grow(buffer, prop_len + 2 + value_len + 2);
 
     buffer_write(buffer, prop, prop_len);
     buffer_write(buffer, ": ", 2);
@@ -141,7 +141,7 @@ headers_set(JSContext* ctx, ByteBuffer* buffer, const char* name, const char* va
   size_t namelen = strlen(name), valuelen = strlen(value);
   size_t len = namelen + 2 + valuelen + 2;
 
-  buffer_grow(buffer, len, ctx);
+  buffer_grow(buffer, len);
   buffer_write(buffer, name, namelen);
   buffer_write(buffer, ": ", 2);
   buffer_write(buffer, value, valuelen);
@@ -269,7 +269,7 @@ headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   int tok, len, count = 0;
 
   if(!headers->start)
-    buffer_alloc(headers, 1024, ctx);
+    buffer_alloc(headers, 1024);
 
   for(tok = WSI_TOKEN_HOST; tok < WSI_TOKEN_COUNT; tok++) {
     if(tok == WSI_TOKEN_HTTP || tok == WSI_TOKEN_HTTP_URI_ARGS)
@@ -287,9 +287,9 @@ headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
         // printf("headers %i %.*s '%s'\n", tok, namelen, name, hdr);
 
         if(!headers->alloc)
-          buffer_alloc(headers, 1024, ctx);
+          buffer_alloc(headers, 1024);
 
-        while(!buffer_printf(headers, "%.*s: %s\n", namelen, name, hdr)) { buffer_grow(headers, 1024, ctx); }
+        while(!buffer_printf(headers, "%.*s: %s\n", namelen, name, hdr)) { buffer_grow(headers, 1024); }
         ++count;
       }
     }
@@ -321,6 +321,6 @@ headers_tostring(JSContext* ctx, struct lws* wsi) {
 
   ret = js_strndup(ctx, (const char*)buf.start, buffer_BYTES(&buf));
 
-  buffer_free(&buf, ctx);
+  buffer_free(&buf);
   return ret;
 }

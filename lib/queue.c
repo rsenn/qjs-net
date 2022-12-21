@@ -21,7 +21,7 @@ queue_clear_rt(Queue* q, JSRuntime* rt) {
     QueueItem* i = list_entry(p, QueueItem, link);
 
     list_del(p);
-    block_free_rt(&i->block, rt);
+    block_free(&i->block);
     // JS_FreeValueRT(rt, i->value);
 
     free(p);
@@ -133,10 +133,10 @@ queue_put(Queue* q, ByteBlock chunk, JSContext* ctx) {
   QueueItem* i;
 
   if(q->continuous && (i = queue_last_chunk(q))) {
-    if(block_append(&i->block, block_BEGIN(&chunk), block_SIZE(&chunk), ctx) == -1)
+    if(block_append(&i->block, block_BEGIN(&chunk), block_SIZE(&chunk)) == -1)
       i = 0;
 
-    block_free(&chunk, ctx);
+    block_free(&chunk);
   } else {
     i = queue_add(q, chunk);
   }
@@ -148,10 +148,10 @@ queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
   QueueItem* i;
 
   if(q->continuous && (i = queue_last_chunk(q))) {
-    if(block_append(&i->block, data, size, ctx) == -1)
+    if(block_append(&i->block, data, size) == -1)
       i = 0;
   } else {
-    ByteBlock chunk = block_copy(data, size, ctx);
+    ByteBlock chunk = block_copy(data, size);
 
     i = queue_add(q, chunk);
   }
