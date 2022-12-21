@@ -4,13 +4,8 @@
 #include <stddef.h>
 
 typedef struct allocated {
-<<<<<<< HEAD
-  void* pointer;
-  void (*free_func)(void*);
-=======
   void *pointer, *opaque;
   void (*free_func)(void* ptr, void* opaque);
->>>>>>> 2e676673f404167abe81e74e17b79ec9303560af
 } Allocated;
 
 #define ALLOCATED(ptr, free_func) \
