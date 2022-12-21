@@ -453,9 +453,9 @@ url_fromwsi(struct url* url, struct lws* wsi, JSContext* ctx) {
     }
   }
 
-  if((p = wsi_uri_and_method(wsi, ctx, 0))) {
+  if((p = wsi_uri_and_method(wsi, 0))) {
     if(url->path)
-      js_free(ctx, url->path);
+      free(url->path);
     url->path = p;
   }
 
@@ -464,9 +464,9 @@ url_fromwsi(struct url* url, struct lws* wsi, JSContext* ctx) {
   if(url_query(*url) == NULL) {
     char* q;
     size_t qlen;
-    if((q = wsi_query_string_len(wsi, &qlen, ctx))) {
+    if((q = wsi_query_string_len(wsi, &qlen))) {
       url_set_query_len(url, q, qlen, ctx);
-      js_free(ctx, q);
+      free(q);
     }
   }
 

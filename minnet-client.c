@@ -572,7 +572,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
         opaque->status = OPEN;
         if((ctx = client->on.connect.ctx)) {
-          client->request->ip = wsi_ipaddr(wsi, ctx);
+          client->request->ip = wsi_ipaddr(wsi);
           client->session.ws_obj = minnet_ws_fromwsi(ctx, wsi);
 
           if(reason != LWS_CALLBACK_RAW_CONNECTED) {

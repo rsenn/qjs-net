@@ -208,8 +208,8 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
     }
 
     case RINGBUFFER_GET_ELEMENT: {
-      ret = JS_NewArrayBuffer(
-          ctx, (uint8_t*)lws_ring_get_element(rb->ring, &new_tail), ringbuffer_element_len(rb), &deferred_finalizer, deferred_new(&ringbuffer_free, ringbuffer_dup(rb), ctx), FALSE);
+      ret =
+          JS_NewArrayBuffer(ctx, (uint8_t*)lws_ring_get_element(rb->ring, &new_tail), ringbuffer_element_len(rb), &deferred_finalizer, deferred_new(&ringbuffer_free, ringbuffer_dup(rb), ctx), FALSE);
       break;
     }
 

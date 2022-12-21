@@ -57,6 +57,16 @@ int byte_diff(const void*, size_t len, const void* b);
 size_t byte_equal(const void*, size_t n, const void* t);
 size_t byte_findb(const void*, size_t hlen, const void* what, size_t wlen);
 
+static inline char*
+str_ndup(const char* s, size_t n) {
+  char* r = malloc(n + 1);
+  if(r == NULL)
+    return NULL;
+  memcpy(r, s, n);
+  r[n] = '\0';
+  return r;
+}
+
 static inline size_t
 byte_finds(const void* haystack, size_t hlen, const char* what) {
   return byte_findb(haystack, hlen, what, strlen(what));
@@ -80,24 +90,22 @@ char* socket_address(int, int (*fn)(int, struct sockaddr*, socklen_t*));
 
 BOOL wsi_http2(struct lws*);
 BOOL wsi_tls(struct lws*);
-char* wsi_peer(struct lws*, JSContext* ctx);
-char* wsi_host(struct lws*, JSContext* ctx);
+char* wsi_peer(struct lws*);
+char* wsi_host(struct lws*);
 void wsi_cert(struct lws*);
-char* wsi_query_string_len(struct lws*, size_t* len_p, JSContext* ctx);
-// int wsi_query_object(struct lws*, JSContext* ctx, JSValueConst obj);
-
-BOOL wsi_token_exists(struct lws* wsi, enum lws_token_indexes token);
-char* wsi_token_len(struct lws*, JSContext* ctx, enum lws_token_indexes token, size_t* len_p);
+char* wsi_query_string_len(struct lws*, size_t* len_p);
+BOOL wsi_token_exists(struct lws*, enum lws_token_indexes token);
+char* wsi_token_len(struct lws*, enum lws_token_indexes token, size_t* len_p);
 int wsi_copy_fragment(struct lws*, enum lws_token_indexes token, int fragment, DynBuf* db);
-char* wsi_uri_and_method(struct lws*, JSContext* ctx, HTTPMethod* method);
-HTTPMethod wsi_method(struct lws* wsi);
-enum lws_token_indexes wsi_uri_token(struct lws* wsi);
-char* wsi_host_and_port(struct lws* wsi, JSContext* ctx, int* port);
-char* wsi_vhost_and_port(struct lws* wsi, JSContext* ctx, int* port);
-const char* wsi_vhost_name(struct lws* wsi);
-const char* wsi_protocol_name(struct lws* wsi);
-const char* lws_callback_name(int reason);
-char* wsi_ipaddr(struct lws*, JSContext* ctx);
+char* wsi_uri_and_method(struct lws*, HTTPMethod* method);
+char* wsi_host_and_port(struct lws*, int* port);
+const char* wsi_vhost_name(struct lws*);
+const char* wsi_protocol_name(struct lws*);
+char* wsi_vhost_and_port(struct lws*, int* port);
+enum lws_token_indexes wsi_uri_token(struct lws*);
+HTTPMethod wsi_method(struct lws*);
+char* wsi_ipaddr(struct lws*);
+const char* lws_callback_name(int);
 
 static inline BOOL
 has_query(const char* str) {
@@ -110,8 +118,8 @@ has_query_b(const char* str, size_t len) {
 }
 
 static inline char*
-wsi_token(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token) {
-  return wsi_token_len(wsi, ctx, token, NULL);
+wsi_token(struct lws* wsi, enum lws_token_indexes token) {
+  return wsi_token_len(wsi, token, NULL);
 }
 
 static inline BOOL

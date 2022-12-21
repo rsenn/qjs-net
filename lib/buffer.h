@@ -103,7 +103,7 @@ uint8_t* buffer_skip(ByteBuffer*, size_t size);
 BOOL buffer_putchar(ByteBuffer*, char c);
 ByteBuffer buffer_move(ByteBuffer*);
 uint8_t* buffer_grow(ByteBuffer*, size_t size);
- 
+
 static inline void
 buffer_reset(ByteBuffer* buf) {
   buf->read = buf->start;

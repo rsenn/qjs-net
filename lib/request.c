@@ -135,7 +135,7 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
 
   ret = request_new(url, method, ctx);
 
-  ret->ip = wsi_ipaddr(wsi, ctx);
+  ret->ip = wsi_ipaddr(wsi);
   ret->secure = wsi_tls(wsi);
 
   return ret;
@@ -161,7 +161,7 @@ request_clear(Request* req, JSContext* ctx) {
   url_free(&req->url, ctx);
   buffer_free(&req->headers);
   if(req->ip) {
-    js_free(ctx, req->ip);
+    free(req->ip);
     req->ip = 0;
   }
   if(req->body)

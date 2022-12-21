@@ -252,17 +252,17 @@ wsi_tls(struct lws* wsi) {
 }
 
 char*
-wsi_peer(struct lws* wsi, JSContext* ctx) {
+wsi_peer(struct lws* wsi) {
   char buf[1024];
 
   lws_get_peer_simple(wsi, buf, sizeof(buf) - 1);
 
-  return js_strdup(ctx, buf);
+  return strdup(buf);
 }
 
 char*
-wsi_host(struct lws* wsi, JSContext* ctx) {
-  return wsi_token(wsi, ctx, lws_wsi_is_h2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST);
+wsi_host(struct lws* wsi) {
+  return wsi_token(wsi, lws_wsi_is_h2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST);
 }
 
 void
@@ -317,14 +317,14 @@ wsi_cert(struct lws* wsi) {
 }
 
 char*
-wsi_query_string_len(struct lws* wsi, size_t* len_p, JSContext* ctx) {
+wsi_query_string_len(struct lws* wsi, size_t* len_p) {
   if(!wsi_token_exists(wsi, WSI_TOKEN_HTTP_URI_ARGS)) {
     if(len_p)
       *len_p = 0;
     return 0;
   }
 
-  return wsi_token_len(wsi, ctx, WSI_TOKEN_HTTP_URI_ARGS, len_p);
+  return wsi_token_len(wsi, WSI_TOKEN_HTTP_URI_ARGS, len_p);
 }
 
 BOOL
@@ -333,13 +333,13 @@ wsi_token_exists(struct lws* wsi, enum lws_token_indexes token) {
 }
 
 char*
-wsi_token_len(struct lws* wsi, JSContext* ctx, enum lws_token_indexes token, size_t* len_p) {
+wsi_token_len(struct lws* wsi, enum lws_token_indexes token, size_t* len_p) {
   size_t len;
   char* buf;
 
   len = lws_hdr_total_length(wsi, token);
 
-  if(!(buf = js_mallocz(ctx, len + 1)))
+  if(!(buf = malloc(len + 1)))
     return 0;
 
   lws_hdr_copy(wsi, buf, len + 1, token);
@@ -366,25 +366,25 @@ wsi_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, D
 }
 
 char*
-wsi_uri_and_method(struct lws* wsi, JSContext* ctx, HTTPMethod* method) {
+wsi_uri_and_method(struct lws* wsi, HTTPMethod* method) {
   char* url;
 
-  if((url = wsi_token(wsi, ctx, WSI_TOKEN_POST_URI))) {
+  if((url = wsi_token(wsi, WSI_TOKEN_POST_URI))) {
     if(method)
       *method = METHOD_POST;
-  } else if((url = wsi_token(wsi, ctx, WSI_TOKEN_GET_URI))) {
+  } else if((url = wsi_token(wsi, WSI_TOKEN_GET_URI))) {
     if(method)
       *method = METHOD_GET;
-  } else if((url = wsi_token(wsi, ctx, WSI_TOKEN_HEAD_URI))) {
+  } else if((url = wsi_token(wsi, WSI_TOKEN_HEAD_URI))) {
     if(method)
       *method = METHOD_HEAD;
-  } else if((url = wsi_token(wsi, ctx, WSI_TOKEN_OPTIONS_URI))) {
+  } else if((url = wsi_token(wsi, WSI_TOKEN_OPTIONS_URI))) {
     if(method)
       *method = METHOD_OPTIONS;
-  } else if((url = wsi_token(wsi, ctx, WSI_TOKEN_PATCH_URI))) {
+  } else if((url = wsi_token(wsi, WSI_TOKEN_PATCH_URI))) {
     if(method)
       *method = METHOD_PATCH;
-  } else if((url = wsi_token(wsi, ctx, WSI_TOKEN_PUT_URI))) {
+  } else if((url = wsi_token(wsi, WSI_TOKEN_PUT_URI))) {
     if(method)
       *method = METHOD_PUT;
   }
@@ -393,17 +393,17 @@ wsi_uri_and_method(struct lws* wsi, JSContext* ctx, HTTPMethod* method) {
 }
 
 char*
-wsi_host_and_port(struct lws* wsi, JSContext* ctx, int* port) {
+wsi_host_and_port(struct lws* wsi, int* port) {
   char* host;
   size_t hostlen;
 
-  if((host = wsi_token_len(wsi, ctx, WSI_TOKEN_HOST, &hostlen))) {
+  if((host = wsi_token_len(wsi, WSI_TOKEN_HOST, &hostlen))) {
     size_t pos;
 
     if((pos = byte_chr(host, hostlen, ':')) < hostlen) {
       *port = atoi(&host[pos + 1]);
       host[pos] = '\0';
-      host = js_realloc(ctx, host, pos + 1);
+      host = realloc(host, pos + 1);
     }
   }
   return host;
@@ -430,14 +430,14 @@ wsi_protocol_name(struct lws* wsi) {
 }
 
 char*
-wsi_vhost_and_port(struct lws* wsi, JSContext* ctx, int* port) {
+wsi_vhost_and_port(struct lws* wsi, int* port) {
   char* host = 0;
   struct lws_vhost* vhost;
 
   if((vhost = lws_get_vhost(wsi))) {
     const char* vhn = lws_get_vhost_name(vhost);
     size_t hostlen = str_chr(vhn, ':');
-    host = js_strndup(ctx, vhn, hostlen);
+    host = str_ndup(vhn, hostlen);
 
     // printf("%s() host=%s port=%u\n", __func__, host, lws_get_vhost_port(vhost));
 
@@ -490,11 +490,11 @@ wsi_method(struct lws* wsi) {
 }
 
 char*
-wsi_ipaddr(struct lws* wsi, JSContext* ctx) {
+wsi_ipaddr(struct lws* wsi) {
   char ipaddr[16], *ret = 0;
 
   if(lws_get_peer_simple(wsi, ipaddr, sizeof(ipaddr)))
-    ret = js_strdup(ctx, ipaddr);
+    ret = strdup(ipaddr);
 
   return ret;
 }
