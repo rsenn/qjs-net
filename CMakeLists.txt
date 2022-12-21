@@ -280,10 +280,12 @@ file(
   lib/callback.*
   lib/closure.*
   lib/context.*
+  lib/form-parser.*
   lib/deferred.*
   lib/generator.*
   lib/headers.*
   lib/jsutils.*
+  lib/lws-utils.*
   lib/opaque.*
   #lib/poll.*
   lib/query.*

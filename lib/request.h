@@ -3,6 +3,7 @@
 
 #include <quickjs.h>
 #include <cutils.h>
+#include "lws-utils.h"
 #include "jsutils.h"
 #include "generator.h"
 #include "url.h"

@@ -1,47 +1,16 @@
 #ifndef MINNET_FORM_PARSER_H
 #define MINNET_FORM_PARSER_H
 
-#include <cutils.h>
-#include <libwebsockets.h>
-#include <quickjs.h>
-#include <stddef.h>
-#include "callback.h"
+#include "form-parser.h"
 #include "minnet-websocket.h"
 #include "utils.h"
 
-typedef struct form_parser {
-  int ref_count;
-  struct lws_spa_create_info spa_create_info;
-  struct lws_spa* spa;
-  struct lwsac* lwsac_head;
-  MinnetWebsocket* ws;
-  struct {
-    JSCallback content, open, close, finalize;
-  } cb;
-  JSValue exception;
-  JSValue name, file;
-  size_t read;
-} MinnetFormParser;
+typedef struct form_parser MinnetFormParser;
 
-void form_parser_init(MinnetFormParser*, MinnetWebsocket*, int, const char* const* param_names, size_t chunk_size);
-MinnetFormParser* form_parser_alloc(JSContext*);
-MinnetFormParser* form_parser_new(JSContext*, MinnetWebsocket*, int, const char* const* param_names, size_t chunk_size);
-MinnetFormParser* form_parser_dup(MinnetFormParser*);
-void form_parser_zero(MinnetFormParser*);
-void form_parser_clear(MinnetFormParser*, JSContext*);
-void form_parser_clear_rt(MinnetFormParser*, JSRuntime*);
-void form_parser_free(MinnetFormParser*, JSContext*);
-void form_parser_free_rt(MinnetFormParser*, JSRuntime*);
-const char* form_parser_param_name(MinnetFormParser*, int);
-BOOL form_parser_param_valid(MinnetFormParser*, int);
-size_t form_parser_param_count(MinnetFormParser*);
-int form_parser_param_index(MinnetFormParser*, const char*);
-BOOL form_parser_param_exists(MinnetFormParser*, const char*);
-int form_parser_process(MinnetFormParser*, const void*, size_t);
-JSValueConst minnet_form_parser_constructor(JSContext*, JSValueConst, int, JSValueConst argv[]);
-JSValueConst minnet_form_parser_new(JSContext*, MinnetWebsocket*, int, const char* const* param_names, size_t chunk_size);
-JSValueConst minnet_form_parser_wrap(JSContext*, MinnetFormParser*);
-JSValueConst minnet_form_parser_call(JSContext*, JSValueConst, JSValueConst, int argc, JSValueConst argv[], int flags);
+JSValue minnet_form_parser_constructor(JSContext*, JSValueConst new_target, int argc, JSValueConst argv[]);
+JSValue minnet_form_parser_new(JSContext*, MinnetWebsocket* ws, int nparams, const char* const* param_names, size_t chunk_size);
+JSValue minnet_form_parser_wrap(JSContext*, MinnetFormParser* fp);
+JSValue minnet_form_parser_call(JSContext*, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags);
 
 extern THREAD_LOCAL JSValue minnet_form_parser_proto, minnet_form_parser_ctor;
 extern THREAD_LOCAL JSClassID minnet_form_parser_class_id;

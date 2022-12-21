@@ -2,7 +2,9 @@
 #include "opaque.h"
 #include "ringbuffer.h"
 #include "jsutils.h"
-#include "../minnet-websocket.h"
+#include "ws.h"
+
+struct socket* minnet_ws_data(JSValueConst);
 
 /*static THREAD_LOCAL uint32_t session_serial = 0;
 THREAD_LOCAL struct list_head session_list = {0, 0};*/

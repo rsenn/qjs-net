@@ -29,6 +29,11 @@ enum {
   REQUEST_REFERER,
 };
 
+MinnetRequest*
+minnet_request_data(JSValueConst obj) {
+  return JS_GetOpaque(obj, minnet_request_class_id);
+}
+
 JSValue
 minnet_request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
   MinnetRequest* req;

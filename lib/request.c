@@ -1,13 +1,14 @@
 #define _GNU_SOURCE
-#include <quickjs.h>
-#include <cutils.h>
-#include "../minnet-request.h"
+#include "request.h"
+#include "lws-utils.h"
 #include "ringbuffer.h"
 #include "headers.h"
 #include "jsutils.h"
 #include <ctype.h>
 #include <strings.h>
 #include <libwebsockets.h>
+
+struct http_request* minnet_request_data(JSValueConst);
 
 static const char* const method_names[] = {
     "GET",

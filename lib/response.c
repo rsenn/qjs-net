@@ -1,11 +1,12 @@
 #include "session.h"
 #include "response.h"
-#include "../minnet-response.h"
 #include "buffer.h"
 #include "jsutils.h"
 #include "headers.h"
 #include <cutils.h>
 #include <assert.h>
+
+struct http_response* minnet_response_data(JSValueConst);
 
 void
 response_format(const struct http_response* resp, char* buf, size_t len) {
@@ -118,10 +119,10 @@ response_session(struct http_response* resp, struct session_data* session, JSCal
   if(cb && cb->ctx) {
     JSValue ret = callback_emit_this(cb, session->ws_obj, 2, session->args);
     lwsl_user("response_session ret=%s", JS_ToCString(cb->ctx, ret));
-    if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
+    if(JS_IsObject(ret) && minnet_response_data(ret)) {
       JS_FreeValue(cb->ctx, session->args[1]);
       session->args[1] = ret;
-      resp = minnet_response_data2(cb->ctx, ret);
+      resp = minnet_response_data(ret);
     } else {
       JS_FreeValue(cb->ctx, ret);
     }

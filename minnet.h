@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include "jsutils.h"
 #include "utils.h"
+#include "lws-utils.h"
 
 #ifdef DEBUG_OUTPUT
 #define DEBUG(x...) minnet_debug(x)

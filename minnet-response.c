@@ -26,6 +26,11 @@ enum {
   RESPONSE_HEADERS,
 };
 
+MinnetResponse*
+minnet_response_data(JSValueConst obj) {
+  return JS_GetOpaque(obj, minnet_response_class_id);
+}
+
 JSValue
 minnet_response_new(JSContext* ctx, MinnetURL url, int status, char* status_text, BOOL headers_sent, const char* type) {
   MinnetResponse* resp;

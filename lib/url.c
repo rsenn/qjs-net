@@ -1,12 +1,14 @@
 #include "url.h"
-#include "../minnet-url.h"
 #include "jsutils.h"
+#include "lws-utils.h"
 #include "utils.h"
 #include "query.h"
 #include <assert.h>
 #include <limits.h>
 #include <ctype.h>
 #include <strings.h>
+
+struct url* minnet_url_data(JSValueConst);
 
 #ifndef HAVE_STRLCPY
 size_t
@@ -431,14 +433,14 @@ url_fromwsi(struct url* url, struct lws* wsi, JSContext* ctx) {
   int i, port = -1;
   char* p;
   const char* protocol;
-  typedef char* get_host_and_port(struct lws*, JSContext*, int*);
+  typedef char* get_host_and_port(struct lws*, int*);
   get_host_and_port* fns[] = {
       &wsi_host_and_port,
       &wsi_vhost_and_port,
   };
 
   for(i = 0; i < countof(fns); i++) {
-    if((p = fns[i](wsi, ctx, &port))) {
+    if((p = fns[i](wsi, &port))) {
       if(p[0]) {
         if(url->host)
           js_free(ctx, url->host);

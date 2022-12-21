@@ -19,6 +19,11 @@ enum {
   URL_TLS,
 };
 
+MinnetURL*
+minnet_url_data(JSValueConst obj) {
+  return JS_GetOpaque(obj, minnet_url_class_id);
+}
+
 JSValue
 minnet_url_wrap(JSContext* ctx, MinnetURL* url) {
   JSValue url_obj = JS_NewObjectProtoClass(ctx, minnet_url_proto, minnet_url_class_id);

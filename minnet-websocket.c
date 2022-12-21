@@ -34,6 +34,11 @@ enum {
 
 enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
 
+MinnetWebsocket*
+minnet_ws_data(JSValueConst obj) {
+  return JS_GetOpaque(obj, minnet_ws_class_id);
+}
+
 JSValue
 minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
