@@ -86,6 +86,8 @@ static JSValue
 minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
+  JSBuffer jsbuf;
+  QueueItem* item;
 
   if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
@@ -96,14 +98,17 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   if(argc == 0)
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
-  {
-    JSBuffer jsbuf = js_input_args(ctx, argc, argv);
-    ByteBlock buffer = block_copy(jsbuf.data, jsbuf.size, ctx);
-    js_buffer_free(&jsbuf, ctx);
 
-    ringbuffer_insert(&ws->sendq, &buffer, 1);
+  jsbuf = js_input_args(ctx, argc, argv);
 
-    lws_callback_on_writable(ws->lwsi);
+  if((item = ws_send(ws, jsbuf.data, jsbuf.size, ctx))) {
+    ResolveFunctions fns;
+
+    ret = js_promise_create(ctx, &fns);
+
+    item->unref = deferred_newjs(fns.resolve, ctx);
+    // item->unref = deferred_new(&JS_FreeValue, fns.resolve, ctx);
+    JS_FreeValue(ctx, fns.reject);
   }
 
   return ret;
@@ -251,10 +256,10 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
 
     // printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
     if(opaque->status < CLOSING) {
-      const struct lws_protocols* protocol = lws_get_protocol(ws->lwsi);
+      // const struct lws_protocols* protocol = lws_get_protocol(ws->lwsi);
 
-      if(!strncmp(protocol->name, "ws", 2))
-        lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
+      // if(!strncmp(protocol->name, "ws", 2))
+      lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
     }
 
     opaque->status = CLOSED;
@@ -406,9 +411,7 @@ minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValue
   if(ws->lwsi) {
     struct wsi_opaque_user_data* opaque = opaque_new(ctx);
     // opaque->obj = JS_VALUE_GET_OBJ(JS_DupValue(ctx, obj));
-    opaque->handler = JS_NULL;
-    /*opaque->handlers[0] = JS_NULL;
-    opaque->handlers[1] = JS_NULL;*/
+    // opaque->handler = JS_NULL;
     lws_set_opaque_user_data(ws->lwsi, opaque);
   }
 
@@ -441,7 +444,7 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
     JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
     JS_CFUNC_DEF("close", 1, minnet_ws_close),
-    JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_ws_get, 0, WEBSOCKET_PROTOCOL, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_ws_get, 0, WEBSOCKET_PROTOCOL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_get, 0, WEBSOCKET_ADDRESS, 0),
     JS_ALIAS_DEF("remoteAddress", "address"),
@@ -451,7 +454,7 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("ssl", minnet_ws_get, 0, WEBSOCKET_SSL, 0),
     JS_ALIAS_DEF("tls", "ssl"),
     JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_get, minnet_ws_set, WEBSOCKET_BINARY, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, JS_PROP_ENUMERABLE),
     /*JS_CGETSET_MAGIC_FLAGS_DEF("reservedBits", minnet_ws_get, 0, WEBSOCKET_RESERVED_BITS, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("firstFragment", minnet_ws_get, 0, WEBSOCKET_FIRST_FRAGMENT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("finalFragment", minnet_ws_get, 0, WEBSOCKET_FINAL_FRAGMENT, 0),

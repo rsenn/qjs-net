@@ -383,6 +383,11 @@ const JSCFunctionListEntry minnet_hash_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("hmac", minnet_hash_get, 0, HASH_HMAC, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("finalized", minnet_hash_get, 0, HASH_FINALIZED, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetHash", JS_PROP_CONFIGURABLE),
+    JS_PROP_INT32_DEF("TYPE_MD5", LWS_GENHASH_TYPE_MD5, 0),
+    JS_PROP_INT32_DEF("TYPE_SHA1", LWS_GENHASH_TYPE_SHA1, 0),
+    JS_PROP_INT32_DEF("TYPE_SHA256", LWS_GENHASH_TYPE_SHA256, 0),
+    JS_PROP_INT32_DEF("TYPE_SHA384", LWS_GENHASH_TYPE_SHA384, 0),
+    JS_PROP_INT32_DEF("TYPE_SHA512", LWS_GENHASH_TYPE_SHA512, 0),
 };
 
 const JSCFunctionListEntry minnet_hash_static_funcs[] = {

@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include "jsutils.h"
+#include "buffer.h"
 
 JSValue
 vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
@@ -33,7 +34,7 @@ js_object_classname(JSContext* ctx, JSValueConst value) {
     ctor = js_object_constructor(ctx, proto);
   }
   if((name = js_function_name(ctx, ctor))) {
-    s = js_strdup(ctx, name);
+    s = name && name[0] ? js_strdup(ctx, name) : 0;
     JS_FreeCString(ctx, name);
   }
 
@@ -89,6 +90,12 @@ js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val) 
   return js_function_bind(ctx, func, 1 | JS_BIND_THIS, &this_val);
 }
 
+JSValue
+js_function_bind_this_1(JSContext* ctx, JSValueConst func, JSValueConst this_val, JSValueConst arg) {
+  JSValueConst bound[] = {this_val, arg};
+  return js_function_bind(ctx, func, countof(bound) | JS_BIND_THIS, &bound);
+}
+
 /*JSValue
 js_function_bind_v(JSContext* ctx, JSValueConst func, ...) {
   va_list args;
@@ -130,6 +137,16 @@ js_function_name(JSContext* ctx, JSValueConst value) {
 }
 
 JSValue
+js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done) {
+  JSValue ret = JS_NewObject(ctx);
+
+  JS_SetPropertyStr(ctx, ret, "done", JS_NewBool(ctx, done));
+  JS_SetPropertyStr(ctx, ret, "value", JS_DupValue(ctx, value));
+
+  return ret;
+}
+
+JSValue
 js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
   JSValue fn, result, done, value;
 
@@ -153,11 +170,9 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, 
       return JS_ThrowTypeError(ctx, "object does not have 'next' method");
 
     if(!JS_IsFunction(ctx, fn))
-      return JS_ThrowTypeError(ctx, "object.next is not asynciterator_shift function");
+      return JS_ThrowTypeError(ctx, "object.next is not a function");
 
     *next = js_function_bind_this(ctx, fn, obj);
-    /* if(thisObj)
-     *thisObj = JS_DupValue(ctx, obj);*/
     JS_FreeValue(ctx, fn);
     fn = *next;
   }
@@ -168,10 +183,13 @@ js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, 
   if(JS_IsException(result))
     return JS_EXCEPTION;
 
+  if(js_is_promise(ctx, result))
+    return result;
+
   done = JS_GetPropertyStr(ctx, result, "done");
   value = JS_GetPropertyStr(ctx, result, "value");
-  JS_FreeValue(ctx, result);
   *done_p = JS_ToBool(ctx, done);
+  JS_FreeValue(ctx, result);
   JS_FreeValue(ctx, done);
   return value;
 }
@@ -191,25 +209,26 @@ js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags
   return i;
 }
 
-/*void
-js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
+void
+js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr) {
+  JSBuffer* buf = opaque;
+
+  if(JS_IsString(buf->value))
+    JS_FreeValueRT(rt, buf->value);
+  else if(!JS_IsUndefined(buf->value))
+    JS_FreeValueRT(rt, buf->value);
+
+  buf->value = JS_UNDEFINED;
   buf->data = 0;
   buf->size = 0;
   buf->pos = 0;
-  buf->free = &js_buffer_free_default;
-  buf->value = JS_UNDEFINED;
-  buf->range = (OffsetLength){0,-1};
+  ol_init(&buf->range);
+}
 
-  if(JS_IsString(value)) {
-    buf->data = (uint8_t*)JS_ToCStringLen(ctx, &buf->size, value);
-    buf->value = value;
-  } else if((buf->data = JS_GetArrayBuffer(ctx, &buf->size, value))) {
-    buf->value = JS_DupValue(ctx, value);
-  }
-}*/
-void
+BOOL
 js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value) {
   *buf = js_input_chars(ctx, value);
+  return !!buf->data;
 }
 
 JSBuffer
@@ -225,6 +244,30 @@ js_buffer_new(JSContext* ctx, JSValueConst value) {
   }
 
   return ret;
+}
+
+JSBuffer
+js_buffer_fromblock(JSContext* ctx, struct byte_block* blk) {
+  JSValue buf = block_toarraybuffer(blk, ctx);
+
+  return js_buffer_new(ctx, buf);
+}
+
+JSBuffer
+js_buffer_data(JSContext* ctx, const void* data, size_t size) {
+  ByteBlock block = {(uint8_t*)data, (uint8_t*)data + size};
+
+  return js_buffer_fromblock(ctx, &block);
+}
+
+JSBuffer
+js_buffer_alloc(JSContext* ctx, size_t size) {
+  ByteBlock block = {0, 0};
+
+  if((block.start = js_malloc(ctx, size)))
+    block.end = block.start + size;
+
+  return js_buffer_fromblock(ctx, &block);
 }
 
 void
@@ -265,13 +308,18 @@ js_buffer_dump(const JSBuffer* in, DynBuf* db) {
 }
 
 void
-js_buffer_free(JSBuffer* in, JSContext* ctx) {
+js_buffer_free_rt(JSBuffer* in, JSRuntime* rt) {
   if(in->data) {
-    in->free(JS_GetRuntime(ctx), in, in->data);
+    in->free(rt, in, in->data);
     in->data = 0;
     in->size = 0;
     in->value = JS_UNDEFINED;
   }
+}
+
+void
+js_buffer_free(JSBuffer* in, JSContext* ctx) {
+  js_buffer_free_rt(in, JS_GetRuntime(ctx));
 }
 
 BOOL
@@ -302,6 +350,18 @@ js_is_iterator(JSContext* ctx, JSValueConst obj) {
       return TRUE;
   }
   return FALSE;
+}
+
+BOOL
+js_is_async_generator(JSContext* ctx, JSValueConst obj) {
+  BOOL ret = FALSE;
+  const char* str;
+
+  if((str = JS_ToCString(ctx, obj))) {
+    ret = !!strstr(str, "AsyncGenerator");
+    JS_FreeCString(ctx, str);
+  }
+  return ret;
 }
 
 JSAtom
@@ -535,6 +595,11 @@ js_promise_pending(ResolveFunctions const* funcs) {
 BOOL
 js_promise_done(ResolveFunctions const* funcs) {
   return js_resolve_functions_is_null(funcs);
+}
+
+JSValue
+js_promise_then(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
+  return js_invoke(ctx, promise, "then", 1, &handler);
 }
 
 BOOL
@@ -954,6 +1019,21 @@ js_input_args(JSContext* ctx, int argc, JSValueConst argv[]) {
   return input;
 }
 
+int
+js_buffer_fromargs(JSContext* ctx, int argc, JSValueConst argv[], JSBuffer* buf) {
+  int ret = 0;
+  *buf = js_input_chars(ctx, argv[0]);
+
+  if(buf->size) {
+    ++ret;
+
+    if(argc > 1)
+      ret += js_offset_length(ctx, buf->size, argc - 1, argv + 1, &buf->range);
+  }
+
+  return ret;
+}
+
 BOOL
 js_is_arraybuffer(JSContext* ctx, JSValueConst value) {
   if(JS_IsObject(value)) {
@@ -995,15 +1075,65 @@ BOOL
 js_is_generator(JSContext* ctx, JSValueConst value) {
   const char* str;
   BOOL ret = FALSE;
+
   if((str = JS_ToCString(ctx, value))) {
     const char* s = str;
-    if(!strncmp(s, "function ", 9))
-      s += 9;
 
-    if(*s == '*')
+    if(!strncmp(s, "async ", 6))
+      s += 6;
+
+    if(!strncmp(s, "function", 8)) {
+      s += 8;
+
+      while(*s == ' ') ++s;
+
+      if(*s == '*')
+        ret = TRUE;
+    }
+
+    JS_FreeCString(ctx, str);
+  }
+  return ret;
+}
+
+BOOL
+js_is_async(JSContext* ctx, JSValueConst value) {
+  const char* str;
+  BOOL ret = FALSE;
+  if((str = JS_ToCString(ctx, value))) {
+    const char* s = str;
+
+    if(!strncmp(s, "async ", 6))
+      ret = TRUE;
+
+    else if(!strncmp(s, "[object Async", 13))
       ret = TRUE;
 
     JS_FreeCString(ctx, str);
   }
+  return ret;
+}
+
+JSValue
+js_typedarray_constructor(JSContext* ctx, int bits, BOOL floating, BOOL sign) {
+  char class_name[64];
+
+  sprintf(class_name, "%s%s%dArray", (!floating && bits >= 64) ? "Big" : "", floating ? "Float" : sign ? "Int" : "Uint", bits);
+
+  return js_global_get(ctx, class_name);
+}
+
+JSValue
+js_typedarray_new(JSContext* ctx, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length) {
+  JSValue ctor = js_typedarray_constructor(ctx, bits, floating, sign);
+  JSValue args[] = {
+      buffer,
+      JS_NewUint32(ctx, byte_offset),
+      JS_NewUint32(ctx, length),
+  };
+  JSValue ret = JS_CallConstructor(ctx, ctor, countof(args), args);
+  JS_FreeValue(ctx, args[1]);
+  JS_FreeValue(ctx, args[2]);
+  JS_FreeValue(ctx, ctor);
   return ret;
 }

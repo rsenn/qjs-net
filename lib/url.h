@@ -1,5 +1,5 @@
-#ifndef WJSNET_LIBQJSNET_LIB_URL_H
-#define WJSNET_LIBQJSNET_LIB_URL_H
+#ifndef QJSNET_LIB_URL_H
+#define QJSNET_LIB_URL_H
 
 #include <libwebsockets.h>
 #include <quickjs.h>
@@ -113,4 +113,4 @@ static inline BOOL
 url_set_query(struct url* url, const char* query, JSContext* ctx) {
   return url_set_query_len(url, query, strlen(query), ctx);
 }
-#endif /* WJSNET_LIBQJSNET_LIB_URL_H */
+#endif /* QJSNET_LIB_URL_H */

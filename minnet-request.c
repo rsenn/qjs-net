@@ -3,6 +3,7 @@
 #include <cutils.h>
 #include "minnet-request.h"
 #include "minnet-ringbuffer.h"
+#include "minnet-generator.h"
 #include "minnet.h"
 #include "headers.h"
 #include "jsutils.h"
@@ -13,7 +14,20 @@
 THREAD_LOCAL JSClassID minnet_request_class_id;
 THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;
 
-enum { REQUEST_TYPE, REQUEST_METHOD, REQUEST_URI, REQUEST_PATH, REQUEST_HEADERS, REQUEST_ARRAYBUFFER, REQUEST_TEXT, REQUEST_BODY };
+enum {
+  REQUEST_TYPE,
+  REQUEST_METHOD,
+  REQUEST_URI,
+  REQUEST_PATH,
+  REQUEST_HEADERS,
+  REQUEST_ARRAYBUFFER,
+  REQUEST_TEXT,
+  REQUEST_BODY,
+  REQUEST_IP,
+  REQUEST_PROTOCOL,
+  REQUEST_SECURE,
+  REQUEST_REFERER,
+};
 
 JSValue
 minnet_request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
@@ -119,7 +133,12 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_TYPE: {
-      ret = JS_NewInt32(ctx, req->method);
+      char* type;
+
+      if((type = headers_get(&req->headers, "content-type", ctx))) {
+        ret = JS_NewString(ctx, type);
+        js_free(ctx, type);
+      }
       break;
     }
     case REQUEST_URI: {
@@ -138,24 +157,42 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       // ret = buffer_tostring(&req->headers, ctx);
       break;
     }
-    case REQUEST_ARRAYBUFFER: {
-      // q ret = buffer_HEAD(&req->body) ? buffer_toarraybuffer(&req->body, ctx) : JS_NULL;
-      break;
-    }
-    case REQUEST_TEXT: {
-      // ret = buffer_HEAD(&req->body) ? buffer_tostring(&req->body, ctx) : JS_NULL;
-      break;
-    }
-    case REQUEST_BODY: {
-      ret = minnet_generator_create(ctx, &req->body); /* if(buffer_HEAD(&req->body)  {
-            size_t typelen;
-            const char* type = header_get(ctx, &typelen, &req->headers, "content-type");
+    case REQUEST_REFERER: {
+      char* ref;
 
-            ret = buffer_tostring(&req->body, ctx);
-            //  ret = minnet_ringbuffer_new(ctx, type, typelen, block_BEGIN(&req->body), buffer_HEAD(&req->body));
-          }  else {
-            ret = JS_NULL;
-          }*/
+      if((ref = headers_get(&req->headers, "referer", ctx))) {
+        ret = JS_NewString(ctx, ref);
+        js_free(ctx, ref);
+      }
+
+      break;
+    }
+
+    case REQUEST_BODY: {
+      switch(req->method) {
+        case METHOD_GET:
+        case METHOD_OPTIONS:
+        case METHOD_PATCH:
+        case METHOD_PUT:
+        case METHOD_DELETE:
+        case METHOD_HEAD:
+          if(!req->body)
+            break;
+
+        case METHOD_POST: ret = minnet_generator_create(ctx, &req->body); break;
+      }
+      break;
+    }
+    case REQUEST_IP: {
+      ret = req->ip ? JS_NewString(ctx, req->ip) : JS_NULL;
+      break;
+    }
+    case REQUEST_PROTOCOL: {
+      ret = JS_NewString(ctx, req->url.protocol);
+      break;
+    }
+    case REQUEST_SECURE: {
+      ret = JS_NewBool(ctx, req->secure);
       break;
     }
   }
@@ -219,6 +256,63 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
   return ret;
 }
 
+static JSValue
+minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  MinnetRequest* req;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(req = minnet_request_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+
+    case REQUEST_ARRAYBUFFER: {
+      if(req->body) {
+        ResolveFunctions funcs = {JS_NULL, JS_NULL};
+        ret = js_promise_create(ctx, &funcs);
+        JS_FreeValue(ctx, funcs.reject);
+
+        generator_continuous(req->body, funcs.resolve);
+        req->body->block_fn = &block_toarraybuffer;
+      }
+      break;
+    }
+    case REQUEST_TEXT: {
+      if(req->body) {
+        ResolveFunctions funcs = {JS_NULL, JS_NULL};
+        ret = js_promise_create(ctx, &funcs);
+        JS_FreeValue(ctx, funcs.reject);
+
+        generator_continuous(req->body, funcs.resolve);
+        req->body->block_fn = &block_tostring;
+      }
+      break;
+    }
+  }
+  return ret;
+}
+
+static JSValue
+minnet_request_getheader(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  MinnetRequest* req;
+  JSValue ret = JS_UNDEFINED;
+  const char *key, *value;
+
+  if(!(req = minnet_request_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  key = JS_ToCString(ctx, argv[0]);
+
+  value = headers_get(&req->headers, key, ctx);
+
+  ret = JS_NewString(ctx, value);
+
+  js_free(ctx, (void*)value);
+  JS_FreeCString(ctx, key);
+
+  return ret;
+}
+
 static void
 minnet_request_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRequest* req;
@@ -233,14 +327,19 @@ JSClassDef minnet_request_class = {
 };
 
 const JSCFunctionListEntry minnet_request_proto_funcs[] = {
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, minnet_request_set, REQUEST_HEADERS, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("arrayBuffer", minnet_request_get, 0, REQUEST_ARRAYBUFFER, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("text", minnet_request_get, 0, REQUEST_TEXT, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("referer", minnet_request_get, 0, REQUEST_REFERER, 0),
+    JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_request_method, REQUEST_ARRAYBUFFER),
+    JS_CFUNC_MAGIC_DEF("text", 0, minnet_request_method, REQUEST_TEXT),
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("secure", minnet_request_get, 0, REQUEST_SECURE, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("ip", minnet_request_get, 0, REQUEST_IP, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_request_get, 0, REQUEST_PROTOCOL, 0),
+    JS_CFUNC_DEF("get", 1, minnet_request_getheader),
     JS_CFUNC_DEF("clone", 0, minnet_request_clone),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };

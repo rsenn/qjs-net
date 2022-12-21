@@ -2,6 +2,8 @@
 #include "buffer.h"
 #include "jsutils.h"
 #include "opaque.h"
+#include "session.h"
+#include "ringbuffer.h"
 #include <strings.h>
 #include <assert.h>
 #include <libwebsockets.h>
@@ -16,14 +18,11 @@ ws_new(struct lws* wsi, JSContext* ctx) {
 
   ws->lwsi = wsi;
   ws->ref_count = 2;
-  ringbuffer_init2(&ws->sendq, sizeof(ByteBlock), 65536 * 2);
+  // ringbuffer_init2(&ws->sendq, sizeof(ByteBlock), 65536 * 2);
 
   if((opaque = lws_opaque(wsi, ctx))) {
     opaque->ws = ws;
     opaque->status = 0;
-    opaque->handler = JS_NULL;
-    /*opaque->handlers[0] = JS_NULL;
-    opaque->handlers[1] = JS_NULL;*/
   }
 
   return ws;
@@ -47,7 +46,7 @@ ws_clear_rt(struct socket* ws, JSRuntime* rt) {
     }
   }
 
-  ringbuffer_zero(&ws->sendq);
+  // ringbuffer_zero(&ws->sendq);
 }
 
 void
@@ -78,21 +77,72 @@ ws_dup(struct socket* ws) {
 }
 
 int
-ws_write(struct socket* ws, BOOL binary, JSContext* ctx) {
+ws_writable(struct socket* ws, BOOL binary, JSContext* ctx) {
+  struct wsi_opaque_user_data* opaque;
   int ret = 0;
-  size_t size;
 
-  if((size = ringbuffer_size(&ws->sendq))) {
-    ByteBlock buf;
-    ringbuffer_consume(&ws->sendq, &buf, 1);
+  if((opaque = lws_get_opaque_user_data(ws->lwsi))) {
+    struct session_data* session = opaque->sess;
 
-    ret = lws_write(ws->lwsi, block_BEGIN(&buf), block_SIZE(&buf), binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
+    ret = session_writable(session, binary, ctx);
+  }
+  return ret;
+}
 
-    block_free(&buf, ctx);
+typedef struct {
+  JSContext* ctx;
+  struct socket* ws;
+} WSWantWrite;
+
+static void
+ws_want_write_free(void* ptr) {
+  WSWantWrite* closure = ptr;
+  JSContext* ctx = closure->ctx;
+
+  ws_free(closure->ws, ctx);
+  js_free(ctx, closure);
+};
+
+static JSValue
+want_write(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  WSWantWrite* closure = ptr;
+
+  lws_callback_on_writable(closure->ws->lwsi);
+  return JS_UNDEFINED;
+}
+
+JSValue
+ws_want_write(struct socket* ws, JSContext* ctx) {
+  WSWantWrite* h;
+
+  if(!(h = js_mallocz(ctx, sizeof(WSWantWrite))))
+    return JS_ThrowOutOfMemory(ctx);
+
+  *h = (WSWantWrite){ctx, ws_dup(ws)};
+
+  return JS_NewCClosure(ctx, want_write, 0, 0, h, ws_want_write_free);
+}
+
+QueueItem*
+ws_enqueue(struct socket* ws, ByteBlock chunk) {
+  struct wsi_opaque_user_data* opaque;
+  QueueItem* item = 0;
+
+  if((opaque = lws_get_opaque_user_data(ws->lwsi))) {
+    struct session_data* session = opaque->sess;
+
+    if((item = queue_add(&session->sendq, chunk))) {
+
+      lws_callback_on_writable(ws->lwsi);
+    }
   }
 
-  if(size > 1)
-    lws_callback_on_writable(ws->lwsi);
+  return item;
+}
 
-  return ret;
+QueueItem*
+ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
+  ByteBlock chunk = block_copy(data, size, ctx);
+
+  return ws_enqueue(ws, chunk);
 }

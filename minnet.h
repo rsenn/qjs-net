@@ -1,15 +1,15 @@
 #ifndef MINNET_H
 #define MINNET_H
 
-#include <inttypes.h>      // for PRId64
-#include <libwebsockets.h> // for LLL_PARSER, LLL_USER, lwsl_...
-#include <quickjs.h>       // for JSContext, JSValueConst
-#include <stddef.h>        // for NULL
-#include "jsutils.h"       // for JS_INIT_MODULE
-#include "utils.h"         // for FG, NC
+#include <inttypes.h>
+#include <libwebsockets.h>
+#include <quickjs.h>
+#include <stddef.h>
+#include "jsutils.h"
+#include "utils.h"
 
 #ifdef DEBUG_OUTPUT
-#define DEBUG(x...) printf(x)
+#define DEBUG(x...) minnet_debug(x)
 #else
 #define DEBUG(x...)
 #endif
@@ -23,7 +23,7 @@
   } while(0);
 
 #define LOG(name, fmt, args...) \
-  lwsl_user("%-5s" \
+  lwsl_user("%-15s" \
             " " fmt "\n", \
             (char*)(name), \
             args);
@@ -40,6 +40,7 @@ typedef enum socket_state MinnetStatus;
 void minnet_io_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValueConst out[2]);
 void minnet_log_callback(int, const char* line);
 int minnet_lws_unhandled(const char*, int reason);
+void minnet_debug(const char*, ...);
 
 struct js_callback;
 

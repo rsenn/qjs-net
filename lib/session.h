@@ -1,11 +1,8 @@
 #ifndef QJSNET_LIB_SESSION_H
 #define QJSNET_LIB_SESSION_H
 
-#include <stdint.h>
-#include "buffer.h"
 #include "callback.h"
-#include "utils.h"
-#include <list.h>
+#include "queue.h"
 
 struct http_mount;
 struct proxy_connection;
@@ -25,20 +22,18 @@ struct session_data {
   struct http_mount* mount;
   struct proxy_connection* proxy;
   JSValue generator, next;
-  int serial;
-  BOOL h2, in_body;
-  int64_t written;
+  BOOL in_body, wait_resolve, response_sent;
   struct server_context* server;
   struct client_context* client;
-  ByteBuffer send_buf;
-  struct list_head link;
+  Queue sendq;
 };
 
-extern THREAD_LOCAL struct list_head session_list;
+// extern THREAD_LOCAL struct list_head session_list;
 
 void session_zero(struct session_data*);
 void session_clear(struct session_data*, JSContext* ctx);
 void session_clear_rt(struct session_data*, JSRuntime* rt);
-JSValue session_object(struct wsi_opaque_user_data*, JSContext*);
+JSValue session_object(struct session_data* session, JSContext* ctx);
+int session_writable(struct session_data*, BOOL binary, JSContext* ctx);
 
 #endif /* QJSNET_LIB_SESSION_H */

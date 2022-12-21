@@ -2,34 +2,29 @@
 #define QJSNET_LIB_ASYNCITERATOR_H
 
 #include "jsutils.h"
-#include "utils.h"
 
 typedef struct async_read {
   struct list_head link;
   ResolveFunctions promise;
 } AsyncRead;
 
-typedef struct value_item {
-  struct list_head link;
-  JSValue value;
-  int64_t id;
-} ValueItem;
-
 typedef struct async_iterator {
-  JSContext* ctx;
-  BOOL closed, closing;
   struct list_head reads;
+  BOOL closed, closing;
 } AsyncIterator;
 
-void asynciterator_zero(AsyncIterator* it);
-void asynciterator_clear(AsyncIterator* it, JSRuntime* rt);
-AsyncIterator* asynciterator_new(JSContext* ctx);
-JSValue asynciterator_next(AsyncIterator* it, JSContext* ctx);
-BOOL asynciterator_check_closing(AsyncIterator* it, JSContext* ctx);
-BOOL asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx);
-int asynciterator_reject_all(AsyncIterator* it, JSValueConst value, JSContext* ctx);
-BOOL asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx);
-BOOL asynciterator_emplace(AsyncIterator* it, JSValueConst obj, JSContext* ctx);
-JSValue asynciterator_obj(JSValueConst value, BOOL done, JSContext* ctx);
+void asynciterator_zero(AsyncIterator*);
+void asynciterator_clear(AsyncIterator*, JSRuntime* rt);
+AsyncIterator* asynciterator_new(JSContext*);
+JSValue asynciterator_next(AsyncIterator*, JSContext* ctx);
+BOOL asynciterator_stop(AsyncIterator*, JSContext* ctx);
+int asynciterator_cancel(AsyncIterator*, JSValueConst error, JSContext* ctx);
+BOOL asynciterator_emplace(AsyncIterator*, JSValueConst value, BOOL done, JSContext* ctx);
+JSValue asynciterator_object(JSValueConst, BOOL done, JSContext* ctx);
+
+static inline BOOL
+asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
+  return list_empty(&it->reads) ? FALSE : asynciterator_emplace(it, value, FALSE, ctx);
+}
 
 #endif /* QJSNET_LIB_ASYNCITERATOR_H */

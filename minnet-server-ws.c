@@ -13,21 +13,19 @@ int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, s
 char* lws_hdr_simple_ptr(struct lws*, int);
 
 int
-js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   struct session_data* session = user;
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 
-  if(!opaque && ctx)
-    opaque = lws_opaque(wsi, ctx);
-
   if(lws_reason_poll(reason))
     return wsi_handle_poll(wsi, reason, &server->cb.fd, in);
+
   if(lws_reason_http(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
-  LOGCB("WS", "fd=%d, %s%sin='%.*s' session#%i", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in, session ? session->serial : 0);
+  LOGCB("WS", "fd=%d, %s%sin='%.*s'", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_CONNECTING: {
@@ -42,12 +40,9 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       break;
     }
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
-    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
-      /* if(!opaque->req)
-         opaque->req = request_fromwsi(wsi, ctx);*/
-
+    case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
       break;
-
+    }
     case LWS_CALLBACK_PROTOCOL_INIT: {
       break;
     }
@@ -76,24 +71,31 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
     }
 
     case LWS_CALLBACK_WSI_CREATE: {
+      if(!opaque && ctx)
+        opaque = lws_opaque(wsi, ctx);
+
+      if(opaque && session)
+        opaque->sess = session;
+
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);
       /*      if(session)
               session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);*/
+      break;
       return 0;
     }
 
     case LWS_CALLBACK_WSI_DESTROY: {
-      /*   if(opaque && opaque->ws) {
-           ws_free(opaque->ws, ctx);
-           opaque->ws = 0;
-         }*/
-      if((opaque = lws_get_opaque_user_data(wsi))) {
+
+      /*   if((opaque = lws_get_opaque_user_data(wsi)))*/ {
         if(opaque->ws)
           opaque->ws->lwsi = 0;
 
+        opaque->sess = 0;
+
         lws_set_opaque_user_data(wsi, 0);
-        // opaque_free(opaque, ctx);
+
+        opaque_free(opaque, ctx);
       }
       return 0;
     }
@@ -128,6 +130,8 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
       if(!opaque->req) {
         opaque->req = request_new(url, METHOD_GET, ctx);
+        opaque->req->ip = wsi_ipaddr(wsi, ctx);
+        opaque->req->secure = wsi_tls(wsi);
         headers_tobuffer(ctx, &opaque->req->headers, wsi);
       } else {
         url_free(&url, ctx);
@@ -142,8 +146,10 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       MinnetHttpMount* mount = 0;
       MinnetURL* url;
 
-      if(!opaque->req)
+      if(!opaque->req) {
         opaque->req = request_fromwsi(wsi, ctx);
+        opaque->req->ip = wsi_ipaddr(wsi, ctx);
+      }
 
       if(opaque->req) {
         url = &opaque->req->url;
@@ -194,9 +200,13 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
         LOGCB("ws", "fd=%d, status=%d code=%d", lws_get_socket_fd(wsi), opaque->status, code);
 
         if(ctx) {
-          JSValue cb_argv[3] = {session->ws_obj, code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED, why};
-          server_exception(server, callback_emit(&server->cb.close, code != -1 ? 3 : 1, cb_argv));
-          JS_FreeValue(ctx, cb_argv[1]);
+          JSValue args[3] = {
+              session->ws_obj,
+              code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED,
+              why,
+          };
+          server_exception(server, callback_emit(&server->cb.close, code != -1 ? 3 : 1, args));
+          JS_FreeValue(ctx, args[1]);
         }
         JS_FreeValue(server->context.js, why);
         /*JS_FreeValue(server->context.js, session->ws_obj);
@@ -207,17 +217,21 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
       // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));
-      ws_write(opaque->ws, opaque->binary, ctx);
+      session_writable(session, opaque->binary, ctx);
       break;
     }
 
     case LWS_CALLBACK_RECEIVE: {
       if(ctx) {
-        JSValue msg = opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
-        JSValue cb_argv[2] = {JS_DupValue(ctx, session->ws_obj), msg};
-        server_exception(server, callback_emit(&server->cb.message, 2, cb_argv));
-        JS_FreeValue(ctx, cb_argv[0]);
-        JS_FreeValue(ctx, cb_argv[1]);
+        BOOL binary = lws_frame_is_binary(wsi);
+        JSValue msg = binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
+        JSValue args[2] = {
+            JS_DupValue(ctx, session->ws_obj),
+            msg,
+        };
+        server_exception(server, callback_emit(&server->cb.message, 2, args));
+        JS_FreeValue(ctx, args[0]);
+        JS_FreeValue(ctx, args[1]);
       }
       return 0;
     }
@@ -225,14 +239,20 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       if(server->cb.pong.ctx) {
         // ws_obj = minnet_ws_fromwsi(server->cb.pong.ctx, wsi);
         JSValue msg = JS_NewArrayBufferCopy(server->cb.pong.ctx, in, len);
-        JSValue cb_argv[2] = {JS_DupValue(server->cb.pong.ctx, session->ws_obj), msg};
-        server_exception(server, callback_emit(&server->cb.pong, 2, cb_argv));
-        JS_FreeValue(server->cb.pong.ctx, cb_argv[0]);
-        JS_FreeValue(server->cb.pong.ctx, cb_argv[1]);
+        JSValue args[2] = {
+            JS_DupValue(server->cb.pong.ctx, session->ws_obj),
+            msg,
+        };
+        server_exception(server, callback_emit(&server->cb.pong, 2, args));
+        JS_FreeValue(server->cb.pong.ctx, args[0]);
+        JS_FreeValue(server->cb.pong.ctx, args[1]);
       }
       return 0;
     }
     case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL: {
+      if(opaque)
+        opaque->sess = 0;
+
       return 0;
     }
     case LWS_CALLBACK_VHOST_CERT_AGING:
@@ -246,7 +266,7 @@ js_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void*
       return 0;
     }
     default: {
-      // printf("js_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
+      // printf("ws_server_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
       minnet_lws_unhandled(__func__, reason);
       break;
     }

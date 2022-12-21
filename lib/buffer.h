@@ -1,18 +1,23 @@
 #ifndef QJSNET_LIB_BUFFER_H
 #define QJSNET_LIB_BUFFER_H
 
-#include <cutils.h>        // for BOOL
-#include <libwebsockets.h> // for LWS_PRE
-#include <quickjs.h>       // for JSContext, JSValue, JS_GetRuntime, JSRuntime
-#include <stdarg.h>        // for va_list
-#include <stdint.h>        // for uint8_t
-#include <string.h>        // for size_t, memcpy
-#include <sys/types.h>     // for ssize_t
+#include <cutils.h>
+#include <libwebsockets.h>
+#include <quickjs.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/types.h>
 
 typedef struct byte_block {
   uint8_t* start;
   uint8_t* end;
 } ByteBlock;
+
+#define BLOCK_0() \
+  (ByteBlock) { \
+    { 0, 0 } \
+  }
 
 #define block_SIZE(b) (size_t)((b)->end - (b)->start)
 #define block_BEGIN(b) (void*)(b)->start
@@ -23,22 +28,17 @@ void block_init(ByteBlock*, uint8_t*, size_t);
 uint8_t* block_alloc(ByteBlock*, size_t, JSContext*);
 uint8_t* block_realloc(ByteBlock*, size_t, JSContext*);
 void block_free_rt(ByteBlock*, JSRuntime*);
+ByteBlock block_new(size_t, JSContext* ctx);
+ByteBlock block_copy(const void*, size_t size, JSContext* ctx);
+ByteBlock block_from(void*, size_t size);
 int block_fromarraybuffer(ByteBlock*, JSValue, JSContext*);
 JSValue block_toarraybuffer(ByteBlock*, JSContext*);
-JSValue block_tostring(ByteBlock const*, JSContext*);
+JSValue block_tostring(ByteBlock*, JSContext*);
+ssize_t block_append(ByteBlock*, const void* data, size_t size, JSContext* ctx);
 
 static inline void
 block_free(ByteBlock* b, JSContext* ctx) {
   block_free_rt(b, JS_GetRuntime(ctx));
-}
-
-static inline ByteBlock
-block_copy(const void* ptr, size_t size, JSContext* ctx) {
-  ByteBlock ret = {0, 0};
-  if(block_alloc(&ret, size, ctx)) {
-    memcpy(ret.start, ptr, size);
-  }
-  return ret;
 }
 
 static inline uint8_t*
@@ -52,6 +52,14 @@ block_move(ByteBlock* blk) {
   blk->start = 0;
   blk->end = 0;
   return ret;
+}
+
+static inline ssize_t
+block_concat(ByteBlock* blk, ByteBlock other, JSContext* ctx) {
+  if(block_append(blk, block_BEGIN(&other), block_SIZE(&other), ctx) == -1)
+    return -1;
+
+  return block_SIZE(blk);
 }
 
 typedef union byte_buffer {
@@ -127,5 +135,22 @@ buffer_reset(ByteBuffer* buf) {
 buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx) {
   return block_grow(&buf->block, size, ctx);
 }*/
+
+typedef struct writer {
+  uint8_t **write, *end;
+} BufferWriter;
+
+static inline BufferWriter
+buffer_writer(ByteBuffer* bb) {
+  return (BufferWriter){&bb->write, bb->end};
+}
+typedef struct reader {
+  uint8_t **read, *write;
+} BufferReader;
+
+static inline BufferReader
+buffer_reader(ByteBuffer* bb) {
+  return (BufferReader){&bb->read, bb->write};
+}
 
 #endif /* QJSNET_LIB_BUFFER_H */

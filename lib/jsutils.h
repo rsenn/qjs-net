@@ -63,6 +63,11 @@ typedef struct input_buffer {
     (data), (size), 0, (free), JS_UNDEFINED, { 0, -1 } \
   }
 
+#define JS_BUFFER_VALUE(data, size, value) \
+  (JSBuffer) { \
+    (data), (size), 0, (&js_buffer_free_default), (value), { 0, -1 } \
+  }
+
 typedef struct key_value {
   JSAtom key;
   JSValue value;
@@ -96,6 +101,8 @@ js_vector_free(JSContext* ctx, int argc, JSValue argv[]) {
   }
 }
 
+struct byte_block;
+
 JSValue js_object_constructor(JSContext* ctx, JSValueConst value);
 char* js_object_classname(JSContext* ctx, JSValueConst value);
 void js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log);
@@ -103,19 +110,29 @@ JSValue js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSVal
 JSValue js_function_bind(JSContext* ctx, JSValueConst func, int flags, JSValueConst argv[]);
 JSValue js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg);
 JSValue js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val);
+JSValue js_function_bind_this_1(JSContext* ctx, JSValueConst func, JSValueConst this_val, JSValueConst arg);
 const char* js_function_name(JSContext* ctx, JSValueConst value);
+JSValue js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done);
 JSValue js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags);
-void js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
+void js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr);
+BOOL js_buffer_from(JSContext* ctx, JSBuffer* buf, JSValueConst value);
 JSBuffer js_buffer_new(JSContext* ctx, JSValueConst value);
+JSBuffer js_buffer_fromblock(JSContext* ctx, struct byte_block* blk);
+
+int js_buffer_fromargs(JSContext* ctx, int argc, JSValueConst argv[], JSBuffer* buf);
+JSBuffer js_buffer_alloc(JSContext*, size_t size);
+JSBuffer js_buffer_data(JSContext*, const void* data, size_t size);
 void js_buffer_to(JSBuffer buf, void** pptr, size_t* plen);
 void js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen);
 BOOL js_buffer_valid(const JSBuffer* in);
 JSBuffer js_buffer_clone(const JSBuffer* in, JSContext* ctx);
 void js_buffer_dump(const JSBuffer* in, DynBuf* db);
 void js_buffer_free(JSBuffer* in, JSContext* ctx);
+void js_buffer_free_rt(JSBuffer* in, JSRuntime* rt);
 BOOL js_is_iterable(JSContext* ctx, JSValueConst obj);
 BOOL js_is_iterator(JSContext* ctx, JSValueConst obj);
+BOOL js_is_async_generator(JSContext* ctx, JSValueConst obj);
 JSAtom js_symbol_static_atom(JSContext* ctx, const char* name);
 JSValue js_symbol_static_value(JSContext* ctx, const char* name);
 JSValue js_symbol_for_value(JSContext* ctx, const char* name);
@@ -141,6 +158,7 @@ JSValue js_promise_reject(JSContext* ctx, ResolveFunctions* funcs, JSValueConst 
 void js_promise_zero(ResolveFunctions* funcs);
 BOOL js_promise_pending(ResolveFunctions const* funcs);
 BOOL js_promise_done(ResolveFunctions const* funcs);
+JSValue js_promise_then(JSContext*, JSValueConst promise, JSValueConst handler);
 BOOL js_is_promise(JSContext* ctx, JSValueConst value);
 JSValue js_error_new(JSContext* ctx, const char* fmt, ...);
 uint8_t* js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value);
@@ -185,6 +203,7 @@ BOOL js_is_arraybuffer(JSContext* ctx, JSValueConst value);
 BOOL js_is_dataview(JSContext* ctx, JSValueConst value);
 BOOL js_is_typedarray(JSContext* ctx, JSValueConst value);
 BOOL js_is_generator(JSContext* ctx, JSValueConst value);
+BOOL js_is_async(JSContext* ctx, JSValueConst value);
 
 static inline void
 js_entry_init(JSEntry* entry) {
@@ -368,16 +387,6 @@ js_is_nullish(JSValueConst value) {
   return JS_IsNull(value) || JS_IsUndefined(value);
 }
 
-static inline void
-js_buffer_free_default(JSRuntime* rt, void* opaque, void* ptr) {
-  JSBuffer* buf = opaque;
-
-  if(JS_IsString(buf->value))
-    JS_FreeValueRT(rt, buf->value);
-  else if(!JS_IsUndefined(buf->value))
-    JS_FreeValueRT(rt, buf->value);
-}
-
 static inline const uint8_t*
 js_buffer_begin(const JSBuffer* in) {
   return in->data;
@@ -387,5 +396,8 @@ static inline const uint8_t*
 js_buffer_end(const JSBuffer* in) {
   return in->data + in->size;
 }
+
+JSValue js_typedarray_constructor(JSContext*, int bits, BOOL floating, BOOL sign);
+JSValue js_typedarray_new(JSContext*, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length);
 
 #endif /* QJSNET_LIB_JS_UTILS_H */

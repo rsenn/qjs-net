@@ -52,6 +52,27 @@ block_finalizer(JSRuntime* rt, void* alloc, void* start) {
   js_free_rt(rt, alloc);
 }
 
+ByteBlock
+block_new(size_t size, JSContext* ctx) {
+  ByteBlock ret = {0, 0};
+  block_alloc(&ret, size, ctx);
+  return ret;
+}
+
+ByteBlock
+block_copy(const void* ptr, size_t size, JSContext* ctx) {
+  ByteBlock ret = {0, 0};
+  if(block_alloc(&ret, size, ctx)) {
+    memcpy(ret.start, ptr, size);
+  }
+  return ret;
+}
+
+ByteBlock
+block_from(void* data, size_t size) {
+  return (ByteBlock){data, (uint8_t*)data + size};
+}
+
 int
 block_fromarraybuffer(ByteBlock* blk, JSValueConst value, JSContext* ctx) {
   size_t len;
@@ -65,13 +86,28 @@ block_fromarraybuffer(ByteBlock* blk, JSValueConst value, JSContext* ctx) {
 
 JSValue
 block_toarraybuffer(ByteBlock* blk, JSContext* ctx) {
-  ByteBlock mem = block_move(blk);
+  ByteBlock mem = block_move((ByteBlock*)blk);
   return JS_NewArrayBuffer(ctx, block_BEGIN(&mem), block_SIZE(&mem), block_finalizer, block_ALLOC(&mem), FALSE);
 }
 
 JSValue
-block_tostring(ByteBlock const* blk, JSContext* ctx) {
-  return JS_NewStringLen(ctx, block_BEGIN(blk), block_SIZE(blk));
+block_tostring(ByteBlock* blk, JSContext* ctx) {
+  ByteBlock mem = block_move((ByteBlock*)blk);
+  JSValue str = JS_NewStringLen(ctx, block_BEGIN(&mem), block_SIZE(&mem));
+  block_free(&mem, ctx);
+  return str;
+}
+
+ssize_t
+block_append(ByteBlock* blk, const void* data, size_t size, JSContext* ctx) {
+  size_t offset = block_SIZE(blk);
+  uint8_t* start;
+
+  if((start = block_grow(blk, size, ctx))) {
+    memcpy(start + offset, data, size);
+    return size;
+  }
+  return -1;
 }
 
 void

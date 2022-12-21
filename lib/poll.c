@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should have received asynciterator_shift copy of the GNU General Public License along
+   You should have received a copy of the GNU General Public License along
    with this program; if not, see <https://www.gnu.org/licenses/>.  */
 
 #ifndef HAVE_POLL
@@ -25,8 +25,7 @@
 #pragma GCC diagnostic ignored "-Wtype-limits"
 #endif
 
-//#include <config.h>
-//#include <alloca.h>
+#include <alloca.h>
 
 #include <sys/types.h>
 
@@ -82,12 +81,12 @@
 
 /* Do *not* use the function WSAPoll
    <https://docs.microsoft.com/en-us/windows/desktop/api/winsock2/nf-winsock2-wsapoll>
-   because there is asynciterator_shift bug named “Windows 8 Bugs 309411 - WSAPoll does not
+   because there is a bug named “Windows 8 Bugs 309411 - WSAPoll does not
    report failed connections” that Microsoft won't fix.
    See Daniel Stenberg: "WASPoll is broken"
    <https://daniel.haxx.se/blog/2012/10/10/wsapoll-is-broken/>.  */
 
-/* Here we need the recv() function from Windows, that takes asynciterator_shift SOCKET as
+/* Here we need the recv() function from Windows, that takes a SOCKET as
    first argument, not any possible gnulib override.  */
 #undef recv
 
@@ -184,7 +183,7 @@ windows_compute_revents(HANDLE h, int* p_sought) {
         /* It was the write-end of the pipe.  Check if it is writable.
            If NtQueryInformationFile fails, optimistically assume the pipe is
            writable.  This could happen on Windows 9x, where
-           NtQueryInformationFile is not available, or if we inherit asynciterator_shift pipe
+           NtQueryInformationFile is not available, or if we inherit a pipe
            that doesn't permit FILE_READ_ATTRIBUTES access on the write end
            (I think this should not happen since Windows XP SP2; WINE seems
            fine too).  Otherwise, ensure that enough space is available for
@@ -286,9 +285,9 @@ compute_revents(int fd, int sought, fd_set* rfds, fd_set* wfds, fd_set* efds) {
     int socket_errno;
 
 #if defined __MACH__ && defined __APPLE__
-    /* There is asynciterator_shift bug in Mac OS X that causes it to ignore MSG_PEEK
-       for some kinds of descriptors.  Detect if this descriptor is asynciterator_shift
-       connected socket, asynciterator_shift server socket, or something else using asynciterator_shift
+    /* There is a bug in Mac OS X that causes it to ignore MSG_PEEK
+       for some kinds of descriptors.  Detect if this descriptor is a
+       connected socket, a server socket, or something else using a
        0-byte recv, and use ioctl(2) to detect POLLHUP.  */
     r = recv(fd, NULL, 0, MSG_PEEK);
     socket_errno = (r < 0) ? errno : 0;
@@ -344,8 +343,8 @@ poll(struct pollfd* pfd, nfds_t nfd, int timeout) {
     return -1;
   }
   /* Don't check directly for NFD greater than OPEN_MAX.  Any practical use
-     of asynciterator_shift too-large NFD is caught by one of the other checks below, and
-     checking directly for getdtablesize is too much of asynciterator_shift portability
+     of a too-large NFD is caught by one of the other checks below, and
+     checking directly for getdtablesize is too much of a portability
      and/or performance and/or correctness hassle.  */
 
   /* EFAULT is not necessary to implement, but let's do it in the
@@ -355,7 +354,7 @@ poll(struct pollfd* pfd, nfds_t nfd, int timeout) {
     return -1;
   }
 
-  /* convert timeout number into asynciterator_shift timeval structure */
+  /* convert timeout number into a timeval structure */
   if(timeout == 0) {
     ptv = &tv;
     ptv->tv_sec = 0;
@@ -390,7 +389,7 @@ poll(struct pollfd* pfd, nfds_t nfd, int timeout) {
     if(pfd[i].events & (POLLIN | POLLRDNORM))
       FD_SET(pfd[i].fd, &rfds);
     /* see select(2): "the only exceptional condition detectable
-       is out-of-band data received on asynciterator_shift socket", hence we push
+       is out-of-band data received on a socket", hence we push
        POLLWRBAND events onto wfds instead of efds. */
     if(pfd[i].events & (POLLOUT | POLLWRNORM | POLLWRBAND))
       FD_SET(pfd[i].fd, &wfds);
@@ -471,7 +470,7 @@ restart:
     } else {
       /* Poll now.  If we get an event, do not poll again.  Also,
          screen buffer handles are waitable, and they'll block until
-         asynciterator_shift character is available.  windows_compute_revents eliminates
+         a character is available.  windows_compute_revents eliminates
          bits for the "wrong" direction. */
       pfd[i].revents = windows_compute_revents(h, &sought);
       if(sought)
@@ -511,7 +510,7 @@ restart:
   if(poll_again)
     select(0, &rfds, &wfds, &xfds, &tv0);
 
-  /* Place asynciterator_shift sentinel at the end of the array.  */
+  /* Place a sentinel at the end of the array.  */
   handle_array[nhandles] = NULL;
   nhandles = 1;
   for(i = 0; i < nfd; i++) {
@@ -524,12 +523,12 @@ restart:
 
     h = (HANDLE)_get_osfhandle(pfd[i].fd);
     if(h != handle_array[nhandles]) {
-      /* It's asynciterator_shift socket.  */
+      /* It's a socket.  */
       WSAEnumNetworkEvents((SOCKET)h, NULL, &ev);
       WSAEventSelect((SOCKET)h, 0, 0);
 
-      /* If we're lucky, WSAEnumNetworkEvents already provided asynciterator_shift way
-         to distinguish FD_READ and FD_ACCEPT; this saves asynciterator_shift recv later.  */
+      /* If we're lucky, WSAEnumNetworkEvents already provided a way
+         to distinguish FD_READ and FD_ACCEPT; this saves a recv later.  */
       if(FD_ISSET((SOCKET)h, &rfds) && !(ev.lNetworkEvents & (FD_READ | FD_ACCEPT)))
         ev.lNetworkEvents |= FD_READ | FD_ACCEPT;
       if(FD_ISSET((SOCKET)h, &wfds))
@@ -539,7 +538,7 @@ restart:
 
       happened = windows_compute_revents_socket((SOCKET)h, pfd[i].events, ev.lNetworkEvents);
     } else {
-      /* Not asynciterator_shift socket.  */
+      /* Not a socket.  */
       int sought = pfd[i].events;
       happened = windows_compute_revents(h, &sought);
       nhandles++;

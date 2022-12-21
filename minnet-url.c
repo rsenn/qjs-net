@@ -209,7 +209,7 @@ minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
   url_fromvalue(url, argv[0], ctx);
 
   if(!url_valid(*url))
-    return JS_ThrowTypeError(ctx, "Not asynciterator_shift valid URL");
+    return JS_ThrowTypeError(ctx, "Not a valid URL");
 
   return minnet_url_wrap(ctx, url);
 }

@@ -1,14 +1,14 @@
 #ifndef MINNET_CLIENT_H
 #define MINNET_CLIENT_H
 
-#include <libwebsockets.h> // for lws_context_user, lws_get_context, lws_cl...
-#include <quickjs.h>       // for JSValue, JSValueConst, JSContext
-#include <stdint.h>        // for uint8_t
-#include "callback.h"      // for CallbackList
-#include "context.h"       // for struct context
-#include "cutils.h"        // for BOOL
-#include "jsutils.h"       // for ResolveFunctions
-#include "session.h"       // for struct session_data
+#include <libwebsockets.h>
+#include <quickjs.h>
+#include <stdint.h>
+#include "callback.h"
+#include "context.h"
+#include <cutils.h>
+#include "jsutils.h"
+#include "session.h"
 
 #define client_exception(client, retval) context_exception(&(client->context), (retval))
 

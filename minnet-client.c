@@ -218,7 +218,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     union closure* closure = ptr;
 
     closure->pointer = client;
-    closure->free_func = &client_free_rt;
+    closure->free_func = (closure_free_t*)client_free_rt;
   }
 
   *client = (MinnetClient){
@@ -231,6 +231,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   session_zero(&client->session);
 
   client->request = request_from(argc, argv, ctx);
+  enum protocol p = url_protocol(client->request->url);
+  client->request->secure = protocol_is_tls(p);
+
   js_promise_zero(&client->promise);
 
   if(argc >= 2) {
@@ -510,35 +513,42 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       if(opaque->status < CLOSING) {
         JSContext* ctx;
-        int32_t result = -1;
-        if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in)
-          client->context.error = JS_NewStringLen(client->context.js, in, len);
-        else
+        int32_t result = -1, err = /*opaque ? opaque->error :*/ 0;
+
+        if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in) {
+          if(!strncmp("conn fail: ", in, 11)) {
+            err = /*opaque->error =*/atoi(&((const char*)in)[11]);
+            client->context.error = JS_NewString(client->context.js, strerror(err));
+          } else {
+            client->context.error = JS_NewStringLen(client->context.js, in, len);
+          }
+        } else
           client->context.error = JS_UNDEFINED;
 
         opaque->status = CLOSING;
         if((ctx = client->on.close.ctx)) {
           JSValue ret;
-          int argc, err = opaque ? opaque->error : 0;
+          int argc = 1;
           JSValueConst cb_argv[4] = {client->session.ws_obj};
 
           if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR) {
-            argc = 2;
-            cb_argv[1] = JS_DupValue(ctx, client->context.error);
+
+            cb_argv[argc++] = JS_UNDEFINED;
+            cb_argv[argc++] = JS_DupValue(ctx, client->context.error);
+            cb_argv[argc++] = JS_NewInt32(ctx, err);
+
           } else {
-            argc = 4;
-            cb_argv[1] = close_status(ctx, in, len);
-            cb_argv[2] = close_reason(ctx, in, len);
-            cb_argv[3] = JS_NewInt32(ctx, err);
+            cb_argv[argc++] = close_status(ctx, in, len);
+            cb_argv[argc++] = close_reason(ctx, in, len);
+            cb_argv[argc++] = JS_NewInt32(ctx, err);
           }
 
           ret = client_exception(client, callback_emit(&client->on.close, argc, cb_argv));
           if(JS_IsNumber(ret))
             JS_ToInt32(ctx, &result, ret);
           JS_FreeValue(ctx, ret);
-          JS_FreeValue(ctx, cb_argv[1]);
-          JS_FreeValue(ctx, cb_argv[2]);
-          JS_FreeValue(ctx, cb_argv[3]);
+
+          while(--argc >= 0) JS_FreeValue(ctx, cb_argv[argc]);
         }
         ret = result;
         break;
@@ -556,12 +566,13 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_CONNECTED: {
       if(opaque->status < OPEN) {
         JSContext* ctx;
+
         /* int status;
          status = lws_http_client_http_response(wsi);*/
 
         opaque->status = OPEN;
         if((ctx = client->on.connect.ctx)) {
-
+          client->request->ip = wsi_ipaddr(wsi, ctx);
           client->session.ws_obj = minnet_ws_fromwsi(ctx, wsi);
 
           if(reason != LWS_CALLBACK_RAW_CONNECTED) {
@@ -592,7 +603,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       buffer_reset(buf);*/
 
-      ws_write(opaque->ws, opaque->binary, ctx);
+      session_writable(&client->session, opaque->binary, ctx);
       break;
     }
 

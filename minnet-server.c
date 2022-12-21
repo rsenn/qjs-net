@@ -18,11 +18,11 @@
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static struct lws_protocols protocols[] = {
-    {"ws", js_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     {"defprot", lws_callback_http_dummy, sizeof(struct session_data), 1024, 0, NULL, 0},
-    {"proxy-ws-raw-ws", callback_proxy_ws_server, 0, 1024, 0, NULL, 0},
-    {"proxy-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
+    {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
+    {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
     // {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
     LWS_PLUGIN_PROTOCOL_DEADDROP,
@@ -31,11 +31,11 @@ static struct lws_protocols protocols[] = {
 };
 
 static struct lws_protocols protocols2[] = {
-    {"ws", js_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     {"defprot", defprot_callback, sizeof(struct session_data), 0},
-    {"proxy-ws-raw-ws", callback_proxy_ws_server, 0, 1024, 0, NULL, 0},
-    {"proxy-ws-raw-raw", callback_proxy_raw_client, 0, 1024, 0, NULL, 0},
+    {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
+    {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
     //  {"proxy-ws", proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
     //  LWS_PLUGIN_PROTOCOL_RAW_PROXY,
@@ -57,7 +57,7 @@ static const struct lws_http_mount mount = {
     /* .cache_reusable */ 0,
     /* .cache_revalidate */ 0,
     /* .cache_intermediaries */ 0,
-    /* .origin_protocol */ LWSMPRO_FILE, /* files in asynciterator_shift dir */
+    /* .origin_protocol */ LWSMPRO_FILE, /* files in a dir */
     /* .mountpoint_len */ 1,             /* char count */
     /* .basic_auth_login_file */ NULL,
 };
@@ -227,7 +227,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
 JSValue
 minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  int argind = 0, asynciterator_shift = 0;
+  int argind = 0, a = 0;
   BOOL block = TRUE, is_tls = FALSE, is_h2 = TRUE, per_message_deflate = FALSE;
   MinnetServer* server;
   MinnetURL url = {0};
@@ -242,7 +242,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(ptr) {
     union closure* closure = ptr;
     closure->pointer = server;
-    closure->free_func = &server_free;
+    closure->free_func = (closure_free_t*)server_free;
   }
 
   info = &server->context.info;
@@ -406,7 +406,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!block)
     return ret;
 
-  while(asynciterator_shift >= 0) {
+  while(a >= 0) {
     if(!JS_IsNull(server->context.error)) {
       ret = JS_Throw(ctx, server->context.error);
       break;
@@ -415,7 +415,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     if(server->cb.fd.ctx)
       js_std_loop(ctx);
     else
-      asynciterator_shift = lws_service(server->context.lws, 20);
+      a = lws_service(server->context.lws, 20);
   }
 
   // lws_context_destroy(server->context.lws);

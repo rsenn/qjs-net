@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(qjs-net C)
 
+cmake_policy(SET CMP0007 OLD)
+
 message("Building project [1;31m${PROJECT_NAME}[0m")
 
 set(DISABLE_WERROR TRUE CACHE BOOL "Disable -Werror flag")
@@ -265,10 +267,39 @@ endif(USE_CURL)
 
 link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR}
                  ${OPENSSL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
-include_directories(lib ${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIR}
+include_directories(lib ${CMAKE_CURRENT_BINARY_DIR} ${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIR}
                     ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
 
-file(GLOB JS_BINDINGS_SOURCES lib/*.[ch] minnet*.[ch])
+file(
+  GLOB
+  JS_BINDINGS_SOURCES
+  lib/allocated.*
+  lib/assure.*
+  lib/asynciterator.*
+  lib/buffer.*
+  lib/callback.*
+  lib/closure.*
+  lib/context.*
+  lib/deferred.*
+  lib/generator.*
+  lib/headers.*
+  lib/jsutils.*
+  lib/opaque.*
+  #lib/poll.*
+  lib/query.*
+  lib/queue.*
+  #lib/ref.*
+  lib/request.*
+  lib/response.*
+  lib/ringbuffer.*
+  lib/session.*
+  lib/url.*
+  lib/utils.*
+  lib/ws.*
+  minnet*.[ch])
+
+#list(APPEND JS_BINDINGS_SOURCES )
+
 list(FILTER JS_BINDINGS_SOURCES EXCLUDE REGEX ".*-plugin-.*")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -308,6 +339,9 @@ if(WIN32)
 else(WIN32)
   add_library(quickjs-minnet SHARED ${JS_BINDINGS_SOURCES})
 endif(WIN32)
+
+
+#add_dependencies(quickjs-minnet minnet.c)
 
 target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY})
 
@@ -356,9 +390,9 @@ macro(TARGET_LINK TARGET)
                           ${LIBWEBSOCKETS_LIBRARY_DIR})
 
   target_link_libraries(
-    ${TARGET} ${LIBWEBSOCKETS_LIBRARIES}
-    ${MBEDTLS_LIBRARIES} ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES}
-    ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY})
+    ${TARGET} ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES}
+    ${OPENSSL_LIBRARIES} ${SOCKET_LIBRARIES} ${BROTLI_LIBRARIES}
+    ${ZLIB_LIBRARY})
 endmacro(TARGET_LINK TARGET)
 
 target_link(quickjs-minnet net)
@@ -395,8 +429,28 @@ endif(NOT QUICKJS_C_MODULE_DIR)
 install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}"
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE
                     GROUP_READ WORLD_READ WORLD_EXECUTE)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc.js
-        DESTINATION "${QUICKJS_JS_MODULE_DIR}")
+file(GLOB JSLIB js/*.js)
+list(FILTER JSLIB EXCLUDE REGEX "debugger-client")
+
+install(FILES ${JSLIB} DESTINATION "${QUICKJS_JS_MODULE_DIR}")
+
+foreach(SRC ${JSLIB})
+  #string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" SRC "${SRC}")
+message("Compile module '${SRC}' ...")
+
+  file(RELATIVE_PATH SRC "${CMAKE_CURRENT_SOURCE_DIR}" "${SRC}")
+  string(REGEX REPLACE "\\.js$" "" BASE "${SRC}")
+  string(REGEX REPLACE ".*/" "" BASE "${BASE}")
+  message("Compiling module ${SRC}")
+
+  compile_module(${SRC} ${CMAKE_CURRENT_BINARY_DIR}/${BASE}.c)
+  make_module_header(${CMAKE_CURRENT_BINARY_DIR}/${BASE}.c)
+
+
+  #make_module(${NAME} ${SRC})
+endforeach()
+
+
 #dump_target(quickjs-minnet)
 
 file(GLOB TESTS tests/test-*.js)

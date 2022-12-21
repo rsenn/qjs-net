@@ -1,8 +1,11 @@
 #include "session.h"
 #include "opaque.h"
+#include "ringbuffer.h"
+#include "jsutils.h"
+#include "../minnet-websocket.h"
 
-static THREAD_LOCAL uint32_t session_serial = 0;
-THREAD_LOCAL struct list_head session_list = {0, 0};
+/*static THREAD_LOCAL uint32_t session_serial = 0;
+THREAD_LOCAL struct list_head session_list = {0, 0};*/
 
 void
 session_zero(struct session_data* session) {
@@ -13,27 +16,13 @@ session_zero(struct session_data* session) {
   session->proxy = 0;
   session->generator = JS_NULL;
   session->next = JS_NULL;
-  session->serial = ++session_serial;
-  session->h2 = FALSE;
   session->in_body = FALSE;
-  session->written = 0;
+  session->response_sent = FALSE;
+  session->wait_resolve = FALSE;
   session->server = NULL;
   session->client = NULL;
-  buffer_init(&session->send_buf, 0, 0);
-  session->link.prev = session->link.next = NULL;
-}
 
-void
-session_add(struct session_data* session) {
-  if(session_list.prev == NULL)
-    init_list_head(&session_list);
-
-  list_add(&session->link, &session_list);
-}
-
-void
-session_remove(struct session_data* session) {
-  list_del(&session->link);
+  queue_zero(&session->sendq);
 }
 
 void
@@ -56,22 +45,42 @@ session_clear_rt(struct session_data* session, JSRuntime* rt) {
   JS_FreeValueRT(rt, session->next);
   session->next = JS_UNDEFINED;
 
-  buffer_free_rt(&session->send_buf, rt);
-
-  // printf("%s #%i %p\n", __func__, session->serial, session);
+  if(queue_size(&session->sendq))
+    queue_clear_rt(&session->sendq, rt);
 }
 
 JSValue
-session_object(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
+session_object(struct session_data* session, JSContext* ctx) {
   JSValue ret;
   ret = JS_NewArray(ctx);
 
-  JS_SetPropertyUint32(ctx, ret, 0, opaque->serial ? JS_NewInt32(ctx, opaque->serial) : JS_NULL);
+  JS_SetPropertyUint32(ctx, ret, 1, JS_DupValue(ctx, session->ws_obj));
+  JS_SetPropertyUint32(ctx, ret, 2, JS_DupValue(ctx, session->req_obj));
+  JS_SetPropertyUint32(ctx, ret, 3, JS_DupValue(ctx, session->resp_obj));
 
-  if(opaque->sess) {
-    JS_SetPropertyUint32(ctx, ret, 1, JS_DupValue(ctx, opaque->sess->ws_obj));
-    JS_SetPropertyUint32(ctx, ret, 2, JS_DupValue(ctx, opaque->sess->req_obj));
-    JS_SetPropertyUint32(ctx, ret, 3, JS_DupValue(ctx, opaque->sess->resp_obj));
+  return ret;
+}
+
+int
+session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
+
+  int ret = 0;
+  size_t size;
+  struct socket* ws = minnet_ws_data(session->ws_obj);
+
+  if((size = queue_size(&session->sendq)) > 0) {
+    ByteBlock chunk;
+    BOOL done = FALSE;
+
+    chunk = queue_next(&session->sendq, &done);
+
+    ret = lws_write(ws->lwsi, block_BEGIN(&chunk), block_SIZE(&chunk), binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
+
+    block_free(&chunk, ctx);
   }
+
+  if(queue_size(&session->sendq) > 0)
+    lws_callback_on_writable(ws->lwsi);
+
   return ret;
 }

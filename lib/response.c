@@ -1,4 +1,5 @@
-#include "ws.h"
+#include "session.h"
+#include "response.h"
 #include "../minnet-response.h"
 #include "buffer.h"
 #include "jsutils.h"
@@ -7,12 +8,12 @@
 #include <assert.h>
 
 void
-response_format(struct http_response const* resp, char* buf, size_t len) {
-  snprintf(buf, len, FGC(226, "struct http_response") " { url.path: '%s', status: %d, ok: %s, type: '%s' }", resp->url.path, resp->status, resp->ok ? "true" : "false", resp->type);
+response_format(const struct http_response* resp, char* buf, size_t len) {
+  snprintf(buf, len, FGC(226, "Response") " { url.path: '%s', status: %d, headers_sent: %s, type: '%s' }", resp->url.path, resp->status, resp->headers_sent ? "true" : "false", resp->type);
 }
 
 char*
-response_dump(struct http_response const* resp) {
+response_dump(const struct http_response* resp) {
   static char buf[1024];
   response_format(resp, buf, sizeof(buf));
   return buf;
@@ -20,21 +21,21 @@ response_dump(struct http_response const* resp) {
 
 /*void
 response_zero(struct http_response* resp) {
-  memset(resp, 0, sizeof(struct http_response));
+  memset(resp, 0, sizeof(Response));
   resp->body = BUFFER_0();
 }*/
 
 void
-response_init(struct http_response* resp, struct url url, int32_t status, char* status_text, BOOL ok, char* type) {
-  // memset(resp, 0, sizeof(struct http_response));
+response_init(struct http_response* resp, struct url url, int32_t status, char* status_text, BOOL headers_sent, char* type) {
+  // memset(resp, 0, sizeof(Response));
 
   resp->status = status;
   resp->status_text = status_text;
-  resp->ok = ok;
+  resp->headers_sent = headers_sent;
   resp->url = url;
   resp->type = type;
   resp->headers = BUFFER_0();
-  resp->body = 0; // BUFFER_0();
+  resp->generator = NULL;
 }
 
 struct http_response*
@@ -45,8 +46,8 @@ response_dup(struct http_response* resp) {
 
 ssize_t
 response_write(struct http_response* resp, const void* x, size_t n, JSContext* ctx) {
-  assert(resp->body);
-  return buffer_append(resp->body, x, n, ctx);
+  assert(resp->generator);
+  return generator_write(resp->generator, x, n, JS_UNDEFINED);
 }
 
 void
@@ -93,7 +94,7 @@ struct http_response*
 response_new(JSContext* ctx) {
   struct http_response* resp;
 
-  if(!(resp = js_mallocz(ctx, sizeof(struct http_response))))
+  if(!(resp = js_mallocz(ctx, sizeof(Response))))
     JS_ThrowOutOfMemory(ctx);
 
   resp->ref_count = 1;
@@ -109,13 +110,14 @@ response_redirect(struct http_response* resp, const char* location, JSContext* c
   headers_set(ctx, &resp->headers, "Location", location);
   return resp;
 }
+
 struct http_response*
-session_response(struct session_data* session, JSCallback* cb) {
-  struct http_response* resp = minnet_response_data2(cb->ctx, session->resp_obj);
+response_session(struct http_response* resp, struct session_data* session, JSCallback* cb) {
+  // struct http_response* resp = minnet_response_data2(cb->ctx, session->resp_obj);
 
   if(cb && cb->ctx) {
     JSValue ret = callback_emit_this(cb, session->ws_obj, 2, session->args);
-    lwsl_user("session_response ret=%s", JS_ToCString(cb->ctx, ret));
+    lwsl_user("response_session ret=%s", JS_ToCString(cb->ctx, ret));
     if(JS_IsObject(ret) && minnet_response_data2(cb->ctx, ret)) {
       JS_FreeValue(cb->ctx, session->args[1]);
       session->args[1] = ret;
@@ -124,7 +126,6 @@ session_response(struct session_data* session, JSCallback* cb) {
       JS_FreeValue(cb->ctx, ret);
     }
   }
-  lwsl_user("session_response %s", response_dump(resp));
-
+  lwsl_user("response_session %s", response_dump(resp));
   return resp;
 }

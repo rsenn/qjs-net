@@ -12,6 +12,8 @@
 #include "jsutils.h"
 #include "utils.h"
 #include "buffer.h"
+#include "modules/minnet.h"
+#include "modules/minnet.c"
 #include <libwebsockets.h>
 #include <assert.h>
 #include <errno.h>
@@ -19,6 +21,7 @@
 #include <strings.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <stdarg.h>
 
 /*#ifdef _WIN32
 #include "poll.h"
@@ -27,6 +30,7 @@
 static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 static THREAD_LOCAL int32_t minnet_log_level = 0;
 static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
+static THREAD_LOCAL JSValue minnet_js_module;
 
 #ifndef POLLIN
 #define POLLIN 1
@@ -80,9 +84,10 @@ lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(p->revents & PIO) {
     struct lws_pollfd x = {p->fd, magic, p->revents & PIO};
 
-    if(p->revents & (POLLERR | POLLHUP))
-      closure->opaque->error = errno;
-
+    if(p->revents & (POLLERR | POLLHUP)) {
+      closure->opaque->poll = *p;
+      // closure->opaque->error = errno;
+    }
     /*if(x.revents & POLLOUT)
       if(x.revents & POLLIN)
         x.revents &= ~(POLLOUT);*/
@@ -240,11 +245,11 @@ minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
   ret = JS_NewArray(ctx);
 
-  list_for_each(el, &session_list) {
-    struct wsi_opaque_user_data* session = list_entry(el, struct wsi_opaque_user_data, link);
-    DEBUG("%s @%u #%" PRId64 " %p\n", __func__, i, session->serial, session);
+  list_for_each_prev(el, &opaque_list) {
+    struct wsi_opaque_user_data* opaque = list_entry(el, struct wsi_opaque_user_data, link);
+    DEBUG("%s @%u #%" PRId64 " %p\n", __func__, i, opaque->serial, opaque);
 
-    JS_SetPropertyUint32(ctx, ret, i++, session_object(session, ctx));
+    JS_SetPropertyUint32(ctx, ret, i++, opaque->sess ? session_object(opaque->sess, ctx) : JS_NewInt64(ctx, opaque->serial));
   }
   return ret;
 }
@@ -269,11 +274,14 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("server", 1, minnet_server),
     JS_CFUNC_DEF("client", 1, minnet_client),
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
-    JS_CFUNC_SPECIAL_DEF("socket", 1, constructor, minnet_ws_constructor),
-    JS_CFUNC_SPECIAL_DEF("url", 1, constructor, minnet_url_constructor),
-    JS_CFUNC_SPECIAL_DEF("generator", 1, constructor, minnet_generator_constructor),
-    // JS_CGETSET_DEF("log", get_log, set_log),
-    // JS_CGETSET_DEF("sessions", minnet_get_sessions, 0),
+    // JS_CFUNC_SPECIAL_DEF("formParser", 0, constructor, minnet_form_parser_constructor),
+    // JS_CFUNC_SPECIAL_DEF("generator", 0, constructor, minnet_generator_constructor),
+    // JS_CFUNC_SPECIAL_DEF("hash", 0, constructor, minnet_hash_constructor),
+    // JS_CFUNC_SPECIAL_DEF("request", 0, constructor, minnet_request_constructor),
+    // JS_CFUNC_SPECIAL_DEF("response", 0, constructor, minnet_response_constructor),
+    // JS_CFUNC_SPECIAL_DEF("ringbuffer", 0, constructor, minnet_ringbuffer_constructor),
+    // JS_CFUNC_SPECIAL_DEF("url", 0, constructor, minnet_url_constructor),
+    // JS_CFUNC_SPECIAL_DEF("socket", 0, constructor, minnet_ws_constructor),
     JS_CFUNC_DEF("getSessions", 0, minnet_get_sessions),
     JS_CFUNC_DEF("setLog", 1, minnet_set_log),
     JS_PROP_INT32_DEF("METHOD_GET", METHOD_GET, 0),
@@ -302,8 +310,8 @@ static const JSCFunctionListEntry minnet_funcs[] = {
 
 static int
 js_minnet_init(JSContext* ctx, JSModuleDef* m) {
-  /*  minnet_log_cb = JS_UNDEFINED;
-    minnet_log_this = JS_UNDEFINED;*/
+
+  // minnet_js_module = JS_ReadObject(ctx, qjsc_minnet, qjsc_minnet_size, JS_READ_OBJ_BYTECODE);
 
   JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
@@ -350,18 +358,18 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
     JS_SetModuleExport(ctx, m, "Ringbuffer", minnet_ringbuffer_ctor);
 
   // Add class Generator
-  /* JS_NewClassID(&minnet_generator_class_id);
+  JS_NewClassID(&minnet_generator_class_id);
 
-   JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
-   minnet_generator_proto = JS_NewObject(ctx);
-   JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, minnet_generator_proto_funcs_size);
-   JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
+  minnet_generator_proto = JS_NewObject(ctx);
+  // JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, minnet_generator_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
 
-   minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
-   JS_SetConstructor(ctx, minnet_generator_ctor, minnet_generator_proto);
+  minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_generator_ctor, minnet_generator_proto);
 
-   if(m)
-     JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);*/
+  if(m)
+    JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
 
   // Add class URL
   minnet_url_init(ctx, m);
@@ -412,11 +420,6 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Hash", minnet_hash_ctor);
 
-  minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetHash", 0, JS_CFUNC_constructor, 0);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
-
   {
     JSValue minnet_default = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, minnet_default, minnet_funcs, countof(minnet_funcs));
@@ -435,10 +438,10 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Response");
   JS_AddModuleExport(ctx, m, "Request");
   JS_AddModuleExport(ctx, m, "Ringbuffer");
+  JS_AddModuleExport(ctx, m, "Generator");
   JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExport(ctx, m, "FormParser");
   JS_AddModuleExport(ctx, m, "Hash");
-  JS_AddModuleExport(ctx, m, "Generator");
   JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExport(ctx, m, "default");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
@@ -448,4 +451,34 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   lws_set_log_level(minnet_log_level, minnet_log_callback);
 
   return m;
+}
+
+void
+minnet_debug(const char* format, ...) {
+  int n;
+  va_list ap;
+  char buf[1024];
+  va_start(ap, format);
+  n = vsnprintf(buf, sizeof(buf), format, ap);
+  va_end(ap);
+
+  if(n < sizeof(buf)) {
+    if(buf[n - 1] != '\n')
+      buf[n++] = '\n';
+  }
+
+  for(int i = 0; i < n; i++) {
+    if(i + 1 != n) {
+      if(buf[i] == '\n') {
+        fputs("\\n", stdout);
+        continue;
+      }
+      if(buf[i] == '\r') {
+        fputs("\\r", stdout);
+        continue;
+      }
+    }
+    fputc(buf[i], stdout);
+  }
+  fflush(stdout);
 }

@@ -1,6 +1,8 @@
 import { setLog, URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net';
 import { err } from 'std';
 
+let logName;
+
 export const Levels = (() => {
   const llObj = {
     LLL_ERR,
@@ -29,7 +31,8 @@ export const DebugCallback = fn => (isDebug() ? fn : () => {});
 export const DefaultLevels =
   LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_CLIENT | LLL_LATENCY | LLL_USER | LLL_THREAD;
 
-export const Init = (name, mask = LLL_USER | ((LLL_CLIENT << 1) - 1)) =>
+export const Init = (name, mask = LLL_USER | ((LLL_CLIENT << 1) - 1)) => {
+  if(typeof name == 'string') logName = name;
   setLog(
     mask,
     DebugCallback((level, msg) => {
@@ -40,18 +43,27 @@ export const Init = (name, mask = LLL_USER | ((LLL_CLIENT << 1) - 1)) =>
       err.puts(`${l.padEnd(10)} ${msg}\n`);
     })
   );
+};
 
-export const SetLog = (name, maxLevel = LLL_CLIENT) =>
+export const SetLog = (name, maxLevel = LLL_CLIENT) => {
+  if(typeof name == 'string') logName = name;
+
   setLog(LLL_USER | ((maxLevel << 1) - 1), (level, msg) => {
     let l = Levels[level] ?? 'UNKNOWN';
     if(l == 'USER') l = name ?? l;
     err.puts(('X', l).padEnd(9) + msg.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
   });
-
-import('console').then(({ Console }) => { globalThis.console = new Console(err, { inspectOptions: { compact: 0, customInspect: true, maxStringLength: 100 } });
-});
+};
 
 export const log = (() => {
-  const name = scriptArgs[0].replace(/.*\//g, '');
-  return (...args) => console.log(name + ':', ...args);
+  logName ??= scriptArgs[0].replace(/.*\//g, '');
+  let cons = console;
+  import('console').then(({ Console }) => {
+    globalThis.console = cons = new Console(
+      /*err, */ {
+        inspectOptions: { compact: 0, depth: 10, customInspect: true, maxStringLength: 100, colors: true }
+      }
+    );
+  });
+  return (...args) => cons.log(logName + ':', ...args);
 })();

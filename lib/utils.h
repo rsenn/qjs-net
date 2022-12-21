@@ -53,6 +53,15 @@ size_t str_chr(const char*, char);
 size_t byte_chr(const void*, size_t, char);
 size_t byte_chrs(const void*, size_t, const char[], size_t);
 size_t byte_rchr(const void*, size_t, char);
+int byte_diff(const void*, size_t len, const void* b);
+size_t byte_equal(const void*, size_t n, const void* t);
+size_t byte_findb(const void*, size_t hlen, const void* what, size_t wlen);
+
+static inline size_t
+byte_finds(const void* haystack, size_t hlen, const char* what) {
+  return byte_findb(haystack, hlen, what, strlen(what));
+}
+
 size_t scan_whitenskip(const void*, size_t);
 size_t scan_nonwhitenskip(const void*, size_t);
 size_t scan_eol(const void*, size_t);
@@ -87,8 +96,8 @@ char* wsi_host_and_port(struct lws* wsi, JSContext* ctx, int* port);
 char* wsi_vhost_and_port(struct lws* wsi, JSContext* ctx, int* port);
 const char* wsi_vhost_name(struct lws* wsi);
 const char* wsi_protocol_name(struct lws* wsi);
-
 const char* lws_callback_name(int reason);
+char* wsi_ipaddr(struct lws*, JSContext* ctx);
 
 static inline BOOL
 has_query(const char* str) {
