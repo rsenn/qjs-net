@@ -24,27 +24,20 @@ typedef struct byte_block {
 #define block_END(b) (void*)(b)->end
 #define block_ALLOC(b) (void*)((b)->start ? (b)->start - LWS_PRE : 0)
 
-void block_init(ByteBlock*, uint8_t*, size_t);
-uint8_t* block_alloc(ByteBlock*, size_t, JSContext*);
-uint8_t* block_realloc(ByteBlock*, size_t, JSContext*);
-void block_free_rt(ByteBlock*, JSRuntime*);
-ByteBlock block_new(size_t, JSContext* ctx);
-ByteBlock block_copy(const void*, size_t size, JSContext* ctx);
-ByteBlock block_from(void*, size_t size);
-int block_fromarraybuffer(ByteBlock*, JSValue, JSContext*);
-JSValue block_toarraybuffer(ByteBlock*, JSContext*);
-JSValue block_tostring(ByteBlock*, JSContext*);
-ssize_t block_append(ByteBlock*, const void* data, size_t size, JSContext* ctx);
+void       block_init(ByteBlock*, uint8_t* start, size_t len);
+uint8_t*   block_alloc(ByteBlock*, size_t size);
+uint8_t*   block_realloc(ByteBlock*, size_t size);
+void       block_free(ByteBlock*);
+uint8_t*   block_grow(ByteBlock*, size_t size);
+ssize_t    block_concat(ByteBlock*, ByteBlock other);
+ByteBlock  block_new(size_t, JSContext* ctx);
+ByteBlock  block_copy(const void*, size_t size, JSContext* ctx);
+ByteBlock  block_from(void*, size_t size);
+int        block_fromarraybuffer(ByteBlock*, JSValueConst value, JSContext* ctx);
+JSValue    block_toarraybuffer(ByteBlock*, JSContext* ctx);
+JSValue    block_tostring(ByteBlock*, JSContext* ctx);
+ssize_t    block_append(ByteBlock*, const void* data, size_t size, JSContext* ctx);
 
-static inline void
-block_free(ByteBlock* b, JSContext* ctx) {
-  block_free_rt(b, JS_GetRuntime(ctx));
-}
-
-static inline uint8_t*
-block_grow(ByteBlock* blk, size_t size, JSContext* ctx) {
-  return block_realloc(blk, block_SIZE(blk) + size, ctx);
-}
 
 static inline ByteBlock
 block_move(ByteBlock* blk) {
@@ -52,14 +45,6 @@ block_move(ByteBlock* blk) {
   blk->start = 0;
   blk->end = 0;
   return ret;
-}
-
-static inline ssize_t
-block_concat(ByteBlock* blk, ByteBlock other, JSContext* ctx) {
-  if(block_append(blk, block_BEGIN(&other), block_SIZE(&other), ctx) == -1)
-    return -1;
-
-  return block_SIZE(blk);
 }
 
 typedef union byte_buffer {

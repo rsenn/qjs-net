@@ -9,10 +9,10 @@ block_init(ByteBlock* blk, uint8_t* start, size_t len) {
 }
 
 uint8_t*
-block_alloc(ByteBlock* blk, size_t size, JSContext* ctx) {
+block_alloc(ByteBlock* blk, size_t size ) {
   uint8_t* ptr;
 
-  if((ptr = js_malloc(ctx, size + LWS_PRE))) {
+  if((ptr =  malloc(  size + LWS_PRE))) {
     blk->start = ptr + LWS_PRE;
     blk->end = blk->start + size;
   }
@@ -21,7 +21,7 @@ block_alloc(ByteBlock* blk, size_t size, JSContext* ctx) {
 }
 
 uint8_t*
-block_realloc(ByteBlock* blk, size_t size, JSContext* ctx) {
+block_realloc(ByteBlock* blk, size_t size) {
   uint8_t* ptr;
 
   if(!size) {
@@ -29,7 +29,7 @@ block_realloc(ByteBlock* blk, size_t size, JSContext* ctx) {
     return 0;
   }
 
-  if((ptr = js_realloc(ctx, block_ALLOC(blk), size + LWS_PRE))) {
+  if((ptr =  realloc(  block_ALLOC(blk), size + LWS_PRE))) {
     blk->start = ptr + LWS_PRE;
     blk->end = blk->start + size;
   } else {
@@ -40,27 +40,40 @@ block_realloc(ByteBlock* blk, size_t size, JSContext* ctx) {
 }
 
 void
-block_free_rt(ByteBlock* blk, JSRuntime* rt) {
+block_free(ByteBlock* blk) {
   if(blk->start)
-    js_free_rt(rt, blk->start - LWS_PRE);
+    free(blk->start - LWS_PRE);
 
   blk->start = blk->end = 0;
 }
 
+uint8_t*
+block_grow(ByteBlock* blk, size_t size) {
+  return realloc(blk, block_SIZE(blk) + size, ctx);
+}
+
+ssize_t
+block_concat(ByteBlock* blk, ByteBlock other ) {
+  if(block_append(blk, block_BEGIN(&other), block_SIZE(&other) ) == -1)
+    return -1;
+
+  return block_SIZE(blk);
+}
+
 static void
 block_finalizer(JSRuntime* rt, void* alloc, void* start) {
-  js_free_rt(rt, alloc);
+  free(  alloc);
 }
 
 ByteBlock
-block_new(size_t size, JSContext* ctx) {
+block_new(size_t size) {
   ByteBlock ret = {0, 0};
   block_alloc(&ret, size, ctx);
   return ret;
 }
 
 ByteBlock
-block_copy(const void* ptr, size_t size, JSContext* ctx) {
+block_copy(const void* ptr, size_t size) {
   ByteBlock ret = {0, 0};
   if(block_alloc(&ret, size, ctx)) {
     memcpy(ret.start, ptr, size);
