@@ -298,7 +298,7 @@ file(
   lib/url.*
   lib/utils.*
   lib/ws.*
-  minnet*.[ch])
+  src/minnet*.[ch])
 
 #list(APPEND JS_BINDINGS_SOURCES )
 

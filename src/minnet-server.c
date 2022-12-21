@@ -11,8 +11,9 @@
 #include <quickjs-libc.h>
 #include <libwebsockets.h>
 
-#include "libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
-#include "libwebsockets/plugins/deaddrop/protocol_lws_deaddrop.c"
+#include "../libwebsockets/plugins/raw-proxy/protocol_lws_raw_proxy.c"
+#include "../libwebsockets/plugins/deaddrop/protocol_lws_deaddrop.c"
+#include "../libwebsockets/plugins/protocol_lws_mirror.c"
 #include "minnet-plugin-broker.c"
 
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
@@ -27,6 +28,7 @@ static struct lws_protocols protocols[] = {
     MINNET_PLUGIN_BROKER(broker),
     LWS_PLUGIN_PROTOCOL_DEADDROP,
     // LWS_PLUGIN_PROTOCOL_RAW_PROXY,
+    LWS_PLUGIN_PROTOCOL_MIRROR,
     {0},
 };
 
@@ -39,6 +41,7 @@ static struct lws_protocols protocols2[] = {
     //  {"proxy-ws", proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     MINNET_PLUGIN_BROKER(broker),
     //  LWS_PLUGIN_PROTOCOL_RAW_PROXY,
+    LWS_PLUGIN_PROTOCOL_MIRROR,
     {0, 0},
 };
 
@@ -381,7 +384,12 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }*/
 
-  MinnetVhostOptions* vhopt = vhost_options_create(ctx, "lws-deaddrop", "");
+  MinnetVhostOptions *vhopt = 0, **vhptr = &vhopt;
+
+  ADD(vhptr, vhost_options_create(ctx, "lws-deaddrop", ""), next);
+  ADD(vhptr, vhost_options_create(ctx, "lws-mirror-protocol", ""), next);
+  ADD(vhptr, vhost_options_create(ctx, "raw-proxy", ""), next);
+
   info->pvo = &vhopt->lws;
 
   if(!JS_IsUndefined(opt_options)) {
