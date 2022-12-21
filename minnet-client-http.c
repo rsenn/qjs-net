@@ -226,7 +226,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         ssize_t size, r;
         // MinnetRequest* req = client->request;
         ByteBuffer buf;
-        buffer_alloc(&buf, 1024, ctx);
+        buffer_alloc(&buf, 1024);
 
         if(lws_http_is_redirected_to_get(wsi))
           break;
@@ -245,7 +245,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               // js_std_dump_error(ctx);
 
               DEBUG("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
-              buffer_append(&buf, input.data, input.size, ctx);
+              buffer_append(&buf, input.data, input.size);
               DEBUG("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
               js_buffer_free(&input, ctx);
             }
@@ -303,7 +303,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       // client_exception(client, callback_emit(&client->on.message, 2, &session->req_obj));
 
-      // buffer_append(resp->body, in, len, ctx);
+      // buffer_append(resp->body, in, len);
       return 0;
     }
 

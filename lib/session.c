@@ -76,7 +76,7 @@ session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
 
     ret = lws_write(ws->lwsi, block_BEGIN(&chunk), block_SIZE(&chunk), binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
 
-    block_free(&chunk, ctx);
+    block_free(&chunk);
   }
 
   if(queue_size(&session->sendq) > 0)

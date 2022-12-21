@@ -39,7 +39,7 @@ method_number(const char* name) {
 
 void
 request_format(Request const* req, char* buf, size_t len, JSContext* ctx) {
-  char* headers = buffer_escaped(&req->headers, ctx);
+  char* headers = buffer_escaped(&req->headers);
   char* url = url_format(req->url, ctx);
   snprintf(buf, len, FGC(196, "Request") " { method: '%s', url: '%s', headers: '%s' }", method_name(req->method), url, headers);
 
@@ -159,7 +159,7 @@ request_zero(Request* req) {
 void
 request_clear(Request* req, JSContext* ctx) {
   url_free(&req->url, ctx);
-  buffer_free_rt(&req->headers, JS_GetRuntime(ctx));
+  buffer_free(&req->headers);
   if(req->ip) {
     js_free(ctx, req->ip);
     req->ip = 0;
@@ -171,7 +171,7 @@ request_clear(Request* req, JSContext* ctx) {
 void
 request_clear_rt(Request* req, JSRuntime* rt) {
   url_free_rt(&req->url, rt);
-  buffer_free_rt(&req->headers, rt);
+  buffer_free(&req->headers);
   if(req->ip) {
     js_free_rt(rt, req->ip);
     req->ip = 0;

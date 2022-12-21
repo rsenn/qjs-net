@@ -27,6 +27,8 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     case ON_HTTP: {
       if(js_promise_pending(&client->promise))
         js_promise_resolve(ctx, &client->promise, argv[1]);
+
+      return JS_NewInt32(ctx, 0);
       break;
     }
 

@@ -113,7 +113,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
         dest = url_format(url, ctx);
         destlen = url_length(url);
 
-        buffer_alloc(&out, 1024, ctx);
+        buffer_alloc(&out, 1024);
 
         if(lws_http_redirect(wsi, 308, (const unsigned char*)dest, destlen, &out.write, out.end) < 0)
           ret = -1;

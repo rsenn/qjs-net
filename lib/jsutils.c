@@ -319,7 +319,7 @@ js_buffer_free_rt(JSBuffer* in, JSRuntime* rt) {
 
 void
 js_buffer_free(JSBuffer* in, JSContext* ctx) {
-  js_buffer_free_rt(in, JS_GetRuntime(ctx));
+  js_buffer_free(in, JS_GetRuntime(ctx));
 }
 
 BOOL

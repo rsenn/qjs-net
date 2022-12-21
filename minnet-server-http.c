@@ -225,7 +225,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 
   const char* path = JS_ToCString(ctx, mnt);
 
-  // DEBUG("mount_new '%s'\n", path);
+  DEBUG("mount_new '%s'\n", path);
 
   if(JS_IsFunction(ctx, org)) {
     ret = mount_create(ctx, path, 0, 0, 0, LWSMPRO_CALLBACK);
@@ -611,12 +611,12 @@ serve_file(struct http_closure* closure, const char* path, MinnetHttpMount* moun
     size_t n = file_size(fp);
     ByteBlock blk;
 
-    block_alloc(&blk, n, closure->ctx);
+    block_alloc(&blk, n);
     if(fread(blk.start, n, 1, fp) == 1) {
       queue_put(&closure->session->sendq, blk, closure->ctx);
       queue_close(&closure->session->sendq);
     } else {
-      block_free(&blk, closure->ctx);
+      block_free(&blk);
     }
 
     if(mime) {
@@ -685,7 +685,7 @@ http_server_writable(struct http_closure* closure, BOOL done) {
       }
     }
 
-    block_free(&buf, closure->ctx);
+    block_free(&buf);
   }
 
   if(done || remain || queue_closed(&closure->session->sendq))
