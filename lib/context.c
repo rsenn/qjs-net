@@ -1,4 +1,8 @@
+#include <libwebsockets.h>
 #include "context.h"
+#include "utils.h"
+
+THREAD_LOCAL struct list_head context_list = {0, 0};
 
 JSValue
 context_exception(struct context* context, JSValue retval) {
@@ -32,4 +36,39 @@ context_clear(struct context* context) {
   JS_FreeValue(ctx, context->ca);
 
   JS_FreeValue(ctx, context->error);
+}
+
+void
+context_add(struct context* context) {
+
+  if(context_list.next == 0 && context_list.prev == 0)
+    init_list_head(&context_list);
+
+  list_add(&context->link, &context_list);
+}
+
+void
+context_delete(struct context* context) {
+  list_del(&context->link);
+}
+
+struct context*
+context_for_fd(int fd, struct lws** p_wsi) {
+  struct list_head* el;
+
+  if(context_list.next == 0 && context_list.prev == 0)
+    init_list_head(&context_list);
+
+  list_for_each(el, &context_list) {
+    struct context* context = list_entry(el, struct context, link);
+    struct lws* wsi;
+
+    if((wsi = wsi_from_fd(context->lws, fd))) {
+      if(p_wsi)
+        *p_wsi = wsi;
+      return context;
+    }
+  }
+
+  return 0;
 }

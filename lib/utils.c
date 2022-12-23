@@ -12,6 +12,21 @@ str_chr(const char* in, char needle) {
 }
 
 size_t
+str_chrs(const char* in, const char needles[], size_t nn) {
+  const char* t = in;
+  size_t i;
+  for(;;) {
+    if(!*t)
+      break;
+    for(i = 0; i < nn; i++)
+      if(*t == needles[i])
+        return (size_t)(t - in);
+    ++t;
+  }
+  return (size_t)(t - in);
+}
+
+size_t
 byte_chr(const void* x, size_t len, char c) {
   const char *s, *t, *str = x;
 

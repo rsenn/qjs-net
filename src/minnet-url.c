@@ -12,11 +12,16 @@ THREAD_LOCAL JSClassID minnet_url_class_id;
 
 enum {
   URL_PROTOCOL,
+  URL_HOSTNAME,
   URL_HOST,
   URL_PORT,
   URL_PATH,
   URL_QUERY,
   URL_TLS,
+  URL_SEARCH,
+  URL_HASH,
+  URL_ORIGIN,
+  URL_HREF,
 };
 
 MinnetURL*
@@ -67,38 +72,79 @@ minnet_url_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = url->protocol ? JS_NewString(ctx, url->protocol) : JS_NULL;
       break;
     }
-    case URL_HOST: {
+
+    case URL_HOSTNAME: {
       ret = url->host ? JS_NewString(ctx, url->host) : JS_NULL;
       break;
     }
-    case URL_PORT: {
-      ret = JS_NewUint32(ctx, url->port);
-      break;
-    }
-    case URL_PATH: {
-      if(url->path) {
-        size_t pathlen = str_chr(url->path, '?');
-        ret = JS_NewStringLen(ctx, url->path, pathlen);
-      } else {
-        ret = JS_NULL;
+
+    case URL_HOST: {
+      char* str;
+      if((str = url_host(*url, ctx))) {
+        ret = JS_NewString(ctx, str);
+        js_free(ctx, str);
       }
       break;
     }
+
+    case URL_PORT: {
+      if(url->port >= 0 && url->port <= 0xffff)
+        ret = JS_NewUint32(ctx, url->port);
+      break;
+    }
+
+    case URL_PATH: {
+      ret = url->path ? JS_NewStringLen(ctx, url->path, str_chrs(url->path, "?#", 2)) : JS_NULL;
+      break;
+    }
+
     case URL_QUERY: {
       const char* query;
-
-      if((query = url_query(*url))) {
+      if((query = url_query(*url)))
         ret = query_object(query, ctx);
-      } else {
+      else
         ret = JS_NULL;
-      }
-
       break;
     }
+
     case URL_TLS: {
       if(url->protocol) {
         MinnetProtocol proto = protocol_number(url->protocol);
         ret = JS_NewBool(ctx, protocol_is_tls(proto));
+      }
+      break;
+    }
+
+    case URL_SEARCH: {
+      const char* search;
+      size_t searchlen;
+      if((search = url_search(*url, &searchlen)))
+        ret = JS_NewStringLen(ctx, search, searchlen);
+      break;
+    }
+
+    case URL_HASH: {
+      const char* hash;
+      if((hash = url_hash(*url)))
+        ret = JS_NewString(ctx, hash);
+      break;
+    }
+
+    case URL_HREF: {
+      char* str;
+      if((str = url_format(*url, ctx))) {
+        ret = JS_NewString(ctx, str);
+        js_free(ctx, str);
+      }
+      break;
+    }
+
+    case URL_ORIGIN: {
+      char *str, *end;
+      if((str = url_format(*url, ctx))) {
+        end = url->path ? strstr(str, url->path) : str + strlen(str);
+        ret = JS_NewStringLen(ctx, str, end - str);
+        js_free(ctx, str);
       }
       break;
     }
@@ -127,12 +173,8 @@ minnet_url_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int ma
       }
       break;
     }
-    case URL_HOST: {
-      /*if(JS_IsNull(value) || JS_IsUndefined(value)) {
-        if(url->host)
-          js_free(ctx, url->host);
-        url->host = 0;
-      } else */
+
+    case URL_HOSTNAME: {
       if((str = JS_ToCString(ctx, value))) {
         if(url->host)
           js_free(ctx, url->host);
@@ -141,13 +183,14 @@ minnet_url_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int ma
       }
       break;
     }
+
     case URL_PORT: {
       int32_t port = -1;
       JS_ToInt32(ctx, &port, value);
-
-      url->port = (port >= 0 && port <= 65535) ? port : -1;
+      url->port = URL_IS_VALID_PORT(port) ? port : -1;
       break;
     }
+
     case URL_PATH: {
       if((str = JS_ToCStringLen(ctx, &len, value))) {
         url_set_path_len(url, str, len, ctx);
@@ -155,6 +198,7 @@ minnet_url_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int ma
       }
       break;
     }
+
     case URL_QUERY: {
       if(JS_IsString(value)) {
         if((str = JS_ToCStringLen(ctx, &len, value))) {
@@ -176,11 +220,13 @@ minnet_url_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int ma
       break;
     }
   }
-
   return ret;
 }
 
-enum { URL_TO_STRING };
+enum {
+  URL_TO_STRING,
+  URL_TO_OBJECT,
+};
 
 JSValue
 minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
@@ -198,6 +244,10 @@ minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
         ret = JS_NewString(ctx, str);
         js_free(ctx, str);
       }
+      break;
+    }
+    case URL_TO_OBJECT: {
+      ret = url_object(*url, ctx);
       break;
     }
   }
@@ -298,13 +348,19 @@ static JSClassDef minnet_url_class = {
 
 static const JSCFunctionListEntry minnet_url_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_url_get, minnet_url_set, URL_PROTOCOL, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("host", minnet_url_get, minnet_url_set, URL_HOST, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("hostname", minnet_url_get, minnet_url_set, URL_HOSTNAME, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("host", minnet_url_get, 0, URL_HOST, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_url_get, minnet_url_set, URL_PORT, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_url_get, minnet_url_set, URL_PATH, JS_PROP_ENUMERABLE),
-    JS_ALIAS_DEF("pathname", "path"),
-    JS_CGETSET_MAGIC_FLAGS_DEF("query", minnet_url_get, minnet_url_set, URL_QUERY, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("pathname", minnet_url_get, minnet_url_set, URL_PATH, JS_PROP_ENUMERABLE),
+    JS_ALIAS_DEF("path", "pathname"),
+    JS_CGETSET_MAGIC_FLAGS_DEF("query", minnet_url_get, minnet_url_set, URL_QUERY, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("search", minnet_url_get, 0, URL_SEARCH, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("hash", minnet_url_get, 0, URL_HASH, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("origin", minnet_url_get, 0, URL_ORIGIN, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("tls", minnet_url_get, 0, URL_TLS, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("href", minnet_url_get, 0, URL_HREF, 0),
     JS_CFUNC_MAGIC_DEF("toString", 0, minnet_url_method, URL_TO_STRING),
+    JS_CFUNC_MAGIC_DEF("toObject", 0, minnet_url_method, URL_TO_OBJECT),
     JS_CFUNC_DEF("inspect", 0, minnet_url_inspect),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetURL", JS_PROP_CONFIGURABLE),
 };

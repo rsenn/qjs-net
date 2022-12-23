@@ -17,6 +17,8 @@ enum protocol {
   NUM_PROTOCOLS,
 };
 
+#define URL_IS_VALID_PORT(num) ((num) >= 0 && (num) <= 65535)
+
 enum protocol protocol_number(const char*);
 const char* protocol_string(enum protocol);
 uint16_t protocol_default_port(enum protocol);
@@ -41,6 +43,7 @@ void url_parse(struct url*, const char*, JSContext*);
 struct url url_create(const char*, JSContext*);
 size_t url_print(char*, size_t, const struct url);
 char* url_format(const struct url, JSContext*);
+char* url_host(const struct url, JSContext* ctx);
 size_t url_length(const struct url);
 void url_free(struct url*, JSContext*);
 void url_free_rt(struct url*, JSRuntime*);
@@ -50,11 +53,14 @@ BOOL url_set_query_len(struct url*, const char*, size_t, JSContext*);
 void url_info(const struct url, struct lws_client_connect_info*);
 char* url_location(const struct url, JSContext*);
 const char* url_query(const struct url);
+const char* url_search(const struct url, size_t* len_p);
+const char* url_hash(const struct url);
 void url_fromobj(struct url*, JSValueConst, JSContext*);
 BOOL url_fromvalue(struct url*, JSValueConst, JSContext*);
 void url_fromwsi(struct url*, struct lws*, JSContext*);
 void url_dump(const char*, struct url const*);
 struct url* url_new(JSContext*);
+JSValue url_object(const struct url url, JSContext* ctx);
 
 static inline const char*
 url_path(const struct url url) {

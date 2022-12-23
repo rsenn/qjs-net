@@ -4,7 +4,7 @@ import * as os from 'os';
 import REPL from 'repl';
 import inspect from 'inspect';
 import net, { Socket, URL, Request } from 'net';
-import { Console } from 'console';
+import { Console, ConsoleOptions } from 'console';
 import { quote, toString, toArrayBuffer } from 'util';
 
 const connections = new Set();
@@ -106,7 +106,7 @@ class CLI extends REPL {
       .replace(/-/g, ' ')
       .replace(/\.[^\/.]*$/, '');
     let [prefix, suffix] = [name, prompt2];
-    let prompt = MakePrompt(prefix, suffix).slice(0, -2);
+    let prompt = MakePrompt(prefix, suffix, false).slice(0, -2);
     super(prompt, false);
 
     Object.assign(this, { prefix, suffix });
@@ -121,12 +121,16 @@ class CLI extends REPL {
     let orig_log = console.log;
     let log = this.printFunction((...args) => orig_log(...args));
     console.log = (...args) => {
-      //log('console.log:', args);
-      //while(str.endsWith('\n')) str = str.slice(0, -1);
-
-      this.printStatus(args.map(arg => inspect(arg, console.options)));
+      let opts = console.config(console.options);
+      this.printStatus(
+        args.reduce((acc, arg) => {
+          if(arg instanceof ConsoleOptions) opts = opts.merge(arg);
+          else acc = (acc != '' ? acc + ' ' : '') + inspect(arg, opts);
+          return acc;
+        }, '')
+      );
     };
-    this.commandMode = true;
+    this.commandMode = false;
     this.commands['\x1b'] ??= this.escape;
     //this.commands['\x11'] = this.escape;
     this.commands['§'] = this.escape;
@@ -161,7 +165,7 @@ async function main(...args) {
   globalThis.console = new Console({
     inspectOptions: {
       depth: Infinity,
-      compact: 1,
+      compact: 0,
       customInspect: true
     }
   });
@@ -179,6 +183,7 @@ async function main(...args) {
       port: [true, null, 'p'],
       method: [true, null, 'm'],
       output: [true, null, 'o'],
+      protocol: [true, null, 'P'],
       header: [
         true,
         arg => {
@@ -200,7 +205,7 @@ async function main(...args) {
   //  const url = params['@'][0] ?? 'ws://127.0.0.1:8999';
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
-  const { binary } = params;
+  const { binary, protocol } = params;
   let urls = params['@'];
 
   function createWS(url, callbacks, listen = 0) {
@@ -230,6 +235,7 @@ async function main(...args) {
       sslPrivateKey,
       method,
       binary,
+      protocol,
       block: false,
       body: function* () {
         yield '{ "test": 1234 }';
@@ -327,7 +333,7 @@ async function main(...args) {
         os.setWriteHandler(fd, wr);
       },
       onMessage(ws, msg) {
-        //console.log('onMessage', { ws, msg });
+        console.log('onMessage', console.config({ compact: 1 }), { ws, msg });
         if(typeof msg == 'string') {
           msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
           msg = msg.substring(0, 100);

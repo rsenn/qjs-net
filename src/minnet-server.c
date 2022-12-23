@@ -91,6 +91,8 @@ server_new(JSContext* ctx) {
   server->context.js = ctx;
   server->context.info = (struct lws_context_creation_info){.protocols = protocols2, .user = server};
 
+  context_add(&server->context);
+
   return server;
 }
 

@@ -38,6 +38,7 @@
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 size_t str_chr(const char*, char);
+size_t str_chrs(const char*, const char needles[], size_t nn);
 size_t byte_chr(const void*, size_t, char);
 size_t byte_chrs(const void*, size_t, const char[], size_t);
 size_t byte_rchr(const void*, size_t, char);

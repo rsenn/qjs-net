@@ -95,13 +95,24 @@ protocol_is_tls(enum protocol p) {
   }
 }
 
+static const char*
+start_from(const char* p, char ch) {
+  if(p)
+    for(; *p; p++)
+      if(*p == '\\')
+        ++p;
+      else if(*p == ch)
+        break;
+  return p;
+}
+
 void
 url_init(struct url* url, const char* protocol, const char* host, int port, const char* path, JSContext* ctx) {
   enum protocol proto = protocol_number(protocol);
 
   url->protocol = protocol_string(proto);
   url->host = js_strdup(ctx, host && *host ? host : "0.0.0.0");
-  url->port = port >= 0 && port <= 65535 ? port : protocol_default_port(proto);
+  url->port = URL_IS_VALID_PORT(port) ? port : protocol_default_port(proto);
   url->path = js_strdup(ctx, path ? path : "");
 }
 
@@ -191,8 +202,8 @@ url_format(const struct url url, JSContext* ctx) {
   enum protocol proto = -1;
 
   if((str = js_malloc(ctx, len))) {
-    const char* host = url.host ? url.host : "0.0.0.0";
     size_t pos = 0;
+    const char* host;
     str[pos] = '\0';
     if(url.protocol) {
       proto = protocol_number(url.protocol);
@@ -201,14 +212,38 @@ url_format(const struct url url, JSContext* ctx) {
       strcpy(&str[pos], "://");
       pos += 3;
     }
-    if(proto != -1 && url.port == protocol_default_port(proto)) {
-      strcpy(&str[pos], host);
-      pos += strlen(&str[pos]);
-    } else {
-      pos += sprintf(&str[pos], "%s:%u", host, url.port);
+    if((host = url.host ? url.host : (pos > 0 || url.port >= 0) ? "0.0.0.0" : 0)) {
+      if(proto != -1 && (url.port == protocol_default_port(proto) || url.port < 0)) {
+        strcpy(&str[pos], host);
+        pos += strlen(&str[pos]);
+      } else {
+        pos += sprintf(&str[pos], "%s:%u", host, url.port);
+      }
     }
     if(url.path)
       strcpy(&str[pos], url.path);
+  }
+  return str;
+}
+
+char*
+url_host(const struct url url, JSContext* ctx) {
+  size_t len = (url.host ? strlen(url.host) + 1 + 5 : 0) + 1;
+  char* str;
+
+  if((str = js_malloc(ctx, len))) {
+    size_t pos = 0;
+    const char* host;
+    str[pos] = '\0';
+
+    if((host = url.host ? url.host : (pos > 0 || url.port >= 0) ? "0.0.0.0" : 0)) {
+      if(url.port < 0) {
+        strcpy(&str[pos], host);
+        pos += strlen(&str[pos]);
+      } else {
+        pos += sprintf(&str[pos], "%s:%u", host, url.port);
+      }
+    }
   }
   return str;
 }
@@ -306,12 +341,12 @@ url_info(const struct url url, struct lws_client_connect_info* info) {
 #elif defined(LWS_ROLE_H1)
       info->alpn = "http/1.1";
 #endif
-      info->protocol = "http";
+      info->protocol = strdup("http");
       break;
     }
     case PROTOCOL_WS:
     case PROTOCOL_WSS: {
-      info->protocol = "ws";
+      info->protocol = strdup("ws");
       break;
     }
     default: {
@@ -362,20 +397,27 @@ url_location(const struct url url, JSContext* ctx) {
 const char*
 url_query(const struct url url) {
   const char* p;
-  if(!url.path)
-    return 0;
 
-  for(p = url.path; *p; p++) {
-    if(*p == '\\') {
-      ++p;
-      continue;
-    }
-    if(*p == '?') {
-      ++p;
-      break;
-    }
-  }
-  return *p ? p : 0;
+  if((p = start_from(url.path, '?')))
+    ++p;
+
+  return p;
+}
+
+const char*
+url_search(const struct url url, size_t* len_p) {
+  const char* s;
+
+  if((s = start_from(url.path, '?')))
+    if(len_p)
+      *len_p = str_chr(s, '#');
+
+  return s;
+}
+
+const char*
+url_hash(const struct url url) {
+  return start_from(url.path, '#');
 }
 
 void
@@ -388,14 +430,19 @@ url_fromobj(struct url* url, JSValueConst obj, JSContext* ctx) {
   protocol = JS_ToCString(ctx, value);
   JS_FreeValue(ctx, value);
 
-  value = JS_GetPropertyStr(ctx, obj, "host");
+  value = JS_GetPropertyStr(ctx, obj, "hostname");
+  if(JS_IsUndefined(value))
+    value = JS_GetPropertyStr(ctx, obj, "host");
   host = JS_ToCString(ctx, value);
   JS_FreeValue(ctx, value);
 
   value = JS_GetPropertyStr(ctx, obj, "port");
   JS_ToInt32(ctx, &port, value);
+  JS_FreeValue(ctx, value);
 
-  value = JS_GetPropertyStr(ctx, obj, "path");
+  value = JS_GetPropertyStr(ctx, obj, "pathname");
+  if(JS_IsUndefined(value))
+    value = JS_GetPropertyStr(ctx, obj, "path");
   path = JS_ToCString(ctx, value);
   JS_FreeValue(ctx, value);
 
@@ -445,7 +492,7 @@ url_fromwsi(struct url* url, struct lws* wsi, JSContext* ctx) {
         if(url->host)
           js_free(ctx, url->host);
         url->host = p;
-        if(port >= 0 && port <= 65535) {
+        if(URL_IS_VALID_PORT(port)) {
           url->port = port;
           break;
         }
@@ -504,4 +551,31 @@ url_new(JSContext* ctx) {
 
   url->ref_count = 1;
   return url;
+}
+
+JSValue
+url_object(const struct url url, JSContext* ctx) {
+  JSValue ret = JS_NewObject(ctx);
+
+  if(url.protocol)
+    JS_SetPropertyStr(ctx, ret, "protocol", JS_NewString(ctx, url.protocol));
+
+  if(url.host)
+    JS_SetPropertyStr(ctx, ret, "hostname", JS_NewString(ctx, url.host));
+
+  if(URL_IS_VALID_PORT(url.port))
+    JS_SetPropertyStr(ctx, ret, "port", JS_NewUint32(ctx, url.port));
+
+  if(url.path) {
+    size_t len = str_chrs(url.path, "?#", 2);
+    JS_SetPropertyStr(ctx, ret, "pathname", JS_NewStringLen(ctx, url.path, len));
+
+    const char* str;
+    if((str = url_search(url, &len)))
+      JS_SetPropertyStr(ctx, ret, "search", JS_NewStringLen(ctx, str, len));
+    if((str = url_hash(url)))
+      JS_SetPropertyStr(ctx, ret, "hash", JS_NewString(ctx, str));
+  }
+
+  return ret;
 }

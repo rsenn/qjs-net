@@ -78,6 +78,7 @@ client_new(JSContext* ctx) {
     init_list_head(&minnet_clients);
 
   list_add_tail(&client->link, &minnet_clients);
+  context_add(&client->context);
 
   return client;
 }
@@ -97,31 +98,7 @@ client_find(struct lws* wsi) {
 
 void
 client_free(MinnetClient* client, JSContext* ctx) {
-  if(--client->ref_count == 0) {
-    DEBUG("%s() client=%p\n", __func__, client);
-
-    if(client->link.prev)
-      list_del(&client->link);
-
-    JS_FreeValue(ctx, client->headers);
-    client->headers = JS_UNDEFINED;
-    JS_FreeValue(ctx, client->body);
-    client->body = JS_UNDEFINED;
-    JS_FreeValue(ctx, client->next);
-    client->next = JS_UNDEFINED;
-
-    if(client->connect_info.method) {
-      js_free(ctx, (void*)client->connect_info.method);
-      client->connect_info.method = 0;
-    }
-
-    js_promise_free(ctx, &client->promise);
-
-    context_clear(&client->context);
-    session_clear(&client->session, ctx);
-
-    js_free(ctx, client);
-  }
+  return client_free_rt(client, JS_GetRuntime(ctx));
 }
 
 void
@@ -147,6 +124,8 @@ client_free_rt(MinnetClient* client, JSRuntime* rt) {
     js_promise_free_rt(rt, &client->promise);
 
     context_clear(&client->context);
+    context_delete(&client->context);
+
     session_clear_rt(&client->session, rt);
 
     js_free_rt(rt, client);
@@ -319,6 +298,18 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   url_info(client->request->url, &client->connect_info);
 
+  value = JS_GetPropertyStr(ctx, options, "protocol");
+  if(!JS_IsUndefined(value)) {
+    const char* str = JS_ToCString(ctx, value);
+
+    if(client->connect_info.protocol)
+      free((void*)client->connect_info.protocol);
+
+    client->connect_info.protocol = strdup(str);
+    JS_FreeCString(ctx, str);
+  }
+  JS_FreeValue(ctx, value);
+
   DEBUG("alpn = '%s'\n", client->connect_info.alpn);
 
   client->connect_info.pwsi = &client->wsi;
@@ -384,6 +375,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   opaque = lws_opaque(client->wsi, client->context.js);
   opaque->binary = binary;
+  opaque->connect_info = &client->connect_info;
   /*opaque->req = client->request;
   opaque->resp = client->response;*/
 

@@ -4,6 +4,7 @@
 #include <list.h>
 #include <libwebsockets.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "utils.h"
 
 enum socket_state {
@@ -32,6 +33,7 @@ struct wsi_opaque_user_data {
   struct list_head link;
   struct form_parser* form_parser;
   struct lws* upstream;
+  struct lws_client_connect_info* connect_info;
 };
 
 extern THREAD_LOCAL int64_t serial;
@@ -43,10 +45,18 @@ void opaque_clear(struct wsi_opaque_user_data*, JSContext* ctx);
 void opaque_free(struct wsi_opaque_user_data*, JSContext* ctx);
 struct wsi_opaque_user_data* opaque_new(JSContext*);
 struct wsi_opaque_user_data* lws_opaque(struct lws*, JSContext* ctx);
+bool opaque_valid(struct wsi_opaque_user_data* opaque);
 
 static inline struct wsi_opaque_user_data*
 opaque_dup(struct wsi_opaque_user_data* opaque) {
   ++opaque->ref_count;
   return opaque;
 }
+
+static inline struct wsi_opaque_user_data*
+opaque_from_wsi(struct lws* wsi) {
+  struct wsi_opaque_user_data* opaque;
+  return ((opaque = lws_get_opaque_user_data(wsi)) && opaque_valid(opaque)) ? opaque : 0;
+}
+
 #endif /* QJSNET_LIB_OPAQUE_H */

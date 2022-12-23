@@ -12,7 +12,7 @@ THREAD_LOCAL JSClassID minnet_form_parser_class_id;
 THREAD_LOCAL JSValue minnet_form_parser_proto, minnet_form_parser_ctor;
 
 enum { FORM_PARSER_PARAMS, FORM_PARSER_SOCKET, FORM_PARSER_READ, FORM_PARSER_ON_OPEN, FORM_PARSER_ON_CONTENT, FORM_PARSER_ON_CLOSE, FORM_PARSER_ON_FINALIZE };
- 
+
 JSValue
 minnet_form_parser_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;

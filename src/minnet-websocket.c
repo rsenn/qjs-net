@@ -342,7 +342,11 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
     }
     case WEBSOCKET_PROTOCOL: {
       const struct lws_protocols* protocol;
-      if((protocol = lws_get_protocol(ws->lwsi)))
+      struct lws_client_connect_info* cinfo;
+
+      if((cinfo = ws_opaque(ws)->connect_info) && cinfo->protocol)
+        ret = JS_NewString(ctx, cinfo->protocol);
+      else if((protocol = lws_get_protocol(ws->lwsi)))
         ret = JS_NewString(ctx, protocol->name);
       break;
     }
@@ -379,6 +383,44 @@ minnet_ws_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int mag
 
     case WEBSOCKET_BINARY: {
       ws_opaque(ws)->binary = JS_ToBool(ctx, value);
+      break;
+    }
+  }
+  return ret;
+}
+
+enum {
+  WEBSOCKET_FROMFD = 0,
+};
+
+static JSValue
+minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  JSValue ret = JS_UNDEFINED;
+  switch(magic) {
+    case WEBSOCKET_FROMFD: {
+      struct lws* wsi;
+      struct context* context;
+      int32_t fd = -1;
+
+      if(argc > 0)
+        JS_ToInt32(ctx, &fd, argv[0]);
+
+      if((context = context_for_fd(fd, &wsi))) {
+        struct wsi_opaque_user_data* opaque;
+        struct session_data* sess;
+
+        if((opaque = opaque_from_wsi(wsi))) {
+          if(!opaque->ws)
+            opaque->ws = ws_new(wsi, ctx);
+
+          ret = minnet_ws_wrap(ctx, opaque->ws);
+        } else if((sess = lws_session(wsi))) {
+          ret = JS_NewInt32(ctx, -2);
+        } else {
+          ret = minnet_ws_new(ctx, wsi);
+        }
+      }
+
       break;
     }
   }
@@ -473,6 +515,7 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
 };
 
 const JSCFunctionListEntry minnet_ws_static_funcs[] = {
+    JS_CFUNC_MAGIC_DEF("byFd", 1, minnet_ws_static, 0),
     JS_PROP_INT32_DEF("CONNECTING", 0, JS_PROP_ENUMERABLE),
     JS_PROP_INT32_DEF("OPEN", 1, JS_PROP_ENUMERABLE),
     JS_PROP_INT32_DEF("CLOSING", 2, JS_PROP_ENUMERABLE),

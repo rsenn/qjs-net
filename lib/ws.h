@@ -56,7 +56,7 @@ ws_session(struct socket* ws) {
 static inline struct socket*
 ws_from_wsi(struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
-  return (opaque = lws_get_opaque_user_data(wsi)) ? opaque->ws : 0;
+  return ((opaque = lws_get_opaque_user_data(wsi)) && opaque_valid(opaque)) ? opaque->ws : 0;
 }
 
 #endif /* QJSNET_LIB_WS_H */
