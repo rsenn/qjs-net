@@ -602,6 +602,11 @@ js_promise_then(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
   return js_invoke(ctx, promise, "then", 1, &handler);
 }
 
+JSValue
+js_promise_catch(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
+  return js_invoke(ctx, promise, "catch", 1, &handler);
+}
+
 BOOL
 js_is_promise(JSContext* ctx, JSValueConst value) {
   JSValue ctor;

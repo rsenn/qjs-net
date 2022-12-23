@@ -151,7 +151,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_PATH: {
-      ret = req->url.path ? JS_NewString(ctx, req->url.path) : JS_NULL;
+      ret = JS_NewString(ctx, req->url.path ? req->url.path : "");
       break;
     }
     case REQUEST_HEADERS: {
@@ -332,7 +332,7 @@ JSClassDef minnet_request_class = {
 };
 
 const JSCFunctionListEntry minnet_request_proto_funcs[] = {
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, 0),

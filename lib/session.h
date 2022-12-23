@@ -22,7 +22,8 @@ struct session_data {
   struct http_mount* mount;
   struct proxy_connection* proxy;
   JSValue generator, next;
-  BOOL in_body, wait_resolve, response_sent;
+  BOOL in_body, response_sent;
+  uint32_t wait_resolve;
   struct server_context* server;
   struct client_context* client;
   Queue sendq;

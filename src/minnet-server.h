@@ -29,6 +29,10 @@ JSValue minnet_server(JSContext*, JSValue, int, JSValue argv[]);
 int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
 int ws_server_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
 
+static inline struct server_context*
+lws_server(struct lws* wsi) {
+  return lws_context_user(lws_get_context(wsi));
+}
 // extern THREAD_LOCAL MinnetServer minnet_server;
 
 #endif /* MINNET_SERVER_H */

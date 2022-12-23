@@ -15,7 +15,7 @@ enum {
   URL_HOSTNAME,
   URL_HOST,
   URL_PORT,
-  URL_PATH,
+  URL_PATHNAME,
   URL_QUERY,
   URL_TLS,
   URL_SEARCH,
@@ -93,8 +93,8 @@ minnet_url_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
 
-    case URL_PATH: {
-      ret = url->path ? JS_NewStringLen(ctx, url->path, str_chrs(url->path, "?#", 2)) : JS_NULL;
+    case URL_PATHNAME: {
+      ret = url->path ? JS_NewStringLen(ctx, url->path, str_chrs(url->path, "?#", 2)) : JS_NewString(ctx, "");
       break;
     }
 
@@ -191,7 +191,7 @@ minnet_url_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int ma
       break;
     }
 
-    case URL_PATH: {
+    case URL_PATHNAME: {
       if((str = JS_ToCStringLen(ctx, &len, value))) {
         url_set_path_len(url, str, len, ctx);
         JS_FreeCString(ctx, str);
@@ -351,8 +351,8 @@ static const JSCFunctionListEntry minnet_url_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("hostname", minnet_url_get, minnet_url_set, URL_HOSTNAME, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("host", minnet_url_get, 0, URL_HOST, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_url_get, minnet_url_set, URL_PORT, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("pathname", minnet_url_get, minnet_url_set, URL_PATH, JS_PROP_ENUMERABLE),
-    JS_ALIAS_DEF("path", "pathname"),
+    JS_CGETSET_MAGIC_FLAGS_DEF("pathname", minnet_url_get, minnet_url_set, URL_PATHNAME, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_url_get, 0, URL_PATHNAME, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("query", minnet_url_get, minnet_url_set, URL_QUERY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("search", minnet_url_get, 0, URL_SEARCH, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("hash", minnet_url_get, 0, URL_HASH, JS_PROP_ENUMERABLE),

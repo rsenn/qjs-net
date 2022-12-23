@@ -159,6 +159,7 @@ void js_promise_zero(ResolveFunctions* funcs);
 BOOL js_promise_pending(ResolveFunctions const* funcs);
 BOOL js_promise_done(ResolveFunctions const* funcs);
 JSValue js_promise_then(JSContext*, JSValueConst promise, JSValueConst handler);
+JSValue js_promise_catch(JSContext*, JSValueConst promise, JSValueConst handler);
 BOOL js_is_promise(JSContext* ctx, JSValueConst value);
 JSValue js_error_new(JSContext* ctx, const char* fmt, ...);
 uint8_t* js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value);

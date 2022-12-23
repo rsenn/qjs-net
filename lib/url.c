@@ -398,8 +398,10 @@ const char*
 url_query(const struct url url) {
   const char* p;
 
-  if((p = start_from(url.path, '?')))
+  if(*(p = start_from(url.path, '?')) == '?')
     ++p;
+  else
+    p = 0;
 
   return p;
 }
