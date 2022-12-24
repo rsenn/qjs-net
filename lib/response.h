@@ -44,6 +44,4 @@ response_generator(struct http_response* resp, JSContext* ctx) {
 
 struct http_response* response_new(JSContext*);
 
-struct http_response* response_session(struct http_response* resp, struct session_data* session, JSCallback* cb);
-
 #endif /* QJSNET_LIB_RESPONSE_H */

@@ -73,3 +73,8 @@ context_for_fd(int fd, struct lws** p_wsi) {
 
   return 0;
 }
+
+struct context*
+context_for_wsi(int, struct lws* wsi) {
+  return lws_context_user(lws_get_context(wsi));
+}

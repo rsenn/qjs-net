@@ -17,6 +17,11 @@ enum http_method {
 
 typedef enum http_method HTTPMethod;
 
+static inline void*
+wsi_context(struct lws* wsi) {
+  return lws_context_user(lws_get_context(wsi));
+}
+
 bool wsi_http2(struct lws*);
 bool wsi_tls(struct lws*);
 char* wsi_peer(struct lws*);

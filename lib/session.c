@@ -3,8 +3,16 @@
 #include "ringbuffer.h"
 #include "jsutils.h"
 #include "ws.h"
+#include "context.h"
+#include "lws-utils.h"
+#include <assert.h>
 
 struct socket* minnet_ws_data(JSValueConst);
+struct http_request* minnet_request_data(JSValueConst);
+struct http_response* minnet_response_data(JSValueConst);
+
+struct http_response;
+extern struct http_response* minnet_response_data(JSValueConst);
 
 /*static THREAD_LOCAL uint32_t session_serial = 0;
 THREAD_LOCAL struct list_head session_list = {0, 0};*/
@@ -85,4 +93,62 @@ session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
     lws_callback_on_writable(ws->lwsi);
 
   return ret;
+}
+
+int
+session_callback(struct session_data* session, JSCallback* cb, struct context* context) {
+  int ret = 0;
+  struct wsi_opaque_user_data* opaque = session_opaque(session);
+  struct http_response* resp = 0;
+  JSValue result = callback_emit_this(cb, session->ws_obj, 2, &session->req_obj);
+  context_exception(context, result);
+
+  if(JS_IsException(result)) {
+    JS_FreeValue(cb->ctx, result);
+    ret = -1;
+  } else if(js_is_iterator(cb->ctx, result)) {
+    assert(js_is_iterator(cb->ctx, result));
+    session->generator = result;
+    session->next = JS_UNDEFINED;
+  } else {
+    JS_FreeValue(cb->ctx, result);
+  }
+
+  return ret;
+}
+
+struct wsi_opaque_user_data*
+session_opaque(struct session_data* sess) {
+  struct socket* ws;
+
+  if((ws = session_ws(sess))) {
+    assert(ws->lwsi);
+    return lws_get_opaque_user_data(ws->lwsi);
+  }
+
+  return 0;
+}
+
+struct context*
+session_context(struct session_data* sess) {
+  struct lws* wsi;
+
+  if((wsi = session_wsi(sess)))
+    return wsi_context(wsi);
+
+  return 0;
+}
+
+struct http_request*
+session_request(struct session_data* sess) {
+  if(JS_IsObject(sess->req_obj))
+    return minnet_request_data(sess->req_obj);
+  return 0;
+}
+
+struct http_response*
+session_response(struct session_data* sess) {
+  if(JS_IsObject(sess->resp_obj))
+    return minnet_response_data(sess->resp_obj);
+  return 0;
 }

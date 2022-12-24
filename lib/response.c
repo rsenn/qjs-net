@@ -111,22 +111,3 @@ response_redirect(struct http_response* resp, const char* location, JSContext* c
   headers_set(ctx, &resp->headers, "Location", location);
   return resp;
 }
-
-struct http_response*
-response_session(struct http_response* resp, struct session_data* session, JSCallback* cb) {
-  // struct http_response* resp = minnet_response_data2(cb->ctx, session->resp_obj);
-
-  if(cb && cb->ctx) {
-    JSValue ret = callback_emit_this(cb, session->ws_obj, 2, session->args);
-    lwsl_user("response_session ret=%s", JS_ToCString(cb->ctx, ret));
-    if(JS_IsObject(ret) && minnet_response_data(ret)) {
-      JS_FreeValue(cb->ctx, session->args[1]);
-      session->args[1] = ret;
-      resp = minnet_response_data(ret);
-    } else {
-      JS_FreeValue(cb->ctx, ret);
-    }
-  }
-  lwsl_user("response_session %s", response_dump(resp));
-  return resp;
-}
