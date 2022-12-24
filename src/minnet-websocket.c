@@ -409,7 +409,7 @@ minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
         struct wsi_opaque_user_data* opaque;
         struct session_data* sess;
 
-        if((opaque = opaque_from_wsi(wsi))) {
+        if((opaque = opaque_fromwsi(wsi))) {
           if(!opaque->ws)
             opaque->ws = ws_new(wsi, ctx);
 

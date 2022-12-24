@@ -5,6 +5,7 @@
 #include <libwebsockets.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <assert.h>
 #include "utils.h"
 
 enum socket_state {
@@ -54,9 +55,10 @@ opaque_dup(struct wsi_opaque_user_data* opaque) {
 }
 
 static inline struct wsi_opaque_user_data*
-opaque_from_wsi(struct lws* wsi) {
-  struct wsi_opaque_user_data* opaque;
-  return ((opaque = lws_get_opaque_user_data(wsi)) && opaque_valid(opaque)) ? opaque : 0;
+opaque_fromwsi(struct lws* wsi) {
+  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+  assert(opaque);
+  return opaque;
 }
 
 #endif /* QJSNET_LIB_OPAQUE_H */
