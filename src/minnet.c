@@ -12,8 +12,6 @@
 #include "jsutils.h"
 #include "utils.h"
 #include "buffer.h"
-#include "modules/minnet.h"
-#include "modules/minnet.c"
 #include <libwebsockets.h>
 #include <assert.h>
 #include <errno.h>
