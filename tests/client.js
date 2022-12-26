@@ -27,12 +27,12 @@ export default function Client(url, options, debug) {
 
   err.puts(`Client connecting to ${url} ...\n`);
 
-  setLog(
+ /* setLog(
     LLL_WARN | LLL_USER,
     (level, message) =>
       !/LOAD_EXTRA|VHOST_CERT_AGING/.test(message) &&
       log(`${logLevels[level].padEnd(10)} ${message.replace(/\n/g, '\\n').trim()}`)
-  );
+  );*/
 
   let writable, readable, c, pr, resolve, reject;
 
@@ -101,9 +101,14 @@ export default function Client(url, options, debug) {
     },
     async onHttp(req, resp) {
       // console.log('onHttp', { req, resp });
-      let t=await resp.text();
+      let t=  resp.text();
+
        console.log('onHttp', t);
-      push(t);
+
+      t.then(t => {
+        console.log('onHttp',t);
+        push(t);
+      });
       /*for await(let chunk of resp.body) {
         //console.log('onHttp body chunk:', chunk);
         push(chunk);

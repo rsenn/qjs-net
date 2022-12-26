@@ -22,7 +22,7 @@ minnet_generator_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
   JSValue ret = JS_UNDEFINED;
 
-  ret = generator_next(gen, ctx);
+  ret = generator_next(gen);
 
   return ret;
 }

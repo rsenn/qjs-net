@@ -220,6 +220,12 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         client->response->status_text = js_strdup(ctx, &buf[i]);
       }
 
+      if(client->on.http.ctx) {
+        JSValue ret;
+        ret = client_exception(client, callback_emit_this(&client->on.http, session->ws_obj, 2, &session->req_obj));
+        JS_FreeValue(client->on.http.ctx, ret);
+      }
+
       if(method_number(client->connect_info.method) == METHOD_POST) {
         lws_client_http_body_pending(wsi, 1);
         lws_callback_on_writable(wsi);
@@ -298,66 +304,81 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
+      MinnetResponse* resp = opaque->resp;
+      Generator* gen = resp->generator;
+      LOGCB("CLIENT-HTTP(2)", "gen->q=%p", gen->q);
+
+      if(gen && gen->q) {
+
+        if(gen->q->continuous && !JS_IsNull(gen->callback)) {
+
+          JSValue ret = generator_next(gen);
+
+          JS_Call(ctx, gen->callback, JS_UNDEFINED, 1, &ret);
+          JS_FreeValue(ctx, ret);
+        }
+      }
+
       if(client->on.http.ctx) {
-        MinnetRequest* req;
-        MinnetResponse* resp = minnet_response_data2(client->on.http.ctx, session->resp_obj);
-        int32_t result = -1;
-        JSValue ret;
+        /*        MinnetRequest* req;
+                MinnetResponse* resp = minnet_response_data2(client->on.http.ctx, session->resp_obj);
+                int32_t result = -1;
+                JSValue ret;
+        */
 
         // url_copy(&resp->url, client->request->url, client->on.http.ctx);
 
         // resp->type = headers_get(&resp->headers, "content-type", client->on.http.ctx);
 
-        ret = client_exception(client, callback_emit_this(&client->on.http, session->ws_obj, 2, &session->req_obj));
+        /*    ret = client_exception(client, callback_emit_this(&client->on.http, session->ws_obj, 2, &session->req_obj));
 
-        if(JS_IsNumber(ret)) {
-          JS_ToInt32(client->on.http.ctx, &result, ret);
+            if(JS_IsNumber(ret)) {
+              JS_ToInt32(client->on.http.ctx, &result, ret);
 
-          printf("onHttp() returned: %" PRId32 "\n", result);
-          client->wsi = wsi;
+              printf("onHttp() returned: %" PRId32 "\n", result);
+              client->wsi = wsi;
 
-        } else if((req = minnet_request_data(ret))) {
-          url_info(req->url, &client->connect_info);
-          client->connect_info.pwsi = &client->wsi;
-          client->connect_info.context = client->context.lws;
+            } else if((req = minnet_request_data(ret))) {
+              url_info(req->url, &client->connect_info);
+              client->connect_info.pwsi = &client->wsi;
+              client->connect_info.context = client->context.lws;
 
-          if(client->request) {
-            request_free(client->request, client->on.http.ctx);
-            client->request = 0;
-          }
+              if(client->request) {
+                request_free(client->request, client->on.http.ctx);
+                client->request = 0;
+              }
 
-          if(client->response) {
-            response_free(client->response, client->on.http.ctx);
-            client->response = 0;
-          }
-          if(opaque->resp) {
-            response_free(opaque->resp, client->on.http.ctx);
-            opaque->resp = 0;
-          }
+              if(client->response) {
+                response_free(client->response, client->on.http.ctx);
+                client->response = 0;
+              }
+              if(opaque->resp) {
+                response_free(opaque->resp, client->on.http.ctx);
+                opaque->resp = 0;
+              }
 
-          client->request = req;
-          client->response = response_new(client->on.http.ctx);
+              client->request = req;
+              client->response = response_new(client->on.http.ctx);
 
-          //   opaque->req = request_dup(req);
 
-          lws_client_connect_via_info(&client->connect_info);
+              lws_client_connect_via_info(&client->connect_info);
 
-          result = 0;
-        } else if(js_is_promise(ctx, ret)) {
-          JSValue promise = client_promise(ctx, session, resp, wsi, ret);
+              result = 0;
+            } else if(js_is_promise(ctx, ret)) {
+              JSValue promise = client_promise(ctx, session, resp, wsi, ret);
 
-        } else {
-          const char* str = JS_ToCString(ctx, ret);
-          JS_ThrowInternalError(client->on.http.ctx, "onHttp didn't return a number: %s", str);
-          if(str)
-            JS_FreeCString(ctx, str);
-        }
+            } else {
+              const char* str = JS_ToCString(ctx, ret);
+              JS_ThrowInternalError(client->on.http.ctx, "onHttp didn't return a number: %s", str);
+              if(str)
+                JS_FreeCString(ctx, str);
+            }
 
-        if(result != 0) {
-          lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
-        }
+            if(result != 0) {
+              lws_cancel_service(lws_get_context(wsi));
+            }
 
-        return result;
+            return result;*/
       }
       break;
     }

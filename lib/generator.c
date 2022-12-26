@@ -54,36 +54,42 @@ generator_new(JSContext* ctx) {
   return gen;
 }
 
+static JSValue
+generator_dequeue(Generator* gen, BOOL* done_p) {
+  ByteBlock blk = queue_next(gen->q, done_p);
+  JSValue ret = block_SIZE(&blk) ? gen->block_fn(&blk, gen->ctx) : JS_UNDEFINED;
+
+  if(block_BEGIN(&blk)) {
+    gen->bytes_read += block_SIZE(&blk);
+    gen->chunks_read += 1;
+  }
+
+  return ret;
+}
+
 static int
-generator_dequeue(Generator* gen) {
+generator_update(Generator* gen) {
   int i = 0;
 
-  while(!list_empty(&gen->iterator.reads) && (gen->q && queue_size(gen->q) > 0)) {
+  while(!list_empty(&gen->iterator.reads) && gen->q && queue_size(gen->q) > 0) {
     BOOL done = FALSE;
-    ByteBlock blk = queue_next(gen->q, &done);
-    JSValue chunk = block_SIZE(&blk) ? gen->block_fn(&blk, gen->ctx) : JS_UNDEFINED;
+    JSValue chunk = generator_dequeue(gen, &done);
     done ? asynciterator_stop(&gen->iterator, gen->ctx) : asynciterator_yield(&gen->iterator, chunk, gen->ctx);
     JS_FreeValue(gen->ctx, chunk);
 
-    if(!done)
-      ++i;
-
-    if(block_BEGIN(&blk)) {
-      gen->bytes_read += block_SIZE(&blk);
-      gen->chunks_read += 1;
-    }
+    ++i;
   }
 
   return i;
 }
 
 JSValue
-generator_next(Generator* gen, JSContext* ctx) {
+generator_next(Generator* gen) {
   JSValue ret = JS_UNDEFINED;
 
-  ret = asynciterator_next(&gen->iterator, ctx);
+  ret = asynciterator_next(&gen->iterator, gen->ctx);
 
-  generator_dequeue(gen);
+  generator_update(gen);
 
   return ret;
 }
@@ -146,9 +152,9 @@ generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
 BOOL
 generator_cancel(Generator* gen) {
   BOOL ret = FALSE;
-  
+
   if(!queue_complete(gen->q)) {
-     queue_close(gen->q);
+    queue_close(gen->q);
     ret = TRUE;
   }
   if(asynciterator_cancel(&gen->iterator, JS_UNDEFINED, gen->ctx))
@@ -208,7 +214,7 @@ BOOL
 generator_continuous(Generator* gen, JSValueConst callback) {
   Queue* q;
 
-  assert(JS_IsUndefined(gen->callback));
+  assert(JS_IsNull(gen->callback));
 
   if(!(q = gen->q))
     q = gen->q = queue_new(gen->ctx);

@@ -200,27 +200,6 @@ queue_bytes(Queue* q) {
   return bytes;
 }
 
-/*ByteBlock
-queue_concat(Queue* q, JSContext* ctx) {
-  size_t size = queue_bytes(q);
-  ByteBlock blk = block_new(size, ctx);
-  QueueItem* i;
-  struct list_head* el;
-  size_t pos = 0, len;
-
-  list_for_each(el, &q->items) {
-    i = list_entry(el, QueueItem, link);
-
-    if((len = block_SIZE(&i->block)))
-      memcpy(&blk.start[pos], i->block.start, len);
-
-    pos += len;
-  }
-
-  return blk;
-}
-*/
-
 QueueItem*
 queue_continuous(Queue* q) {
   QueueItem* i;

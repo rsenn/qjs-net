@@ -26,7 +26,7 @@ void generator_zero(Generator*);
 void generator_destroy(Generator**);
 BOOL generator_free(Generator*);
 Generator* generator_new(JSContext*);
-JSValue generator_next(Generator*, JSContext* ctx);
+JSValue generator_next(Generator*);
 ssize_t generator_write(Generator*, const void* data, size_t len, JSValueConst callback);
 JSValue generator_push(Generator*, JSValueConst value);
 BOOL generator_yield(Generator*, JSValueConst value, JSValueConst callback);
