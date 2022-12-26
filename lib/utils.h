@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <quickjs.h>
 #include <cutils.h>
+#include <list.h>
 
 #if defined(_WIN32) || defined(__MINGW32__)
 #define VISIBLE __declspec(dllexport)
@@ -96,4 +97,7 @@ static inline char*
 socket_local(int fd) {
   return socket_address(fd, &getsockname);
 }
+
+size_t list_size(struct list_head*);
+
 #endif /* QJSNET_LIB_UTILS_H */

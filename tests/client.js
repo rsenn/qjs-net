@@ -37,7 +37,6 @@ export default function Client(url, options, debug) {
   let writable, readable, c, pr, resolve, reject;
 
   readable = new Generator(async (push, stop) => {
-  
     c = client(url, {
       tls,
       sslCert,
@@ -74,26 +73,28 @@ export default function Client(url, options, debug) {
 
         onError ? onError(ws, error) : (console.log('onError', { ws, error }), exit(error));
       },
-     
+
       onFd(fd, rd, wr) {
         setReadHandler(fd, rd);
         setWriteHandler(fd, wr);
       },
-      onMessage(ws, msg) {         onMessage
+      onMessage(ws, msg) {
+        onMessage
           ? onMessage(ws, msg)
           : (console.log('onMessage', console.config({ maxStringLen: 100 }), { ws, msg }),
             puts(escape(abbreviate(msg)) + '\n'));
       },
       async onHttp(req, resp) {
         console.log('onHttp', { req, resp });
-        let text =  await resp.text();
 
+        /*        let text =  await resp.text();
           console.log('onHttp(2)', text.replace(/\n/g, '\\n').substring(0,100));
-          console.log('push', push(text));
-        /*for await(let chunk of resp.body) {
-          console.log('onHttp body chunk:', chunk);
+          console.log('push', await push(text));
+*/
+        for await(let chunk of resp.body) {
+          //console.log('onHttp body chunk:', chunk);
           push(chunk);
-        }*/
+        }
       }
     });
   });

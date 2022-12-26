@@ -257,3 +257,13 @@ js_value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
   lwsl_user("%s = '%s'\n", n, str);
   JS_FreeCString(ctx, str);
 }
+
+size_t
+list_size(struct list_head* list) {
+  size_t count = 0;
+  if(list->next && list->prev) {
+    struct list_head* el;
+    list_for_each(el, list)++ count;
+  }
+  return count;
+}

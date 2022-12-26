@@ -512,7 +512,7 @@ js_resolve_functions_is_null(ResolveFunctions const* funcs) {
 
 static inline JSValue
 js_resolve_functions_call(JSContext* ctx, ResolveFunctions* funcs, int index, JSValueConst arg) {
-  JSValue ret = JS_UNDEFINED, func = ((JSValue*)&funcs)[index];
+  JSValue ret = JS_UNDEFINED, func = ((JSValue*)funcs)[index];
 
   assert(!JS_IsNull(func));
   ret = JS_Call(ctx, func, JS_UNDEFINED, 1, &arg);

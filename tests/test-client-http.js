@@ -44,7 +44,7 @@ async function main(...args) {
     console.log('cli', cli);
     console.log('cli.readable', cli.readable);
     for await(let chunk of cli.readable) {
-      console.log('DATA:', chunk.replace(/\n/g, '\\n').substring(0, 100));
+      console.log('DATA:', chunk);
     }
   }
 
