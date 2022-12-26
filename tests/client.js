@@ -92,9 +92,12 @@ export default function Client(url, options, debug) {
           console.log('push', await push(text));
 */
         for await(let chunk of resp.body) {
-          //console.log('onHttp body chunk:', chunk);
-          push(chunk);
+
+          console.log('\x1b[1;33monHttp body chunk\x1b[1;36m:\x1b[0m',chunk.length, chunk.replace(/\n/g, '\\n').substring(0,100));
+        push(chunk);
+        // /*await */push(chunk);
         }
+        
       }
     });
   });

@@ -63,6 +63,7 @@ asynciterator_next(AsyncIterator* it, JSContext* ctx) {
   if((rd = js_malloc(ctx, sizeof(AsyncRead)))) {
     list_add(&rd->link, &it->reads);
     ret = js_promise_create(ctx, &rd->promise);
+    rd->id = ++it->serial;
   }
 
   asynciterator_check_closing(it, ctx);
@@ -106,10 +107,14 @@ asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContex
   AsyncRead* rd;
 
   if((rd = asynciterator_shift(it, ctx))) {
+
+    printf("%-22s reads: %zu read: %" PRIu32 " value: %.*s done: %i\n", __func__, list_size(&it->reads), rd->id, 10, JS_ToCString(ctx, value), done);
+
     JSValue obj = asynciterator_object(value, done, ctx);
     js_promise_resolve(ctx, &rd->promise, obj);
     JS_FreeValue(ctx, obj);
     js_free(ctx, rd);
+    //    it->serial++;
     return TRUE;
   }
 

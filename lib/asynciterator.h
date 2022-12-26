@@ -6,11 +6,13 @@
 typedef struct async_read {
   struct list_head link;
   ResolveFunctions promise;
+  uint32_t id;
 } AsyncRead;
 
 typedef struct async_iterator {
   struct list_head reads;
   BOOL closed, closing;
+  uint32_t serial;
 } AsyncIterator;
 
 void asynciterator_zero(AsyncIterator*);

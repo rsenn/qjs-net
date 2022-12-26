@@ -38,13 +38,13 @@ async function main(...args) {
             stdout.flush();*/
         }
       },
-      0 // debug ? LLL_INFO - 1 : LLL_USER
+      true // debug ? LLL_INFO - 1 : LLL_USER
     );
 
     console.log('cli', cli);
     console.log('cli.readable', cli.readable);
     for await(let chunk of cli.readable) {
-      console.log('DATA:', chunk);
+      console.log('DATA: '+ chunk.replace(/\n/g, '\n      ').split('\n').map(line => line.substring(0,80)).join('\n'));
     }
   }
 
