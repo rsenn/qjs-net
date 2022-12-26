@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <libwebsockets.h>
 #include "context.h"
 #include "utils.h"
@@ -50,7 +51,8 @@ context_add(struct context* context) {
 
 void
 context_delete(struct context* context) {
-  list_del(&context->link);
+  if(context->link.next || context->link.prev)
+    list_del(&context->link);
 }
 
 struct context*
@@ -72,9 +74,4 @@ context_for_fd(int fd, struct lws** p_wsi) {
   }
 
   return 0;
-}
-
-struct context*
-context_for_wsi(int, struct lws* wsi) {
-  return lws_context_user(lws_get_context(wsi));
 }

@@ -15,6 +15,7 @@ typedef struct generator {
   };
   JSContext* ctx;
   Queue* q;
+  JSValue callback;
   uint64_t bytes_written, bytes_read;
   uint32_t chunks_written, chunks_read;
   JSValue (*block_fn)(ByteBlock*, JSContext*);

@@ -15,6 +15,22 @@
 #define DEBUG(x...)
 #endif
 
+extern struct lws_protocols *minnet_client_protocols, *minnet_server_protocols;
+
+typedef union {
+  struct lws_protocols lws;
+  struct {
+    const char* name;
+    lws_callback_function* callback;
+    size_t per_session_data_size;
+    size_t rx_buffer_size;
+    unsigned int id;
+    void* user;
+    size_t tx_packet_size;
+    enum { CLIENT, SERVER } type;
+  };
+} MinnetProtocols;
+
 #define SETLOG(max_level) lws_set_log_level(((((max_level) << 1) - 1) & (~LLL_PARSER)) | LLL_USER, NULL);
 
 #define ADD(ptr, inst, member) \
@@ -48,5 +64,8 @@ struct js_callback;
 int wsi_handle_poll(struct lws*, enum lws_callback_reasons, struct js_callback*, struct lws_pollargs* args);
 JSValue minnet_get_sessions(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[]);
 JSModuleDef* JS_INIT_MODULE(JSContext*, const char* module_name);
+
+int minnet_protocol_count(MinnetProtocols**);
+int minnet_protocol_add(MinnetProtocols** plist, struct lws_protocols protocol);
 
 #endif /* MINNET_H */

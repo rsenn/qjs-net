@@ -28,11 +28,11 @@ cmake_run() {
 configure_libwebsockets() {
   : ${sourcedir:=libwebsockets}
   : ${builddir:=libwebsockets/build/$($CC -dumpmachine)}
-  : ${prefix:=/opt/libwebsockets-$(cd "$sourcedir" && (git branch -a | sed -n '/^*/ { s|^*s*||; p }'))}
+  : ${prefix:=/opt/libwebsockets-$(cd "$sourcedir" && git branch -a |sed -n '/^\*/ { s|^[* ]*||; s|-[a-z]*$||; s|\s||g; p }')}
   : ${njobs:=10}
   : ${relsrcdir:=$(realpath --relative-to $builddir $sourcedir)}
   : ${PLUGINS:=OFF}
-  : ${DISKCACHE:=OFF}
+  : ${DISKCACHE:=ON}
   : ${CC:=gcc}
 
   mkdir -p $builddir
@@ -52,7 +52,7 @@ configure_libwebsockets() {
 	-DLWS_WITH_DISKCACHE:BOOL="$DISKCACHE" \
 	-DLWS_WITH_ACCESS_LOG:BOOL=ON \
 	-DLWS_WITH_CGI:BOOL=OFF \
-	-DLWS_WITH_DIR:BOOL=OFF \
+	-DLWS_WITH_DIR:BOOL=ON \
 	-DLWS_WITH_EVLIB_PLUGINS:BOOL=OFF \
 	-DLWS_WITH_EXTERNAL_POLL:BOOL=ON \
 	-DLWS_WITH_FILE_OPS:BOOL=ON \

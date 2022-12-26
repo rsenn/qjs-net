@@ -29,6 +29,7 @@ static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 static THREAD_LOCAL int32_t minnet_log_level = 0;
 static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
 static THREAD_LOCAL JSValue minnet_js_module;
+struct lws_protocols *minnet_client_protocols = 0, *minnet_server_protocols = 0;
 
 #ifndef POLLIN
 #define POLLIN 1
@@ -479,4 +480,31 @@ minnet_debug(const char* format, ...) {
     fputc(buf[i], stdout);
   }
   fflush(stdout);
+}
+
+int
+minnet_protocol_count(MinnetProtocols** plist) {
+  int i;
+
+  if(!*plist)
+    return 0;
+
+  for(i = 0;; i++) {
+    if((*plist)[i].name == NULL)
+      break;
+  }
+  return i;
+}
+
+int
+minnet_protocol_add(MinnetProtocols** plist, struct lws_protocols protocol) {
+  size_t pos = minnet_protocol_count(plist);
+
+  if(!(*plist = realloc(*plist, (pos + 1) * sizeof(struct lws_protocols))))
+    return -1;
+
+  memcpy(&(*plist)[pos], &protocol, sizeof(struct lws_protocols));
+  memset(&(*plist)[pos + 1], 0, sizeof(struct lws_protocols));
+
+  return pos;
 }

@@ -1,6 +1,6 @@
 import { err, exit, puts } from 'std';
 import { setReadHandler, setWriteHandler } from 'os';
-import { client, setLog, LLL_WARN, LLL_CLIENT, LLL_USER, URL, generator, logLevels } from 'net';
+import { client, setLog, LLL_WARN, LLL_CLIENT, LLL_USER, URL, Generator, logLevels } from 'net';
 import { Levels, DefaultLevels, Init, isDebug, log } from './log.js';
 import { escape, abbreviate } from './common.js';
 
@@ -36,15 +36,15 @@ export default function Client(url, options, debug) {
 
   let writable, readable, c, pr, resolve, reject;
 
-  readable = new generator(async (push, stop) => {
-    onMessage = (ws, data) => push(data);
+  readable = new Generator(async (push, stop) => {
+ /*   onMessage = (ws, data) => push(data);
     onClose = onError = (ws, status) => {
       console.log('stop', { ws, status });
 
       stop(status);
     };
   });
-
+*/
   c = client(url, {
     tls,
     sslCert,
@@ -101,16 +101,16 @@ export default function Client(url, options, debug) {
     },
     async onHttp(req, resp) {
       // console.log('onHttp', { req, resp });
-      let body = resp.body;
-
-      for await(let chunk of body) {
-        onMessage(null, chunk);
-      }
-      console.log('onHttp done!', { resp, body });
-
-      return 'XXX';
+      let t=await resp.text();
+       console.log('onHttp', t);
+      push(t);
+      /*for await(let chunk of resp.body) {
+        //console.log('onHttp body chunk:', chunk);
+        push(chunk);
+      }*/
     }
   });
+});
 
   return {
     readable: Object.defineProperties(
@@ -120,7 +120,7 @@ export default function Client(url, options, debug) {
           value: () => readable
         },
         getReader: {
-          value: () => ({ read: readable.next })
+          value: () => ({ read: () => readable.next() })
         },
         [Symbol.toStringTag]: { value: 'ReadableStream' }
       }

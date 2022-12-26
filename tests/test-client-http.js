@@ -26,11 +26,16 @@ async function main(...args) {
       {
         block: false,
         onHttp(req, resp) {
-          //log('onHttp', { req, resp });
+          log('onHttp', { req, resp });
 
           /*  let body = resp.text();
           puts(body);*/
           log(`Headers:`, resp.headers);
+        },
+        onMessage(...args) {
+          log('onMessage', { args });
+          /* stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
+            stdout.flush();*/
         }
       },
       debug ? LLL_INFO - 1 : LLL_USER
@@ -39,7 +44,7 @@ async function main(...args) {
     console.log('cli', cli);
     console.log('cli.readable', cli.readable);
     for await(let chunk of cli.readable) {
-      console.log('chunk', chunk);
+      console.log('DATA:', chunk.replace(/\n/g, '\\n').substring(0,100));
     }
   }
 

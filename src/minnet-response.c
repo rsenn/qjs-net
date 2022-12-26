@@ -63,32 +63,31 @@ enum {
 
 static JSValue
 minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
-  JSValue ret, result = JS_UNDEFINED;
+  JSValue ret;
   ResolveFunctions funcs;
   MinnetResponse* resp;
 
   if(!(resp = minnet_response_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
+  ret = js_promise_create(ctx, &funcs);
+
   switch(magic) {
-    /*case RESPONSE_ARRAYBUFFER: {
-      result = JS_NewArrayBuffer(ctx, block_BEGIN(resp->body), block_SIZE(resp->body), 0, 0, 0);
+    case RESPONSE_ARRAYBUFFER: {
       break;
     }
     case RESPONSE_TEXT: {
-      result = JS_NewStringLen(ctx, (char*)block_BEGIN(resp->body), buffer_HEAD(resp->body));
+      if(resp->generator) {
+        generator_continuous(resp->generator, funcs.resolve);
+      }
       break;
     }
     case RESPONSE_JSON: {
-      result = JS_ParseJSON(ctx, block_BEGIN(resp->body), buffer_HEAD(resp->body), resp->url.path);
       break;
-    }*/
+    }
   }
 
-  ret = js_promise_create(ctx, &funcs);
-
-  js_promise_resolve(ctx, &funcs, result);
-  JS_FreeValue(ctx, result);
+  js_promise_free(ctx, &funcs);
 
   return ret;
 }
@@ -145,7 +144,15 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case RESPONSE_TYPE: {
-      ret = resp->type ? JS_NewString(ctx, resp->type) : JS_NULL;
+      char* type;
+      size_t len;
+
+      if((type = resp->type))
+        len = strlen(type);
+      else
+        type = headers_getlen(&resp->headers, &len, "content-type");
+
+      ret = type ? JS_NewStringLen(ctx, type, len) : JS_NULL;
       break;
     }
       /* case RESPONSE_OFFSET: {

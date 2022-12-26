@@ -17,7 +17,7 @@
 
 static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
 
-static /*THREAD_LOCAL*/ struct list_head minnet_clients = {0, 0};
+static THREAD_LOCAL struct list_head minnet_clients = {0, 0};
 
 static const struct lws_protocols client_protocols[] = {
     {"raw", client_callback, 0, 0, 0, 0, 0},
@@ -134,7 +134,6 @@ client_free_rt(MinnetClient* client, JSRuntime* rt) {
 
 void
 client_zero(MinnetClient* client) {
-  // memset(client, 0, sizeof(MinnetClient));
   client->ref_count = 1;
   client->headers = JS_NULL;
   client->body = JS_NULL;

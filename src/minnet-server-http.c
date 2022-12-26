@@ -387,6 +387,7 @@ serve_rejected(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   queue_close(&session->sendq);
 
   JS_FreeCString(ctx, message);
+  return JS_UNDEFINED;
 }
 
 static JSValue
@@ -931,7 +932,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_HTTP: {
       MinnetRequest* req = opaque->req ? opaque->req : (opaque->req = request_fromwsi(wsi, ctx));
-      MinnetResponse* resp;
       JSValue* args = &session->ws_obj;
       char* path = in;
       size_t mountpoint_len = 0, pathlen = 0;
@@ -1004,7 +1004,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if(!JS_IsObject(session->resp_obj))
           session->resp_obj = minnet_response_new(ctx, req->url, 200, 0, TRUE, "text/html");
 
-        resp = opaque->resp = minnet_response_data2(ctx, session->resp_obj);
+        opaque->resp = minnet_response_data2(ctx, session->resp_obj);
         LOGCB("HTTP(3)", "req=%p, header=%zu mnt=%s org=%s", req, buffer_HEAD(&req->headers), mount->mnt, mount->org);
         request_dup(req);
         cb = &mount->callback;
