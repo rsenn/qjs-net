@@ -138,6 +138,7 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
 
   ret->ip = wsi_ipaddr(wsi);
   ret->secure = wsi_tls(wsi);
+  ret->h2 = wsi_http2(wsi);
 
   return ret;
 }

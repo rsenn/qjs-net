@@ -16,7 +16,7 @@ int method_number(const char*);
 
 typedef struct http_request {
   int ref_count;
-  BOOL read_only, secure;
+  BOOL read_only, secure, h2;
   enum http_method method;
   struct url url;
   ByteBuffer headers;

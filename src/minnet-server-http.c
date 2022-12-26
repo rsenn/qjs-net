@@ -802,7 +802,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   if(opaque->upstream) {
     if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION) {
-      printf("FILTER(2)\n");
+      // printf("FILTER(2)\n");
     } else
       return lws_callback_http_dummy(wsi, reason, user, in, len);
   }

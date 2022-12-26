@@ -28,7 +28,7 @@ static JSValue
 client_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   const char* val = JS_ToCString(ctx, argv[0]);
 
-  printf("value=%s\n", val);
+  //printf("value=%s\n", val);
   LOG(__func__, "value=%s", val);
   JS_FreeCString(ctx, val);
 
@@ -134,6 +134,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetRequest* req = client->request;
       ByteBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
+      req->h2 = wsi_http2(wsi);
+
       size_t n = headers_write(&buf.write, buf.end, &req->headers, wsi);
 
       DEBUG("APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
@@ -179,24 +181,20 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       int status;
       MinnetResponse* resp;
 
-      if(!(resp = opaque->resp)) {
-        resp = opaque->resp = response_new(ctx);
+      //client->req->h2 = wsi_http2(wsi);
 
+      if(!(resp = opaque->resp)) {        resp = opaque->resp = response_new(ctx);
         resp->generator = generator_new(ctx);
         resp->status = lws_http_client_http_response(wsi);
-
         headers_tobuffer(ctx, &opaque->resp->headers, wsi);
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
       }
 
       headers_tobuffer(ctx, &opaque->resp->headers, wsi);
-
       if(!resp->type)
         resp->type = headers_get(&resp->headers, "content-type", ctx);
-
       if(!strncmp(resp->type, "text/", 5))
         resp->generator->block_fn = &block_tostring;
-
       url_copy(&resp->url, client->request->url, client->on.http.ctx);
 
       // opaque->resp->headers = headers_gettoken(ctx, wsi, WSI_TOKEN_HTTP_CONTENT_TYPE);
@@ -230,6 +228,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
       return 0;
     }
+    
     case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
       /*  case LWS_CALLBACK_HTTP_WRITEABLE: */ {
         if(method_number(client->connect_info.method) == METHOD_POST) {
@@ -333,7 +332,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             if(JS_IsNumber(ret)) {
               JS_ToInt32(client->on.http.ctx, &result, ret);
 
-              printf("onHttp() returned: %" PRId32 "\n", result);
+              //printf("onHttp() returned: %" PRId32 "\n", result);
               client->wsi = wsi;
 
             } else if((req = minnet_request_data(ret))) {

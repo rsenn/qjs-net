@@ -24,6 +24,7 @@ enum {
   REQUEST_TEXT,
   REQUEST_BODY,
   REQUEST_IP,
+  REQUEST_H2,
   REQUEST_PROTOCOL,
   REQUEST_SECURE,
   REQUEST_REFERER,
@@ -200,6 +201,10 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_NewBool(ctx, req->secure);
       break;
     }
+    case REQUEST_H2: {
+      ret = JS_NewBool(ctx, req->h2);
+      break;
+    }
   }
   return ret;
 }
@@ -343,7 +348,8 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("secure", minnet_request_get, 0, REQUEST_SECURE, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("ip", minnet_request_get, 0, REQUEST_IP, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_request_get, 0, REQUEST_PROTOCOL, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("h2", minnet_request_get, 0, REQUEST_H2, JS_PROP_CONFIGURABLE|JS_PROP_ENUMERABLE),
+   JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_request_get, 0, REQUEST_PROTOCOL, 0),
     JS_CFUNC_DEF("get", 1, minnet_request_getheader),
     JS_CFUNC_DEF("clone", 0, minnet_request_clone),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),

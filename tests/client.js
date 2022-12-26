@@ -85,19 +85,19 @@ export default function Client(url, options, debug) {
             puts(escape(abbreviate(msg)) + '\n'));
       },
       async onHttp(req, resp) {
-        console.log('onHttp', { req, resp });
-
-        /*        let text =  await resp.text();
-          console.log('onHttp(2)', text.replace(/\n/g, '\\n').substring(0,100));
-          console.log('push', await push(text));
-*/
-        for await(let chunk of resp.body) {
-
-          console.log('\x1b[1;33monHttp body chunk\x1b[1;36m:\x1b[0m',chunk.length, chunk.replace(/\n/g, '\\n').substring(0,100));
-        push(chunk);
-        // /*await */push(chunk);
-        }
-        
+        let text = await resp.text();
+        console.log('onHttp(2)', text.replace(/\n/g, '\\n').substring(0, 100));
+        console.log('push', await push(text));
+        /*for await(let chunk of resp.body) {
+          let psh;
+          console.log(
+            '\x1b[1;33monHttp body chunk\x1b[1;36m:\x1b[0m',
+            chunk.length,
+            chunk.replace(/\n/g, '\\n').substring(0, 100)
+          );
+          console.log('push', (psh = push(chunk)));
+          await psh;
+        }*/
       }
     });
   });

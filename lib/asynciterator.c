@@ -108,7 +108,7 @@ asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContex
 
   if((rd = asynciterator_shift(it, ctx))) {
 
-    printf("%-22s reads: %zu read: %" PRIu32 " value: %.*s done: %i\n", __func__, list_size(&it->reads), rd->id, 10, JS_ToCString(ctx, value), done);
+    // printf("%-22s reads: %zu read: %" PRIu32 " value: %.*s done: %i\n", __func__, list_size(&it->reads), rd->id, 10, JS_ToCString(ctx, value), done);
 
     JSValue obj = asynciterator_object(value, done, ctx);
     js_promise_resolve(ctx, &rd->promise, obj);

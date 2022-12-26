@@ -15,7 +15,7 @@ async function main(...args) {
   if(args.length == 0) {
     pid = spawn('server.js', ['localhost', 30000], null /*scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log')*/);
     sleep(1000);
-    args.push('https://localhost:30000/minnet.h');
+    args.push('https://localhost:30000/src/minnet.h');
   }
 
   for(let arg of args) {
@@ -38,13 +38,20 @@ async function main(...args) {
             stdout.flush();*/
         }
       },
-      true // debug ? LLL_INFO - 1 : LLL_USER
+   0 // debug ? LLL_INFO - 1 : LLL_USER
     );
 
     console.log('cli', cli);
     console.log('cli.readable', cli.readable);
     for await(let chunk of cli.readable) {
-      console.log('DATA: '+ chunk.replace(/\n/g, '\n      ').split('\n').map(line => line.substring(0,80)).join('\n'));
+      console.log(
+        'DATA: ' +
+          chunk
+            .replace(/\n/g, '\n      ')
+            .split('\n')
+            .map(line => line.substring(0, 80))
+            .join('\n')
+      );
     }
   }
 

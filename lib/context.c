@@ -14,7 +14,7 @@ context_exception(struct context* context, JSValue retval) {
     JSValue stack = JS_GetPropertyStr(context->js, context->error, "stack");
     const char* err = JS_ToCString(context->js, context->error);
     const char* stk = JS_ToCString(context->js, stack);
-    printf("Got exception: %s\n%s\n", err, stk);
+    // printf("Got exception: %s\n%s\n", err, stk);
     JS_FreeCString(context->js, err);
     JS_FreeCString(context->js, stk);
     JS_FreeValue(context->js, stack);
