@@ -49,7 +49,13 @@ block_free(ByteBlock* blk) {
 
 uint8_t*
 block_grow(ByteBlock* blk, size_t size) {
-  return realloc(block_ALLOC(blk), block_SIZE(blk) + LWS_PRE + size);
+  uint8_t* alloc;
+  size_t newsize = block_SIZE(blk) + size;
+  if((alloc = realloc(block_ALLOC(blk), LWS_PRE + newsize))) {
+    blk->start = alloc + LWS_PRE;
+    blk->end = blk->start + newsize;
+  }
+  return alloc ? blk->start : 0;
 }
 
 ssize_t
@@ -125,8 +131,8 @@ block_append(ByteBlock* blk, const void* data, size_t size) {
 
 void
 buffer_init(ByteBuffer* buf, uint8_t* start, size_t len) {
-  buf->start=start;
-  buf->end=start+len;
+  buf->start = start;
+  buf->end = start + len;
   buf->read = buf->start;
   buf->write = buf->start;
   buf->alloc = 0;

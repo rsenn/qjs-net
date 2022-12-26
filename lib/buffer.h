@@ -24,7 +24,6 @@ typedef struct byte_block {
 #define block_END(b) (void*)(b)->end
 #define block_ALLOC(b) (void*)((b)->start ? (b)->start - LWS_PRE : 0)
 
-void block_init(ByteBlock*, uint8_t* start, size_t len);
 uint8_t* block_alloc(ByteBlock*, size_t size);
 uint8_t* block_realloc(ByteBlock*, size_t size);
 void block_free(ByteBlock*);
@@ -32,8 +31,6 @@ uint8_t* block_grow(ByteBlock*, size_t size);
 ssize_t block_concat(ByteBlock*, ByteBlock other);
 ByteBlock block_new(size_t);
 ByteBlock block_copy(const void*, size_t size);
-ByteBlock block_from(void*, size_t size);
-int block_fromarraybuffer(ByteBlock*, JSValueConst value, JSContext* ctx);
 JSValue block_toarraybuffer(ByteBlock*, JSContext* ctx);
 JSValue block_tostring(ByteBlock*, JSContext* ctx);
 ssize_t block_append(ByteBlock*, const void* data, size_t size);
