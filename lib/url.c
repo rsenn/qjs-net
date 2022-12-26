@@ -97,12 +97,14 @@ protocol_is_tls(enum protocol p) {
 
 static const char*
 start_from(const char* p, char ch) {
-  if(p)
-    for(; *p; p++)
+  if(p) {
+    for(; *p; p++) {
       if(*p == '\\')
         ++p;
       else if(*p == ch)
         break;
+    }
+  }
   return p;
 }
 

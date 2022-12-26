@@ -26,14 +26,15 @@ void generator_zero(Generator*);
 void generator_destroy(Generator**);
 BOOL generator_free(Generator*);
 Generator* generator_new(JSContext*);
+JSValue generator_dequeue(Generator*, BOOL*);
 JSValue generator_next(Generator*);
-ssize_t generator_write(Generator*, const void* data, size_t len, JSValueConst callback);
-JSValue generator_push(Generator*, JSValueConst value);
-BOOL generator_yield(Generator*, JSValueConst value, JSValueConst callback);
+ssize_t generator_write(Generator*, const void*, size_t len, JSValueConst callback);
+JSValue generator_push(Generator*, JSValueConst);
+BOOL generator_yield(Generator*, JSValueConst, JSValueConst callback);
 BOOL generator_cancel(Generator*);
-BOOL generator_close(Generator*, JSValueConst callback);
+BOOL generator_close(Generator*, JSValueConst);
 JSValue generator_stop(Generator*);
-BOOL generator_continuous(Generator*, JSValueConst callback);
+BOOL generator_continuous(Generator*, JSValueConst);
 
 static inline Generator*
 generator_dup(Generator* gen) {

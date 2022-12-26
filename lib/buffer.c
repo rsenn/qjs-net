@@ -2,11 +2,11 @@
 #include "jsutils.h"
 #include <assert.h>
 
-void
+/*void
 block_init(ByteBlock* blk, uint8_t* start, size_t len) {
   blk->start = start;
   blk->end = blk->start + len;
-}
+}*/
 
 uint8_t*
 block_alloc(ByteBlock* blk, size_t size) {
@@ -81,12 +81,12 @@ block_copy(const void* ptr, size_t size) {
   return ret;
 }
 
-ByteBlock
+/*ByteBlock
 block_from(void* data, size_t size) {
   return (ByteBlock){data, (uint8_t*)data + size};
-}
+}*/
 
-int
+/*int
 block_fromarraybuffer(ByteBlock* blk, JSValueConst value, JSContext* ctx) {
   size_t len;
 
@@ -95,7 +95,7 @@ block_fromarraybuffer(ByteBlock* blk, JSValueConst value, JSContext* ctx) {
 
   blk->end = blk->start + len;
   return 0;
-}
+}*/
 
 JSValue
 block_toarraybuffer(ByteBlock* blk, JSContext* ctx) {
@@ -125,8 +125,8 @@ block_append(ByteBlock* blk, const void* data, size_t size) {
 
 void
 buffer_init(ByteBuffer* buf, uint8_t* start, size_t len) {
-  block_init(&buf->block, start, len);
-
+  buf->start=start;
+  buf->end=start+len;
   buf->read = buf->start;
   buf->write = buf->start;
   buf->alloc = 0;
@@ -217,7 +217,7 @@ buffer_realloc(ByteBuffer* buf, size_t size) {
   return x;
 }
 
-int
+/*int
 buffer_fromarraybuffer(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
   int ret;
 
@@ -227,7 +227,7 @@ buffer_fromarraybuffer(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
     buf->alloc = 0;
   }
   return ret;
-}
+}*/
 
 int
 buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {

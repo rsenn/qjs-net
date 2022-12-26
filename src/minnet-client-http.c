@@ -15,7 +15,7 @@ typedef struct {
   struct lws* wsi;
 } HTTPAsyncResolveClosure;
 
-static void
+/*static void
 client_resolved_free(void* ptr) {
   HTTPAsyncResolveClosure* closure = ptr;
   if(--closure->ref_count == 0) {
@@ -26,8 +26,6 @@ client_resolved_free(void* ptr) {
 
 static JSValue
 client_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  HTTPAsyncResolveClosure* closure = ptr;
-
   const char* val = JS_ToCString(ctx, argv[0]);
 
   printf("value=%s\n", val);
@@ -35,9 +33,9 @@ client_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
   JS_FreeCString(ctx, val);
 
   return JS_UNDEFINED;
-}
+}*/
 
-static JSValue
+/*static JSValue
 client_promise(JSContext* ctx, struct session_data* session, MinnetResponse* resp, struct lws* wsi, JSValueConst value) {
   HTTPAsyncResolveClosure* p;
   JSValue ret = JS_UNDEFINED;
@@ -52,7 +50,7 @@ client_promise(JSContext* ctx, struct session_data* session, MinnetResponse* res
     ret = JS_ThrowOutOfMemory(ctx);
   }
   return ret;
-}
+}*/
 
 int
 http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
@@ -311,8 +309,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(gen && gen->q) {
 
         if(gen->q->continuous && !JS_IsNull(gen->callback)) {
-
-          JSValue ret = generator_next(gen);
+          BOOL done = FALSE;
+          JSValue ret = generator_dequeue(gen, &done);
 
           JS_Call(ctx, gen->callback, JS_UNDEFINED, 1, &ret);
           JS_FreeValue(ctx, ret);

@@ -49,7 +49,7 @@ minnet_generator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   JSValue callback = argc > 1 ? JS_DupValue(ctx, argv[1]) : JS_NULL;
 
-  BOOL result = generator_close(gen, callback);
+  ret = JS_NewBool(ctx, generator_close(gen, callback));
 
   JS_FreeValue(ctx, callback);
 

@@ -133,9 +133,13 @@ queue_put(Queue* q, ByteBlock chunk, JSContext* ctx) {
   QueueItem* i;
 
   if(q->continuous && (i = queue_last_chunk(q))) {
-    if(block_append(&i->block, block_BEGIN(&chunk), block_SIZE(&chunk)) == -1)
-      i = 0;
-
+    if(!block_SIZE(&i->block)) {
+      //      i->block = chunk;
+      i->block = block_copy(chunk.start, block_SIZE(&chunk));
+    } else {
+      if(block_append(&i->block, block_BEGIN(&chunk), block_SIZE(&chunk)) == -1)
+        i = 0;
+    }
     block_free(&chunk);
   } else {
     i = queue_add(q, chunk);

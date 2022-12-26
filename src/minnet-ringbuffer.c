@@ -127,7 +127,7 @@ tail_new(JSContext* ctx, struct ringbuffer* rb, JSValueConst tail_value) {
   return tail;
 }
 
-static JSValue
+/*static JSValue
 tail_consume(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   JSValue ret = JS_UNDEFINED;
   struct ringbuffer_tail* tail = opaque;
@@ -151,7 +151,7 @@ tail_consume(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   js_buffer_free(&buf, ctx);
 
   return ret;
-}
+}*/
 
 static JSValue
 tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {

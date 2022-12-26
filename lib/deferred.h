@@ -60,17 +60,18 @@ void deferred_destructor(void*);
 void deferred_finalizer(JSRuntime*, void* opaque, void* ptr);
 JSValue deferred_tojs(Deferred*, JSContext* ctx);
 
-#define DEFERRED_SENTINEL (((void*)0) + 0xb222471f43df05)
+#define DEFERRED_SENTINEL (/*((void*)0) +*/ 0xb222471f43df05)
 
 static inline Deferred*
 vdeferred_new(ptr_t fn, va_list a) {
   int argc = 0;
-  ptr_t args[8] = {0}, arg;
+  ptr_t args[8] = {0};
+  size_t arg;
 
-  while((arg = va_arg(a, void*))) {
-    if(arg == DEFERRED_SENTINEL)
+  while((arg = va_arg(a, size_t))) {
+    if(arg == (size_t)DEFERRED_SENTINEL)
       break;
-    args[argc++] = arg;
+    args[argc++] = (void*)arg;
   }
 
   return deferred_newv(fn, argc, args);
@@ -84,15 +85,13 @@ deferred_new_x(ptr_t fn, ...) {
   va_list a;
   int argc = 0;
   ptr_t args[8] = {0}, arg;
-  Deferred* def;
   va_start(a, fn);
 
   while((arg = va_arg(a, void*))) {
-    if(arg == DEFERRED_SENTINEL)
+    if((size_t)arg == (size_t)DEFERRED_SENTINEL)
       break;
     args[argc++] = arg;
   }
-  // def = vdeferred_new(fn, a);
 
   va_end(a);
   return deferred_newv(fn, argc, args);

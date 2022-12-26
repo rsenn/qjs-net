@@ -656,11 +656,11 @@ file_size(FILE* fp) {
 
 static int
 serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const char* path, MinnetHttpMount* mount) {
-  MinnetRequest* req = opaque_fromwsi(wsi)->req;
+  // MinnetRequest* req = opaque_fromwsi(wsi)->req;
   MinnetResponse* resp = opaque_fromwsi(wsi)->resp;
   FILE* fp;
   const char* mime = lws_get_mimetype(path, &mount->lws);
-  BOOL compressed = has_transfer_encoding(req, "gzip");
+  // BOOL compressed = has_transfer_encoding(req, "gzip");
 
   DEBUG("serve_file path=%s mount=%s compressed=%i\n", path, mount->mnt, compressed);
 

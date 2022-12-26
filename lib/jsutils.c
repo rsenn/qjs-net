@@ -93,7 +93,7 @@ js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val) 
 JSValue
 js_function_bind_this_1(JSContext* ctx, JSValueConst func, JSValueConst this_val, JSValueConst arg) {
   JSValueConst bound[] = {this_val, arg};
-  return js_function_bind(ctx, func, countof(bound) | JS_BIND_THIS, &bound);
+  return js_function_bind(ctx, func, countof(bound) | JS_BIND_THIS, bound);
 }
 
 /*JSValue
@@ -501,20 +501,21 @@ js_timer_restart(struct TimerClosure* closure) {
 
 static inline void
 js_resolve_functions_zero(ResolveFunctions* funcs) {
-  funcs->array[0] = JS_NULL;
-  funcs->array[1] = JS_NULL;
+  funcs->resolve = JS_NULL;
+  funcs->reject = JS_NULL;
 }
 
 static inline BOOL
 js_resolve_functions_is_null(ResolveFunctions const* funcs) {
-  return JS_IsNull(funcs->array[0]) && JS_IsNull(funcs->array[1]);
+  return JS_IsNull(funcs->resolve) && JS_IsNull(funcs->reject);
 }
 
 static inline JSValue
 js_resolve_functions_call(JSContext* ctx, ResolveFunctions* funcs, int index, JSValueConst arg) {
-  JSValue ret = JS_UNDEFINED;
-  assert(!JS_IsNull(funcs->array[index]));
-  ret = JS_Call(ctx, funcs->array[index], JS_UNDEFINED, 1, &arg);
+  JSValue ret = JS_UNDEFINED, func = ((JSValue*)&funcs)[index];
+
+  assert(!JS_IsNull(func));
+  ret = JS_Call(ctx, func, JS_UNDEFINED, 1, &arg);
   js_promise_free(ctx, funcs);
   return ret;
 }
@@ -550,34 +551,34 @@ JSValue
 js_promise_create(JSContext* ctx, ResolveFunctions* funcs) {
   JSValue ret;
 
-  ret = JS_NewPromiseCapability(ctx, funcs->array);
+  ret = JS_NewPromiseCapability(ctx, &funcs->resolve);
   return ret;
 }
 
 void
 js_promise_free(JSContext* ctx, ResolveFunctions* funcs) {
-  JS_FreeValue(ctx, funcs->array[0]);
-  JS_FreeValue(ctx, funcs->array[1]);
+  JS_FreeValue(ctx, funcs->resolve);
+  JS_FreeValue(ctx, funcs->reject);
   js_resolve_functions_zero(funcs);
 }
 
 void
 js_promise_free_rt(JSRuntime* rt, ResolveFunctions* funcs) {
-  JS_FreeValueRT(rt, funcs->array[0]);
-  JS_FreeValueRT(rt, funcs->array[1]);
+  JS_FreeValueRT(rt, funcs->resolve);
+  JS_FreeValueRT(rt, funcs->reject);
   js_resolve_functions_zero(funcs);
 }
 
 JSValue
 js_promise_resolve(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
-  if(js_is_nullish(funcs->array[0]))
+  if(js_is_nullish(funcs->resolve))
     return JS_UNDEFINED;
   return js_resolve_functions_call(ctx, funcs, 0, value);
 }
 
 JSValue
 js_promise_reject(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
-  if(js_is_nullish(funcs->array[1]))
+  if(js_is_nullish(funcs->reject))
     return JS_UNDEFINED;
   return js_resolve_functions_call(ctx, funcs, 1, value);
 }
@@ -783,9 +784,8 @@ js_module_find_s(JSContext* ctx, const char* name) {
 void*
 js_module_export_find(JSModuleDef* module, JSAtom name) {
   void* export_entries = *(void**)((char*)module + sizeof(int) * 2 + sizeof(struct list_head) + sizeof(void*) + sizeof(int) * 2);
-  int export_entries_count = *(int*)((char*)module + sizeof(int) * 2 + sizeof(struct list_head) + sizeof(void*) + sizeof(int) * 2 + sizeof(void*));
+  int i, export_entries_count = *(int*)((char*)module + sizeof(int) * 2 + sizeof(struct list_head) + sizeof(void*) + sizeof(int) * 2 + sizeof(void*));
   static const size_t export_entry_size = sizeof(void*) * 2 + sizeof(int) * 2;
-  size_t i;
 
   for(i = 0; i < export_entries_count; i++) {
     void* entry = (char*)export_entries + export_entry_size * i;
@@ -954,7 +954,7 @@ js_atom_is_string(JSContext* ctx, JSAtom atom) {
 
 JSBuffer
 js_input_buffer(JSContext* ctx, JSValueConst value) {
-  JSBuffer ret = {0, 0, 0, &js_buffer_free_default, JS_UNDEFINED};
+  JSBuffer ret = {0, 0, 0, &js_buffer_free_default, JS_UNDEFINED, {0, 0}};
   int64_t offset = 0, length = INT64_MAX;
 
   ol_init(&ret.range);
@@ -983,12 +983,12 @@ js_input_buffer(JSContext* ctx, JSValueConst value) {
 
   if(offset < 0)
     ret.range.offset = ret.size + offset % ret.size;
-  else if(offset > ret.size)
+  else if((size_t)offset > ret.size)
     ret.range.offset = ret.size;
   else
     ret.range.offset = offset;
 
-  if(length >= 0 && length < ret.size)
+  if(length >= 0 && (size_t)length < ret.size)
     ret.range.length = length;
 
   return ret;

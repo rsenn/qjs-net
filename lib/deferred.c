@@ -103,14 +103,14 @@ deferred_call_x(Deferred* def, ...) {
   DoubleWord ret = {{0, 0}};
   va_list a;
   int argc = def->argc;
-  ptr_t arg;
+  size_t arg;
 
   va_start(a, def);
 
-  while(argc < countof(def->argv) && (arg = va_arg(a, void*))) {
+  while(argc < countof(def->argv) && (arg = va_arg(a, size_t))) {
     if(arg == DEFERRED_SENTINEL)
       break;
-    def->argv[argc++] = arg;
+    def->argv[argc++] = (ptr_t)arg;
   }
 
   va_end(a);

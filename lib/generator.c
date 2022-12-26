@@ -54,7 +54,7 @@ generator_new(JSContext* ctx) {
   return gen;
 }
 
-static JSValue
+JSValue
 generator_dequeue(Generator* gen, BOOL* done_p) {
   ByteBlock blk = queue_next(gen->q, done_p);
   JSValue ret = block_SIZE(&blk) ? gen->block_fn(&blk, gen->ctx) : JS_UNDEFINED;
@@ -71,7 +71,7 @@ static int
 generator_update(Generator* gen) {
   int i = 0;
 
-  while(!list_empty(&gen->iterator.reads) && gen->q && queue_size(gen->q) > 0) {
+  while(!list_empty(&gen->iterator.reads) && gen->q && !queue_closed(gen->q)) {
     BOOL done = FALSE;
     JSValue chunk = generator_dequeue(gen, &done);
     done ? asynciterator_stop(&gen->iterator, gen->ctx) : asynciterator_yield(&gen->iterator, chunk, gen->ctx);
@@ -113,7 +113,7 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
 
 JSValue
 generator_push(Generator* gen, JSValueConst value) {
-  ResolveFunctions funcs = {{JS_NULL, JS_NULL}};
+  ResolveFunctions funcs = {JS_NULL, JS_NULL};
   JSValue ret = js_promise_create(gen->ctx, &funcs);
 
   if(!generator_yield(gen, value, funcs.resolve)) {
@@ -199,7 +199,7 @@ generator_close(Generator* gen, JSValueConst callback) {
 
 JSValue
 generator_stop(Generator* gen) {
-  ResolveFunctions funcs = {{JS_NULL, JS_NULL}};
+  ResolveFunctions funcs = {JS_NULL, JS_NULL};
   JSValue ret = js_promise_create(gen->ctx, &funcs);
 
   if(!generator_close(gen, funcs.resolve)) {

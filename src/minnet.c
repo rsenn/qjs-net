@@ -28,7 +28,6 @@
 static THREAD_LOCAL JSValue minnet_log_cb, minnet_log_this;
 static THREAD_LOCAL int32_t minnet_log_level = 0;
 static THREAD_LOCAL JSContext* minnet_log_ctx = 0;
-static THREAD_LOCAL JSValue minnet_js_module;
 struct lws_protocols *minnet_client_protocols = 0, *minnet_server_protocols = 0;
 
 #ifndef POLLIN

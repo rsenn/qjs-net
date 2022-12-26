@@ -98,8 +98,6 @@ session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
 int
 session_callback(struct session_data* session, JSCallback* cb, struct context* context) {
   int ret = 0;
-  struct wsi_opaque_user_data* opaque = session_opaque(session);
-  struct http_response* resp = 0;
   JSValue result = callback_emit_this(cb, session->ws_obj, 2, &session->req_obj);
   context_exception(context, result);
 

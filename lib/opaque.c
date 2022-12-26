@@ -94,12 +94,7 @@ opaque_valid(struct wsi_opaque_user_data* opaque) {
   if(opaque_list.next == 0 && opaque_list.prev == 0)
     init_list_head(&opaque_list);
 
-  list_for_each(el, &opaque_list) {
-    struct wsi_opaque_user_data* opaque;
-
-    if(opaque == list_entry(el, struct wsi_opaque_user_data, link))
-      return true;
-  }
+  list_for_each(el, &opaque_list) if(opaque == list_entry(el, struct wsi_opaque_user_data, link)) return true;
 
   return false;
 }

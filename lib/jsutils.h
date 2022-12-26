@@ -76,11 +76,8 @@ typedef struct key_value {
 #define JS_ENTRY() \
   (JSEntry) { -1, JS_UNDEFINED }
 
-typedef union resolve_functions {
-  JSValue array[2];
-  struct {
-    JSValue resolve, reject;
-  };
+typedef struct resolve_functions {
+  JSValue resolve, reject;
 } ResolveFunctions;
 
 struct TimerClosure {
@@ -291,7 +288,7 @@ ol_data(const OffsetLength* ol, const void* x) {
 }
 
 static inline size_t
-ol_size(const OffsetLength* ol, size_t n) {
+ol_size(const OffsetLength* ol, int64_t n) {
   return MIN(ol->length, n - ol->offset);
 }
 
