@@ -38,7 +38,7 @@ async function main(...args) {
             stdout.flush();*/
         }
       },
-   1 // debug ? LLL_INFO - 1 : LLL_USER
+      1 // debug ? LLL_INFO - 1 : LLL_USER
     );
 
     console.log('cli', cli);

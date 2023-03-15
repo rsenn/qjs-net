@@ -33,7 +33,29 @@ configure_libwebsockets() {
   : ${relsrcdir:=$(realpath --relative-to $builddir $sourcedir)}
   : ${PLUGINS:=OFF}
   : ${DISKCACHE:=ON}
-  : ${CC:=gcc}
+	: ${CC:=gcc}
+	: ${SHARED:=OFF}
+
+	if [ -n "$OPENSSL_PREFIX" -a -d "$OPENSSL_PREFIX" ]; then
+	  if [ -z "$OPENSSL_LIBDIR" ]; then
+	  	OPENSSL_LIBDIR="$OPENSSL_PREFIX/lib"
+	  fi
+	  if [ -z "$OPENSSL_INCLUDEDIR" ]; then
+	  	OPENSSL_INCLUDEDIR="$OPENSSL_PREFIX/include"
+	  fi
+	else
+		archlibdir=/usr/lib/$(${CC-gcc} -dumpmachine)
+		if [ -n "$archlibdir" -a -d "$archlibdir" ]; then
+			if [ -e "$archlibdir/libssl.so" ]; then
+		   OPENSSL_LIBDIR="$archlibdir"
+		   OPENSSL_INCLUDEDIR=/usr/include
+			fi
+		fi
+	fi
+
+	if [ -d "$OPENSSL_LIBDIR" ]; then
+		LINK_FLAGS="${LINK_FLAGS:+$LINK_FLAGS }-Wl,-rpath=$OPENSSL_LIBDIR"
+	fi
 
   mkdir -p $builddir
   set --  $relsrcdir ${TOOLCHAIN+"-DCMAKE_TOOLCHAIN_FILE:FILEPATH=$TOOLCHAIN"} \
@@ -42,6 +64,7 @@ configure_libwebsockets() {
   -DCOMPILER_IS_CLANG:BOOL=OFF \
   ${CC:+-DCMAKE_C_COMPILER:STRING=${CC}} \
 	-DCMAKE_BUILD_TYPE:STRING=${TYPE-RelWithDebInfo} \
+	-DCMAKE_{SHARED,MODULE}_LINKER_FLAGS="$LINK_FLAGS" \
 	-DLWS_WITH_SHARED:BOOL=${SHARED-OFF} \
 	-DLWS_WITH_STATIC:BOOL=${STATIC-ON} \
 	-DLWS_STATIC_PIC:BOOL=${PIC-ON} \
@@ -57,6 +80,7 @@ configure_libwebsockets() {
 	-DLWS_WITH_EXTERNAL_POLL:BOOL=ON \
 	-DLWS_WITH_FILE_OPS:BOOL=ON \
 	-DLWS_WITH_FSMOUNT:BOOL=OFF \
+	-DLWS_WITH_GENCRYPTO:BOOL=ON \
 	-DLWS_WITH_NETLINK:BOOL=OFF \
 	-DLWS_WITH_HTTP2:BOOL="${HTTP2:-ON}" \
 	-DLWS_WITH_HTTP_BROTLI:BOOL=ON \
@@ -74,14 +98,17 @@ configure_libwebsockets() {
 	-DLWS_WITH_PLUGINS_BUILTIN:BOOL=$PLUGINS \
 	-DLWS_WITH_RANGES:BOOL=ON \
 	-DLWS_WITH_SERVER:BOOL=ON \
-	-DLWS_WITH_SOCKS5:BOOL=ON \
+  -DLWS_WITH_SOCKS5:BOOL=ON \
 	-DLWS_WITH_SYS_ASYNC_DNS:BOOL=ON \
 	-DLWS_WITH_THREADPOOL:BOOL=ON \
 	-DLWS_WITH_UNIX_SOCK:BOOL=ON \
 	-DLWS_WITH_ZIP_FOPS:BOOL=ON \
 	-DLWS_WITH_ZLIB:BOOL=ON \
 	-DLWS_HAVE_HMAC_CTX_new:STRING=1 \
-	-DLWS_HAVE_EVP_MD_CTX_free:STRING=1 "$@"
+	-DLWS_HAVE_EVP_MD_CTX_free:STRING=1 \
+	-DLWS_OPENSSL_INCLUDE_DIRS:PATH="${OPENSSL_INCLUDEDIR}" \
+  -DLWS_OPENSSL_LIBRARIES:PATH="${OPENSSL_LIBDIR}/libcrypto.so;${OPENSSL_LIBDIR}/libssl.so" \
+  "$@"
   (echo -e "Command: cd $builddir && cmake $@" | sed 's,\s\+-, \n\t-,g') >&2
 CFLAGS="-I$PWD/libwebsockets/lib/plat/unix${CFLAGS:+ $CFLAGS}" cmake_run "$@" 2>&1 | tee cmake.log
 }

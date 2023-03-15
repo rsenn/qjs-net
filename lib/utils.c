@@ -233,7 +233,7 @@ socket_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
     struct sockaddr_in6 ai6;
   } sa;
   socklen_t sl = sizeof(s);
-  uint16_t port;
+  uint16_t port = 0;
   static char addr[1024];
 
   if(fn(fd, &sa.a, &sl) != -1) {
