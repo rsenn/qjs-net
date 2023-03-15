@@ -10,7 +10,7 @@ ref_clear(Ref* r) {
 void
 ref_free(Ref* r) {
   if(--r->ref_count == 0) {
-    JSContext* ctx = r->dup.opaque;
+    JSContext* ctx = r->dup.argv[0];
     ref_clear(r);
     js_free(ctx, r);
   }

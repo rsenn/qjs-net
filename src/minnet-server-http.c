@@ -1,3 +1,4 @@
+#include "minnet.h"
 #include "minnet-server-http.h"
 #include <assert.h>
 #include <ctype.h>
@@ -18,7 +19,6 @@
 #include "minnet-server.h"
 #include "minnet-url.h"
 #include "minnet-websocket.h"
-#include "minnet.h"
 #include "opaque.h"
 #include <quickjs.h>
 #include "utils.h"
@@ -662,7 +662,7 @@ serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const 
   const char* mime = lws_get_mimetype(path, &mount->lws);
   // BOOL compressed = has_transfer_encoding(req, "gzip");
 
-  DEBUG("serve_file path=%s mount=%s compressed=%i\n", path, mount->mnt, compressed);
+  DEBUG("serve_file path=%s mount=%s\n", path, mount->mnt);
 
   if(path[0] == '\0')
     path = mount->def;
