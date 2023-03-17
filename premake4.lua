@@ -1,9 +1,9 @@
-solution "minnet"
+solution "qjs-net"
 location("build")
 configurations { "Debug", "Release" }
 platforms { "native", "x64", "x32" }
 
-  project "minnet"
+  project "qjs-net"
   language "C"
   kind "SharedLib"
 
