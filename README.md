@@ -37,10 +37,7 @@ These alternative build methods can't invoke the compilation of `libwebsockets`,
 cd qjs-net
 . build-libwebsockets.sh
 
-CFLAGS="-w" \
-prefix=/opt/libwebsockets \
-TYPE=Release \
-builddir=libwebsockets/build \
+TYPE=Release builddir=libwebsockets/build \
   build_libwebsockets 
   
 make -C libwebsockets/build install

@@ -28,13 +28,14 @@ cmake_run() {
 configure_libwebsockets() {
   : ${sourcedir:=libwebsockets}
   : ${builddir:=libwebsockets/build/$($CC -dumpmachine)}
-  : ${prefix:=/opt/libwebsockets-$(cd "$sourcedir" && git branch -a |sed -n '/^\*/ { s|^[* ]*||; s|-[a-z]*$||; s|\s||g; p }')}
+  : ${prefix:=/opt/libwebsockets} #-$(cd "$sourcedir" && git branch -a |sed -n '/^\*/ { s|^[* ]*||; s|-[a-z]*$||; s|\s||g; p }')}
   : ${njobs:=10}
   : ${relsrcdir:=$(realpath --relative-to $builddir $sourcedir)}
   : ${PLUGINS:=OFF}
   : ${DISKCACHE:=ON}
 	: ${CC:=gcc}
 	: ${SHARED:=OFF}
+	: ${CFLAGS:="-w"}
 
 	if [ -n "$OPENSSL_PREFIX" -a -d "$OPENSSL_PREFIX" ]; then
 	  if [ -z "$OPENSSL_LIBDIR" ]; then
