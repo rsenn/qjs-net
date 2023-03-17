@@ -1,30 +1,43 @@
-# minnet-quickjs
-This package aims to provide simple, minimal and essential networking infrastructures for QuickJS.  
+# qjs-net
+This package aims to provide simple, minimal and essential networking infrastructures for QuickJS.
+(Derived from [minnet-quickjs](https://github.com/khanhas/minnet-quickjs))
+
 Currently, it can:
-- Creating WebSocket `server`
-- Creating WebSocket `client`
+- Creating WebSocket and HTTP `server`
+- Creating WebSocket or HTTP `client`
 - `fetch`
 
 ## Usage
 Requirements:
-- `clang`
+- `clang or gcc`
 - `libwebsockets`
-- `libcurl`
 
-To use `minnet-quickjs` in your QuickJS project, run following commands:
+
+To use `qjs-net` in your QuickJS project, run following commands:
 ```bash
 cd your_project_dir
 git clone https://github.com/rsenn/qjs-net
-cd qjs-net
-make
+cd qjs-net/build
+cmake ..
+```
+
+Alternatively use either `premake` or `ninja`:
+
+```premake5 gmake```
+
+
+cd your_project_dir
+git clone https://github.com/rsenn/qjs-net
+cd qjs-net/build
+cmake ..
 ```
 
 In your JS script:
 ```javascript
-import * as minnet from "net"
+import * as net from 'net.so';
 ```
 
-### `minnet.server(options)`: Create a WebSocket server and listen to host:port.
+### `net.server(options)`: Create a WebSocket server and listen to host:port.
 `options`: an object with following properties:
 - `port`: *number*, *optional*, *default = `7981`*
 - `host`: *string*, *optional*, *default = `"localhost"`*
@@ -57,7 +70,7 @@ onPong: (client_socket, data) => {
 }
 ```
 
-### `minnet.client(options)`: Create a WebSocket client and connect to a server.
+### `net.client(options)`: Create a WebSocket client and connect to a server.
 `options`: an object with following properties:
 - `port`: *number*, *optional*, *default = `7981`*
 - `host`: *string*, *optional*, *default = `"localhost"`*
