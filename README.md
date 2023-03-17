@@ -25,6 +25,9 @@ Alternatively use either `premake` or `ninja`:
 
 ```premake5 gmake```
 
+or 
+
+```ninja -C build``
 
 cd your_project_dir
 git clone https://github.com/rsenn/qjs-net
