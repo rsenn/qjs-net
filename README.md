@@ -17,7 +17,9 @@ To use `qjs-net` in your QuickJS project, run following commands:
 ```bash
 cd your_project_dir
 git clone https://github.com/rsenn/qjs-net
-cd qjs-net/build
+cd qjs-net
+git submodule update --init
+cd build
 cmake ..
 ```
 
@@ -27,7 +29,26 @@ Alternatively use either `premake` or `ninja`:
 
 or 
 
-```ninja -C build``
+```ninja -C build```
+
+These alternative build methods can't invoke the compilation of `libwebsockets`, therefore you have to build and install it manually before you can compile qjs-net:
+
+```bash
+cd qjs-net
+. build-libwebsockets.sh
+
+CFLAGS="-w" \
+prefix=/opt/libwebsockets \
+TYPE=Release \
+builddir=libwebsockets/build \
+  build_libwebsockets 
+  
+make -C libwebsockets/build install
+```
+
+You may add the variable OPENSSL_PREFIX (e.g. OPENSSL_PREFIX=/opt/libressl-3.5.1) in front of that command when building against a custom SSL library build.
+
+
 
 cd your_project_dir
 git clone https://github.com/rsenn/qjs-net

@@ -16,14 +16,14 @@ platforms { "native", "x64", "x32" }
 
   includedirs { 
       "lib",
-      "/opt/libressl-3.5.1-x86_64/include",
-      "/opt/libwebsockets-x86_64/include",
+      "/opt/libressl-3.5.1/include",
+      "/opt/libwebsockets/include",
       "/usr/local/include/quickjs"
    }
 
   libdirs { 
-      "/opt/libressl-3.5.1-x86_64/lib",
-      "/opt/libwebsockets-x86_64/lib",
+      "/opt/libressl-3.5.1/lib",
+      "/opt/libwebsockets/lib",
       "/usr/local/lib/x86_64-linux-gnu"
   }
   
@@ -40,7 +40,7 @@ platforms { "native", "x64", "x32" }
 
   linkoptions { 
       "-Wl,-soname,net.so",
-      "-Wl,-rpath=/opt/libressl-3.5.1-x86_64/lib:/opt/libwebsockets-x86_64/lib:/usr/local/lib/x86_64-linux-gnu"
+      "-Wl,-rpath=/opt/libressl-3.5.1/lib:/opt/libwebsockets/lib:/usr/local/lib/x86_64-linux-gnu"
   }
 
   targetprefix ""
