@@ -54,10 +54,16 @@ export const escape = s =>
 export const abbreviate = s => (s.length > 100 ? s.substring(0, 45) + ' ... ' + s.substring(-45) : s);
 
 export async function save(generator, file) {
-  let handle = open(file, 'w');
+  let handle;
+  console.log('generator:', generator);
 
   for await(let chunk of await generator) {
-    handle.puts(chunk);
+    handle ??= open(file, 'w');
+
+    if(chunk === undefined) break;
+    console.log('Writing:', chunk);
+
+    handle.write(chunk, 0, chunk.byteLength);
   }
 
   handle.flush();

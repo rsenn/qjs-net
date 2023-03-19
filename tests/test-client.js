@@ -109,7 +109,11 @@ function main(...args) {
       log('result', result);
       log('result[Symbol.asyncIterator]', result[Symbol.asyncIterator]);
 
-      save(result.readable, 'output.txt');
+let file= await result.remoteName || 'output.txt';
+
+log('file',file);
+
+      save(result.readable, file/*?? 'output.txt'*/);
 
       /*for await(let chunk of result.readable)
         log('chunk', chunk.length);*/
