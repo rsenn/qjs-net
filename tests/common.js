@@ -55,15 +55,13 @@ export const abbreviate = s => (s.length > 100 ? s.substring(0, 45) + ' ... ' + 
 
 export async function save(generator, file) {
   let handle;
-  console.log('generator:', generator);
 
   for await(let chunk of await generator) {
     handle ??= open(file, 'w');
 
     if(chunk === undefined) break;
-    console.log('Writing:', chunk);
 
-    handle.write(chunk, 0, chunk.byteLength);
+    console.log('Written:', handle.write(chunk, 0, chunk.byteLength));
   }
 
   handle.flush();
