@@ -7,8 +7,7 @@ import { escape, abbreviate } from './common.js';
 const connections = new Set();
 
 export default function Client(url, options, debug) {
-  //console.log('Client',{url,options,debug});
-  log('MinnetClient', { url, options });
+  //log('MinnetClient', { url, options });
   Init('client.js', typeof debug == 'number' ? debug : LLL_CLIENT | (debug ? LLL_USER : 0));
 
   let {
@@ -25,8 +24,7 @@ export default function Client(url, options, debug) {
     ...opts
   } = options;
 
-  //err.puts(`Client connecting to ${url} ...\n`);
-  log(`Client connecting to ${url} ...\n`);
+  log(`Client connecting to ${url} ...`);
 
   /* setLog(
     LLL_WARN | (debug ? LLL_USER : 0),
@@ -101,16 +99,6 @@ export default function Client(url, options, debug) {
             log('onHttp(2)', text.replace(/\n/g, '\\n').substring(0, 100));
 
             console.log('push', /* await*/ push(text));
-            /*for await(let chunk of resp.body) {
-          let psh;
-          console.log(
-            '\x1b[1;33monHttp body chunk\x1b[1;36m:\x1b[0m',
-            chunk.length,
-            chunk.replace(/\n/g, '\\n').substring(0, 100)
-          );
-          console.log('push', (psh = push(chunk)));
-          await psh;
-        }*/
           }
         });
       });

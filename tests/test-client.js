@@ -89,7 +89,7 @@ function main(...args) {
             });
           },
           onClose(ws, status, reason, error) {
-            log('onClose', { ws, status, reason, error });
+            //log('onClose', { ws, status, reason, error });
             terminate(0);
           },
           onError(ws, error) {
@@ -106,14 +106,14 @@ function main(...args) {
         debug ? LLL_INFO - 1 : LLL_USER
       );
 
-      log('result', result);
-      log('result[Symbol.asyncIterator]', result[Symbol.asyncIterator]);
+      /*log('result', result);
+      log('result[Symbol.asyncIterator]', result[Symbol.asyncIterator]);*/
 
-let file= await result.remoteName || 'output.txt';
+      let file = (await result.remoteName) || 'output.txt';
 
-log('file',file);
+      log('file', file);
 
-      save(result.readable, file/*?? 'output.txt'*/);
+      save(result.readable, file /*?? 'output.txt'*/);
 
       /*for await(let chunk of result.readable)
         log('chunk', chunk.length);*/
