@@ -1,3 +1,4 @@
+import { open } from 'std';
 import { readlink, stat } from 'os';
 
 export function assert(actual, expected, message) {
@@ -51,5 +52,16 @@ export const escape = s =>
   ].reduce((a, [exp, rpl]) => a.replace(exp, rpl), s);
 
 export const abbreviate = s => (s.length > 100 ? s.substring(0, 45) + ' ... ' + s.substring(-45) : s);
+
+export async function save(generator, file) {
+  let handle = open(file, 'w');
+
+  for await(let chunk of await generator) {
+    handle.puts(chunk);
+  }
+
+  handle.flush();
+  handle.close();
+}
 
 export default { assert, getpid, once, exists, randStr, escape, abbreviate };

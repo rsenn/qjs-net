@@ -39,17 +39,20 @@ function FetchNext(array) {
     );
     log(`fetching \x1b[1;33m${url}\x1b[0m`);
     log(console.config({ compact: 0 }), 'request:', request);
-    let promise = fetch(url, reqObj);
-    promise
+    fetch(url, reqObj)
       .then(response => {
+        console.log('response', response);
         log(console.config({ compact: 0 }), response);
         let prom = response.arrayBuffer();
         prom.then(buf => {
+          console.log('buf', buf);
           let prom = response.text();
+          console.log('prom', prom);
           prom.then(text => {
             log('arrayBuffer()', console.config({ compact: 2 }), buf);
 
             let filename = response.url.path.replace(/.*\//g, '');
+
             log('filename', filename);
             WriteFile(filename, buf);
 
@@ -93,9 +96,7 @@ function main(...args) {
     .catch(run);
 
   function run() {
-    let promise = FetchNext(args);
-    log('promise', promise);
-    promise
+    FetchNext(args)
       .then(() => {
         log('SUCCEEDED');
       })

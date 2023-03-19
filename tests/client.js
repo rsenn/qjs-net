@@ -25,15 +25,16 @@ export default function Client(url, options, debug) {
     ...opts
   } = options;
 
-  err.puts(`Client connecting to ${url} ...\n`);
+  //err.puts(`Client connecting to ${url} ...\n`);
+  log(`Client connecting to ${url} ...\n`);
 
-  setLog(
+  /* setLog(
     LLL_WARN | (debug ? LLL_USER : 0),
     (level, message) =>
       !/LOAD_EXTRA|VHOST_CERT_AGING/.test(message) &&
       log(`${logLevels[level].padEnd(10)} ${message.replace(/\n/g, '\\n').trim()}`)
   );
-
+*/
   let writable, readable, c, pr, resolve, reject;
 
   readable = new Generator(async (push, stop) => {
@@ -86,7 +87,8 @@ export default function Client(url, options, debug) {
       },
       async onHttp(req, resp) {
         let text = await resp.text();
-        console.log('onHttp(2)', text.replace(/\n/g, '\\n').substring(0, 100));
+        log('onHttp(2)', text.replace(/\n/g, '\\n').substring(0, 100));
+
         console.log('push', await push(text));
         /*for await(let chunk of resp.body) {
           let psh;

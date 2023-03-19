@@ -1,9 +1,9 @@
-import { exit, puts } from 'std';
-import { URL, LLL_INFO, LLL_USER, setLog } from 'net';
+import { exit, puts, open } from 'std';
+import { URL, LLL_ALL, LLL_INFO, LLL_USER, setLog } from 'net';
 import Client from './client.js';
-import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker, ttySetRaw, sleep, kill, signal, SIGINT } from 'os';
+import { close, exec, O_RDWR, setReadHandler, setWriteHandler, Worker, ttySetRaw, sleep, kill, signal, SIGINT } from 'os';
 import { in as stdin, out as stdout, err as stderr } from 'std';
-import { assert, getpid, exists, randStr, abbreviate, escape } from './common.js';
+import { assert, getpid, exists, randStr, abbreviate, escape, save } from './common.js';
 import { spawn, wait4, WNOHANG } from './spawn.js';
 import { log } from './log.js';
 
@@ -22,11 +22,24 @@ function main(...args) {
     args.push('wss://localhost:30000/ws');
   }
 
+  /*setLog(
+    LLL_ALL,
+    (() => {
+      let lf = open('test-client.log', 'w');
+      return (level, msg) => {
+        log(logLevels[level].padEnd(10) + msg);
+        puts('LOG: ' + msg);
+        lf.puts(logLevels[level].padEnd(10) + msg + '\n');
+        lf.flush();
+      };
+    })()
+  );*/
+
   (async function() {
     for(let arg of args) {
-      let pr, gen;
+      let result, gen;
 
-      pr = Client(
+      result = Client(
         arg,
         {
           block: false,
@@ -46,9 +59,9 @@ function main(...args) {
 
                     if(line.length) {
                       let s = line;
-                      let pr = ws.send(line);
-                      log('pr:', { pr, s });
-                      pr.then(() => log('Sent:', { s }));
+                      let result = ws.send(line);
+                      log('result:', { result, s });
+                      result.then(() => log('Sent:', { s }));
                       stdout.puts(`\x1b[0m\n`);
                       stdout.flush();
                     }
@@ -93,13 +106,13 @@ function main(...args) {
         debug ? LLL_INFO - 1 : LLL_USER
       );
 
-      console.log('pr', pr);
-      console.log('pr[Symbol.asyncIterator]', pr[Symbol.asyncIterator]);
+      log('result', result);
+      log('result[Symbol.asyncIterator]', result[Symbol.asyncIterator]);
 
-      for await(let chunk of pr) {
-        console.log('chunk', chunk);
-      }
-      //    await pr;
+      save(result.readable, 'output.txt');
+
+      /*for await(let chunk of result.readable)
+        log('chunk', chunk.length);*/
     }
   })();
 
