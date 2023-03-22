@@ -3,7 +3,7 @@ import { URL, LLL_INFO, LLL_USER, setLog } from 'net';
 import Client from './client.js';
 import { kill, close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker, ttySetRaw, sleep } from 'os';
 import { in as stdin, out as stdout, err as stderr } from 'std';
-import { assert, getpid, exists, randStr, abbreviate, escape } from './common.js';
+import { assert, getpid, exists, randStr, abbreviate, escape,save } from './common.js';
 import { spawn, wait4 } from './spawn.js';
 import { log } from './log.js';
 
@@ -43,7 +43,11 @@ async function main(...args) {
 
     console.log('cli', cli);
     console.log('cli.readable', cli.readable);
-    for await(let chunk of cli.readable) {
+
+
+save(cli.readable, 'output.txt');
+
+    /*for await(let chunk of cli.readable) {
       console.log(
         'DATA: ' +
           chunk
@@ -52,7 +56,7 @@ async function main(...args) {
             .map(line => line.substring(0, 80))
             .join('\n')
       );
-    }
+    }*/
   }
 
   function terminate(code = 0, ex = true) {

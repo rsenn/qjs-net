@@ -294,6 +294,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(!JS_IsObject(session->resp_obj))
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
+      
+      DEBUG("LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ len=%zu in='%.*s'", len, /*len > 30 ? 30 :*/ (int)len, (char*)in);
 
       generator_write(resp->generator, in, len, JS_UNDEFINED);
 
