@@ -103,12 +103,19 @@ struct byte_block;
 JSValue js_object_constructor(JSContext* ctx, JSValueConst value);
 char* js_object_classname(JSContext* ctx, JSValueConst value);
 void js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log);
+
 JSValue js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue* func_data);
 JSValue js_function_bind(JSContext* ctx, JSValueConst func, int flags, JSValueConst argv[]);
 JSValue js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg);
 JSValue js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val);
 JSValue js_function_bind_this_1(JSContext* ctx, JSValueConst func, JSValueConst this_val, JSValueConst arg);
 const char* js_function_name(JSContext* ctx, JSValueConst value);
+JSValue js_function_prototype(JSContext* ctx);
+
+typedef JSValue CClosureFunc(JSContext*, JSValueConst, int, JSValueConst[], int, void*);
+
+JSValue js_function_cclosure(JSContext*, CClosureFunc*, int, int magic, void* opaque, void (*opaque_finalize)(void*));
+
 JSValue js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done);
 JSValue js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext* ctx, JSValueConst dst, JSValueConst src, int flags);

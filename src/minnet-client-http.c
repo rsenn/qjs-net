@@ -181,9 +181,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       int status;
       MinnetResponse* resp;
 
-      //client->req->h2 = wsi_http2(wsi);
+      // client->req->h2 = wsi_http2(wsi);
 
-      if(!(resp = opaque->resp)) {        resp = opaque->resp = response_new(ctx);
+      if(!(resp = opaque->resp)) {
+        resp = opaque->resp = response_new(ctx);
         resp->generator = generator_new(ctx);
         resp->status = lws_http_client_http_response(wsi);
         headers_tobuffer(ctx, &opaque->resp->headers, wsi);
@@ -228,7 +229,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
       return 0;
     }
-    
+
     case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
       /*  case LWS_CALLBACK_HTTP_WRITEABLE: */ {
         if(method_number(client->connect_info.method) == METHOD_POST) {
@@ -294,7 +295,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(!JS_IsObject(session->resp_obj))
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
-      
+
       DEBUG("LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ len=%zu in='%.*s'", len, /*len > 30 ? 30 :*/ (int)len, (char*)in);
 
       generator_write(resp->generator, in, len, JS_UNDEFINED);

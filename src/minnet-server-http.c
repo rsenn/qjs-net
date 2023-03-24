@@ -651,7 +651,7 @@ file_size(FILE* fp) {
     size = ftell(fp);
     fseek(fp, pos, SEEK_SET);
   }
-  
+
   return size;
 }
 
