@@ -1219,10 +1219,11 @@ js_function_cclosure(JSContext* ctx, CClosureFunc* func, int length, int magic, 
 
   if(js_cclosure_class_id == 0) {
     JS_NewClassID(&js_cclosure_class_id);
+    JS_NewClass(JS_GetRuntime(ctx), js_cclosure_class_id, &js_cclosure_class);
   }
 
   func_proto = js_function_prototype(ctx);
-  func_obj = JS_NewObjectProtoClass(ctx, js_function_prototype(ctx), js_cclosure_class_id);
+  func_obj = JS_NewObjectProtoClass(ctx, func_proto, js_cclosure_class_id);
   JS_FreeValue(ctx, func_proto);
 
   if(JS_IsException(func_obj))
