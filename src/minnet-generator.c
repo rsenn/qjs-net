@@ -67,8 +67,8 @@ minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, 
   if(argc < 1 || !JS_IsFunction(ctx, argv[0]))
     return JS_ThrowInternalError(ctx, "MinnetGenerator needs a function parameter");
 
-  args[0] = JS_NewCClosure(ctx, minnet_generator_push, 0, 0, generator_dup(gen), (void*)&generator_free);
-  args[1] = JS_NewCClosure(ctx, minnet_generator_stop, 0, 0, generator_dup(gen), (void*)&generator_free);
+  args[0] = js_function_cclosure(ctx, minnet_generator_push, 0, 0, generator_dup(gen), (void*)&generator_free);
+  args[1] = js_function_cclosure(ctx, minnet_generator_stop, 0, 0, generator_dup(gen), (void*)&generator_free);
 
   ret = JS_Call(ctx, argv[0], JS_UNDEFINED, 2, args);
 
@@ -83,7 +83,7 @@ JSValue
 minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
   JSValue ret = JS_NewObject(ctx);
 
-  JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, generator_dup(gen), (void*)&generator_free));
+  JS_SetPropertyStr(ctx, ret, "next", js_function_cclosure(ctx, minnet_generator_next, 0, 0, generator_dup(gen), (void*)&generator_free));
   JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
 
   return ret;
@@ -93,7 +93,7 @@ JSValue
 minnet_generator_reader(JSContext* ctx, MinnetGenerator* gen) {
   JSValue ret = JS_NewObject(ctx);
 
-  JS_SetPropertyStr(ctx, ret, "read", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, generator_dup(gen), (void*)&generator_free));
+  JS_SetPropertyStr(ctx, ret, "read", js_function_cclosure(ctx, minnet_generator_next, 0, 0, generator_dup(gen), (void*)&generator_free));
   JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
 
   return ret;
@@ -116,7 +116,7 @@ minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
 
     ++gen->ref_count;
 
-  JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
+  JS_SetPropertyStr(ctx, ret, "next", js_function_cclosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
 
   return ret;
 }

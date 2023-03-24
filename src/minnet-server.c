@@ -408,7 +408,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!server_init(server))
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
 
-  JSValue timer_cb = JS_NewCClosure(ctx, minnet_server_timeout, 4, 0, server, 0);
+  JSValue timer_cb = js_function_cclosure(ctx, minnet_server_timeout, 4, 0, server, 0);
   uint32_t interval = lws_service_adjust_timeout(server->context.lws, 15000, 0);
   if(interval == 0)
     interval = 10;
@@ -491,8 +491,8 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(js_is_promise(ctx, ret)) {
     JSValue func[2], tmp;
 
-    func[0] = JS_NewCClosure(ctx, &minnet_server_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
-    func[1] = JS_NewCClosure(ctx, &minnet_server_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
+    func[0] = js_function_cclosure(ctx, &minnet_server_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
+    func[1] = js_function_cclosure(ctx, &minnet_server_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
 
     tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
     JS_FreeValue(ctx, ret);

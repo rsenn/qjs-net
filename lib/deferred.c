@@ -159,5 +159,5 @@ JSValue
 deferred_tojs(Deferred* def, JSContext* ctx) {
   deferred_dup(def);
 
-  return JS_NewCClosure(ctx, deferred_js_call, 0, 0, def, (void (*)(ptr_t))deferred_free);
+  return js_function_cclosure(ctx, deferred_js_call, 0, 0, def, (void (*)(ptr_t))deferred_free);
 }

@@ -120,7 +120,7 @@ ws_want_write(struct socket* ws, JSContext* ctx) {
 
   *h = (WSWantWrite){ctx, ws_dup(ws)};
 
-  return JS_NewCClosure(ctx, want_write, 0, 0, h, ws_want_write_free);
+  return js_function_cclosure(ctx, want_write, 0, 0, h, ws_want_write_free);
 }
 
 QueueItem*

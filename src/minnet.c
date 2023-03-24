@@ -108,7 +108,7 @@ minnet_io_handler(JSContext* ctx, int fd, int events, struct lws* wsi) {
 
   h->opaque->poll = (struct pollfd){fd, events, 0};
 
-  return JS_NewCClosure(ctx, lws_iohandler, 1, events, h, lws_iohandler_free);
+  return js_function_cclosure(ctx, lws_iohandler, 1, events, h, lws_iohandler_free);
 }
 
 void

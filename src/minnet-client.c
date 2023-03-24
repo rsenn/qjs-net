@@ -415,8 +415,8 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(js_is_promise(ctx, ret)) {
     JSValue func[2], tmp;
 
-    func[0] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
-    func[1] = JS_NewCClosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
+    func[0] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
+    func[1] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
 
     tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
     JS_FreeValue(ctx, ret);

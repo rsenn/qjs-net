@@ -494,7 +494,7 @@ js_timer_interval(JSContext* ctx, JSValueConst fn, uint32_t ms) {
   closure->ctx = ctx;
   closure->interval = ms;
   closure->handler = JS_DupValue(ctx, fn);
-  closure->callback = JS_NewCClosure(ctx, js_timer_callback, 0, 0, closure, js_timer_free);
+  closure->callback = js_function_cclosure(ctx, js_timer_callback, 0, 0, closure, js_timer_free);
   closure->id = js_timer_start(ctx, closure->callback, ms);
 
   return closure;

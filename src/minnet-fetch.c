@@ -86,10 +86,10 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   args[0] = argv[0];
   args[1] = argc <= 1 ? JS_NewObject(ctx) : JS_DupValue(ctx, argv[1]);
 
-  handlers[0] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_HTTP, closure_dup(cc), closure_free);
-  handlers[1] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_ERROR, closure_dup(cc), closure_free);
-  handlers[2] = JS_NewCClosure(ctx, &fetch_handler, 2, ON_CLOSE, closure_dup(cc), closure_free);
-  handlers[3] = JS_NewCClosure(ctx, &fetch_handler, 3, ON_FD, closure_dup(cc), closure_free);
+  handlers[0] = js_function_cclosure(ctx, &fetch_handler, 2, ON_HTTP, closure_dup(cc), closure_free);
+  handlers[1] = js_function_cclosure(ctx, &fetch_handler, 2, ON_ERROR, closure_dup(cc), closure_free);
+  handlers[2] = js_function_cclosure(ctx, &fetch_handler, 2, ON_CLOSE, closure_dup(cc), closure_free);
+  handlers[3] = js_function_cclosure(ctx, &fetch_handler, 3, ON_FD, closure_dup(cc), closure_free);
 
   JS_SetPropertyStr(ctx, args[1], "onHttp", handlers[0]);
   JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);

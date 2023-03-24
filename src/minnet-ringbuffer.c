@@ -298,7 +298,7 @@ minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValu
       tail_decorate(ctx, ret, this_val, "getElement", 0, RINGBUFFER_GET_ELEMENT);
       tail_decorate(ctx, ret, this_val, "consume", 1, RINGBUFFER_CONSUME);
 
-      JS_SetPropertyStr(ctx, ret, "next", JS_NewCClosure(ctx, tail_next, 0, 0, tail_new(ctx, rb, ret), tail_finalize));
+      JS_SetPropertyStr(ctx, ret, "next", js_function_cclosure(ctx, tail_next, 0, 0, tail_new(ctx, rb, ret), tail_finalize));
       break;
     }
 

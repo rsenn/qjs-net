@@ -42,7 +42,7 @@ client_promise(JSContext* ctx, struct session_data* session, MinnetResponse* res
 
   if((p = js_malloc(ctx, sizeof(HTTPAsyncResolveClosure)))) {
     *p = (HTTPAsyncResolveClosure){1, ctx, session, response_dup(resp), wsi};
-    JSValue fn = JS_NewCClosure(ctx, client_resolved, 1, 0, p, client_resolved_free);
+    JSValue fn = js_function_cclosure(ctx, client_resolved, 1, 0, p, client_resolved_free);
     JSValue tmp = js_promise_then(ctx, value, fn);
     JS_FreeValue(ctx, fn);
     ret = tmp;
