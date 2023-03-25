@@ -657,7 +657,6 @@ file_size(FILE* fp) {
 
 static int
 serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const char* path, MinnetHttpMount* mount) {
-  // MinnetRequest* req = opaque_fromwsi(wsi)->req;
   MinnetResponse* resp = opaque_fromwsi(wsi)->resp;
   FILE* fp;
   const char* mime = lws_get_mimetype(path, &mount->lws);
@@ -716,6 +715,7 @@ http_server_writable(struct session_data* session, struct lws* wsi, BOOL done) {
   LOG("SERVER-HTTP(1)", FG("%d") "%-38s" NC " status=%d type=%s generator=%d done=%d", 207, __func__ + 12, resp->status, resp->type, resp->generator != NULL, done);
 
   n = (done || resp->generator->closing) ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
+
 
   if(queue_size(&session->sendq)) {
     ByteBlock buf;

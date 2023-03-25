@@ -1153,7 +1153,7 @@ js_typedarray_new(JSContext* ctx, int bits, BOOL floating, BOOL sign, JSValueCon
 
 typedef struct {
   CClosureFunc* func;
-  uint16_t length,magic;
+  uint16_t length, magic;
   void* opaque;
   void (*opaque_finalize)(void*);
 } JSCClosureRecord;
@@ -1240,7 +1240,7 @@ js_function_cclosure(JSContext* ctx, CClosureFunc* func, int length, int magic, 
 
   JS_SetOpaque(func_obj, ccr);
 
-  //JS_DefinePropertyValueStr(ctx, func_obj, "length", JS_NewUint32(ctx, length), JS_PROP_CONFIGURABLE);
+  // JS_DefinePropertyValueStr(ctx, func_obj, "length", JS_NewUint32(ctx, length), JS_PROP_CONFIGURABLE);
 
   return func_obj;
 }
