@@ -5,7 +5,7 @@ import REPL from 'repl';
 import inspect from 'inspect';
 import net, { URL, Request } from 'net';
 import { Console, ConsoleOptions } from 'console';
-import {  toString } from 'util';
+import { toString } from 'util';
 
 const connections = new Set();
 
@@ -27,21 +27,19 @@ function FromDomain(buffer) {
     if(s != '') s += '.';
     while(len--) s += String.fromCharCode(u8[i++]);
   }
-
 }
 
 function WriteFile(filename, buffer) {
   let fd;
-  let err={};
-  if((fd = std.open(filename, "w+",err))) {
-
-    let r = typeof buffer == 'string' ? (fd.puts(buffer),fd.tell()) : fd.write(buffer, 0, buffer.byteLength);
+  let err = {};
+  if((fd = std.open(filename, 'w+', err))) {
+    let r = typeof buffer == 'string' ? (fd.puts(buffer), fd.tell()) : fd.write(buffer, 0, buffer.byteLength);
     fd.close();
-    console.log(`r`,r);
+    console.log(`r`, r);
     if(r >= 0) console.log(`Wrote '${filename}'.`);
     else console.log(`Error writing '${filename}': ${std.strerror(err.errno)}`);
     return r;
-  }  
+  }
 }
 
 function ToDomain(str, alpha = false) {
@@ -165,7 +163,6 @@ async function main(...args) {
       compact: 1,
       customInspect: true
     }
-
   });
   let headers = [];
   params = GetOpt(
@@ -198,7 +195,7 @@ async function main(...args) {
     },
     args
   );
-  
+
   const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', method } = params;
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
@@ -269,7 +266,6 @@ async function main(...args) {
         if(repl) {
           repl.printStatus(`Closed (${status}): ${reason}`);
           os.setTimeout(() => {
-
             repl.exit(status != 1000 ? 1 : 0);
           }, 100);
         }
@@ -317,8 +313,7 @@ async function main(...args) {
         } else {
         }
       },
-      onError(ws, error) {
-      }
+      onError(ws, error) {}
     });
   }
 

@@ -37,7 +37,7 @@ export const Init = (name, mask = LLL_USER | ((LLL_CLIENT << 1) - 1)) => {
     mask,
     DebugCallback((level, msg) => {
       let l = Levels[level];
-    /*  if(!(level & mask)) return;
+      /*  if(!(level & mask)) return;
       if(level >= LLL_NOTICE && level <= LLL_EXT) return;*/
       if(l == 'USER') l = name ?? l;
       err.puts(`${l.padEnd(10)} ${msg}\n`);
