@@ -1,4 +1,4 @@
-import { setLog, URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from '../net.so';
+import { setLog, URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net.so';
 import { err } from 'std';
 
 let logName;
@@ -61,7 +61,7 @@ export const log = (() => {
   import('console').then(({ Console }) => {
     globalThis.console = cons = new Console(
       /*err, */ {
-        inspectOptions: { compact: 0, depth: 10, customInspect: true, maxStringLength: 100, colors: true }
+        inspectOptions: { compact: 1, depth: 10, customInspect: true, maxStringLength: 1000, colors: true }
       }
     );
   });
