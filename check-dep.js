@@ -38,7 +38,11 @@ let definitions = {},
   lookup = {},
   used = new Set(),
   external = new Set();
-let getCode = memoize(src => [...PipeStream(['strip-comments', src])].join('\n'));
+
+let getCode = memoize(src => {
+  console.log(`Processing '${src}'...`);
+  return [...PipeStream(['strip-comments', src])].join('\n');
+});
 
 for(let file in files) {
   let records = files[file];
@@ -85,7 +89,7 @@ for(let file in files) {
   let fns = [...code.matchAll(/^([a-zA-Z_][0-9a-zA-Z_]*)\(.*(,|{)$/gm)];
 
   let functionList = getFunctionList(file);
-  console.log(`functionList ${file}`, functionList);
+  //console.log(`functionList ${file}`, functionList);
   let [undef, def] = MatchSymbols(code, valid);
 
   Object.assign(files[file], { undef, def });
