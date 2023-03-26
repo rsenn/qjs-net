@@ -24,14 +24,6 @@
 #include "utils.h"
 #include "buffer.h"
 
-struct http_closure {
-  struct lws* wsi;
-  MinnetServer* server;
-  struct session_data* session;
-  JSContext* ctx;
-  struct wsi_opaque_user_data* opaque;
-};
-
 static int serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, BOOL* done_p);
 
 int lws_hdr_simple_create(struct lws*, enum lws_token_indexes, const char*);
@@ -760,29 +752,15 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   struct session_data* session = user;
   JSContext* ctx = server ? server->context.js : 0;
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-  struct http_closure closure = {
-      wsi,
-      server,
-      session,
-      ctx,
-      opaque,
-  };
 
   if(lws_reason_poll(reason)) {
     assert(server);
     return wsi_handle_poll(wsi, reason, &server->cb.fd, in);
   }
 
-  /*if(reason == LWS_CALLBACK_HTTP_CONFIRM_UPGRADE) {
-    if(session && session->serial != opaque->serial) {
-      //session->serial = opaque->serial;
-      // session->h2 = wsi_http2(wsi);
-    }
-  }*/
+  if(!opaque && ctx)
+    opaque = lws_opaque(wsi, ctx);
 
-  if(!opaque && ctx) {
-    opaque = closure.opaque = lws_opaque(wsi, ctx);
-  }
   assert(opaque);
 
   if(session) {
@@ -802,12 +780,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           (char*)in,
           opaque && opaque->req ? url_string(&opaque->req->url) : 0);
 
-  if(opaque->upstream) {
-    if(reason == LWS_CALLBACK_FILTER_HTTP_CONNECTION) {
-      // printf("FILTER(2)\n");
-    } else
+  if(opaque->upstream)
+    if(reason != LWS_CALLBACK_FILTER_HTTP_CONNECTION)
       return lws_callback_http_dummy(wsi, reason, user, in, len);
-  }
+
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
