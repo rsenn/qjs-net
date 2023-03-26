@@ -192,10 +192,15 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       headers_tobuffer(ctx, &opaque->resp->headers, wsi);
+
       if(!resp->type)
         resp->type = headers_get(&resp->headers, "content-type", ctx);
-      if(!strncmp(resp->type, "text/", 5))
-        resp->generator->block_fn = &block_tostring;
+
+      if(resp->type) {
+        if(!strncmp(resp->type, "text/", 5))
+          resp->generator->block_fn = &block_tostring;
+      }
+
       url_copy(&resp->url, client->request->url, client->on.http.ctx);
 
       // opaque->resp->headers = headers_gettoken(ctx, wsi, WSI_TOKEN_HTTP_CONTENT_TYPE);

@@ -695,7 +695,9 @@ serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const 
                        "Found</h1>\n  </body>\n</html>\n";
     resp->status = 404;
 
-    response_write(resp, body, strlen(body), ctx);
+    // response_write(resp, body, strlen(body), ctx);
+    queue_write(&session->sendq, body, strlen(body), ctx);
+    queue_close(&session->sendq);
   }
 
   lws_callback_on_writable(wsi);
@@ -715,7 +717,6 @@ http_server_writable(struct session_data* session, struct lws* wsi, BOOL done) {
   LOG("SERVER-HTTP(1)", FG("%d") "%-38s" NC " status=%d type=%s generator=%d done=%d", 207, __func__ + 12, resp->status, resp->type, resp->generator != NULL, done);
 
   n = (done || resp->generator->closing) ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
-
 
   if(queue_size(&session->sendq)) {
     ByteBlock buf;
@@ -1095,10 +1096,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       // if(queue_closed(&session->sendq) || queue_size(&session->sendq))
       if(http_server_writable(session, wsi, !!queue_closed(&session->sendq)))
         ret = http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, session, in, len);
-      //  ret =  lws_http_transaction_completed(wsi);
-      else
-
-          if(queue_closed(&session->sendq) && queue_complete(&session->sendq))
+      else if(queue_closed(&session->sendq) && queue_complete(&session->sendq))
         ret = lws_http_transaction_completed(wsi);
 
       break;

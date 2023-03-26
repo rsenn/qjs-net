@@ -45,11 +45,11 @@ response_dup(struct http_response* resp) {
   return resp;
 }
 
-ssize_t
+/*ssize_t
 response_write(struct http_response* resp, const void* x, size_t n, JSContext* ctx) {
   assert(resp->generator);
   return generator_write(resp->generator, x, n, JS_UNDEFINED);
-}
+}*/
 
 void
 response_clear(struct http_response* resp, JSContext* ctx) {

@@ -125,6 +125,11 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
     // printf("%-22s reads: %zu continuous: %i queued: %zu\n", __func__, list_size(&gen->iterator.reads), gen->q && gen->q->continuous, gen->q ? queue_size(gen->q) : 0);
   }
 
+  if(ret >= 0) {
+    gen->bytes_written += ret;
+    gen->chunks_written += 1;
+  }
+
   return ret;
 }
 
