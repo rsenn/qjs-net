@@ -48,6 +48,7 @@ for(let file in files) {
   }
 }
 
+
 for(let file in definitions) {
   let [def, undef] = definitions[file];
   for(let name of undef)
@@ -85,6 +86,7 @@ for(let file in files) {
   Object.assign(files[file], { undef, def });
 }
 
+
 console.log('all', all.size);
 console.log('external', external.size);
 console.log('used', used.size);
@@ -115,6 +117,7 @@ function GetObj(symbol) {
   let record = lookup[symbol];
   return record;
 }
+
 
 function* PipeStream(command) {
   let [rd, wr] = os.pipe();
