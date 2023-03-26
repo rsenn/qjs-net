@@ -7,11 +7,9 @@ import inspect from 'inspect';
 import { types, define, filter, split, getOpt, toUnixTime } from 'util';
 import * as fs from 'fs';
 import { setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server, URL } from 'net';
-import { Socket } from 'sockets';
+/*import { Socket } from 'sockets';
 import { EventEmitter } from 'events';
-import { Repeater } from 'repeater';
-
-import rpc from './js/rpc.js';
+import { Repeater } from 'repeater';*/ import rpc from './js/rpc.js';
 import * as rpc2 from './js/rpc.js';
 
 globalThis.fs = fs;
@@ -121,7 +119,7 @@ function main(...args) {
     +params.verbose
   ));
 
-  cli.register({ Socket, Worker: os.Worker, Repeater, REPL, EventEmitter });
+  cli.register({ Worker: os.Worker, REPL });
 
   let connections = new Set();
   function createWS(url, callbacks, listen) {
@@ -296,7 +294,6 @@ function main(...args) {
     ...rpc,
     quit,
     exit: quit,
-    Socket,
     cli,
     std,
     os,

@@ -208,7 +208,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   session_zero(&client->session);
 
-  client->request = request_from(argc, argv, ctx);
+  if(!(client->request = request_from(argc, argv, ctx))){
+    client_free(client,ctx);
+    return JS_ThrowTypeError(ctx, "argument 1 must be a Request/URL object or an URL string");
+  }
+
   enum protocol p = url_protocol(client->request->url);
   client->request->secure = protocol_is_tls(p);
 

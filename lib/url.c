@@ -365,6 +365,7 @@ url_info(const struct url url, struct lws_client_connect_info* info) {
     info->ssl_connection = LCCSCF_USE_SSL;
     info->ssl_connection |= LCCSCF_ALLOW_SELFSIGNED;
     info->ssl_connection |= LCCSCF_ALLOW_INSECURE;
+    info->ssl_connection |= LCCSCF_ALLOW_EXPIRED;
     info->ssl_connection |= LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 #ifdef LWS_ROLE_H2
     info->ssl_connection |= LCCSCF_H2_QUIRK_OVERFLOWS_TXCR | LCCSCF_H2_QUIRK_NGHTTP2_END_STREAM;

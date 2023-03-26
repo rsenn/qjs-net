@@ -3,7 +3,7 @@ import * as std from 'std';
 import * as os from 'os';
 import REPL from 'repl';
 import inspect from 'inspect';
-import net, { Socket, URL, Request } from 'net';
+import net, { URL, Request } from 'net';
 import { Console, ConsoleOptions } from 'console';
 import { quote, toString, toArrayBuffer } from 'util';
 
@@ -165,7 +165,7 @@ async function main(...args) {
   globalThis.console = new Console({
     inspectOptions: {
       depth: Infinity,
-      compact: 0,
+      compact: 1,
       customInspect: true
     }
   });
@@ -359,15 +359,13 @@ async function main(...args) {
   try {
     await createWS(urls.shift(), {})
       .then(() => {
-        console.log('FINISHED');
         quit('FINISHED');
       })
       .catch(err => {
         console.log('Failed', err);
       });
   } catch(error) {
-    console.log(error.message);
-    quit(error.message);
+    quit('ERROR: ' + error.message);
   }
 
   function quit(why) {
