@@ -18,23 +18,29 @@ project "qjs-net"
   pic "On"
   visibility "Hidden"
 
-  includedirs {"lib"}
+  includedirs { "lib" }
 
   externalincludedirs {
+    "..",
     "../quickjs",
-    "../libwebsockets/include"
+    "/usr/local/include/quickjs",
+    "libwebsockets/include",
+    "libwebsockets/build/x86_64-linux-gnu"
+
   }
 
   libdirs {
+    "..",
     "../quickjs",
-    "../libwebsockets/lib"
+    "libwebsockets/lib",
+    "libwebsockets/build/x86_64-linux-gnu/lib"
   }
 
   links {
-      "quickjs",
-      "websockets",
-      "ssl",
-      "crypto"
+    "quickjs",
+    "websockets",
+    "ssl","crypto",
+    "brotlienc", "brotlidec", "brotlicommon", "z"
   }
 
   targetprefix ""
