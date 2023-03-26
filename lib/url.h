@@ -38,6 +38,7 @@ enum protocol protocol_number(const char*);
 const char* protocol_string(enum protocol);
 uint16_t protocol_default_port(enum protocol);
 BOOL protocol_is_tls(enum protocol);
+
 void url_init(struct url*, const char*, const char*, int port, const char* path, JSContext* ctx);
 void url_parse(struct url*, const char*, JSContext*);
 struct url url_create(const char*, JSContext*);
@@ -75,6 +76,11 @@ url_valid(const struct url url) {
 static inline enum protocol
 url_protocol(const struct url url) {
   return protocol_number(url.protocol);
+}
+
+static inline BOOL
+url_is_tls(const struct url url) {
+  return url.protocol ? protocol_is_tls(protocol_number(url.protocol)) : FALSE;
 }
 
 static inline struct url*

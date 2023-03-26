@@ -64,7 +64,7 @@ request_init(Request* req, struct url url, enum http_method method) {
   req->body = 0;
   req->ip = 0;
   req->read_only = FALSE;
-  req->secure = FALSE;
+  req->secure = url_is_tls(url);
 }
 
 Request*

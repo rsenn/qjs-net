@@ -213,8 +213,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_ThrowTypeError(ctx, "argument 1 must be a Request/URL object or an URL string");
   }
 
-  enum protocol p = url_protocol(client->request->url);
-  client->request->secure = protocol_is_tls(p);
+  /*enum protocol p = url_protocol(client->request->url);
+  client->request->secure = protocol_is_tls(p);*/
 
   js_promise_zero(&client->promise);
 
@@ -222,6 +222,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
     if(JS_IsObject(argv[1]))
       argind++;
+
     /*    if(JS_IsString(argv[argind])) {
           tmp = JS_ToCString(ctx, argv[argind]);
           argind++;

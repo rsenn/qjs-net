@@ -5,7 +5,7 @@ import REPL from 'repl';
 import inspect from 'inspect';
 import net, { URL, Request } from 'net';
 import { Console, ConsoleOptions } from 'console';
-import { quote, toString, toArrayBuffer } from 'util';
+import {  toString } from 'util';
 
 const connections = new Set();
 
@@ -32,14 +32,16 @@ function FromDomain(buffer) {
 
 function WriteFile(filename, buffer) {
   let fd;
-  if(typeof buffer == 'string') buffer = toArrayBuffer(buffer);
-  if((fd = os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)) != -1) {
-    let r = os.write(fd, buffer, 0, buffer.byteLength);
-    os.close(fd);
+  let err={};
+  if((fd = std.open(filename, "w+",err))) {
+
+    let r = typeof buffer == 'string' ? (fd.puts(buffer),fd.tell()) : fd.write(buffer, 0, buffer.byteLength);
+    fd.close();
+    console.log(`r`,r);
     if(r >= 0) console.log(`Wrote '${filename}'.`);
-    else console.log(`Error writing '${filename}': ${std.strerror(util.error().errno)}`);
+    else console.log(`Error writing '${filename}': ${std.strerror(err.errno)}`);
     return r;
-  }
+  }  
 }
 
 function ToDomain(str, alpha = false) {
