@@ -2,7 +2,8 @@ import * as std from 'std';
 import * as os from 'os';
 import { Console } from 'console';
 import * as deep from 'deep';
-import { memoize } from 'util';
+import { memoize, histogram } from 'util';
+
 globalThis.console = new Console({ inspectOptions: { compact: 2, maxArrayLength: Infinity, maxStringLength: 100 } });
 
 function ReadJSON(file) {
@@ -39,9 +40,15 @@ let definitions = {},
   used = new Set(),
   external = new Set();
 
-let getCode = memoize(src => {
+const getCode = memoize(src => {
   console.log(`Processing '${src}'...`);
   return [...PipeStream(['strip-comments', src])].join('\n');
+});
+
+const getFunctionList = memoize(file => {
+  let code = getCode(file);
+  let fns = [...code.matchAll(/^([a-zA-Z_][0-9a-zA-Z_]*)\(.*(,|{)$/gm)];
+  return new Map(fns.map(m => [m.index, m[1]]));
 });
 
 for(let file in files) {
@@ -67,13 +74,34 @@ for(let file in definitions) {
 }
 
 let unused = new Set([...all].filter(k => !used.has(k) && !external.has(k)));
+let valid = new Set([...all].filter(n => n in lookup));
 
-let valid = [...all].filter(n => n in lookup);
-let getFunctionList = memoize(function (file) {
+for(let file in files) {
   let code = getCode(file);
   let fns = [...code.matchAll(/^([a-zA-Z_][0-9a-zA-Z_]*)\(.*(,|{)$/gm)];
-  return new Map(fns.map(m => [m.index, m[1]]));
-});
+
+  let functionList = getFunctionList(file);
+
+  for(let f of functionList.values()) valid.add(f);
+}
+
+for(let file in files) {
+  let [undef, def] = MatchSymbols(getCode(file), valid);
+  let exp = [];
+  for(let f of getFunctionList(file).values()) exp.push(f);
+
+  Object.assign(files[file], { undef, def, exp });
+
+  console.log(`symbols ${file}`, console.config({ compact: 0 }), {
+    undef: Object.fromEntries([...histogram(undef)].sort((a, b) => b[1] - a[1]))
+  });
+}
+
+console.log('all', all.size);
+console.log('external', external.size);
+console.log('used', used.size);
+console.log('unused', unused.size);
+console.log('unused', console.config({ compact: false }), [...unused]);
 
 function GetFunctionFromIndex(file, pos) {
   let funcName;
@@ -83,26 +111,6 @@ function GetFunctionFromIndex(file, pos) {
   }
   return funcName;
 }
-
-for(let file in files) {
-  let code = getCode(file);
-  let fns = [...code.matchAll(/^([a-zA-Z_][0-9a-zA-Z_]*)\(.*(,|{)$/gm)];
-
-  let functionList = getFunctionList(file);
-  //console.log(`functionList ${file}`, functionList);
-  let [undef, def] = MatchSymbols(code, valid);
-
-  Object.assign(files[file], { undef, def });
-}
-
-console.log('all', all.size);
-console.log('external', external.size);
-console.log('used', used.size);
-console.log('unused', unused.size);
-console.log('unused', console.config({ compact: false }), [...unused]);
-let paths = deep.select(files, v => v == 'minnet_url_constructor', deep.RETURN_PATH);
-
-console.log('paths', paths);
 
 function GetSymbol(name) {
   let record = lookup[name];
@@ -140,8 +148,8 @@ function* PipeStream(command) {
 }
 
 function SplitByPred(list, pred, t = a => a) {
-  let sets = [new Set(), new Set()];
-  for(let item of list) sets[0 | pred(item)].add(t(item));
+  let sets = [[], []];
+  for(let item of list) sets[0 | pred(item)].push(t(item));
   return sets;
 }
 
