@@ -1,5 +1,9 @@
 import * as std from 'std';
 import * as os from 'os';
+import { Console } from 'console';
+import * as deep from 'deep';
+
+globalThis.console = new Console({ inspectOptions: { compact: 1, maxArrayLength: Infinity } });
 
 function ReadJSON(file) {
   let json = std.loadFile(file);
@@ -36,25 +40,61 @@ while((line = out.getline())) {
   let type = record.slice(17, 18);
   let name = record.slice(19);
 
-  console.log('fields:', { file, type, name }); //{file,type,name});
+  let src = file.replace(/.*\.dir\/(.*)\.o$/g, '$1');
+  //  console.log('fields:', { file, type, name }); //{file,type,name});
 
-  files[file] ??= [];
+  files[src] ??= [];
 
-  files[file].push({ type, name });
+  files[src].push({ file, type, name });
 }
 
-let definitions = {};
-console.log('files', files);
+let definitions = {},
+  lookup = {},
+  used = new Set(),
+  external = new Set();
+//console.log('files', files);
 
 for(let file in files) {
-  definitions[file] = SymbolsToDefinedUndefined(files[file]);
+  let [def, undef] = (definitions[file] = SymbolsToDefinedUndefined(files[file]));
+
+  for(let name of def) lookup[name] = file;
 }
-console.log('definitions', definitions);
+
+for(let file in definitions) {
+  let [def, undef] = definitions[file];
+
+  for(let name of undef)
+    if(!(name in lookup)) {
+      undef.delete(name);
+      external.add(name);
+    } else {
+      used.add(name);
+    }
+}
+
+let all = new Set(Object.keys(lookup));
+let unused = new Set([...all].filter(k => !used.has(k)));
+
+function GetObj(symbol) {
+  let file = lookup[symbol];
+  let record = files[file].find(rec => rec.name == symbol);
+  return {file, ...record};
+}
+
+//console.log('definitions', definitions);
+console.log('all', all.size);
+console.log('external', external.size);
+console.log('used', used.size);
+console.log('unused', unused.size);
+console.log('unused', [...unused].map(GetObj));
+
+
+let paths=deep.select(files, v => v=='minnet_url_constructor', deep.RETURN_PATH);
+console.log('paths', paths);
 
 function SymbolsToDefinedUndefined(symbols) {
   let list = symbols.filter(({ name }) => !/^\./.test(name));
-  return [
-    list.filter(({ type }) => type != 'U').map(({ name }) => name),
-    list.filter(({ type }) => type == 'U').map(({ name }) => name)
-  ];
+  const pred = [({ type }) => type != 'U', ({ type }) => type == 'U'];
+
+  return pred.map(p => new Set(list.filter(p).map(({ name }) => name)));
 }
