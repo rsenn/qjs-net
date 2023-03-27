@@ -2,7 +2,7 @@
 #define QJSNET_LIB_CONTEXT_H
 
 #include <quickjs.h>
-#include <cutils.h>
+#include <stdbool.h>
 #include <list.h>
 #include <libwebsockets.h>
 
@@ -10,7 +10,7 @@ struct context {
   int ref_count;
   JSContext* js;
   struct lws_context* lws;
-  BOOL exception;
+  bool exception:1;
   JSValue error;
   JSValue crt, key, ca;
   struct TimerClosure* timer;

@@ -2,7 +2,6 @@
 #define QJSNET_LIB_LWS_UTILS_H
 
 #include <libwebsockets.h>
-#include <cutils.h>
 #include <stdbool.h>
 
 enum http_method {

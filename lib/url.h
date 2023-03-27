@@ -3,7 +3,6 @@
 
 #include <libwebsockets.h>
 #include <quickjs.h>
-#include <cutils.h>
 #include <stdint.h>
 #include "utils.h"
 

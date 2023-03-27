@@ -3,7 +3,6 @@
 
 #include <libwebsockets.h>
 #include <quickjs.h>
-#include <cutils.h>
 #include "opaque.h"
 #include "jsutils.h"
 #include "queue.h"

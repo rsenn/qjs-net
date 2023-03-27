@@ -3,7 +3,6 @@
 
 #include <quickjs.h>
 #include <list.h>
-#include <cutils.h>
 #include "buffer.h"
 #include "jsutils.h"
 #include "deferred.h"

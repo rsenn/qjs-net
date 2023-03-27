@@ -2,7 +2,6 @@
 #define QJSNET_LIB_QUERY_H
 
 #include <quickjs.h>
-#include <cutils.h>
 #include "jsutils.h"
 
 JSValue query_object(const char* q, JSContext* ctx);

@@ -2,7 +2,6 @@
 #define QJSNET_LIB_RINGBUFFER_H
 
 #include <quickjs.h>
-#include <cutils.h>
 #include "buffer.h"
 #include <libwebsockets.h>
 #include <pthread.h>
