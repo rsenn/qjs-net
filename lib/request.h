@@ -13,7 +13,7 @@ typedef struct http_request {
   int ref_count;
   BOOL read_only, secure, h2;
   enum http_method method;
-  struct url url;
+  URL url;
   ByteBuffer headers;
   Generator* body;
   char* ip;
@@ -22,13 +22,13 @@ typedef struct http_request {
 const char* method_string(enum http_method);
 int method_number(const char*);
 
-void request_init(Request*, struct url url, enum http_method method);
+void request_init(Request*, URL url, enum http_method method);
 Request* request_alloc(JSContext*);
-Request* request_new(struct url, HTTPMethod method, JSContext* ctx);
+Request* request_new(URL, HTTPMethod method, JSContext* ctx);
 Request* request_dup(Request*);
 Request* request_fromwsi(struct lws*, JSContext* ctx);
-void request_clear_rt(Request*, JSRuntime* rt);
-void request_free_rt(Request*, JSRuntime* rt);
+void request_clear(Request*, JSRuntime* rt);
+void request_free(Request*, JSRuntime* rt);
 Request* request_from(int, JSValueConst argv[], JSContext* ctx);
 
 static inline const char*

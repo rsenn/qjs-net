@@ -13,7 +13,7 @@ struct session_data;
 typedef struct http_response {
   int ref_count;
   bool read_only : 1, headers_sent : 1, compress : 1;
-  struct url url;
+  URL url;
   char* type;
   int status;
   char* status_text;
@@ -21,12 +21,11 @@ typedef struct http_response {
   Generator* generator;
 } Response;
 
-void response_init(struct http_response*, struct url, int32_t, char* status_text, BOOL headers_sent, char* type);
-struct http_response* response_dup(struct http_response*);
-void response_clear(struct http_response*, JSContext*);
-void response_clear_rt(struct http_response*, JSRuntime*);
-void response_free(struct http_response*, JSContext*);
-void response_free_rt(struct http_response*, JSRuntime*);
+void      response_init(Response*, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type);
+Response* response_dup(Response*);
+void      response_clear(Response*, JSRuntime* rt);
+void      response_free(Response*, JSRuntime* rt);
+Response* response_new(JSContext*);
 
 static inline Generator*
 response_generator(struct http_response* resp, JSContext* ctx) {

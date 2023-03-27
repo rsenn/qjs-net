@@ -306,7 +306,7 @@ minnet_request_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRequest* req;
 
   if((req = minnet_request_data(val)))
-    request_free_rt(req, rt);
+    request_free(req, rt);
 }
 
 JSClassDef minnet_request_class = {

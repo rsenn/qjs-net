@@ -5,10 +5,10 @@
 #include "headers.h"
 #include <assert.h>
 
-struct http_response* minnet_response_data(JSValueConst);
+Response* minnet_response_data(JSValueConst);
 
 void
-response_init(struct http_response* resp, struct url url, int32_t status, char* status_text, BOOL headers_sent, char* type) {
+response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type) {
   // memset(resp, 0, sizeof(Response));
 
   resp->status = status;
@@ -20,26 +20,14 @@ response_init(struct http_response* resp, struct url url, int32_t status, char* 
   resp->generator = NULL;
 }
 
-struct http_response*
-response_dup(struct http_response* resp) {
+Response*
+response_dup(Response* resp) {
   ++resp->ref_count;
   return resp;
 }
 
 void
-response_clear(struct http_response* resp, JSContext* ctx) {
-  url_free(&resp->url, ctx);
-  if(resp->type) {
-    js_free(ctx, (void*)resp->type);
-    resp->type = 0;
-  }
-
-  buffer_free(&resp->headers);
-  generator_destroy(&resp->generator);
-}
-
-void
-response_clear_rt(struct http_response* resp, JSRuntime* rt) {
+response_clear(Response* resp, JSRuntime* rt) {
   url_free_rt(&resp->url, rt);
   if(resp->type) {
     js_free_rt(rt, (void*)resp->type);
@@ -51,24 +39,16 @@ response_clear_rt(struct http_response* resp, JSRuntime* rt) {
 }
 
 void
-response_free(struct http_response* resp, JSContext* ctx) {
+response_free(Response* resp, JSRuntime* rt) {
   if(--resp->ref_count == 0) {
-    response_clear(resp, ctx);
-    js_free(ctx, resp);
-  }
-}
-
-void
-response_free_rt(struct http_response* resp, JSRuntime* rt) {
-  if(--resp->ref_count == 0) {
-    response_clear_rt(resp, rt);
+    response_clear(resp, rt);
     js_free_rt(rt, resp);
   }
 }
 
-struct http_response*
+Response*
 response_new(JSContext* ctx) {
-  struct http_response* resp;
+  Response* resp;
 
   if(!(resp = js_mallocz(ctx, sizeof(Response))))
     JS_ThrowOutOfMemory(ctx);

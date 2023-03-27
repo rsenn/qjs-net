@@ -19,12 +19,12 @@ opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
   if(opaque->req) {
     struct http_request* req = opaque->req;
     opaque->req = 0;
-    request_free_rt(req, rt);
+    request_free(req, rt);
   }
   if(opaque->resp) {
     struct http_response* resp = opaque->resp;
     opaque->resp = 0;
-    response_free_rt(resp, rt);
+    response_free(resp, rt);
   }
   if(opaque->form_parser) {
     form_parser_free_rt(opaque->form_parser, rt);

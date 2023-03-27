@@ -378,7 +378,7 @@ minnet_response_finalizer(JSRuntime* rt, JSValue val) {
   MinnetResponse* res;
 
   if((res = minnet_response_data(val)))
-    response_free_rt(res, rt);
+    response_free(res, rt);
 }
 
 JSClassDef minnet_response_class = {

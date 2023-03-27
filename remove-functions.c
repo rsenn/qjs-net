@@ -1321,3 +1321,25 @@ ringbuffer_next(struct ringbuffer* rb) {
   assert(rb->ring);
   return lws_ring_get_element(rb->ring, 0);
 }
+
+
+void
+response_free(struct http_response* resp, JSContext* ctx) {
+  if(--resp->ref_count == 0) {
+    response_clear(resp, ctx);
+    js_free(ctx, resp);
+  }
+}
+
+void
+response_clear(struct http_response* resp, JSContext* ctx) {
+  url_free(&resp->url, ctx);
+  if(resp->type) {
+    js_free(ctx, (void*)resp->type);
+    resp->type = 0;
+  }
+
+  buffer_free(&resp->headers);
+  generator_destroy(&resp->generator);
+}
+

@@ -352,7 +352,7 @@ serve_resolved_free(void* ptr) {
 
   if(--closure->ref_count == 0) {
     if(closure->resp)
-      response_free(closure->resp, closure->ctx);
+      response_free(closure->resp, JS_GetRuntime(closure->ctx));
 
     js_free(closure->ctx, ptr);
   }
