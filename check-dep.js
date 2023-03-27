@@ -122,18 +122,19 @@ function main() {
   for(let file in files) {
     let exp = '\\b(' + [...all].join('|') + ')\\b';
 
-    let { code } = allFiles[file];
+    let { code, comments } = allFiles[file];
     let matches = YieldAll(Match)(new RegExp(exp, 'gm'), code)
       .map(([i, n]) => [i, n, code.lastIndexOf('\n', i) + 1])
       .map(([i, n, s]) => [i, n, i - s, code.slice(s, code.indexOf('\n', i))])
       .filter(([i, n, col, line]) => col > 0)
+      .filter(Negate(ArrayArgs(Within(comments))))
       .map(([, n]) => n);
 
     let undef = new Set(matches);
 
     definitions[file] = matches;
 
-    console.log(`definitions[${file}]`, console.config({ compact: 1 }), matches);
+    console.log(`definitions[${file}]`, console.config({ compact: 1 }), undef);
   }
 
   /*  for(let file in definitions) {
