@@ -1,4 +1,5 @@
 #include "session.h"
+#include "response.h"
 #include "opaque.h"
 #include "ringbuffer.h"
 #include "jsutils.h"
@@ -9,13 +10,9 @@
 
 struct socket* minnet_ws_data(JSValueConst);
 struct http_request* minnet_request_data(JSValueConst);
-struct http_response* minnet_response_data(JSValueConst);
+Response* minnet_response_data(JSValueConst);
 
-struct http_response;
-extern struct http_response* minnet_response_data(JSValueConst);
-
-/*static THREAD_LOCAL uint32_t session_serial = 0;
-THREAD_LOCAL struct list_head session_list = {0, 0};*/
+extern Response* minnet_response_data(JSValueConst);
 
 void
 session_zero(struct session_data* session) {
@@ -122,7 +119,7 @@ session_opaque(struct session_data* sess) {
   return 0;
 }
 
-struct http_response*
+Response*
 session_response(struct session_data* sess) {
   if(JS_IsObject(sess->resp_obj))
     return minnet_response_data(sess->resp_obj);

@@ -22,7 +22,7 @@ opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
     request_free(req, rt);
   }
   if(opaque->resp) {
-    struct http_response* resp = opaque->resp;
+    Response* resp = opaque->resp;
     opaque->resp = 0;
     response_free(resp, rt);
   }
