@@ -35,11 +35,6 @@ ringbuffer_new(JSContext* ctx) {
   return rb;
 }
 
-void
-ringbuffer_init2(struct ringbuffer* rb, size_t element_len, size_t count) {
-  const char* type = "application/binary";
-  ringbuffer_init(rb, element_len, count, type, strlen(type));
-}
 
 size_t
 ringbuffer_insert(struct ringbuffer* rb, const void* ptr, size_t n) {

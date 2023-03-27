@@ -1132,8 +1132,6 @@ client_promise(JSContext* ctx, struct session_data* session, MinnetResponse* res
   return ret;
 }
 
-
-
 char*
 buffer_escaped(ByteBuffer const* buf) {
   char* ptr;
@@ -1151,7 +1149,6 @@ buffer_escaped(ByteBuffer const* buf) {
 
   return ptr;
 }
-
 
 int
 buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
@@ -1173,7 +1170,6 @@ buffer_tostring(ByteBuffer const* buf, JSContext* ctx) {
   return JS_NewStringLen(ctx, (const char*)buf->start, buffer_HEAD(buf));
 }
 
-
 char*
 headers_gettoken(JSContext* ctx, struct lws* wsi, enum lws_token_indexes tok) {
   int len;
@@ -1189,7 +1185,6 @@ headers_gettoken(JSContext* ctx, struct lws* wsi, enum lws_token_indexes tok) {
   }
   return 0;
 }
-
 
 struct list_head*
 js_module_list(JSContext* ctx) {
@@ -1207,9 +1202,122 @@ js_module_list(JSContext* ctx) {
   return ((struct list_head*)(ptr - 2)) - 1;
 }
 
-
-
 void
 opaque_clear(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
   opaque_clear_rt(opaque, JS_GetRuntime(ctx));
+}
+size_t
+buffer_escape(ByteBuffer* buf, const void* x, size_t len) {
+  const uint8_t *ptr, *end;
+
+  size_t prev = buffer_REMAIN(buf);
+
+  for(ptr = x, end = (const uint8_t*)x + len; ptr < end; ptr++) {
+    char c = *ptr;
+
+    if(buffer_AVAIL(buf) < 4)
+      break;
+
+    switch(c) {
+      case '\n':
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 'n');
+        break;
+      case '\r':
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 'r');
+        break;
+      case '\t':
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 't');
+        break;
+      case '\v':
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 'v');
+        break;
+      case '\b':
+        buffer_putchar(buf, '\\');
+        buffer_putchar(buf, 'b');
+        break;
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 12:
+      case 14:
+      case 15:
+      case 16:
+      case 17:
+      case 18:
+      case 19:
+      case 20:
+      case 21:
+      case 22:
+      case 23:
+      case 24:
+      case 25:
+      case 26:
+      case 27:
+      case 28:
+      case 29:
+      case 30:
+      case 31: buffer_printf(buf, "\\x%02", c); break;
+      default: buffer_putchar(buf, c); break;
+    }
+  }
+  return buffer_REMAIN(buf) - prev;
+}
+
+
+struct form_parser*
+form_parser_dup(struct form_parser* fp) {
+  ++fp->ref_count;
+  return fp;
+}
+
+Deferred*
+deferred_dupjs(JSValueConst value, JSContext* ctx) {
+  JSValue v = JS_DupValue(ctx, value);
+  return deferred_newjs(v, ctx);
+}
+
+JSValue
+deferred_tojs(Deferred* def, JSContext* ctx) {
+  deferred_dup(def);
+
+  return js_function_cclosure(ctx, deferred_js_call, 0, 0, def, (void (*)(ptr_t))deferred_free);
+}
+
+
+static JSValue
+deferred_js_call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, ptr_t ptr) {
+  Deferred* def = ptr;
+
+  return deferred_call(def).js;
+}
+
+
+BOOL
+buffer_putchar(ByteBuffer* buf, char c) {
+  if(buf->write + 1 <= buf->end) {
+    *buf->write = (uint8_t)c;
+    buf->write++;
+    return TRUE;
+  }
+  return FALSE;
+}
+
+void
+ringbuffer_init2(struct ringbuffer* rb, size_t element_len, size_t count) {
+  const char* type = "application/binary";
+  ringbuffer_init(rb, element_len, count, type, strlen(type));
+}
+const void*
+ringbuffer_next(struct ringbuffer* rb) {
+  assert(rb->ring);
+  return lws_ring_get_element(rb->ring, 0);
 }

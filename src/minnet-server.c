@@ -35,7 +35,7 @@ static struct lws_protocols protocols[] = {
 static struct lws_protocols protocols2[] = {
     {"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-     {"defprot", defprot_callback, sizeof(struct session_data), 0},
+    {"defprot", defprot_callback, sizeof(struct session_data), 0},
     /* {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
      {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
  */ //  {"proxy-ws", proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0},

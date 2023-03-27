@@ -197,7 +197,6 @@ headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   return count;
 }
 
-
 ssize_t
 headers_unsetb(ByteBuffer* b, const char* name, size_t namelen) {
   ssize_t i;

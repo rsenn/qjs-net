@@ -177,71 +177,7 @@ buffer_realloc(ByteBuffer* buf, size_t size) {
   return x;
 }
 
-size_t
-buffer_escape(ByteBuffer* buf, const void* x, size_t len) {
-  const uint8_t *ptr, *end;
 
-  size_t prev = buffer_REMAIN(buf);
-
-  for(ptr = x, end = (const uint8_t*)x + len; ptr < end; ptr++) {
-    char c = *ptr;
-
-    if(buffer_AVAIL(buf) < 4)
-      break;
-
-    switch(c) {
-      case '\n':
-        buffer_putchar(buf, '\\');
-        buffer_putchar(buf, 'n');
-        break;
-      case '\r':
-        buffer_putchar(buf, '\\');
-        buffer_putchar(buf, 'r');
-        break;
-      case '\t':
-        buffer_putchar(buf, '\\');
-        buffer_putchar(buf, 't');
-        break;
-      case '\v':
-        buffer_putchar(buf, '\\');
-        buffer_putchar(buf, 'v');
-        break;
-      case '\b':
-        buffer_putchar(buf, '\\');
-        buffer_putchar(buf, 'b');
-        break;
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-      case 4:
-      case 5:
-      case 6:
-      case 7:
-      case 12:
-      case 14:
-      case 15:
-      case 16:
-      case 17:
-      case 18:
-      case 19:
-      case 20:
-      case 21:
-      case 22:
-      case 23:
-      case 24:
-      case 25:
-      case 26:
-      case 27:
-      case 28:
-      case 29:
-      case 30:
-      case 31: buffer_printf(buf, "\\x%02", c); break;
-      default: buffer_putchar(buf, c); break;
-    }
-  }
-  return buffer_REMAIN(buf) - prev;
-}
 
 BOOL
 buffer_clone(ByteBuffer* buf, const ByteBuffer* other) {
@@ -252,16 +188,6 @@ buffer_clone(ByteBuffer* buf, const ByteBuffer* other) {
   buf->read = buf->start + buffer_TAIL(other);
   buf->write = buf->start + buffer_HEAD(other);
   return TRUE;
-}
-
-BOOL
-buffer_putchar(ByteBuffer* buf, char c) {
-  if(buf->write + 1 <= buf->end) {
-    *buf->write = (uint8_t)c;
-    buf->write++;
-    return TRUE;
-  }
-  return FALSE;
 }
 
 uint8_t*

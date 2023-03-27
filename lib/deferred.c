@@ -53,11 +53,6 @@ deferred_newjs(JSValue func, JSContext* ctx) {
   return def;
 }
 
-Deferred*
-deferred_dupjs(JSValueConst value, JSContext* ctx) {
-  JSValue v = JS_DupValue(ctx, value);
-  return deferred_newjs(v, ctx);
-}
 void
 deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
   int i;
@@ -121,18 +116,4 @@ deferred_destructor(void* ptr) {
 void
 deferred_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
   deferred_destructor(opaque);
-}
-
-static JSValue
-deferred_js_call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, ptr_t ptr) {
-  Deferred* def = ptr;
-
-  return deferred_call(def).js;
-}
-
-JSValue
-deferred_tojs(Deferred* def, JSContext* ctx) {
-  deferred_dup(def);
-
-  return js_function_cclosure(ctx, deferred_js_call, 0, 0, def, (void (*)(ptr_t))deferred_free);
 }
