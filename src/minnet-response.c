@@ -95,6 +95,8 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 enum {
   HEADERS_GET = 0,
   HEADERS_SET,
+  HEADERS_APPEND,
+  HEADERS_LOCATION,
 };
 
 static JSValue
@@ -125,6 +127,19 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       if((v = JS_ToCString(ctx, argv[1])))
         ret = JS_NewInt32(ctx, headers_set(&resp->headers, key, v));
 
+      break;
+    }
+    case HEADERS_APPEND: {
+      const char* v;
+      size_t vlen;
+
+      if((v = JS_ToCStringLen(ctx, &vlen, argv[1])))
+        ret = JS_NewInt32(ctx, headers_appendb(&resp->headers, key, keylen, v, vlen));
+
+      break;
+    }
+    case HEADERS_LOCATION: {
+      ret = JS_NewInt32(ctx, headers_set(&resp->headers, "Location", key));
       break;
     }
   }
@@ -187,9 +202,9 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       char* type;
       size_t len;
 
-      if((type = resp->type))
+   /*   if((type = resp->type))
         len = strlen(type);
-      else
+      else*/
         type = headers_getlen(&resp->headers, &len, "content-type");
 
       ret = type ? JS_NewStringLen(ctx, type, len) : JS_NULL;
@@ -248,7 +263,8 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       break;
     }
     case RESPONSE_TYPE: {
-      resp->type = js_strdup(ctx, str);
+      headers_set(&resp->headers, "content-type", str);
+      //  resp->type = js_strdup(ctx, str);
       break;
     }
     case RESPONSE_BODYUSED: {
@@ -376,6 +392,8 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
     JS_CFUNC_MAGIC_DEF("set", 2, minnet_response_header, HEADERS_SET),
     JS_CFUNC_MAGIC_DEF("get", 1, minnet_response_header, HEADERS_GET),
+    JS_CFUNC_MAGIC_DEF("append", 2, minnet_response_header, HEADERS_APPEND),
+    JS_CFUNC_MAGIC_DEF("location", 1, minnet_response_header, HEADERS_LOCATION),
     JS_CFUNC_DEF("clone", 0, minnet_response_clone),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("statusText", minnet_response_get, minnet_response_set, RESPONSE_STATUSTEXT, 0),
@@ -385,7 +403,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("headersSent", minnet_response_get, 0, RESPONSE_HEADERS_SENT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("redirected", minnet_response_get, minnet_response_set, RESPONSE_REDIRECTED, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, minnet_response_set, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_response_iterator),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),

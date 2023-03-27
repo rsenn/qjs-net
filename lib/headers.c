@@ -270,6 +270,6 @@ headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* val
     if(b->write < b->end)
       memset(b->write, 0, b->end - b->write);
   }
-  
+
   return i;
 }

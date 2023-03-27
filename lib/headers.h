@@ -16,8 +16,9 @@ char* headers_get(ByteBuffer*, const char* name, JSContext* ctx);
 ssize_t headers_find(ByteBuffer*, const char* name);
 int headers_tobuffer(JSContext*, ByteBuffer* headers, struct lws* wsi);
 char* headers_gettoken(JSContext*, struct lws* wsi, enum lws_token_indexes tok);
-ssize_t headers_set(ByteBuffer* b, const char* name, const char* value);
 ssize_t headers_unsetb(ByteBuffer*, const char* name, size_t namelen);
+ssize_t headers_set(ByteBuffer*, const char* name, const char* value);
+ssize_t headers_appendb(ByteBuffer*, const char* name, size_t namelen, const char* value, size_t valuelen);
 
 static inline size_t
 headers_length(const void* start, const void* end) {
