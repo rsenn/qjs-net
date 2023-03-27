@@ -128,7 +128,7 @@ function main() {
       .map(([i, n, s]) => [i, n, i - s, code.slice(s, code.indexOf('\n', i))])
       .filter(([i, n, col, line]) => col > 0)
       .filter(Negate(ArrayArgs(Within(comments))))
-      .map(([i, n]) => [allFiles[file].functionAt(i), n].join(' - '));
+      .map(([i, n]) => [allFiles[file].functionAt(i), n, lookup[n]].join(' - '));
 
     let undef = new Set(matches);
 
