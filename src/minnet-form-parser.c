@@ -88,16 +88,6 @@ fail:
   return JS_EXCEPTION;
 }
 
-/*JSValue
-minnet_form_parser_new(JSContext* ctx, MinnetWebsocket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
-  MinnetFormParser* fp;
-
-  if(!(fp = form_parser_new(ctx, ws, nparams, param_names, chunk_size)))
-    return JS_ThrowOutOfMemory(ctx);
-
-  return minnet_form_parser_wrap(ctx, fp);
-}
-*/
 
 static JSValue
 minnet_form_parser_get(JSContext* ctx, JSValueConst this_val, int magic) {

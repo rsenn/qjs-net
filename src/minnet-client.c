@@ -83,19 +83,6 @@ client_new(JSContext* ctx) {
   return client;
 }
 
-/*MinnetClient*
-client_find(struct lws* wsi) {
-  struct list_head* el;
-
-  list_for_each_prev(el, &minnet_clients) {
-    MinnetClient* client = list_entry(el, MinnetClient, link);
-
-    if(client->wsi == wsi)
-      return client;
-  }
-  return 0;
-}
-*/
 void
 client_free(MinnetClient* client, JSContext* ctx) {
   return client_free_rt(client, JS_GetRuntime(ctx));

@@ -66,7 +66,6 @@ block_copy(const void* ptr, size_t size) {
   return ret;
 }
 
-
 JSValue
 block_toarraybuffer(ByteBlock* blk, JSContext* ctx) {
   ByteBlock mem = block_move((ByteBlock*)blk);
@@ -177,7 +176,6 @@ buffer_realloc(ByteBuffer* buf, size_t size) {
   }
   return x;
 }
-
 
 int
 buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
@@ -303,7 +301,6 @@ buffer_putchar(ByteBuffer* buf, char c) {
   }
   return FALSE;
 }
-
 
 uint8_t*
 buffer_grow(ByteBuffer* buf, size_t size) {

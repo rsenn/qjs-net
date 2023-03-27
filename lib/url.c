@@ -154,7 +154,6 @@ url_parse(struct url* url, const char* u, JSContext* ctx) {
     url->path = s && *s ? js_strdup(ctx, s) : 0;
 }
 
-
 size_t
 url_print(char* buf, size_t size, const struct url url) {
   size_t pos = 0;

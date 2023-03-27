@@ -24,14 +24,14 @@ typedef struct byte_block {
 #define block_END(b) (void*)(b)->end
 #define block_ALLOC(b) (void*)((b)->start ? (b)->start - LWS_PRE : 0)
 
-uint8_t*  block_alloc(ByteBlock*, size_t size);
-uint8_t*  block_realloc(ByteBlock*, size_t size);
-void      block_free(ByteBlock*);
-uint8_t*  block_grow(ByteBlock*, size_t size);
+uint8_t* block_alloc(ByteBlock*, size_t size);
+uint8_t* block_realloc(ByteBlock*, size_t size);
+void block_free(ByteBlock*);
+uint8_t* block_grow(ByteBlock*, size_t size);
 ByteBlock block_copy(const void*, size_t size);
-JSValue   block_toarraybuffer(ByteBlock*, JSContext* ctx);
-JSValue   block_tostring(ByteBlock*, JSContext* ctx);
-ssize_t   block_append(ByteBlock*, const void* data, size_t size);
+JSValue block_toarraybuffer(ByteBlock*, JSContext* ctx);
+JSValue block_tostring(ByteBlock*, JSContext* ctx);
+ssize_t block_append(ByteBlock*, const void* data, size_t size);
 
 static inline ByteBlock
 block_move(ByteBlock* blk) {
@@ -76,21 +76,20 @@ typedef union byte_buffer {
 
 #define buffer_zero(b) memset((b), 0, sizeof(ByteBuffer))
 
-uint8_t*  buffer_alloc(ByteBuffer*, size_t size);
-ssize_t   buffer_append(ByteBuffer*, const void* x, size_t n);
-void      buffer_free(ByteBuffer*);
-BOOL      buffer_write(ByteBuffer*, const void* x, size_t n);
-int       buffer_vprintf(ByteBuffer*, const char* format, va_list ap);
-int       buffer_printf(ByteBuffer*, const char* format, ...);
-uint8_t*  buffer_realloc(ByteBuffer*, size_t size);
-int       buffer_fromvalue(ByteBuffer*, JSValueConst value, JSContext* ctx);
-JSValue   buffer_tostring(ByteBuffer const*, JSContext* ctx);
-size_t    buffer_escape(ByteBuffer*, const void* x, size_t len);
-char*     buffer_escaped(ByteBuffer const*);
-BOOL      buffer_clone(ByteBuffer*, const ByteBuffer* other);
-BOOL      buffer_putchar(ByteBuffer*, char c);
-uint8_t*  buffer_grow(ByteBuffer*, size_t size);
-
+uint8_t* buffer_alloc(ByteBuffer*, size_t size);
+ssize_t buffer_append(ByteBuffer*, const void* x, size_t n);
+void buffer_free(ByteBuffer*);
+BOOL buffer_write(ByteBuffer*, const void* x, size_t n);
+int buffer_vprintf(ByteBuffer*, const char* format, va_list ap);
+int buffer_printf(ByteBuffer*, const char* format, ...);
+uint8_t* buffer_realloc(ByteBuffer*, size_t size);
+int buffer_fromvalue(ByteBuffer*, JSValueConst value, JSContext* ctx);
+JSValue buffer_tostring(ByteBuffer const*, JSContext* ctx);
+size_t buffer_escape(ByteBuffer*, const void* x, size_t len);
+char* buffer_escaped(ByteBuffer const*);
+BOOL buffer_clone(ByteBuffer*, const ByteBuffer* other);
+BOOL buffer_putchar(ByteBuffer*, char c);
+uint8_t* buffer_grow(ByteBuffer*, size_t size);
 
 static inline void
 buffer_reset(ByteBuffer* buf) {

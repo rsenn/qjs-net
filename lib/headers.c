@@ -26,7 +26,6 @@ headers_object(JSContext* ctx, const void* start, const void* e) {
   return ret;
 }
 
-
 size_t
 headers_write(uint8_t** in, uint8_t* end, ByteBuffer* buffer, struct lws* wsi) {
   int ret;
@@ -89,7 +88,6 @@ headers_fromobj(ByteBuffer* buffer, JSValueConst obj, JSContext* ctx) {
   js_free(ctx, tab);
   return i;
 }
-
 
 ssize_t
 headers_findb(ByteBuffer* buffer, const char* name, size_t namelen) {

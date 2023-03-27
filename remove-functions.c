@@ -337,7 +337,6 @@ buffer_init(ByteBuffer* buf, uint8_t* start, size_t len) {
   buf->alloc = 0;
 }
 
-
 int
 buffer_fromarraybuffer(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
   int ret;
@@ -396,9 +395,8 @@ deferred_freejs_rt(Deferred* def) {
   JS_FreeValueRT(def->argv[0], value);
 }
 
-
 Deferred*
-deferred_newjs_rt(  JSValue value, JSContext* ctx) {
+deferred_newjs_rt(JSValue value, JSContext* ctx) {
   Deferred* def;
 
   if((def = deferred_new(fn, JS_GetRuntime(ctx), value)))
@@ -455,7 +453,6 @@ headers_copy(ByteBuffer* buffer, char* dest, size_t sz, const char* name) {
   return -1;
 }
 
-
 ssize_t
 headers_unset(ByteBuffer* buffer, const char* name) {
   return headers_unsetb(buffer, name, strlen(name));
@@ -472,7 +469,6 @@ headers_tostring(JSContext* ctx, struct lws* wsi) {
   buffer_free(&buf);
   return ret;
 }
-
 
 BOOL
 generator_cancel(Generator* gen) {
@@ -501,7 +497,6 @@ generator_stop(Generator* gen) {
   return ret;
 }
 
-
 BOOL
 js_promise_done(ResolveFunctions const* funcs) {
   return js_resolve_functions_is_null(funcs);
@@ -518,7 +513,6 @@ js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str) {
   JS_FreeValue(ctx, value);
   return ret;
 }
-
 
 JSModuleDef*
 js_module_find_s(JSContext* ctx, const char* name) {
@@ -570,7 +564,6 @@ js_arraybuffer_length(JSContext* ctx, JSValueConst buffer) {
 
   return -1;
 }
-
 
 BOOL
 js_atom_is_string(JSContext* ctx, JSAtom atom) {
@@ -686,7 +679,6 @@ opaque_valid(struct wsi_opaque_user_data* opaque) {
   return false;
 }
 
-
 char*
 request_dump(Request const* req, JSContext* ctx) {
   static char buf[2048];
@@ -743,7 +735,6 @@ request_zero(Request* req) {
   req->body = 0;
 }
 
-
 void
 request_free(Request* req, JSContext* ctx) {
   if(--req->ref_count == 0) {
@@ -779,7 +770,6 @@ response_redirect(struct http_response* resp, const char* location, JSContext* c
   return resp;
 }
 
-
 struct ringbuffer*
 ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
   struct ringbuffer* rb;
@@ -789,7 +779,6 @@ ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
 
   return rb;
 }
-
 
 struct context*
 session_context(struct session_data* sess) {
@@ -807,7 +796,6 @@ session_request(struct session_data* sess) {
     return minnet_request_data(sess->req_obj);
   return 0;
 }
-
 
 int
 url_connect(struct url* url, struct lws_context* context, struct lws** p_wsi) {
@@ -827,8 +815,7 @@ url_location(const struct url url, JSContext* ctx) {
   if((query = url_query(url)))
     return js_strndup(ctx, url.path, query - url.path);
   return js_strdup(ctx, url.path);
-} 
-
+}
 
 void
 url_dump(const char* n, struct url const* url) {
@@ -842,7 +829,6 @@ js_value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
   lwsl_user("%s = '%s'\n", n, str);
   JS_FreeCString(ctx, str);
 }
-
 
 int
 socket_geterror(int fd) {
@@ -897,14 +883,10 @@ ws_writable(struct socket* ws, BOOL binary, JSContext* ctx) {
   return ret;
 }
 
-
 typedef struct {
   JSContext* ctx;
   struct socket* ws;
 } WSWantWrite;
-
-
-
 
 JSValue
 ws_want_write(struct socket* ws, JSContext* ctx) {
@@ -924,7 +906,6 @@ form_parser_zero(struct form_parser* fp) {
   fp->lwsac_head = 0;
   memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
 }
-
 
 JSValue
 vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
@@ -1011,7 +992,6 @@ js_get_propertystr_int64(JSContext* ctx, JSValueConst obj, const char* str) {
   return ret;
 }
 
-
 JSModuleDef*
 js_module_at(JSContext* ctx, int i) {
   struct list_head *el = 0, *list = js_module_list(ctx);
@@ -1027,4 +1007,117 @@ js_module_at(JSContext* ctx, int i) {
 static inline uint8_t*
 buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx) {
   return block_grow(&buf->block, size, ctx);
+}
+
+JSValue
+minnet_request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
+  MinnetRequest* req;
+
+  [object Object]
+  req = request_from(argc, argv, ctx);
+
+  return minnet_request_wrap(ctx, req);
+}
+
+JSValue
+minnet_request_new(JSContext* ctx, MinnetURL url, enum http_method method) {
+  MinnetRequest* req;
+
+  if(!(req = request_new(url, method, ctx)))
+    return JS_ThrowOutOfMemory(ctx);
+
+  return minnet_request_wrap(ctx, req);
+}
+
+JSValue
+minnet_generator_reader(JSContext* ctx, MinnetGenerator* gen) {
+  JSValue ret = JS_NewObject(ctx);
+
+  JS_SetPropertyStr(ctx, ret, "read", js_function_cclosure(ctx, minnet_generator_next, 0, 0, generator_dup(gen), (void*)&generator_free));
+  JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
+
+  return ret;
+}
+
+
+JSValue
+minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
+  JSValue ret = JS_NewObject(ctx);
+
+    ++gen->ref_count;
+
+  JS_SetPropertyStr(ctx, ret, "next", js_function_cclosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
+
+  return ret;
+}
+
+
+MinnetClient*
+client_find(struct lws* wsi) {
+  struct list_head* el;
+
+  list_for_each_prev(el, &minnet_clients) {
+    MinnetClient* client = list_entry(el, MinnetClient, link);
+
+    if(client->wsi == wsi)
+      return client;
+  }
+  return 0;
+}
+JSValue
+minnet_form_parser_new(JSContext* ctx, MinnetWebsocket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
+  MinnetFormParser* fp;
+
+  if(!(fp = form_parser_new(ctx, ws, nparams, param_names, chunk_size)))
+    return JS_ThrowOutOfMemory(ctx);
+
+  return minnet_form_parser_wrap(ctx, fp);
+}
+
+
+JSValue
+minnet_ringbuffer_wrap(JSContext* ctx, struct ringbuffer* rb) {
+  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_ringbuffer_proto, minnet_ringbuffer_class_id);
+
+  if(JS_IsException(ret))
+    return JS_EXCEPTION;
+
+  JS_SetOpaque(ret, rb);
+
+  ++rb->ref_count;
+
+  return ret;
+}
+
+static JSValue
+tail_consume(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+  JSValue ret = JS_UNDEFINED;
+  struct ringbuffer_tail* tail = opaque;
+  struct lws_ring* r = tail->rb->ring;
+  uint32_t wanted;
+  JSBuffer buf;
+
+  int index = js_buffer_fromargs(ctx, argc, argv, &buf);
+
+  js_input_args(ctx, argc, argv);
+
+  if(buf.size) {
+    wanted = buf.size / ringbuffer_element_len(tail->rb);
+  } else {
+    if(index == argc || JS_ToUint32(ctx, &wanted, argv[index]))
+      return JS_ThrowRangeError(ctx, "need buffer or element count");
+  }
+
+  ret = JS_NewUint32(ctx, lws_ring_consume(r, tail->ptr, buf.data, wanted));
+
+  js_buffer_free(&buf, ctx);
+
+  return ret;
+}
+
+static JSValue
+tail_bind(JSContext* ctx, JSValue func, JSValueConst this_val, JSValueConst arg) {
+  JSValue ret = js_function_bind_this_1(ctx, func, this_val, arg);
+  JS_FreeValue(ctx, func);
+  return ret;
 }

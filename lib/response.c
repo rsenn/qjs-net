@@ -8,8 +8,6 @@
 
 struct http_response* minnet_response_data(JSValueConst);
 
-
-
 void
 response_init(struct http_response* resp, struct url url, int32_t status, char* status_text, BOOL headers_sent, char* type) {
   // memset(resp, 0, sizeof(Response));
@@ -28,7 +26,6 @@ response_dup(struct http_response* resp) {
   ++resp->ref_count;
   return resp;
 }
-
 
 void
 response_clear(struct http_response* resp, JSContext* ctx) {

@@ -106,7 +106,6 @@ form_parser_alloc(JSContext* ctx) {
   return ret;
 }
 
-
 struct form_parser*
 form_parser_dup(struct form_parser* fp) {
   ++fp->ref_count;

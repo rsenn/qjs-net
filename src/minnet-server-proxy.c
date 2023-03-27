@@ -15,8 +15,6 @@ typedef struct proxy_conn {
   lws_dll2_owner_t pending_msg_to_raw;
 } proxy_conn_t;
 
-
-
 /*int
 proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);

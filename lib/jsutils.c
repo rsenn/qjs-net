@@ -251,7 +251,6 @@ js_buffer_alloc(JSContext* ctx, size_t size) {
   return js_buffer_fromblock(ctx, &block);
 }
 
-
 void
 js_buffer_free_rt(JSBuffer* in, JSRuntime* rt) {
   if(in->data) {

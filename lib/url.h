@@ -35,30 +35,30 @@ struct url {
   (struct url) { 1, 0, 0, 0, 0 }
 
 enum protocol protocol_number(const char*);
-const char*   protocol_string(enum protocol);
-uint16_t      protocol_default_port(enum protocol);
-BOOL          protocol_is_tls(enum protocol);
+const char* protocol_string(enum protocol);
+uint16_t protocol_default_port(enum protocol);
+BOOL protocol_is_tls(enum protocol);
 
-void          url_init(struct url*, const char* protocol, const char* host, int port, const char* path, JSContext* ctx);
-void          url_parse(struct url*, const char* u, JSContext* ctx);
-size_t        url_print(char*, size_t size, const struct url url);
-char*         url_format(const struct url, JSContext* ctx);
-char*         url_host(const struct url, JSContext* ctx);
-size_t        url_length(const struct url);
-void          url_free(struct url*, JSContext* ctx);
-void          url_free_rt(struct url*, JSRuntime* rt);
+void url_init(struct url*, const char* protocol, const char* host, int port, const char* path, JSContext* ctx);
+void url_parse(struct url*, const char* u, JSContext* ctx);
+size_t url_print(char*, size_t size, const struct url url);
+char* url_format(const struct url, JSContext* ctx);
+char* url_host(const struct url, JSContext* ctx);
+size_t url_length(const struct url);
+void url_free(struct url*, JSContext* ctx);
+void url_free_rt(struct url*, JSRuntime* rt);
 enum protocol url_set_protocol(struct url*, const char* proto);
-BOOL          url_set_path_len(struct url*, const char* path, size_t len, JSContext* ctx);
-BOOL          url_set_query_len(struct url*, const char* query, size_t len, JSContext* ctx);
-void          url_info(const struct url, struct lws_client_connect_info* info);
-const char*   url_query(const struct url);
-const char*   url_search(const struct url, size_t* len_p);
-const char*   url_hash(const struct url);
-void          url_fromobj(struct url*, JSValueConst obj, JSContext* ctx);
-BOOL          url_fromvalue(struct url*, JSValueConst value, JSContext* ctx);
-void          url_fromwsi(struct url*, struct lws* wsi, JSContext* ctx);
-struct url*   url_new(JSContext*);
-JSValue       url_object(const struct url, JSContext* ctx);
+BOOL url_set_path_len(struct url*, const char* path, size_t len, JSContext* ctx);
+BOOL url_set_query_len(struct url*, const char* query, size_t len, JSContext* ctx);
+void url_info(const struct url, struct lws_client_connect_info* info);
+const char* url_query(const struct url);
+const char* url_search(const struct url, size_t* len_p);
+const char* url_hash(const struct url);
+void url_fromobj(struct url*, JSValueConst obj, JSContext* ctx);
+BOOL url_fromvalue(struct url*, JSValueConst value, JSContext* ctx);
+void url_fromwsi(struct url*, struct lws* wsi, JSContext* ctx);
+struct url* url_new(JSContext*);
+JSValue url_object(const struct url, JSContext* ctx);
 
 static inline const char*
 url_path(const struct url url) {

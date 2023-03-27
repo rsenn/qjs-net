@@ -22,18 +22,17 @@ typedef struct generator {
   int ref_count;
 } Generator;
 
-void       generator_zero(Generator*);
-void       generator_destroy(Generator**);
-BOOL       generator_free(Generator*);
+void generator_zero(Generator*);
+void generator_destroy(Generator**);
+BOOL generator_free(Generator*);
 Generator* generator_new(JSContext*);
-JSValue    generator_dequeue(Generator*, BOOL* done_p);
-JSValue    generator_next(Generator*);
-ssize_t    generator_write(Generator*, const void* data, size_t len, JSValueConst callback);
-JSValue    generator_push(Generator*, JSValueConst value);
-BOOL       generator_yield(Generator*, JSValueConst value, JSValueConst callback);
-BOOL       generator_close(Generator*, JSValueConst callback);
-BOOL       generator_continuous(Generator*, JSValueConst callback);
-
+JSValue generator_dequeue(Generator*, BOOL* done_p);
+JSValue generator_next(Generator*);
+ssize_t generator_write(Generator*, const void* data, size_t len, JSValueConst callback);
+JSValue generator_push(Generator*, JSValueConst value);
+BOOL generator_yield(Generator*, JSValueConst value, JSValueConst callback);
+BOOL generator_close(Generator*, JSValueConst callback);
+BOOL generator_continuous(Generator*, JSValueConst callback);
 
 static inline Generator*
 generator_dup(Generator* gen) {

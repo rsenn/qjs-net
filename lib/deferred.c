@@ -136,4 +136,3 @@ deferred_tojs(Deferred* def, JSContext* ctx) {
 
   return js_function_cclosure(ctx, deferred_js_call, 0, 0, def, (void (*)(ptr_t))deferred_free);
 }
-

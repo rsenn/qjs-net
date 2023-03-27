@@ -14,7 +14,6 @@ wsi_tls(struct lws* wsi) {
   return lws_is_ssl(lws_get_network_wsi(wsi));
 }
 
-
 void
 wsi_cert(struct lws* wsi) {
   uint8_t buf[1280];
@@ -100,7 +99,6 @@ wsi_token_len(struct lws* wsi, enum lws_token_indexes token, size_t* len_p) {
   return buf;
 }
 
-
 char*
 wsi_uri_and_method(struct lws* wsi, HTTPMethod* method) {
   char* url;
@@ -144,7 +142,6 @@ wsi_host_and_port(struct lws* wsi, int* port) {
   }
   return host;
 }
-
 
 const char*
 wsi_protocol_name(struct lws* wsi) {

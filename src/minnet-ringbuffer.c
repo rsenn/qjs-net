@@ -83,20 +83,6 @@ fail:
   return JS_EXCEPTION;
 }
 
-/*JSValue
-minnet_ringbuffer_wrap(JSContext* ctx, struct ringbuffer* rb) {
-  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_ringbuffer_proto, minnet_ringbuffer_class_id);
-
-  if(JS_IsException(ret))
-    return JS_EXCEPTION;
-
-  JS_SetOpaque(ret, rb);
-
-  ++rb->ref_count;
-
-  return ret;
-}*/
-
 struct ringbuffer_tail {
   union {
     JSBuffer buf;
@@ -126,32 +112,6 @@ tail_new(JSContext* ctx, struct ringbuffer* rb, JSValueConst tail_value) {
   }
   return tail;
 }
-
-/*static JSValue
-tail_consume(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
-  JSValue ret = JS_UNDEFINED;
-  struct ringbuffer_tail* tail = opaque;
-  struct lws_ring* r = tail->rb->ring;
-  uint32_t wanted;
-  JSBuffer buf;
-
-  int index = js_buffer_fromargs(ctx, argc, argv, &buf);
-
-  js_input_args(ctx, argc, argv);
-
-  if(buf.size) {
-    wanted = buf.size / ringbuffer_element_len(tail->rb);
-  } else {
-    if(index == argc || JS_ToUint32(ctx, &wanted, argv[index]))
-      return JS_ThrowRangeError(ctx, "need buffer or element count");
-  }
-
-  ret = JS_NewUint32(ctx, lws_ring_consume(r, tail->ptr, buf.data, wanted));
-
-  js_buffer_free(&buf, ctx);
-
-  return ret;
-}*/
 
 static JSValue
 tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
@@ -264,13 +224,6 @@ fail:
   js_buffer_free(&tail_buf, ctx);
   return ret;
 }
-
-/*static JSValue
-tail_bind(JSContext* ctx, JSValue func, JSValueConst this_val, JSValueConst arg) {
-  JSValue ret = js_function_bind_this_1(ctx, func, this_val, arg);
-  JS_FreeValue(ctx, func);
-  return ret;
-}*/
 
 static void
 tail_decorate(JSContext* ctx, JSValueConst obj, JSValueConst ringbuffer, const char* name, int argc, int magic) {
