@@ -2,7 +2,6 @@
 #define QJSNET_LIB_WS_H
 
 #include <libwebsockets.h>
-#include <quickjs.h>
 #include "opaque.h"
 #include "jsutils.h"
 #include "queue.h"

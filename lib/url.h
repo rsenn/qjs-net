@@ -1,7 +1,6 @@
 #ifndef QJSNET_LIB_URL_H
 #define QJSNET_LIB_URL_H
 
-#include <libwebsockets.h>
 #include <quickjs.h>
 #include <stdint.h>
 #include "utils.h"

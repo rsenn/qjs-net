@@ -1,8 +1,6 @@
 #ifndef QJSNET_LIB_QUEUE_H
 #define QJSNET_LIB_QUEUE_H
 
-#include <quickjs.h>
-#include <list.h>
 #include "buffer.h"
 #include "jsutils.h"
 #include "deferred.h"
