@@ -1,15 +1,10 @@
 #ifndef QJSNET_LIB_REQUEST_H
 #define QJSNET_LIB_REQUEST_H
 
-#include <quickjs.h>
-#include <cutils.h>
 #include "lws-utils.h"
-#include "jsutils.h"
+#include "buffer.h"
 #include "generator.h"
 #include "url.h"
-
-struct socket;
-struct http_response;
 
 const char* method_string(enum http_method);
 int method_number(const char*);

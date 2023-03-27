@@ -1,21 +1,18 @@
 #ifndef QJSNET_LIB_RESPONSE_H
 #define QJSNET_LIB_RESPONSE_H
 
-#include <cutils.h>
-#include <quickjs.h>
-#include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include "buffer.h"
-#include "callback.h"
-#include "generator.h"
 #include "url.h"
+#include "buffer.h"
+#include "generator.h"
 
 struct session_data;
 
 typedef struct http_response {
   int ref_count;
-  BOOL read_only, headers_sent, compress;
+  bool read_only : 1, headers_sent : 1, compress : 1;
   struct url url;
   char* type;
   int status;

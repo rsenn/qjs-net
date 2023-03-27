@@ -3,7 +3,6 @@
 #include "buffer.h"
 #include "jsutils.h"
 #include "headers.h"
-#include <cutils.h>
 #include <assert.h>
 
 struct http_response* minnet_response_data(JSValueConst);
