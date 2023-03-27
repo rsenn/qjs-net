@@ -427,6 +427,29 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   return 0;
 }
 
+__attribute__((visibility("default"))) JSModuleDef*
+JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
+  JSModuleDef* m;
+  m = JS_NewCModule(ctx, module_name, js_minnet_init);
+  if(!m)
+    return NULL;
+  JS_AddModuleExport(ctx, m, "Response");
+  JS_AddModuleExport(ctx, m, "Request");
+  JS_AddModuleExport(ctx, m, "Ringbuffer");
+  JS_AddModuleExport(ctx, m, "Generator");
+  JS_AddModuleExport(ctx, m, "Socket");
+  JS_AddModuleExport(ctx, m, "FormParser");
+  JS_AddModuleExport(ctx, m, "Hash");
+  JS_AddModuleExport(ctx, m, "URL");
+  JS_AddModuleExport(ctx, m, "default");
+  JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
+
+  minnet_log_ctx = ctx;
+
+  lws_set_log_level(minnet_log_level, minnet_log_callback);
+
+  return m;
+}
 
 /*void
 minnet_debug(const char* format, ...) {
