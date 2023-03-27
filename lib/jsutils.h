@@ -89,7 +89,6 @@ struct TimerClosure {
 
 #define JS_BIND_THIS 0x8000
 
-JSValue vector2array(JSContext* ctx, int argc, JSValueConst argv[]);
 static inline void
 js_vector_free(JSContext* ctx, int argc, JSValue argv[]) {
   for(int i = 0; i < argc; i++) {

@@ -20,7 +20,6 @@ void ringbuffer_destroy_element(void*);
 void ringbuffer_init(struct ringbuffer*, size_t element_len, size_t count, const char* type, size_t typelen);
 struct ringbuffer* ringbuffer_new(JSContext*);
 void ringbuffer_init2(struct ringbuffer*, size_t element_len, size_t count);
-struct ringbuffer* ringbuffer_new2(size_t, size_t count, JSContext* ctx);
 size_t ringbuffer_insert(struct ringbuffer*, const void* ptr, size_t n);
 size_t ringbuffer_consume(struct ringbuffer*, void* ptr, size_t n);
 size_t ringbuffer_skip(struct ringbuffer*, size_t n);

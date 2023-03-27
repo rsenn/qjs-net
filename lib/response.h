@@ -24,12 +24,8 @@ typedef struct http_response {
   Generator* generator;
 } Response;
 
-void response_format(const struct http_response*, char*, size_t);
-char* response_dump(const struct http_response*);
 void response_init(struct http_response*, struct url, int32_t, char* status_text, BOOL headers_sent, char* type);
 struct http_response* response_dup(struct http_response*);
-struct http_response* response_redirect(struct http_response* resp, const char* location, JSContext* ctx);
-/*ssize_t response_write(struct http_response*, const void*, size_t, JSContext* ctx);*/
 void response_clear(struct http_response*, JSContext*);
 void response_clear_rt(struct http_response*, JSRuntime*);
 void response_free(struct http_response*, JSContext*);
