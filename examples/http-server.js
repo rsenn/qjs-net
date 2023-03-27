@@ -2,7 +2,7 @@ import { FormParser, Generator, Hash, LLL_ALL, LLL_CLIENT, LLL_DEBUG, LLL_ERR, L
 import { setReadHandler, setWriteHandler } from 'os';
 import { Console } from 'console';
 
-globalThis.console = new Console({ inspectOptions: { compact: 1 } });
+globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 
 setLog((LLL_NOTICE - 1) | LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message));
 
@@ -42,12 +42,13 @@ server({
   onError(ws, error) {
     console.log('onError', { ws, error });
   },
-  onHttp(ws, req, rsp) {
-    console.log('onHttp', { req, rsp });
+  onHttp(ws, req, resp) {
+    console.log('onHttp', { req, resp });
+    Object.assign(globalThis,{req,resp})
   },
   onMessage(ws, msg) {
-    console.log('onMessage', typeof ws, { ws, msg });
-    ws.send('ECHO: ' + msg);
+    console.log('onMessage',  ws.fd, msg);
+    ws.send('ECHO: ' + msg);  
   },
   onFd(fd, rd, wr) {
     //console.log('onFd', { fd, rd, wr });
