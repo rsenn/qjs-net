@@ -36,7 +36,8 @@ function main() {
     Negate,
     decorate,
     Chain,
-    Transform
+    Transform,
+    SaveSlices
   });
   Object.assign(
     globalThis,
@@ -271,6 +272,13 @@ function* RangeSlice(points, length) {
 
 function* GetRanges(s, ranges, t = (index, str) => [index, str]) {
   for(let range of RangeSlice(ranges, s.length)) yield t(range[0], s.slice(...range));
+}
+
+function SaveSlices(g, file) {
+  let f = std.open(file, 'w+');
+  for(let chunk of g) typeof chunk == 'string' ? f.puts(chunk) : f.write(chunk, 0, chunk.byteLength);
+  f.flush();
+  f.close();
 }
 
 function YieldAll(g, thisObj) {
