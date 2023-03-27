@@ -31,6 +31,7 @@ function main() {
     SymbolsToDefinedUndefined,
     ReadJSON,
     YieldAll,
+    YieldJoin,YieldMap,
     Within,
     ArrayArgs,
     Negate,
@@ -47,10 +48,11 @@ function main() {
       Match,
       MissingRange,
       MatchRanges,
-      RangeSlice
+      RangeSlice,
+      
     })
   );
-  Object.assign(globalThis, decorate(YieldMap, { GetRanges }));
+  Object.assign(globalThis, decorate([YieldAll, YieldJoin], { fc:FilterComments }));
 
   let objects = commands
     .map(({ command }) => command.split(/\s+/g).find(a => /\.o/.test(a)))
@@ -131,7 +133,8 @@ function main() {
               ),
           commentFunction: ({ slices }) => {
             let [get, set] = getset(slices);
-            return (name, s = get(name)[1]) => (s.startsWith('/*') ? null : (set(name, `/*${(s = get(name)[1])}*/`), s));
+            let clean = globalThis.fc || (s => [...FilterComments(s)].join(''));
+            return (name, s = get(name)[1]) => (s.startsWith('/*') ? null : (set(name, `/*${(s = clean(get(name)[1]))}*/`), s));
           },
           slices: obj => /*new Map*/ GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s])
         })
@@ -321,6 +324,16 @@ function* GetRanges(s, ranges, t = (index, str) => [index, str]) {
   for(let range of RangeSlice(ranges, s.length)) yield t(range[0], s.slice(...range));
 }
 
+function* FilterComments(s) {
+  let comments=GetComments(s);
+  let ranges=GetRanges(s, comments);
+let isComment = i =>  comments.findIndex(([s,e]) => i == s) != -1;
+
+  for(let [idx,s] of ranges) 
+    if(!s.startsWith('/*'))
+      yield s;
+}
+
 function SaveSlices(g, file) {
   let f = std.open(file, 'w+');
   for(let chunk of g)
@@ -341,6 +354,14 @@ function YieldAll(g, thisObj) {
 
   if('next' in g) g = [...g];
   return g;
+}
+function YieldJoin(g, s='') {
+  if(typeof g == 'function')
+    return function(...args) {
+      return  g.call(this, ...args).join(s);
+    };
+
+return  g.call(this, ...args).join(s);
 }
 
 function YieldMap(g) {
