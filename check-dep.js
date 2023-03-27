@@ -103,7 +103,7 @@ function main() {
             ({ slices }) =>
             (name, s = slices.get(name)) =>
               s.startsWith('/*') ? null : (slices.set(name, `/*${(s = slices.get(name))}*/`), s),
-          slices: obj => new Map(GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s]))
+          slices: obj => /*new Map*/ GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s])
         })
       ),
     fileMap
