@@ -5,7 +5,7 @@
 
 static int
 form_parser_callback(void* data, const char* name, const char* filename, char* buf, int len, enum lws_spa_fileupload_states state) {
-  struct form_parser* fp = data;
+  FormParser* fp = data;
   JSCallback* cb = 0;
   JSValue args[2] = {JS_NULL, JS_NULL};
 
@@ -81,7 +81,7 @@ form_parser_callback(void* data, const char* name, const char* filename, char* b
 }
 
 void
-form_parser_init(struct form_parser* fp, struct socket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
+form_parser_init(FormParser* fp, struct socket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
 
   memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
   fp->ws = ws_dup(ws);
@@ -97,17 +97,17 @@ form_parser_init(struct form_parser* fp, struct socket* ws, int nparams, const c
   fp->file = JS_UNDEFINED;
 }
 
-struct form_parser*
+FormParser*
 form_parser_alloc(JSContext* ctx) {
-  struct form_parser* ret;
+  FormParser* ret;
 
-  ret = js_mallocz(ctx, sizeof(struct form_parser));
+  ret = js_mallocz(ctx, sizeof(FormParser));
   ret->ref_count = 1;
   return ret;
 }
 
 void
-form_parser_clear(struct form_parser* fp, JSContext* ctx) {
+form_parser_clear(FormParser* fp, JSContext* ctx) {
 
   if(fp->spa) {
     lws_spa_destroy(fp->spa);
@@ -125,7 +125,7 @@ form_parser_clear(struct form_parser* fp, JSContext* ctx) {
 }
 
 void
-form_parser_clear_rt(struct form_parser* fp, JSRuntime* rt) {
+form_parser_clear_rt(FormParser* fp, JSRuntime* rt) {
 
   if(fp->spa) {
     lws_spa_destroy(fp->spa);
@@ -143,7 +143,7 @@ form_parser_clear_rt(struct form_parser* fp, JSRuntime* rt) {
 }
 
 void
-form_parser_free(struct form_parser* fp, JSContext* ctx) {
+form_parser_free(FormParser* fp, JSContext* ctx) {
   if(--fp->ref_count == 0) {
     ws_free(fp->ws, ctx);
     form_parser_clear(fp, ctx);
@@ -152,7 +152,7 @@ form_parser_free(struct form_parser* fp, JSContext* ctx) {
 }
 
 void
-form_parser_free_rt(struct form_parser* fp, JSRuntime* rt) {
+form_parser_free_rt(FormParser* fp, JSRuntime* rt) {
   if(--fp->ref_count == 0) {
     ws_free_rt(fp->ws, rt);
     form_parser_clear_rt(fp, rt);
@@ -161,7 +161,7 @@ form_parser_free_rt(struct form_parser* fp, JSRuntime* rt) {
 }
 
 const char*
-form_parser_param_name(struct form_parser* fp, int index) {
+form_parser_param_name(FormParser* fp, int index) {
   if(index >= 0 && index < fp->spa_create_info.count_params) {
     return fp->spa_create_info.param_names[index];
   }
@@ -169,7 +169,7 @@ form_parser_param_name(struct form_parser* fp, int index) {
 }
 
 bool
-form_parser_param_valid(struct form_parser* fp, int index) {
+form_parser_param_valid(FormParser* fp, int index) {
   if(index >= 0 && index < fp->spa_create_info.count_params) {
     return true;
   }
@@ -177,12 +177,12 @@ form_parser_param_valid(struct form_parser* fp, int index) {
 }
 
 size_t
-form_parser_param_count(struct form_parser* fp) {
+form_parser_param_count(FormParser* fp) {
   return fp->spa_create_info.count_params;
 }
 
 int
-form_parser_param_index(struct form_parser* fp, const char* name) {
+form_parser_param_index(FormParser* fp, const char* name) {
   int i;
   for(i = 0; i < fp->spa_create_info.count_params; i++) {
     if(!strcmp(fp->spa_create_info.param_names[i], name))
@@ -192,14 +192,14 @@ form_parser_param_index(struct form_parser* fp, const char* name) {
 }
 
 bool
-form_parser_param_exists(struct form_parser* fp, const char* name) {
+form_parser_param_exists(FormParser* fp, const char* name) {
   int i = form_parser_param_index(fp, name);
 
   return i != -1;
 }
 
 int
-form_parser_process(struct form_parser* fp, const void* data, size_t len) {
+form_parser_process(FormParser* fp, const void* data, size_t len) {
   int retval = lws_spa_process(fp->spa, data, len);
   fp->read += len;
   return retval;
