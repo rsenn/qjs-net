@@ -17,6 +17,8 @@ function main() {
     inspectOptions: { compact: 2, maxArrayLength: Infinity, maxStringLength: 200 }
   });
 
+  //epl.inspectOptions.maxStringLength=20;
+
   let commands = ReadJSON('build/x86_64-linux-debug/compile_commands.json');
 
   Object.assign(globalThis, {
@@ -83,26 +85,18 @@ function main() {
                 .filter(Negate(ArrayArgs(Within(comments))))
                 .map(([index, name]) => [
                   name,
-                  [code.lastIndexOf('\n', code.lastIndexOf('\n', index) - 1) + 1, code.indexOf('\n}\n', index) + 2]
+                  [code.lastIndexOf('\n', code.lastIndexOf('\n', index) - 1) + 1, code.indexOf('\n}', index) + 3]
                 ])
             ),
-          slices: ({ code, functions }) => GetRanges(code, functions.values())
+          functionAt: ({ functions }) => i => { for(let [fn, [s, e]] of functions) if(i >= s && i < e) return fn; },
+          functionByName: ({ functions, code }) => name => { for(let [fn, [s, e]] of functions) if(fn === name) return code.slice(s, e); },
+          commentFunction: ({ slices }) => (name, s = slices.get(name)) => s.startsWith('/*') ? null : (slices.set(name, `/*${(s = slices.get(name))}*/`), s),
+          slices: obj => new Map(GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s]))
         })
       ),
     fileMap
   );
   globalThis.allFiles = GetProxy(getFile, () => [...fileMap.keys()]);
-  /*  const getFunctionList = (globalThis.getFunctionList = memoize(file => {
-    const { code, comments } = getFile(file);
-    return new Map(
-      YieldAll(Match)(/^([a-zA-Z_][0-9a-zA-Z_]*)\(.*(,|{)$/gm, code)
-        .filter(Negate(ArrayArgs(Within(comments))))
-        .map(([index, name]) => [
-          name,
-          [code.lastIndexOf('\n', code.lastIndexOf('\n', index) - 1) + 1, code.indexOf('\n}\n', index) + 2]
-        ])
-    );
-  }, new Map()));*/
 
   for(let file in files) {
     let records = files[file];
@@ -313,6 +307,10 @@ function* Match(re, s) {
   let match;
   if(typeof re != 'object' && !(re instanceof RegExp)) re = new RegExp(re, 'gm');
   while((match = re.exec(s))) yield [match.index, match[1]];
+}
+
+function InRange([s, e]) {
+  return i => i >= s && i < e;
 }
 
 function Within(ranges) {
