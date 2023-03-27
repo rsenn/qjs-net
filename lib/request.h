@@ -40,7 +40,16 @@ static inline const char*
 method_name(int m) {
   if(m < 0)
     return "-1";
-  return ((const char* const[]){"GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE", "CONNECT", "HEAD"})[m];
+  return ((const char* const[]){
+      "GET",
+      "POST",
+      "OPTIONS",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "CONNECT",
+      "HEAD",
+  })[m];
 }
 
 #endif /* QJSNET_LIB_REQUEST_H */
