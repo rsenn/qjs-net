@@ -144,25 +144,6 @@ headers_set(JSContext* ctx, ByteBuffer* buffer, const char* name, const char* va
   return len;
 }
 
-ssize_t
-headers_unsetb(ByteBuffer* buffer, const char* name, size_t namelen) {
-  ssize_t pos;
-
-  if((pos = headers_findb(buffer, name, namelen)) >= 0) {
-    uint8_t* ptr = buffer->start + pos;
-    size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
-
-    while(isspace(buffer->start[len]) && buffer->start + len < buffer->write) ++len;
-
-    memcpy(ptr, ptr + len, buffer->write - (buffer->start + len));
-    buffer->write -= len;
-
-    if(buffer->write < buffer->end)
-      memset(buffer->write, 0, buffer->end - buffer->write);
-  }
-  return pos;
-}
-
 void
 js_buffer_to(JSBuffer buf, void** pptr, size_t* plen) {
   if(pptr)
@@ -1003,10 +984,6 @@ js_module_at(JSContext* ctx, int i) {
       return module;
   }
   return 0;
-}
-static inline uint8_t*
-buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx) {
-  return block_grow(&buf->block, size, ctx);
 }
 
 JSValue

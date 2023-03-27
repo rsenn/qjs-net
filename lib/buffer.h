@@ -89,6 +89,7 @@ size_t buffer_escape(ByteBuffer*, const void* x, size_t len);
 char* buffer_escaped(ByteBuffer const*);
 BOOL buffer_clone(ByteBuffer*, const ByteBuffer* other);
 BOOL buffer_putchar(ByteBuffer*, char c);
+uint8_t* buffer_grow(ByteBuffer* buf, size_t size);
 
 static inline void
 buffer_reset(ByteBuffer* buf) {

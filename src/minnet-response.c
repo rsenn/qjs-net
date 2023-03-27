@@ -92,6 +92,46 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   return ret;
 }
 
+enum {
+  HEADERS_GET = 0,
+  HEADERS_SET,
+};
+
+static JSValue
+minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  JSValue ret = JS_UNDEFINED;
+  MinnetResponse* resp;
+  const char* key;
+  size_t keylen;
+
+  if(!(resp = minnet_response_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  key = JS_ToCStringLen(ctx, &keylen, argv[0]);
+
+  switch(magic) {
+    case HEADERS_GET: {
+      size_t vlen;
+      char* v;
+
+      if((v = headers_getlen(&resp->headers, &vlen, key)))
+        ret = JS_NewStringLen(ctx, v, vlen);
+
+      break;
+    }
+    case HEADERS_SET: {
+      const char* v;
+      
+      if((v = JS_ToCString(ctx, argv[1])))
+        ret = JS_NewInt32(ctx, headers_set(&resp->headers, key, v));
+
+      break;
+    }
+  }
+
+  return ret;
+}
+
 static JSValue
 minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse *resp, *clone;
@@ -334,6 +374,8 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_response_method, RESPONSE_ARRAYBUFFER),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
     JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
+    JS_CFUNC_MAGIC_DEF("set", 2, minnet_response_header, HEADERS_SET),
+    JS_CFUNC_MAGIC_DEF("get", 1, minnet_response_header, HEADERS_GET),
     JS_CFUNC_DEF("clone", 0, minnet_response_clone),
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("statusText", minnet_response_get, minnet_response_set, RESPONSE_STATUSTEXT, 0),
