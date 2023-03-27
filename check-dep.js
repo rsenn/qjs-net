@@ -5,10 +5,10 @@ import * as deep from 'deep';
 import { decorate, define, memoize, histogram, lazyProperties } from 'util';
 
 let src2obj = {};
-let files = {},
+let files = (globalThis.files = {}),
   all = new Set();
 let definitions = {},
-  lookup = {},
+  lookup = (globalThis.lookup = {}),
   used = new Set(),
   external = new Set();
 
@@ -67,7 +67,7 @@ function main() {
 
     src2obj[src] ??= file;
     files[src] ??= [];
-    files[src].push({ src, type, name });
+    files[src].push({ type, name });
   }
 
   globalThis.fileMap = new Map();
@@ -88,9 +88,20 @@ function main() {
                   [code.lastIndexOf('\n', code.lastIndexOf('\n', index) - 1) + 1, code.indexOf('\n}', index) + 3]
                 ])
             ),
-          functionAt: ({ functions }) => i => { for(let [fn, [s, e]] of functions) if(i >= s && i < e) return fn; },
-          functionByName: ({ functions, code }) => name => { for(let [fn, [s, e]] of functions) if(fn === name) return code.slice(s, e); },
-          commentFunction: ({ slices }) => (name, s = slices.get(name)) => s.startsWith('/*') ? null : (slices.set(name, `/*${(s = slices.get(name))}*/`), s),
+          functionAt:
+            ({ functions }) =>
+            i => {
+              for(let [fn, [s, e]] of functions) if(i >= s && i < e) return fn;
+            },
+          functionByName:
+            ({ functions, code }) =>
+            name => {
+              for(let [fn, [s, e]] of functions) if(fn === name) return code.slice(s, e);
+            },
+          commentFunction:
+            ({ slices }) =>
+            (name, s = slices.get(name)) =>
+              s.startsWith('/*') ? null : (slices.set(name, `/*${(s = slices.get(name))}*/`), s),
           slices: obj => new Map(GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s]))
         })
       ),
@@ -99,6 +110,11 @@ function main() {
   globalThis.allFiles = GetProxy(getFile, () => [...fileMap.keys()]);
 
   for(let file in files) {
+    let { functions } = getFile(file);
+    for(let [fn, range] of functions) lookup[fn] = lookup[fn] || [file, range];
+  }
+
+  /*for(let file in files) {
     let records = files[file];
     let [def, undef] = (definitions[file] = SymbolsToDefinedUndefined(records));
     for(let record of records) {
@@ -125,33 +141,19 @@ function main() {
 
   for(let file in files) {
     let { code, functions } = getFile(file);
-    // let fns = [...code.matchAll(/^([a-zA-Z_][0-9a-zA-Z_]*)\(.*(,|{)$/gm)];
-
     console.log(`Parsing functions '${file}'...`, functions);
 
     for(let [name, [s, e]] of functions) {
-      /*let c = code.slice(s, e);
-let fn=c.slice(n - s, c.indexOf('('));*/
       valid.add(name);
     }
   }
-
-  /*  for(let file in files) {
-    console.log(`Matching symbols '${file}'...`);
-
-    let [undef, def] = MatchSymbols(getFile(file).code, valid);
-    let exp = [];
-    for(let f of getFunctionList(file).values()) exp.push(f);
-
-    Object.assign(files[file], { undef, def, exp });
-  }*/
 
   console.log('all', all.size);
   console.log('external', external.size);
   console.log('used', used.size);
   console.log('unused', unused.size);
   console.log('unused', console.config({ compact: false }), [...unused]);
-
+*/
   os.kill(process.pid, os.SIGUSR1);
 }
 
