@@ -121,7 +121,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     }
     case HEADERS_SET: {
       const char* v;
-      
+
       if((v = JS_ToCString(ctx, argv[1])))
         ret = JS_NewInt32(ctx, headers_set(&resp->headers, key, v));
 

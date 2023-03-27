@@ -247,3 +247,28 @@ headers_set(ByteBuffer* b, const char* name, const char* value) {
 
   return c;
 }
+
+ssize_t
+headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* value, size_t valuelen) {
+  ssize_t i;
+
+  if((i = headers_findb(b, name, namelen)) >= 0) {
+    uint8_t *x = b->start + i, *y;
+    size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
+
+    //    while(isspace(b->start[c]) && b->start + c < b->write) ++c;
+    y = x + c;
+
+    if((b->write - y) > 0 && valuelen > 0) {
+      memmove(y + valuelen, y, b->write - y);
+    }
+    if(valuelen > 0)
+      memcpy(y, value, valuelen);
+
+    b->write += valuelen;
+
+    if(b->write < b->end)
+      memset(b->write, 0, b->end - b->write);
+  }
+  return i;
+}
