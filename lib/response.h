@@ -21,10 +21,10 @@ typedef struct http_response {
   Generator* generator;
 } Response;
 
-void      response_init(Response*, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type);
+void response_init(Response*, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type);
 Response* response_dup(Response*);
-void      response_clear(Response*, JSRuntime* rt);
-void      response_free(Response*, JSRuntime* rt);
+void response_clear(Response*, JSRuntime* rt);
+void response_free(Response*, JSRuntime* rt);
 Response* response_new(JSContext*);
 
 static inline Generator*

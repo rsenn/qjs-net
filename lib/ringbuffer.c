@@ -35,7 +35,6 @@ ringbuffer_new(JSContext* ctx) {
   return rb;
 }
 
-
 size_t
 ringbuffer_insert(struct ringbuffer* rb, const void* ptr, size_t n) {
   size_t ret;

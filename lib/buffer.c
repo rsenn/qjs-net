@@ -177,8 +177,6 @@ buffer_realloc(ByteBuffer* buf, size_t size) {
   return x;
 }
 
-
-
 BOOL
 buffer_clone(ByteBuffer* buf, const ByteBuffer* other) {
   if(!buffer_alloc(buf, block_SIZE(other)))

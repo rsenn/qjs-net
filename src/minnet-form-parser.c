@@ -77,6 +77,7 @@ minnet_form_parser_constructor(JSContext* ctx, JSValueConst new_target, int argc
 
     if(opaque->form_parser)
       form_parser_free(opaque->form_parser, ctx);
+    
     opaque->form_parser = fp;
   }
 

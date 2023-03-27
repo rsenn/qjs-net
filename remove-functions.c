@@ -1272,7 +1272,6 @@ buffer_escape(ByteBuffer* buf, const void* x, size_t len) {
   return buffer_REMAIN(buf) - prev;
 }
 
-
 struct form_parser*
 form_parser_dup(struct form_parser* fp) {
   ++fp->ref_count;
@@ -1292,14 +1291,12 @@ deferred_tojs(Deferred* def, JSContext* ctx) {
   return js_function_cclosure(ctx, deferred_js_call, 0, 0, def, (void (*)(ptr_t))deferred_free);
 }
 
-
 static JSValue
 deferred_js_call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, ptr_t ptr) {
   Deferred* def = ptr;
 
   return deferred_call(def).js;
 }
-
 
 BOOL
 buffer_putchar(ByteBuffer* buf, char c) {
@@ -1322,7 +1319,6 @@ ringbuffer_next(struct ringbuffer* rb) {
   return lws_ring_get_element(rb->ring, 0);
 }
 
-
 void
 response_free(struct http_response* resp, JSContext* ctx) {
   if(--resp->ref_count == 0) {
@@ -1342,4 +1338,3 @@ response_clear(struct http_response* resp, JSContext* ctx) {
   buffer_free(&resp->headers);
   generator_destroy(&resp->generator);
 }
-
