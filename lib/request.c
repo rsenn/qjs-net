@@ -38,15 +38,6 @@ method_number(const char* name) {
   return i;
 }
 
-void
-request_format(Request const* req, char* buf, size_t len, JSContext* ctx) {
-  char* headers = buffer_escaped(&req->headers);
-  char* url = url_format(req->url, ctx);
-  snprintf(buf, len, FGC(196, "Request") " { method: '%s', url: '%s', headers: '%s' }", method_name(req->method), url, headers);
-
-  js_free(ctx, headers);
-  js_free(ctx, url);
-}
 
 /*char*
 request_dump(Request const* req, JSContext* ctx) {
@@ -158,17 +149,6 @@ request_zero(Request* req) {
   req->body = 0;
 }
 */
-void
-request_clear(Request* req, JSContext* ctx) {
-  url_free(&req->url, ctx);
-  buffer_free(&req->headers);
-  if(req->ip) {
-    free(req->ip);
-    req->ip = 0;
-  }
-  if(req->body)
-    generator_destroy(&req->body);
-}
 
 void
 request_clear_rt(Request* req, JSRuntime* rt) {

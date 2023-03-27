@@ -106,15 +106,6 @@ form_parser_alloc(JSContext* ctx) {
   return ret;
 }
 
-struct form_parser*
-form_parser_new(JSContext* ctx, struct socket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
-  struct form_parser* fp;
-
-  if((fp = form_parser_alloc(ctx)))
-    form_parser_init(fp, ws, nparams, param_names, chunk_size);
-
-  return fp;
-}
 
 struct form_parser*
 form_parser_dup(struct form_parser* fp) {

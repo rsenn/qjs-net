@@ -94,22 +94,8 @@ typedef struct {
   struct socket* ws;
 } WSWantWrite;
 
-static void
-ws_want_write_free(void* ptr) {
-  WSWantWrite* closure = ptr;
-  JSContext* ctx = closure->ctx;
 
-  ws_free(closure->ws, ctx);
-  js_free(ctx, closure);
-};
 
-static JSValue
-want_write(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  WSWantWrite* closure = ptr;
-
-  lws_callback_on_writable(closure->ws->lwsi);
-  return JS_UNDEFINED;
-}
 
 /*JSValue
 ws_want_write(struct socket* ws, JSContext* ctx) {

@@ -8,10 +8,6 @@
 
 struct http_response* minnet_response_data(JSValueConst);
 
-void
-response_format(const struct http_response* resp, char* buf, size_t len) {
-  snprintf(buf, len, FGC(226, "Response") " { url.path: '%s', status: %d, headers_sent: %s, type: '%s' }", resp->url.path, resp->status, resp->headers_sent ? "true" : "false", resp->type);
-}
 
 /*char*
 response_dump(const struct http_response* resp) {

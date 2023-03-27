@@ -392,12 +392,6 @@ buffer_putchar(ByteBuffer* buf, char c) {
   return FALSE;
 }
 
-ByteBuffer
-buffer_move(ByteBuffer* buf) {
-  ByteBuffer ret = *buf;
-  memset(buf, 0, sizeof(ByteBuffer));
-  return ret;
-}
 
 uint8_t*
 buffer_grow(ByteBuffer* buf, size_t size) {

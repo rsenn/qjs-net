@@ -154,12 +154,6 @@ url_parse(struct url* url, const char* u, JSContext* ctx) {
     url->path = s && *s ? js_strdup(ctx, s) : 0;
 }
 
-struct url
-url_create(const char* str, JSContext* ctx) {
-  struct url ret = {1, 0, 0, 0, 0};
-  url_parse(&ret, str, ctx);
-  return ret;
-}
 
 size_t
 url_print(char* buf, size_t size, const struct url url) {
@@ -395,8 +389,7 @@ url_location(const struct url url, JSContext* ctx) {
   if((query = url_query(url)))
     return js_strndup(ctx, url.path, query - url.path);
   return js_strdup(ctx, url.path);
-}
-*/
+} */
 const char*
 url_query(const struct url url) {
   const char* p;

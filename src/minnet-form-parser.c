@@ -98,17 +98,6 @@ minnet_form_parser_new(JSContext* ctx, MinnetWebsocket* ws, int nparams, const c
   return minnet_form_parser_wrap(ctx, fp);
 }
 */
-JSValue
-minnet_form_parser_wrap(JSContext* ctx, MinnetFormParser* fp) {
-  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_form_parser_proto, minnet_form_parser_class_id);
-
-  if(JS_IsException(ret))
-    return JS_EXCEPTION;
-
-  JS_SetOpaque(ret, form_parser_dup(fp));
-
-  return ret;
-}
 
 static JSValue
 minnet_form_parser_get(JSContext* ctx, JSValueConst this_val, int magic) {

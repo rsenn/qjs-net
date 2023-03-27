@@ -26,19 +26,6 @@ headers_object(JSContext* ctx, const void* start, const void* e) {
   return ret;
 }
 
-char*
-headers_atom(JSAtom atom, JSContext* ctx) {
-  char* ret;
-  const char* str = JS_AtomToCString(ctx, atom);
-  size_t len = strlen(str);
-
-  if((ret = js_malloc(ctx, len + 2))) {
-    strcpy(ret, str);
-    ret[len] = ':';
-    ret[len + 1] = '\0';
-  }
-  return ret;
-}
 
 /*int
 headers_addobj(ByteBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
@@ -136,19 +123,6 @@ headers_fromobj(ByteBuffer* buffer, JSValueConst obj, JSContext* ctx) {
   return i;
 }
 
-ssize_t
-headers_set(JSContext* ctx, ByteBuffer* buffer, const char* name, const char* value) {
-  size_t namelen = strlen(name), valuelen = strlen(value);
-  size_t len = namelen + 2 + valuelen + 2;
-
-  buffer_grow(buffer, len);
-  buffer_write(buffer, name, namelen);
-  buffer_write(buffer, ": ", 2);
-  buffer_write(buffer, value, valuelen);
-  buffer_write(buffer, "\r\n", 2);
-
-  return len;
-}
 
 ssize_t
 headers_findb(ByteBuffer* buffer, const char* name, size_t namelen) {
@@ -240,24 +214,6 @@ headers_find(ByteBuffer* buffer, const char* name) {
   return headers_findb(buffer, name, strlen(name));
 }
 
-ssize_t
-headers_unsetb(ByteBuffer* buffer, const char* name, size_t namelen) {
-  ssize_t pos;
-
-  if((pos = headers_findb(buffer, name, namelen)) >= 0) {
-    uint8_t* ptr = buffer->start + pos;
-    size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
-
-    while(isspace(buffer->start[len]) && buffer->start + len < buffer->write) ++len;
-
-    memcpy(ptr, ptr + len, buffer->write - (buffer->start + len));
-    buffer->write -= len;
-
-    if(buffer->write < buffer->end)
-      memset(buffer->write, 0, buffer->end - buffer->write);
-  }
-  return pos;
-}
 
 /*ssize_t
 headers_unset(ByteBuffer* buffer, const char* name) {

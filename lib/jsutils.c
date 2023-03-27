@@ -278,13 +278,6 @@ js_buffer_alloc(JSContext* ctx, size_t size) {
   return js_buffer_fromblock(ctx, &block);
 }
 
-void
-js_buffer_to(JSBuffer buf, void** pptr, size_t* plen) {
-  if(pptr)
-    *pptr = buf.data;
-  if(plen)
-    *plen = buf.size;
-}
 
 /*void
 js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen) {
@@ -766,18 +759,6 @@ js_module_at(JSContext* ctx, int i) {
   return 0;
 }
 */
-JSModuleDef*
-js_module_find(JSContext* ctx, JSAtom name) {
-  struct list_head *el, *list = js_module_list(ctx);
-
-  list_for_each(el, list) {
-    JSModuleDef* module = (void*)((char*)el - sizeof(JSAtom) * 2);
-
-    if(((JSAtom*)module)[1] == name)
-      return module;
-  }
-  return 0;
-}
 
 /*JSModuleDef*
 js_module_find_s(JSContext* ctx, const char* name) {
