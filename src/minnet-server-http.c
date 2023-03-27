@@ -935,11 +935,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       mounts = (MinnetHttpMount*)server->context.info.mounts;
 
       if(!session->mount)
-        if(req->url.path)
-          session->mount = mount_find(mounts, req->url.path, mountpoint_len);
-      if(!session->mount)
         if(path)
           session->mount = mount_find(mounts, path, 0);
+      if(!session->mount)
+        if(req->url.path)
+          session->mount = mount_find(mounts, req->url.path, mountpoint_len);
       if(req->url.path && !session->mount)
         if(!(session->mount = mount_find(mounts, req->url.path, mountpoint_len)))
           session->mount = mount_find(mounts, req->url.path, 0);

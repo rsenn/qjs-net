@@ -19,7 +19,7 @@ server({
       yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
     },
     *generator(req, res) {
-      log('/generator', { req, res });
+      console.log('/generator', { req, res });
       yield 'This';
       yield ' ';
       yield 'is';
@@ -44,14 +44,13 @@ server({
   },
   onHttp(ws, req, resp) {
     console.log('onHttp', { req, resp });
-    Object.assign(globalThis,{req,resp})
+    Object.assign(globalThis, { req, resp });
   },
   onMessage(ws, msg) {
-    console.log('onMessage',  ws.fd, msg);
-    ws.send('ECHO: ' + msg);  
+    console.log('onMessage', ws.fd, msg);
+    ws.send('ECHO: ' + msg);
   },
   onFd(fd, rd, wr) {
-    //console.log('onFd', { fd, rd, wr });
     setReadHandler(fd, rd);
     setWriteHandler(fd, wr);
   }

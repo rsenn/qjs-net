@@ -450,3 +450,33 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
 
   return m;
 }
+
+void
+minnet_debug(const char* format, ...) {
+  int n;
+  va_list ap;
+  char buf[1024];
+  va_start(ap, format);
+  n = vsnprintf(buf, sizeof(buf), format, ap);
+  va_end(ap);
+
+  if(n < sizeof(buf)) {
+    if(buf[n - 1] != '\n')
+      buf[n++] = '\n';
+  }
+
+  for(int i = 0; i < n; i++) {
+    if(i + 1 != n) {
+      if(buf[i] == '\n') {
+        fputs("\\n", stdout);
+        continue;
+      }
+      if(buf[i] == '\r') {
+        fputs("\\r", stdout);
+        continue;
+      }
+    }
+    fputc(buf[i], stdout);
+  }
+  fflush(stdout);
+}
