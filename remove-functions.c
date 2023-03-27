@@ -1131,3 +1131,85 @@ client_promise(JSContext* ctx, struct session_data* session, MinnetResponse* res
   }
   return ret;
 }
+
+
+
+char*
+buffer_escaped(ByteBuffer const* buf) {
+  char* ptr;
+  ByteBuffer out;
+  size_t size = buffer_REMAIN(buf) * 4;
+
+  size = (size + 8) & (~7);
+
+  if(!(ptr = malloc(size)))
+    return 0;
+
+  out = BUFFER_N(ptr, size - 1);
+
+  ptr[buffer_escape(&out, buf->read, buffer_REMAIN(buf))] = '\0';
+
+  return ptr;
+}
+
+
+int
+buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
+  int ret = -1;
+  JSBuffer input = js_input_chars(ctx, value);
+
+  if(input.data == 0 || input.size == 0) {
+    ret = 0;
+  } else if(buffer_append(buf, input.data, input.size) == input.size) {
+    ret = 1;
+  }
+
+  js_buffer_free(&input, ctx);
+  return ret;
+}
+
+JSValue
+buffer_tostring(ByteBuffer const* buf, JSContext* ctx) {
+  return JS_NewStringLen(ctx, (const char*)buf->start, buffer_HEAD(buf));
+}
+
+
+char*
+headers_gettoken(JSContext* ctx, struct lws* wsi, enum lws_token_indexes tok) {
+  int len;
+
+  if((len = lws_hdr_total_length(wsi, tok)) > 0) {
+    char* hdr;
+
+    if((hdr = js_malloc(ctx, len + 1))) {
+      lws_hdr_copy(wsi, hdr, len + 1, tok);
+      hdr[len] = '\0';
+      return hdr;
+    }
+  }
+  return 0;
+}
+
+
+struct list_head*
+js_module_list(JSContext* ctx) {
+  void* tmp_opaque;
+  ptrdiff_t needle;
+  void** ptr;
+  tmp_opaque = JS_GetContextOpaque(ctx);
+  memset(&needle, 0xa5, sizeof(needle));
+  JS_SetContextOpaque(ctx, (void*)needle);
+
+  ptr = memmem(ctx, 1024, &needle, sizeof(needle));
+
+  JS_SetContextOpaque(ctx, tmp_opaque);
+
+  return ((struct list_head*)(ptr - 2)) - 1;
+}
+
+
+
+void
+opaque_clear(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
+  opaque_clear_rt(opaque, JS_GetRuntime(ctx));
+}

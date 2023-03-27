@@ -177,26 +177,6 @@ buffer_realloc(ByteBuffer* buf, size_t size) {
   return x;
 }
 
-int
-buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
-  int ret = -1;
-  JSBuffer input = js_input_chars(ctx, value);
-
-  if(input.data == 0 || input.size == 0) {
-    ret = 0;
-  } else if(buffer_append(buf, input.data, input.size) == input.size) {
-    ret = 1;
-  }
-
-  js_buffer_free(&input, ctx);
-  return ret;
-}
-
-JSValue
-buffer_tostring(ByteBuffer const* buf, JSContext* ctx) {
-  return JS_NewStringLen(ctx, (const char*)buf->start, buffer_HEAD(buf));
-}
-
 size_t
 buffer_escape(ByteBuffer* buf, const void* x, size_t len) {
   const uint8_t *ptr, *end;
@@ -261,24 +241,6 @@ buffer_escape(ByteBuffer* buf, const void* x, size_t len) {
     }
   }
   return buffer_REMAIN(buf) - prev;
-}
-
-char*
-buffer_escaped(ByteBuffer const* buf) {
-  char* ptr;
-  ByteBuffer out;
-  size_t size = buffer_REMAIN(buf) * 4;
-
-  size = (size + 8) & (~7);
-
-  if(!(ptr = malloc(size)))
-    return 0;
-
-  out = BUFFER_N(ptr, size - 1);
-
-  ptr[buffer_escape(&out, buf->read, buffer_REMAIN(buf))] = '\0';
-
-  return ptr;
 }
 
 BOOL

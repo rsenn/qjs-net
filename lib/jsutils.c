@@ -627,22 +627,6 @@ js_has_propertystr(JSContext* ctx, JSValueConst obj, const char* str) {
   return ret;
 }
 
-struct list_head*
-js_module_list(JSContext* ctx) {
-  void* tmp_opaque;
-  ptrdiff_t needle;
-  void** ptr;
-  tmp_opaque = JS_GetContextOpaque(ctx);
-  memset(&needle, 0xa5, sizeof(needle));
-  JS_SetContextOpaque(ctx, (void*)needle);
-
-  ptr = memmem(ctx, 1024, &needle, sizeof(needle));
-
-  JS_SetContextOpaque(ctx, tmp_opaque);
-
-  return ((struct list_head*)(ptr - 2)) - 1;
-}
-
 int64_t
 js_array_length(JSContext* ctx, JSValueConst array) {
   int64_t len = -1;

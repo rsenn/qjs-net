@@ -197,21 +197,6 @@ headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   return count;
 }
 
-char*
-headers_gettoken(JSContext* ctx, struct lws* wsi, enum lws_token_indexes tok) {
-  int len;
-
-  if((len = lws_hdr_total_length(wsi, tok)) > 0) {
-    char* hdr;
-
-    if((hdr = js_malloc(ctx, len + 1))) {
-      lws_hdr_copy(wsi, hdr, len + 1, tok);
-      hdr[len] = '\0';
-      return hdr;
-    }
-  }
-  return 0;
-}
 
 ssize_t
 headers_unsetb(ByteBuffer* b, const char* name, size_t namelen) {

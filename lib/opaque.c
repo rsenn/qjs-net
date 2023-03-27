@@ -45,11 +45,6 @@ opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 }
 
 void
-opaque_clear(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
-  opaque_clear_rt(opaque, JS_GetRuntime(ctx));
-}
-
-void
 opaque_free(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
   opaque_free_rt(opaque, JS_GetRuntime(ctx));
 }
