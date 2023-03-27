@@ -1024,3 +1024,7 @@ js_module_at(JSContext* ctx, int i) {
   }
   return 0;
 }
+static inline uint8_t*
+buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx) {
+  return block_grow(&buf->block, size, ctx);
+}
