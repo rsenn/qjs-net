@@ -1013,8 +1013,7 @@ JSValue
 minnet_request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
   MinnetRequest* req;
 
-  [object Object]
-  req = request_from(argc, argv, ctx);
+  [object Object] req = request_from(argc, argv, ctx);
 
   return minnet_request_wrap(ctx, req);
 }
@@ -1039,18 +1038,16 @@ minnet_generator_reader(JSContext* ctx, MinnetGenerator* gen) {
   return ret;
 }
 
-
 JSValue
 minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
   JSValue ret = JS_NewObject(ctx);
 
-    ++gen->ref_count;
+  ++gen->ref_count;
 
   JS_SetPropertyStr(ctx, ret, "next", js_function_cclosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
 
   return ret;
 }
-
 
 MinnetClient*
 client_find(struct lws* wsi) {
@@ -1073,7 +1070,6 @@ minnet_form_parser_new(JSContext* ctx, MinnetWebsocket* ws, int nparams, const c
 
   return minnet_form_parser_wrap(ctx, fp);
 }
-
 
 JSValue
 minnet_ringbuffer_wrap(JSContext* ctx, struct ringbuffer* rb) {

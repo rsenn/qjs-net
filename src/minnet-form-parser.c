@@ -88,7 +88,6 @@ fail:
   return JS_EXCEPTION;
 }
 
-
 static JSValue
 minnet_form_parser_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetFormParser* fp;
