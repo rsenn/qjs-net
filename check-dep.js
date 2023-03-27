@@ -7,7 +7,7 @@ import { decorate, define, memoize, histogram, lazyProperties } from 'util';
 let src2obj = {};
 let files = (globalThis.files = {}),
   all = (globalThis.all = new Set());
-let definitions = {},
+let references = (globalThis.references = {}),
   lookup = (globalThis.lookup = {}),
   used = (globalThis.used = new Set()),
   external = new Set();
@@ -73,6 +73,22 @@ function main() {
 
   globalThis.fileMap = new Map();
 
+  lazyProperties(globalThis, {
+    defines: () =>
+      new Map(
+        [...fileMap.values()]
+          .map(file => [...file.functions].map(([fn, range]) => [fn, define({ count: 0, range }, { file })]))
+          .flat()
+          .sort()
+        //          .map((n, s, e) => [n, [0, [s, e]]])
+      ),
+    unused: () =>
+      [...defines]
+        .filter(([k, { count }]) => count == 0)
+        .map(([k]) => k)
+        .sort()
+  });
+
   globalThis.getFile = memoize(
     src =>
       lazyProperties(
@@ -103,6 +119,7 @@ function main() {
             ({ slices }) =>
             (name, s = slices.get(name)) =>
               s.startsWith('/*') ? null : (slices.set(name, `/*${(s = slices.get(name))}*/`), s),
+              save: ({ slices,src  }) =>  SaveSlices(slices,src),
           slices: obj => /*new Map*/ GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s])
         })
       ),
@@ -128,17 +145,26 @@ function main() {
       .map(([i, n, s]) => [i, n, i - s, code.slice(s, code.indexOf('\n', i))])
       .filter(([i, n, col, line]) => col > 0)
       .filter(Negate(ArrayArgs(Within(comments))))
-      .map(([i, n]) => [allFiles[file].functionAt(i), n, lookup[n]].join(' - '));
+      //.map(([,n]) =>n)
+      .map(([i, n]) => [allFiles[file].functionAt(i), n, lookup[n]]);
 
-    let undef = new Set(matches);
+    let undef = new Set(matches.map(([, n]) => n));
 
-    definitions[file] = matches;
+    references[file] = matches;
 
-    console.log(`definitions[${file}]`, console.config({ compact: 1 }), undef);
+    for(let [, m] of matches) {
+      let def;
+      if((def = defines.get(m))) {
+        ++def.count;
+        //console.log('def', def);
+      }
+    }
+
+    //  console.log(`references[${file}]`, console.config({ compact: 1 }), undef);
   }
 
-  /*  for(let file in definitions) {
-    let [def, undef] = definitions[file];
+  /*  for(let file in references) {
+    let [def, undef] = references[file];
     for(let name of undef)
       if(!(name in lookup)) {
         undef.delete(name);

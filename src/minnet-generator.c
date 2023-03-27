@@ -89,7 +89,7 @@ minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
   return ret;
 }
 
-JSValue
+/*JSValue
 minnet_generator_reader(JSContext* ctx, MinnetGenerator* gen) {
   JSValue ret = JS_NewObject(ctx);
 
@@ -97,7 +97,7 @@ minnet_generator_reader(JSContext* ctx, MinnetGenerator* gen) {
   JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
 
   return ret;
-}
+}*/
 
 JSValue
 minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
