@@ -2,7 +2,7 @@ import * as std from 'std';
 import * as os from 'os';
 import { Console } from 'console';
 import * as deep from 'deep';
-import { decorate, define, memoize, histogram, lazyProperties } from 'util';
+import { decorate, getset,define, memoize, histogram, lazyProperties } from 'util';
 
 let src2obj = {};
 let files = (globalThis.files = {}),
@@ -129,10 +129,10 @@ function main() {
                 slices.map(([, s]) => s),
                 to
               ),
-          commentFunction:
-            ({ slices }) =>
-            (name, s = slices.get(name)) =>
-              s.startsWith('/*') ? null : (slices.set(name, `/*${(s = slices.get(name))}*/`), s),
+          commentFunction: ({ slices }) => {
+            let [get, set] = getset(slices);
+            return (name, s = get(name)[1]) => (s.startsWith('/*') ? null : (set(name, `/*${(s = get(name)[1])}*/`), s));
+          },
           slices: obj => /*new Map*/ GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s])
         })
       ),
