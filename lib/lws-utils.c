@@ -14,7 +14,7 @@ wsi_tls(struct lws* wsi) {
   return lws_is_ssl(lws_get_network_wsi(wsi));
 }
 
-char*
+/*char*
 wsi_peer(struct lws* wsi) {
   char buf[1024];
 
@@ -22,12 +22,12 @@ wsi_peer(struct lws* wsi) {
 
   return strdup(buf);
 }
-
-char*
+*/
+/*char*
 wsi_host(struct lws* wsi) {
   return wsi_token(wsi, lws_wsi_is_h2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST);
 }
-
+*/
 void
 wsi_cert(struct lws* wsi) {
   uint8_t buf[1280];
@@ -113,7 +113,7 @@ wsi_token_len(struct lws* wsi, enum lws_token_indexes token, size_t* len_p) {
   return buf;
 }
 
-int
+/*int
 wsi_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, DynBuf* db) {
   int ret = 0, len;
   // dbuf_init2(&dbuf, 0, 0);
@@ -127,7 +127,7 @@ wsi_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, D
 
   return len;
 }
-
+*/
 char*
 wsi_uri_and_method(struct lws* wsi, HTTPMethod* method) {
   char* url;
@@ -172,7 +172,7 @@ wsi_host_and_port(struct lws* wsi, int* port) {
   return host;
 }
 
-const char*
+/*const char*
 wsi_vhost_name(struct lws* wsi) {
   struct lws_vhost* vhost;
 
@@ -181,7 +181,7 @@ wsi_vhost_name(struct lws* wsi) {
 
   return 0;
 }
-
+*/
 const char*
 wsi_protocol_name(struct lws* wsi) {
   const struct lws_protocols* protocol;
@@ -221,7 +221,7 @@ static const enum lws_token_indexes wsi_uri_tokens[] = {
     WSI_TOKEN_HEAD_URI,
 };
 
-enum lws_token_indexes
+/*enum lws_token_indexes
 wsi_uri_token(struct lws* wsi) {
 
   size_t i;
@@ -232,7 +232,7 @@ wsi_uri_token(struct lws* wsi) {
 
   return -1;
 }
-
+*/
 HTTPMethod
 wsi_method(struct lws* wsi) {
   static const HTTPMethod methods[] = {

@@ -7,14 +7,14 @@
 #include "jsutils.h"
 #include "buffer.h"
 
-JSValue
+/*JSValue
 vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
   int i;
   JSValue ret = JS_NewArray(ctx);
   for(i = 0; i < argc; i++) JS_SetPropertyUint32(ctx, ret, i, argv[i]);
   return ret;
 }
-
+*/
 JSValue
 js_object_constructor(JSContext* ctx, JSValueConst value) {
   JSValue ctor = JS_UNDEFINED;
@@ -261,13 +261,13 @@ js_buffer_fromblock(JSContext* ctx, struct byte_block* blk) {
   return js_buffer_new(ctx, buf);
 }
 
-JSBuffer
+/*JSBuffer
 js_buffer_data(JSContext* ctx, const void* data, size_t size) {
   ByteBlock block = {(uint8_t*)data, (uint8_t*)data + size};
 
   return js_buffer_fromblock(ctx, &block);
 }
-
+*/
 JSBuffer
 js_buffer_alloc(JSContext* ctx, size_t size) {
   ByteBlock block = {0, 0};
@@ -286,7 +286,7 @@ js_buffer_to(JSBuffer buf, void** pptr, size_t* plen) {
     *plen = buf.size;
 }
 
-void
+/*void
 js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen) {
   if(!JS_IsString(buf.value)) {
     size_t len = 0;
@@ -296,25 +296,25 @@ js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen) {
   } else
     *pstr = (const char*)buf.data;
 }
-
-BOOL
+*/
+/*BOOL
 js_buffer_valid(const JSBuffer* in) {
   return !JS_IsException(in->value);
 }
-
-JSBuffer
+*/
+/*JSBuffer
 js_buffer_clone(const JSBuffer* in, JSContext* ctx) {
   JSBuffer buf = js_input_buffer(ctx, in->value);
   buf.pos = in->pos;
   buf.range = in->range;
   return buf;
 }
-
-void
+*/
+/*void
 js_buffer_dump(const JSBuffer* in, DynBuf* db) {
   dbuf_printf(db, "(JSBuffer){ .data = %p, .size = %zu, .free = %p }", in->data, in->size, in->free);
 }
-
+*/
 void
 js_buffer_free_rt(JSBuffer* in, JSRuntime* rt) {
   if(in->data) {
@@ -330,7 +330,7 @@ js_buffer_free(JSBuffer* in, JSContext* ctx) {
   js_buffer_free_rt(in, JS_GetRuntime(ctx));
 }
 
-BOOL
+/*BOOL
 js_is_iterable(JSContext* ctx, JSValueConst obj) {
   JSAtom atom;
   BOOL ret = FALSE;
@@ -348,7 +348,7 @@ js_is_iterable(JSContext* ctx, JSValueConst obj) {
   }
   return ret;
 }
-
+*/
 BOOL
 js_is_iterator(JSContext* ctx, JSValueConst obj) {
   if(JS_IsObject(obj)) {
@@ -601,11 +601,11 @@ js_promise_pending(ResolveFunctions const* funcs) {
   return !js_resolve_functions_is_null(funcs);
 }
 
-BOOL
+/*BOOL
 js_promise_done(ResolveFunctions const* funcs) {
   return js_resolve_functions_is_null(funcs);
 }
-
+*/
 JSValue
 js_promise_then(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
   return js_invoke(ctx, promise, "then", 1, &handler);
@@ -697,7 +697,7 @@ js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value) {
   return ret;
 }
 
-BOOL
+/*BOOL
 js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str) {
   BOOL ret = FALSE;
   JSValue value;
@@ -708,8 +708,8 @@ js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str) {
   JS_FreeValue(ctx, value);
   return ret;
 }
-
-int64_t
+*/
+/*int64_t
 js_get_propertystr_int64(JSContext* ctx, JSValueConst obj, const char* str) {
   int64_t ret = 0;
   JSValue value;
@@ -718,7 +718,7 @@ js_get_propertystr_int64(JSContext* ctx, JSValueConst obj, const char* str) {
   JS_FreeValue(ctx, value);
   return ret;
 }
-
+*/
 uint32_t
 js_get_propertystr_uint32(JSContext* ctx, JSValueConst obj, const char* str) {
   uint32_t ret = 0;
@@ -753,7 +753,7 @@ js_module_list(JSContext* ctx) {
   return ((struct list_head*)(ptr - 2)) - 1;
 }
 
-JSModuleDef*
+/*JSModuleDef*
 js_module_at(JSContext* ctx, int i) {
   struct list_head *el = 0, *list = js_module_list(ctx);
 
@@ -765,7 +765,7 @@ js_module_at(JSContext* ctx, int i) {
   }
   return 0;
 }
-
+*/
 JSModuleDef*
 js_module_find(JSContext* ctx, JSAtom name) {
   struct list_head *el, *list = js_module_list(ctx);
@@ -779,7 +779,7 @@ js_module_find(JSContext* ctx, JSAtom name) {
   return 0;
 }
 
-JSModuleDef*
+/*JSModuleDef*
 js_module_find_s(JSContext* ctx, const char* name) {
   JSAtom atom;
   JSModuleDef* module;
@@ -788,8 +788,8 @@ js_module_find_s(JSContext* ctx, const char* name) {
   JS_FreeAtom(ctx, atom);
   return module;
 }
-
-void*
+*/
+/*void*
 js_module_export_find(JSModuleDef* module, JSAtom name) {
   void* export_entries = *(void**)((char*)module + sizeof(int) * 2 + sizeof(struct list_head) + sizeof(void*) + sizeof(int) * 2);
   int i, export_entries_count = *(int*)((char*)module + sizeof(int) * 2 + sizeof(struct list_head) + sizeof(void*) + sizeof(int) * 2 + sizeof(void*));
@@ -806,10 +806,10 @@ js_module_export_find(JSModuleDef* module, JSAtom name) {
 
   return 0;
 }
-
+*/
 extern JSModuleDef* js_module_loader(JSContext* ctx, const char* module_name, void* opaque);
 
-JSValue
+/*JSValue
 js_module_import_meta(JSContext* ctx, const char* name) {
   JSModuleDef* m;
   JSValue ret = JS_UNDEFINED;
@@ -819,7 +819,7 @@ js_module_import_meta(JSContext* ctx, const char* name) {
   }
   return ret;
 }
-
+*/
 int64_t
 js_array_length(JSContext* ctx, JSValueConst array) {
   int64_t len = -1;
@@ -846,7 +846,7 @@ js_array_to_argv(JSContext* ctx, int* argcp, JSValueConst array) {
   return ret;
 }
 
-int64_t
+/*int64_t
 js_arraybuffer_length(JSContext* ctx, JSValueConst buffer) {
   size_t len;
 
@@ -855,7 +855,7 @@ js_arraybuffer_length(JSContext* ctx, JSValueConst buffer) {
 
   return -1;
 }
-
+*/
 int
 js_offset_length(JSContext* ctx, int64_t size, int argc, JSValueConst argv[], OffsetLength* off_len_p) {
   int ret = 0;
@@ -950,7 +950,7 @@ js_atom_is_symbol(JSContext* ctx, JSAtom atom) {
   return ret;
 }
 
-BOOL
+/*BOOL
 js_atom_is_string(JSContext* ctx, JSAtom atom) {
   JSValue value;
   BOOL ret;
@@ -959,7 +959,7 @@ js_atom_is_string(JSContext* ctx, JSAtom atom) {
   JS_FreeValue(ctx, value);
   return ret;
 }
-
+*/
 JSBuffer
 js_input_buffer(JSContext* ctx, JSValueConst value) {
   JSBuffer ret = {0, 0, 0, &js_buffer_free_default, JS_UNDEFINED, {0, 0}};
@@ -1084,7 +1084,7 @@ js_is_typedarray(JSContext* ctx, JSValueConst value) {
   return js_is_dataview(ctx, value) && js_has_propertystr(ctx, value, "BYTES_PER_ELEMENT");
 }
 
-BOOL
+/*BOOL
 js_is_generator(JSContext* ctx, JSValueConst value) {
   const char* str;
   BOOL ret = FALSE;
@@ -1108,8 +1108,8 @@ js_is_generator(JSContext* ctx, JSValueConst value) {
   }
   return ret;
 }
-
-BOOL
+*/
+/*BOOL
 js_is_async(JSContext* ctx, JSValueConst value) {
   const char* str;
   BOOL ret = FALSE;
@@ -1126,7 +1126,7 @@ js_is_async(JSContext* ctx, JSValueConst value) {
   }
   return ret;
 }
-
+*/
 JSValue
 js_typedarray_constructor(JSContext* ctx, int bits, BOOL floating, BOOL sign) {
   char class_name[64];

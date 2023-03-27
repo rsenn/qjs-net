@@ -40,7 +40,7 @@ headers_atom(JSAtom atom, JSContext* ctx) {
   return ret;
 }
 
-int
+/*int
 headers_addobj(ByteBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
@@ -72,7 +72,7 @@ headers_addobj(ByteBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext*
   js_free(ctx, tab);
   return 0;
 }
-
+*/
 size_t
 headers_write(uint8_t** in, uint8_t* end, ByteBuffer* buffer, struct lws* wsi) {
   int ret;
@@ -220,7 +220,7 @@ headers_get(ByteBuffer* buffer, const char* name, JSContext* ctx) {
   return 0;
 }
 
-ssize_t
+/*ssize_t
 headers_copy(ByteBuffer* buffer, char* dest, size_t sz, const char* name) {
   char* hdr;
   size_t len;
@@ -234,7 +234,7 @@ headers_copy(ByteBuffer* buffer, char* dest, size_t sz, const char* name) {
 
   return -1;
 }
-
+*/
 ssize_t
 headers_find(ByteBuffer* buffer, const char* name) {
   return headers_findb(buffer, name, strlen(name));
@@ -259,11 +259,11 @@ headers_unsetb(ByteBuffer* buffer, const char* name, size_t namelen) {
   return pos;
 }
 
-ssize_t
+/*ssize_t
 headers_unset(ByteBuffer* buffer, const char* name) {
   return headers_unsetb(buffer, name, strlen(name));
 }
-
+*/
 int
 headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   int tok, len, count = 0;
@@ -313,7 +313,7 @@ headers_gettoken(JSContext* ctx, struct lws* wsi, enum lws_token_indexes tok) {
   return 0;
 }
 
-char*
+/*char*
 headers_tostring(JSContext* ctx, struct lws* wsi) {
   ByteBuffer buf = BUFFER_0();
   char* ret = 0;
@@ -324,3 +324,4 @@ headers_tostring(JSContext* ctx, struct lws* wsi) {
   buffer_free(&buf);
   return ret;
 }
+*/

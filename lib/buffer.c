@@ -58,26 +58,26 @@ block_grow(ByteBlock* blk, size_t size) {
   return alloc ? blk->start : 0;
 }
 
-ssize_t
+/*ssize_t
 block_concat(ByteBlock* blk, ByteBlock other) {
   if(block_append(blk, block_BEGIN(&other), block_SIZE(&other)) == -1)
     return -1;
 
   return block_SIZE(blk);
 }
-
+*/
 static void
 block_finalizer(JSRuntime* rt, void* alloc, void* start) {
   free(alloc);
 }
 
-ByteBlock
+/*ByteBlock
 block_new(size_t size) {
   ByteBlock ret = {0, 0};
   block_alloc(&ret, size);
   return ret;
 }
-
+*/
 ByteBlock
 block_copy(const void* ptr, size_t size) {
   ByteBlock ret = {0, 0};
@@ -129,7 +129,7 @@ block_append(ByteBlock* blk, const void* data, size_t size) {
   return -1;
 }
 
-void
+/*void
 buffer_init(ByteBuffer* buf, uint8_t* start, size_t len) {
   buf->start = start;
   buf->end = start + len;
@@ -137,7 +137,7 @@ buffer_init(ByteBuffer* buf, uint8_t* start, size_t len) {
   buf->write = buf->start;
   buf->alloc = 0;
 }
-
+*/
 uint8_t*
 buffer_alloc(ByteBuffer* buf, size_t size) {
   uint8_t* ret;
@@ -339,31 +339,31 @@ buffer_escaped(ByteBuffer const* buf) {
   return ptr;
 }
 
-void
+/*void
 buffer_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
   // ByteBuffer* buf = opaque;
 }
-
-JSValue
+*/
+/*JSValue
 buffer_toarraybuffer(ByteBuffer* buf, JSContext* ctx) {
   ByteBuffer moved = buffer_move(buf);
   return block_toarraybuffer(&moved.block, ctx);
 }
-
-JSValue
+*/
+/*JSValue
 buffer_toarraybuffer_size(ByteBuffer* buf, size_t* sz, JSContext* ctx) {
   ByteBuffer moved = buffer_move(buf);
   if(sz)
     *sz = block_SIZE(&moved.block);
   return block_toarraybuffer(&moved.block, ctx);
 }
-
-void
+*/
+/*void
 buffer_dump(const char* n, ByteBuffer const* buf) {
   fprintf(stderr, "%s\t{ write = %td, read = %td, size = %td }\n", n, buf->write - buf->start, buf->read - buf->start, buf->end - buf->start);
   fflush(stderr);
 }
-
+*/
 BOOL
 buffer_clone(ByteBuffer* buf, const ByteBuffer* other) {
   if(!buffer_alloc(buf, block_SIZE(other)))
@@ -375,13 +375,13 @@ buffer_clone(ByteBuffer* buf, const ByteBuffer* other) {
   return TRUE;
 }
 
-uint8_t*
+/*uint8_t*
 buffer_skip(ByteBuffer* buf, size_t size) {
   assert(buf->read + size <= buf->write);
   buf->read += size;
   return buf->read;
 }
-
+*/
 BOOL
 buffer_putchar(ByteBuffer* buf, char c) {
   if(buf->write + 1 <= buf->end) {

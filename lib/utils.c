@@ -211,7 +211,7 @@ uint_pow(unsigned base, unsigned degree) {
   return result;
 }
 
-int
+/*int
 socket_geterror(int fd) {
   int e;
   socklen_t sl = sizeof(e);
@@ -223,8 +223,8 @@ socket_geterror(int fd) {
 
   return -1;
 }
-
-char*
+*/
+/*char*
 socket_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
   const char* s = 0;
   union {
@@ -250,14 +250,14 @@ socket_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
 
   return (char*)s;
 }
-
-void
+*/
+/*void
 js_value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
   const char* str = JS_ToCString(ctx, *v);
   lwsl_user("%s = '%s'\n", n, str);
   JS_FreeCString(ctx, str);
 }
-
+*/
 size_t
 list_size(struct list_head* list) {
   size_t count = 0;

@@ -76,7 +76,7 @@ ws_dup(struct socket* ws) {
   return ws;
 }
 
-int
+/*int
 ws_writable(struct socket* ws, BOOL binary, JSContext* ctx) {
   struct wsi_opaque_user_data* opaque;
   int ret = 0;
@@ -88,7 +88,7 @@ ws_writable(struct socket* ws, BOOL binary, JSContext* ctx) {
   }
   return ret;
 }
-
+*/
 typedef struct {
   JSContext* ctx;
   struct socket* ws;
@@ -111,7 +111,7 @@ want_write(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[],
   return JS_UNDEFINED;
 }
 
-JSValue
+/*JSValue
 ws_want_write(struct socket* ws, JSContext* ctx) {
   WSWantWrite* h;
 
@@ -122,7 +122,7 @@ ws_want_write(struct socket* ws, JSContext* ctx) {
 
   return js_function_cclosure(ctx, want_write, 0, 0, h, ws_want_write_free);
 }
-
+*/
 QueueItem*
 ws_enqueue(struct socket* ws, ByteBlock chunk) {
   struct wsi_opaque_user_data* opaque;

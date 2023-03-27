@@ -427,7 +427,7 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   return 0;
 }
 
-__attribute__((visibility("default"))) JSModuleDef*
+/*__attribute__((visibility("default"))) JSModuleDef*
 JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JSModuleDef* m;
   m = JS_NewCModule(ctx, module_name, js_minnet_init);
@@ -450,8 +450,8 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
 
   return m;
 }
-
-void
+*/
+/*void
 minnet_debug(const char* format, ...) {
   int n;
   va_list ap;
@@ -480,7 +480,7 @@ minnet_debug(const char* format, ...) {
   }
   fflush(stdout);
 }
-
+*/
 int
 minnet_protocol_count(MinnetProtocols** plist) {
   int i;
@@ -495,7 +495,7 @@ minnet_protocol_count(MinnetProtocols** plist) {
   return i;
 }
 
-int
+/*int
 minnet_protocol_add(MinnetProtocols** plist, struct lws_protocols protocol) {
   size_t pos = minnet_protocol_count(plist);
 
@@ -507,3 +507,4 @@ minnet_protocol_add(MinnetProtocols** plist, struct lws_protocols protocol) {
 
   return pos;
 }
+*/

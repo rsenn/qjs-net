@@ -178,7 +178,7 @@ generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
   return TRUE;
 }
 
-BOOL
+/*BOOL
 generator_cancel(Generator* gen) {
   BOOL ret = FALSE;
 
@@ -191,7 +191,7 @@ generator_cancel(Generator* gen) {
 
   return ret;
 }
-
+*/
 BOOL
 generator_close(Generator* gen, JSValueConst callback) {
   BOOL ret = FALSE;
@@ -226,7 +226,7 @@ generator_close(Generator* gen, JSValueConst callback) {
   return ret;
 }
 
-JSValue
+/*JSValue
 generator_stop(Generator* gen) {
   ResolveFunctions funcs = {JS_NULL, JS_NULL};
   JSValue ret = js_promise_create(gen->ctx, &funcs);
@@ -238,7 +238,7 @@ generator_stop(Generator* gen) {
   js_promise_free(gen->ctx, &funcs);
   return ret;
 }
-
+*/
 BOOL
 generator_continuous(Generator* gen, JSValueConst callback) {
   Queue* q;

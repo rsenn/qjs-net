@@ -34,7 +34,7 @@ proxy_new() {
   return pc;
 }
 
-int
+/*int
 proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);
 
@@ -140,8 +140,8 @@ proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* u
 
   return 0;
 }
-
-int
+*/
+/*int
 proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);
   proxy_msg_t* msg;
@@ -232,3 +232,4 @@ proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reason, void
 
   return 0;
 }
+*/

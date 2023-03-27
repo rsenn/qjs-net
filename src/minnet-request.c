@@ -35,18 +35,16 @@ minnet_request_data(JSValueConst obj) {
   return JS_GetOpaque(obj, minnet_request_class_id);
 }
 
-JSValue
+/*JSValue
 minnet_request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
   MinnetRequest* req;
 
-  /* if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0])))
-     req = request_dup(req);
-   else*/
+  [object Object]
   req = request_from(argc, argv, ctx);
 
   return minnet_request_wrap(ctx, req);
 }
-
+*/
 JSValue
 minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
@@ -103,7 +101,7 @@ minnet_request_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   return JS_ThrowOutOfMemory(ctx);
 }
 
-JSValue
+/*JSValue
 minnet_request_new(JSContext* ctx, MinnetURL url, enum http_method method) {
   MinnetRequest* req;
 
@@ -112,7 +110,7 @@ minnet_request_new(JSContext* ctx, MinnetURL url, enum http_method method) {
 
   return minnet_request_wrap(ctx, req);
 }
-
+*/
 JSValue
 minnet_request_wrap(JSContext* ctx, MinnetRequest* req) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_request_proto, minnet_request_class_id);

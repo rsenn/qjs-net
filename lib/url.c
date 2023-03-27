@@ -389,14 +389,14 @@ url_connect(struct url* url, struct lws_context* context, struct lws** p_wsi) {
   return !lws_client_connect_via_info(&i);
 }*/
 
-char*
+/*char*
 url_location(const struct url url, JSContext* ctx) {
   const char* query;
   if((query = url_query(url)))
     return js_strndup(ctx, url.path, query - url.path);
   return js_strdup(ctx, url.path);
 }
-
+*/
 const char*
 url_query(const struct url url) {
   const char* p;
@@ -540,12 +540,12 @@ url_fromwsi(struct url* url, struct lws* wsi, JSContext* ctx) {
   // url->query = minnet_query_string(wsi, ctx);
 }
 
-void
+/*void
 url_dump(const char* n, struct url const* url) {
   fprintf(stderr, "%s{ protocol = %s, host = %s, port = %u, path = %s }\n", n, url->protocol, url->host, url->port, url->path);
   fflush(stderr);
 }
-
+*/
 struct url*
 url_new(JSContext* ctx) {
 

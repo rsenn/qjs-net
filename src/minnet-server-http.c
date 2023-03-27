@@ -140,7 +140,7 @@ vhost_options_free_list(JSContext* ctx, MinnetVhostOptions* vo) {
   } while((vo = next));
 }
 
-void
+/*void
 vhost_options_free(JSContext* ctx, MinnetVhostOptions* vo) {
 
   if(vo->name)
@@ -153,7 +153,7 @@ vhost_options_free(JSContext* ctx, MinnetVhostOptions* vo) {
 
   js_free(ctx, (void*)vo);
 }
-
+*/
 MinnetHttpMount*
 mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, const char* pro, enum lws_mount_protocols origin_proto) {
   MinnetHttpMount* m;

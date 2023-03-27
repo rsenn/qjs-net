@@ -88,7 +88,7 @@ fail:
   return JS_EXCEPTION;
 }
 
-JSValue
+/*JSValue
 minnet_form_parser_new(JSContext* ctx, MinnetWebsocket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
   MinnetFormParser* fp;
 
@@ -97,7 +97,7 @@ minnet_form_parser_new(JSContext* ctx, MinnetWebsocket* ws, int nparams, const c
 
   return minnet_form_parser_wrap(ctx, fp);
 }
-
+*/
 JSValue
 minnet_form_parser_wrap(JSContext* ctx, MinnetFormParser* fp) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_form_parser_proto, minnet_form_parser_class_id);

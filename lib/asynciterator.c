@@ -41,7 +41,7 @@ asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
   }
 }
 
-AsyncIterator*
+/*AsyncIterator*
 asynciterator_new(JSContext* ctx) {
   AsyncIterator* it;
 
@@ -51,7 +51,7 @@ asynciterator_new(JSContext* ctx) {
 
   return it;
 }
-
+*/
 JSValue
 asynciterator_next(AsyncIterator* it, JSContext* ctx) {
   AsyncRead* rd;

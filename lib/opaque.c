@@ -87,7 +87,7 @@ lws_opaque(struct lws* wsi, JSContext* ctx) {
   return opaque;
 }
 
-bool
+/*bool
 opaque_valid(struct wsi_opaque_user_data* opaque) {
   struct list_head* el;
 
@@ -98,3 +98,4 @@ opaque_valid(struct wsi_opaque_user_data* opaque) {
 
   return false;
 }
+*/

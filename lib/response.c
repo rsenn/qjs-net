@@ -13,13 +13,13 @@ response_format(const struct http_response* resp, char* buf, size_t len) {
   snprintf(buf, len, FGC(226, "Response") " { url.path: '%s', status: %d, headers_sent: %s, type: '%s' }", resp->url.path, resp->status, resp->headers_sent ? "true" : "false", resp->type);
 }
 
-char*
+/*char*
 response_dump(const struct http_response* resp) {
   static char buf[1024];
   response_format(resp, buf, sizeof(buf));
   return buf;
 }
-
+*/
 /*void
 response_zero(struct http_response* resp) {
   memset(resp, 0, sizeof(Response));
@@ -103,7 +103,7 @@ response_new(JSContext* ctx) {
   return resp;
 }
 
-struct http_response*
+/*struct http_response*
 response_redirect(struct http_response* resp, const char* location, JSContext* ctx) {
 
   resp->status = 302;
@@ -111,3 +111,4 @@ response_redirect(struct http_response* resp, const char* location, JSContext* c
   headers_set(ctx, &resp->headers, "Location", location);
   return resp;
 }
+*/

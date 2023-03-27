@@ -83,7 +83,7 @@ client_new(JSContext* ctx) {
   return client;
 }
 
-MinnetClient*
+/*MinnetClient*
 client_find(struct lws* wsi) {
   struct list_head* el;
 
@@ -95,7 +95,7 @@ client_find(struct lws* wsi) {
   }
   return 0;
 }
-
+*/
 void
 client_free(MinnetClient* client, JSContext* ctx) {
   return client_free_rt(client, JS_GetRuntime(ctx));
@@ -440,7 +440,7 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   return ret;
 }
 
-uint8_t*
+/*uint8_t*
 scan_backwards(uint8_t* ptr, uint8_t ch) {
   if(ptr[-1] == '\n') {
     do { --ptr; } while(ptr[-1] != ch);
@@ -448,7 +448,7 @@ scan_backwards(uint8_t* ptr, uint8_t ch) {
   }
   return 0;
 }
-
+*/
 static int
 client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetClient* client = lws_client(wsi);

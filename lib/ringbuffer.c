@@ -5,14 +5,11 @@
 #include <libwebsockets.h>
 #include <pthread.h>
 
-void
+/*void
 ringbuffer_dump(struct ringbuffer const* rb) {
-  /*  printf("\nstruct ringbuffer {\n\tref_count = %zu", rb->ref_count);
-    buffer_dump("buffer", &rb->buffer);
-    fputs("\n}", stderr);
-    fflush(stderr);*/
+  [object Object]
 }
-
+*/
 void
 ringbuffer_destroy_element(void* element) {}
 
@@ -44,7 +41,7 @@ ringbuffer_init2(struct ringbuffer* rb, size_t element_len, size_t count) {
   ringbuffer_init(rb, element_len, count, type, strlen(type));
 }
 
-struct ringbuffer*
+/*struct ringbuffer*
 ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
   struct ringbuffer* rb;
 
@@ -53,7 +50,7 @@ ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
 
   return rb;
 }
-
+*/
 size_t
 ringbuffer_insert(struct ringbuffer* rb, const void* ptr, size_t n) {
   size_t ret;
@@ -67,7 +64,7 @@ ringbuffer_insert(struct ringbuffer* rb, const void* ptr, size_t n) {
   return ret;
 }
 
-size_t
+/*size_t
 ringbuffer_consume(struct ringbuffer* rb, void* ptr, size_t n) {
   size_t ret;
   assert(rb->ring);
@@ -78,8 +75,8 @@ ringbuffer_consume(struct ringbuffer* rb, void* ptr, size_t n) {
   pthread_mutex_unlock(&rb->lock_ring);
   return ret;
 }
-
-size_t
+*/
+/*size_t
 ringbuffer_skip(struct ringbuffer* rb, size_t n) {
   size_t ret;
   assert(rb->ring);
@@ -90,13 +87,13 @@ ringbuffer_skip(struct ringbuffer* rb, size_t n) {
   pthread_mutex_unlock(&rb->lock_ring);
   return ret;
 }
-
-const void*
+*/
+/*const void*
 ringbuffer_next(struct ringbuffer* rb) {
   assert(rb->ring);
   return lws_ring_get_element(rb->ring, 0);
 }
-
+*/
 size_t
 ringbuffer_waiting(struct ringbuffer* rb) {
   assert(rb->ring);

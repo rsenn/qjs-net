@@ -48,13 +48,13 @@ request_format(Request const* req, char* buf, size_t len, JSContext* ctx) {
   js_free(ctx, url);
 }
 
-char*
+/*char*
 request_dump(Request const* req, JSContext* ctx) {
   static char buf[2048];
   request_format(req, buf, sizeof(buf), ctx);
   return buf;
 }
-
+*/
 void
 request_init(Request* req, struct url url, enum http_method method) {
   // memset(req, 0, sizeof(Request));
@@ -92,7 +92,7 @@ request_dup(Request* req) {
   return req;
 }
 
-Request*
+/*Request*
 request_fromobj(JSValueConst options, JSContext* ctx) {
   Request* req;
   JSValue value;
@@ -117,7 +117,7 @@ request_fromobj(JSValueConst options, JSContext* ctx) {
 
   JS_FreeValue(ctx, value);
 
-  request_init(req, /*path,*/ url_create(url, ctx), method_number(method));
+  request_init(req, [object Object] url_create(url, ctx), method_number(method));
 
   JS_FreeCString(ctx, url);
   JS_FreeCString(ctx, path);
@@ -125,7 +125,7 @@ request_fromobj(JSValueConst options, JSContext* ctx) {
 
   return req;
 }
-
+*/
 Request*
 request_fromwsi(struct lws* wsi, JSContext* ctx) {
   Request* ret = 0;
@@ -143,21 +143,21 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
   return ret;
 }
 
-Request*
+/*Request*
 request_fromurl(const char* uri, JSContext* ctx) {
   HTTPMethod method = METHOD_GET;
   struct url url = url_create(uri, ctx);
 
   return request_new(url, method, ctx);
 }
-
-void
+*/
+/*void
 request_zero(Request* req) {
   memset(req, 0, sizeof(Request));
   req->headers = BUFFER_0();
   req->body = 0;
 }
-
+*/
 void
 request_clear(Request* req, JSContext* ctx) {
   url_free(&req->url, ctx);
@@ -182,14 +182,14 @@ request_clear_rt(Request* req, JSRuntime* rt) {
     generator_destroy(&req->body);
 }
 
-void
+/*void
 request_free(Request* req, JSContext* ctx) {
   if(--req->ref_count == 0) {
     request_clear(req, ctx);
     js_free(ctx, req);
   }
 }
-
+*/
 void
 request_free_rt(Request* req, JSRuntime* rt) {
   if(--req->ref_count == 0) {
