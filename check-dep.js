@@ -121,7 +121,7 @@ function main() {
 
   for(let file in files) {
     let exp = '\\b(' + [...all].join('|') + ')\\b';
-    // console.log('exp', exp ?? [...all].filter(n => /[*+.]/.test(n)));
+
     let { code } = allFiles[file];
     let matches = YieldAll(Match)(new RegExp(exp, 'gm'), code)
       .map(([i, n]) => [i, n, code.lastIndexOf('\n', i) + 1])
