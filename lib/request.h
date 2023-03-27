@@ -26,6 +26,7 @@ typedef struct http_request {
 
 const char* method_string(enum http_method);
 int method_number(const char*);
+
 void request_init(Request*, struct url url, enum http_method method);
 Request* request_alloc(JSContext*);
 Request* request_new(struct url, HTTPMethod method, JSContext* ctx);

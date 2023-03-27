@@ -1,15 +1,15 @@
 #ifndef QJSNET_LIB_RESPONSE_H
 #define QJSNET_LIB_RESPONSE_H
 
-#include <cutils.h>    // for BOOL
-#include <quickjs.h>   // for JSContext, JSRuntime
-#include <stddef.h>    // for size_t
-#include <stdint.h>    // for int32_t
-#include <sys/types.h> // for ssize_t
-#include "buffer.h"    // for ByteBuffer
-#include "callback.h"  // for JSCallback
-#include "generator.h" // for generator_new, Generator
-#include "url.h"       // for url
+#include <cutils.h>
+#include <quickjs.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include "buffer.h"
+#include "callback.h"
+#include "generator.h"
+#include "url.h"
 
 struct session_data;
 

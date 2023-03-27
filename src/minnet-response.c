@@ -202,10 +202,10 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       char* type;
       size_t len;
 
-   /*   if((type = resp->type))
-        len = strlen(type);
-      else*/
-        type = headers_getlen(&resp->headers, &len, "content-type");
+      /*   if((type = resp->type))
+           len = strlen(type);
+         else*/
+      type = headers_getlen(&resp->headers, &len, "content-type");
 
       ret = type ? JS_NewStringLen(ctx, type, len) : JS_NULL;
       break;
