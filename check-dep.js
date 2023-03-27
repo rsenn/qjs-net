@@ -6,10 +6,10 @@ import { decorate, define, memoize, histogram, lazyProperties } from 'util';
 
 let src2obj = {};
 let files = (globalThis.files = {}),
-  all = new Set();
+  all = (globalThis.all = new Set());
 let definitions = {},
   lookup = (globalThis.lookup = {}),
-  used = new Set(),
+  used = (globalThis.used = new Set()),
   external = new Set();
 
 function main() {
@@ -64,7 +64,7 @@ function main() {
     let src = file.replace(/.*\.dir\/(.*)\.o$/g, '$1');
 
     if(/^\./.test(name)) continue;
-    all.add(name);
+    // all.add(name);
 
     src2obj[src] ??= file;
     files[src] ??= [];
@@ -111,22 +111,32 @@ function main() {
   globalThis.allFiles = GetProxy(getFile, () => [...fileMap.keys()]);
 
   for(let file in files) {
-    let { functions } = getFile(file);
-    for(let [fn, range] of functions) lookup[fn] = lookup[fn] || [file, range];
-  }
+    let obj = getFile(file);
+    for(let [fn, range] of obj.functions) {
+      lookup[fn] = lookup[fn] || [file, range];
 
-  /*for(let file in files) {
-    let records = files[file];
-    let [def, undef] = (definitions[file] = SymbolsToDefinedUndefined(records));
-    for(let record of records) {
-      if(/^[A-TV-Z]$/.test(record.type)) lookup[record.name] ??= record;
-    }
-    for(let record of records) {
-      if(/^[^U]$/.test(record.type)) lookup[record.name] ??= record;
+      all.add(fn);
     }
   }
 
-  for(let file in definitions) {
+  for(let file in files) {
+    let exp = '\\b(' + [...all].join('|') + ')\\b';
+    // console.log('exp', exp ?? [...all].filter(n => /[*+.]/.test(n)));
+    let { code } = allFiles[file];
+    let matches = YieldAll(Match)(new RegExp(exp, 'gm'), code)
+      .map(([i, n]) => [i, n, code.lastIndexOf('\n', i) + 1])
+      .map(([i, n, s]) => [i, n, i - s, code.slice(s, code.indexOf('\n', i))])
+      .filter(([i, n, col, line]) => col > 0)
+      .map(([, n]) => n);
+
+    let undef = new Set(matches);
+
+    definitions[file] = matches;
+
+    console.log(`definitions[${file}]`, console.config({ compact: 1 }), matches);
+  }
+
+  /*  for(let file in definitions) {
     let [def, undef] = definitions[file];
     for(let name of undef)
       if(!(name in lookup)) {
@@ -160,14 +170,13 @@ function main() {
 
 function GetFunctionFromIndex(file, pos) {
   let funcName;
-  for(let [fn, [index,end]] of allFiles[file].functions)
-    if(pos >= index && pos < end) funcName = fn;
+  for(let [fn, [index, end]] of allFiles[file].functions) if(pos >= index && pos < end) funcName = fn;
   return funcName;
 }
 
 function GetSymbol(name) {
-  let record = lookup[name];
-  return record;
+  let [src, range] = lookup[name];
+  return [src, range];
 }
 
 function* MatchRanges(code, re) {
@@ -183,7 +192,7 @@ function MatchSymbols(code, symbols) {
   // console.log('sl',sl);
   let re = new RegExp('(?:^|[^\n])(' + sl + ')', 'g');
 
-  [...(code.matchAll(re) || [])].map(m => {
+  let matches = [...(code.matchAll(re) || [])].map(m => {
     let lineIndex = [code.lastIndexOf('\n', m.index) + 1, code.indexOf('\n', m.index + m[1].length)];
     let line = code.slice(...lineIndex);
     let columnPos = line.indexOf(m[1]);
@@ -197,8 +206,8 @@ function MatchSymbols(code, symbols) {
 }
 
 function GetObj(symbol) {
-  let record = lookup[symbol];
-  return record;
+  let [file] = lookup[symbol];
+  return allFiles[file];
 }
 
 function* PipeStream(command) {
