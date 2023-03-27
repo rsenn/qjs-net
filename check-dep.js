@@ -160,10 +160,8 @@ function main() {
 
 function GetFunctionFromIndex(file, pos) {
   let funcName;
-  for(let [index, fn] of getFunctionList(file)) {
-    if(pos >= index) funcName = fn;
-    if(pos < index) break;
-  }
+  for(let [fn, [index,end]] of allFiles[file].functions)
+    if(pos >= index && pos < end) funcName = fn;
   return funcName;
 }
 
