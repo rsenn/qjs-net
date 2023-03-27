@@ -1117,3 +1117,40 @@ tail_bind(JSContext* ctx, JSValue func, JSValueConst this_val, JSValueConst arg)
   JS_FreeValue(ctx, func);
   return ret;
 }
+
+static void
+client_resolved_free(void* ptr) {
+  HTTPAsyncResolveClosure* closure = ptr;
+  if(--closure->ref_count == 0) {
+    response_free(closure->resp, closure->ctx);
+    js_free(closure->ctx, ptr);
+  }
+}
+
+static JSValue
+client_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  const char* val = JS_ToCString(ctx, argv[0]);
+
+  // printf("value=%s\n", val);
+  LOG(__func__, "value=%s", val);
+  JS_FreeCString(ctx, val);
+
+  return JS_UNDEFINED;
+}
+
+static JSValue
+client_promise(JSContext* ctx, struct session_data* session, MinnetResponse* resp, struct lws* wsi, JSValueConst value) {
+  HTTPAsyncResolveClosure* p;
+  JSValue ret = JS_UNDEFINED;
+
+  if((p = js_malloc(ctx, sizeof(HTTPAsyncResolveClosure)))) {
+    *p = (HTTPAsyncResolveClosure){1, ctx, session, response_dup(resp), wsi};
+    JSValue fn = js_function_cclosure(ctx, client_resolved, 1, 0, p, client_resolved_free);
+    JSValue tmp = js_promise_then(ctx, value, fn);
+    JS_FreeValue(ctx, fn);
+    ret = tmp;
+  } else {
+    ret = JS_ThrowOutOfMemory(ctx);
+  }
+  return ret;
+}
