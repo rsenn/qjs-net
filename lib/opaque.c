@@ -17,7 +17,7 @@ opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
     ws_free_rt(ws, rt);
   }
   if(opaque->req) {
-    struct http_request* req = opaque->req;
+    Request* req = opaque->req;
     opaque->req = 0;
     request_free(req, rt);
   }

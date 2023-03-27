@@ -1,4 +1,5 @@
 #include "session.h"
+#include "request.h"
 #include "response.h"
 #include "opaque.h"
 #include "ringbuffer.h"
@@ -9,7 +10,7 @@
 #include <assert.h>
 
 struct socket* minnet_ws_data(JSValueConst);
-struct http_request* minnet_request_data(JSValueConst);
+Request* minnet_request_data(JSValueConst);
 Response* minnet_response_data(JSValueConst);
 
 extern Response* minnet_response_data(JSValueConst);

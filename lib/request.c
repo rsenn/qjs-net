@@ -8,7 +8,7 @@
 #include <strings.h>
 #include <libwebsockets.h>
 
-struct http_request* minnet_request_data(JSValueConst);
+Request* minnet_request_data(JSValueConst);
 
 static const char* const method_names[] = {
     "GET",
