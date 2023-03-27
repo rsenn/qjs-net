@@ -41,16 +41,6 @@ ringbuffer_init2(struct ringbuffer* rb, size_t element_len, size_t count) {
   ringbuffer_init(rb, element_len, count, type, strlen(type));
 }
 
-/*struct ringbuffer*
-ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
-  struct ringbuffer* rb;
-
-  if((rb = ringbuffer_new(ctx)))
-    ringbuffer_init2(rb, element_len, count);
-
-  return rb;
-}
-*/
 size_t
 ringbuffer_insert(struct ringbuffer* rb, const void* ptr, size_t n) {
   size_t ret;
@@ -64,7 +54,7 @@ ringbuffer_insert(struct ringbuffer* rb, const void* ptr, size_t n) {
   return ret;
 }
 
-/*size_t
+size_t
 ringbuffer_consume(struct ringbuffer* rb, void* ptr, size_t n) {
   size_t ret;
   assert(rb->ring);
@@ -75,8 +65,8 @@ ringbuffer_consume(struct ringbuffer* rb, void* ptr, size_t n) {
   pthread_mutex_unlock(&rb->lock_ring);
   return ret;
 }
-*/
-/*size_t
+
+size_t
 ringbuffer_skip(struct ringbuffer* rb, size_t n) {
   size_t ret;
   assert(rb->ring);
@@ -87,13 +77,13 @@ ringbuffer_skip(struct ringbuffer* rb, size_t n) {
   pthread_mutex_unlock(&rb->lock_ring);
   return ret;
 }
-*/
-/*const void*
+
+const void*
 ringbuffer_next(struct ringbuffer* rb) {
   assert(rb->ring);
   return lws_ring_get_element(rb->ring, 0);
 }
-*/
+
 size_t
 ringbuffer_waiting(struct ringbuffer* rb) {
   assert(rb->ring);

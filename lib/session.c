@@ -35,11 +35,6 @@ session_zero(struct session_data* session) {
   queue_zero(&session->sendq);
 }
 
-/*void
-session_clear(struct session_data* session, JSContext* ctx) {
-  session_clear_rt(session, JS_GetRuntime(ctx));
-}
-*/
 void
 session_clear_rt(struct session_data* session, JSRuntime* rt) {
 
@@ -127,23 +122,6 @@ session_opaque(struct session_data* sess) {
   return 0;
 }
 
-/*struct context*
-session_context(struct session_data* sess) {
-  struct lws* wsi;
-
-  if((wsi = session_wsi(sess)))
-    return wsi_context(wsi);
-
-  return 0;
-}
-*/
-/*struct http_request*
-session_request(struct session_data* sess) {
-  if(JS_IsObject(sess->req_obj))
-    return minnet_request_data(sess->req_obj);
-  return 0;
-}
-*/
 struct http_response*
 session_response(struct session_data* sess) {
   if(JS_IsObject(sess->resp_obj))

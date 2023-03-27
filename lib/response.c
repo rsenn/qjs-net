@@ -9,18 +9,6 @@
 struct http_response* minnet_response_data(JSValueConst);
 
 
-/*char*
-response_dump(const struct http_response* resp) {
-  static char buf[1024];
-  response_format(resp, buf, sizeof(buf));
-  return buf;
-}
-*/
-/*void
-response_zero(struct http_response* resp) {
-  memset(resp, 0, sizeof(Response));
-  resp->body = BUFFER_0();
-}*/
 
 void
 response_init(struct http_response* resp, struct url url, int32_t status, char* status_text, BOOL headers_sent, char* type) {
@@ -41,11 +29,6 @@ response_dup(struct http_response* resp) {
   return resp;
 }
 
-/*ssize_t
-response_write(struct http_response* resp, const void* x, size_t n, JSContext* ctx) {
-  assert(resp->generator);
-  return generator_write(resp->generator, x, n, JS_UNDEFINED);
-}*/
 
 void
 response_clear(struct http_response* resp, JSContext* ctx) {
@@ -98,13 +81,3 @@ response_new(JSContext* ctx) {
 
   return resp;
 }
-
-/*struct http_response*
-response_redirect(struct http_response* resp, const char* location, JSContext* ctx) {
-
-  resp->status = 302;
-  // url_parse(&resp->url, location, ctx);
-  headers_set(ctx, &resp->headers, "Location", location);
-  return resp;
-}
-*/

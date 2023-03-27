@@ -38,14 +38,6 @@ method_number(const char* name) {
   return i;
 }
 
-
-/*char*
-request_dump(Request const* req, JSContext* ctx) {
-  static char buf[2048];
-  request_format(req, buf, sizeof(buf), ctx);
-  return buf;
-}
-*/
 void
 request_init(Request* req, struct url url, enum http_method method) {
   // memset(req, 0, sizeof(Request));
@@ -83,40 +75,6 @@ request_dup(Request* req) {
   return req;
 }
 
-/*Request*
-request_fromobj(JSValueConst options, JSContext* ctx) {
-  Request* req;
-  JSValue value;
-  const char *url, *path, *method;
-
-  if(!(req = request_alloc(ctx)))
-    return req;
-
-  value = JS_GetPropertyStr(ctx, options, "url");
-  url = JS_ToCString(ctx, value);
-  JS_FreeValue(ctx, value);
-
-  value = JS_GetPropertyStr(ctx, options, "path");
-  path = JS_ToCString(ctx, value);
-  JS_FreeValue(ctx, value);
-
-  JS_GetPropertyStr(ctx, options, "method");
-  method = JS_ToCString(ctx, value);
-  JS_FreeValue(ctx, value);
-
-  JS_GetPropertyStr(ctx, options, "headers");
-
-  JS_FreeValue(ctx, value);
-
-  request_init(req, [object Object] url_create(url, ctx), method_number(method));
-
-  JS_FreeCString(ctx, url);
-  JS_FreeCString(ctx, path);
-  JS_FreeCString(ctx, method);
-
-  return req;
-}
-*/
 Request*
 request_fromwsi(struct lws* wsi, JSContext* ctx) {
   Request* ret = 0;
@@ -134,22 +92,6 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
   return ret;
 }
 
-/*Request*
-request_fromurl(const char* uri, JSContext* ctx) {
-  HTTPMethod method = METHOD_GET;
-  struct url url = url_create(uri, ctx);
-
-  return request_new(url, method, ctx);
-}
-*/
-/*void
-request_zero(Request* req) {
-  memset(req, 0, sizeof(Request));
-  req->headers = BUFFER_0();
-  req->body = 0;
-}
-*/
-
 void
 request_clear_rt(Request* req, JSRuntime* rt) {
   url_free_rt(&req->url, rt);
@@ -162,14 +104,6 @@ request_clear_rt(Request* req, JSRuntime* rt) {
     generator_destroy(&req->body);
 }
 
-/*void
-request_free(Request* req, JSContext* ctx) {
-  if(--req->ref_count == 0) {
-    request_clear(req, ctx);
-    js_free(ctx, req);
-  }
-}
-*/
 void
 request_free_rt(Request* req, JSRuntime* rt) {
   if(--req->ref_count == 0) {

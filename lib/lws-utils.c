@@ -14,20 +14,7 @@ wsi_tls(struct lws* wsi) {
   return lws_is_ssl(lws_get_network_wsi(wsi));
 }
 
-/*char*
-wsi_peer(struct lws* wsi) {
-  char buf[1024];
 
-  lws_get_peer_simple(wsi, buf, sizeof(buf) - 1);
-
-  return strdup(buf);
-}
-*/
-/*char*
-wsi_host(struct lws* wsi) {
-  return wsi_token(wsi, lws_wsi_is_h2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST);
-}
-*/
 void
 wsi_cert(struct lws* wsi) {
   uint8_t buf[1280];
@@ -113,21 +100,7 @@ wsi_token_len(struct lws* wsi, enum lws_token_indexes token, size_t* len_p) {
   return buf;
 }
 
-/*int
-wsi_copy_fragment(struct lws* wsi, enum lws_token_indexes token, int fragment, DynBuf* db) {
-  int ret = 0, len;
-  // dbuf_init2(&dbuf, 0, 0);
 
-  len = lws_hdr_fragment_length(wsi, token, fragment);
-
-  dbuf_realloc(db, (len > 0 ? len : 1023) + 1);
-
-  if((ret = lws_hdr_copy_fragment(wsi, (void*)db->buf, db->size, token, fragment)) < 0)
-    return ret;
-
-  return len;
-}
-*/
 char*
 wsi_uri_and_method(struct lws* wsi, HTTPMethod* method) {
   char* url;
@@ -172,16 +145,7 @@ wsi_host_and_port(struct lws* wsi, int* port) {
   return host;
 }
 
-/*const char*
-wsi_vhost_name(struct lws* wsi) {
-  struct lws_vhost* vhost;
 
-  if((vhost = lws_get_vhost(wsi)))
-    return lws_get_vhost_name(vhost);
-
-  return 0;
-}
-*/
 const char*
 wsi_protocol_name(struct lws* wsi) {
   const struct lws_protocols* protocol;
@@ -221,18 +185,6 @@ static const enum lws_token_indexes wsi_uri_tokens[] = {
     WSI_TOKEN_HEAD_URI,
 };
 
-/*enum lws_token_indexes
-wsi_uri_token(struct lws* wsi) {
-
-  size_t i;
-
-  for(i = 0; i < countof(wsi_uri_tokens); i++)
-    if(wsi_token_exists(wsi, wsi_uri_tokens[i]))
-      return wsi_uri_tokens[i];
-
-  return -1;
-}
-*/
 HTTPMethod
 wsi_method(struct lws* wsi) {
   static const HTTPMethod methods[] = {

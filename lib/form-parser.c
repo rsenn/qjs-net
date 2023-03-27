@@ -113,14 +113,6 @@ form_parser_dup(struct form_parser* fp) {
   return fp;
 }
 
-/*void
-form_parser_zero(struct form_parser* fp) {
-  fp->ws = 0;
-  fp->spa = 0;
-  fp->lwsac_head = 0;
-  memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
-}
-*/
 void
 form_parser_clear(struct form_parser* fp, JSContext* ctx) {
 

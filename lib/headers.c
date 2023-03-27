@@ -27,39 +27,6 @@ headers_object(JSContext* ctx, const void* start, const void* e) {
 }
 
 
-/*int
-headers_addobj(ByteBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
-  JSPropertyEnum* tab;
-  uint32_t tab_len, i;
-
-  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
-    return 0;
-
-  for(i = 0; i < tab_len; i++) {
-    JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);
-    size_t len;
-    void* prop;
-    const void* str;
-    int ret;
-
-    str = JS_ToCStringLen(ctx, &len, value);
-    JS_FreeValue(ctx, value);
-
-    prop = headers_atom(tab[i].atom, ctx);
-
-    ret = lws_add_http_header_by_name(wsi, prop, str, len, &buffer->write, buffer->end);
-
-    js_free(ctx, prop);
-    JS_FreeCString(ctx, str);
-
-    if(ret)
-      return -1;
-  }
-
-  js_free(ctx, tab);
-  return 0;
-}
-*/
 size_t
 headers_write(uint8_t** in, uint8_t* end, ByteBuffer* buffer, struct lws* wsi) {
   int ret;
@@ -194,32 +161,11 @@ headers_get(ByteBuffer* buffer, const char* name, JSContext* ctx) {
   return 0;
 }
 
-/*ssize_t
-headers_copy(ByteBuffer* buffer, char* dest, size_t sz, const char* name) {
-  char* hdr;
-  size_t len;
-
-  if((hdr = headers_getlen(buffer, &len, name))) {
-    len = MIN(len, sz);
-
-    strncpy(dest, hdr, len);
-    return len;
-  }
-
-  return -1;
-}
-*/
 ssize_t
 headers_find(ByteBuffer* buffer, const char* name) {
   return headers_findb(buffer, name, strlen(name));
 }
 
-
-/*ssize_t
-headers_unset(ByteBuffer* buffer, const char* name) {
-  return headers_unsetb(buffer, name, strlen(name));
-}
-*/
 int
 headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   int tok, len, count = 0;
@@ -268,16 +214,3 @@ headers_gettoken(JSContext* ctx, struct lws* wsi, enum lws_token_indexes tok) {
   }
   return 0;
 }
-
-/*char*
-headers_tostring(JSContext* ctx, struct lws* wsi) {
-  ByteBuffer buf = BUFFER_0();
-  char* ret = 0;
-  headers_tobuffer(ctx, &buf, wsi);
-
-  ret = js_strndup(ctx, (const char*)buf.start, buffer_BYTES(&buf));
-
-  buffer_free(&buf);
-  return ret;
-}
-*/

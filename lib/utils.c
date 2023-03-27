@@ -211,53 +211,6 @@ uint_pow(unsigned base, unsigned degree) {
   return result;
 }
 
-/*int
-socket_geterror(int fd) {
-  int e;
-  socklen_t sl = sizeof(e);
-
-  if(!getsockopt(fd, SOL_SOCKET, SO_ERROR, &e, &sl)) {
-    setsockopt(fd, SOL_SOCKET, SO_ERROR, &e, sl);
-    return e;
-  }
-
-  return -1;
-}
-*/
-/*char*
-socket_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
-  const char* s = 0;
-  union {
-    struct sockaddr a;
-    struct sockaddr_in ai;
-    struct sockaddr_in6 ai6;
-  } sa;
-  socklen_t sl = sizeof(s);
-  uint16_t port = 0;
-  static char addr[1024];
-
-  if(fn(fd, &sa.a, &sl) != -1) {
-    size_t i;
-    s = inet_ntop(sa.ai.sin_family, sa.ai.sin_family == AF_INET ? (void*)&sa.ai.sin_addr : (void*)&sa.ai6.sin6_addr, addr, sizeof(addr));
-    i = strlen(s);
-
-    switch(sa.ai.sin_family) {
-      case AF_INET: port = ntohs(sa.ai.sin_port); break;
-      case AF_INET6: port = ntohs(sa.ai6.sin6_port); break;
-    }
-    snprintf(&addr[i], sizeof(addr) - i, ":%u", port);
-  }
-
-  return (char*)s;
-}
-*/
-/*void
-js_value_dump(JSContext* ctx, const char* n, JSValueConst const* v) {
-  const char* str = JS_ToCString(ctx, *v);
-  lwsl_user("%s = '%s'\n", n, str);
-  JS_FreeCString(ctx, str);
-}
-*/
 size_t
 list_size(struct list_head* list) {
   size_t count = 0;

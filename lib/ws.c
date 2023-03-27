@@ -76,39 +76,6 @@ ws_dup(struct socket* ws) {
   return ws;
 }
 
-/*int
-ws_writable(struct socket* ws, BOOL binary, JSContext* ctx) {
-  struct wsi_opaque_user_data* opaque;
-  int ret = 0;
-
-  if((opaque = lws_get_opaque_user_data(ws->lwsi))) {
-    struct session_data* session = opaque->sess;
-
-    ret = session_writable(session, binary, ctx);
-  }
-  return ret;
-}
-*/
-typedef struct {
-  JSContext* ctx;
-  struct socket* ws;
-} WSWantWrite;
-
-
-
-
-/*JSValue
-ws_want_write(struct socket* ws, JSContext* ctx) {
-  WSWantWrite* h;
-
-  if(!(h = js_mallocz(ctx, sizeof(WSWantWrite))))
-    return JS_ThrowOutOfMemory(ctx);
-
-  *h = (WSWantWrite){ctx, ws_dup(ws)};
-
-  return js_function_cclosure(ctx, want_write, 0, 0, h, ws_want_write_free);
-}
-*/
 QueueItem*
 ws_enqueue(struct socket* ws, ByteBlock chunk) {
   struct wsi_opaque_user_data* opaque;
