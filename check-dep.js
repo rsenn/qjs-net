@@ -92,7 +92,7 @@ function main() {
   globalThis.getFile = memoize(
     src =>
       lazyProperties(
-        { code: std.loadFile(src), src },
+        define({ src }, { code: std.loadFile(src), src }),
         decorate([ThisAsArg, YieldAll], {
           comments: ({ code }) => GetComments(code),
           nonComments: ({ code, comments }) => MissingRange(comments, code.length),
@@ -115,11 +115,24 @@ function main() {
             name => {
               for(let [fn, [s, e]] of functions) if(fn === name) return code.slice(s, e);
             },
+          remove:
+            ({ slices }) =>
+            name => {
+              let i;
+              if((i = typeof name == 'number' ? name : slices.findIndex(([k, v]) => k === name)) != -1)
+                return slices.splice(i, 1)[0];
+            },
+          save:
+            ({ slices, src }) =>
+            (to = src) =>
+              SaveSlices(
+                slices.map(([, s]) => s),
+                to
+              ),
           commentFunction:
             ({ slices }) =>
             (name, s = slices.get(name)) =>
               s.startsWith('/*') ? null : (slices.set(name, `/*${(s = slices.get(name))}*/`), s),
-              save: ({ slices,src  }) =>  SaveSlices(slices,src),
           slices: obj => /*new Map*/ GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s])
         })
       ),
@@ -310,7 +323,10 @@ function* GetRanges(s, ranges, t = (index, str) => [index, str]) {
 
 function SaveSlices(g, file) {
   let f = std.open(file, 'w+');
-  for(let chunk of g) typeof chunk == 'string' ? f.puts(chunk) : f.write(chunk, 0, chunk.byteLength);
+  for(let chunk of g)
+    if(typeof chunk == 'string') f.puts(chunk);
+    else if(typeof chunk == 'object' && chunk instanceof ArrayBuffer) f.write(chunk, 0, chunk.byteLength);
+    else throw new TypeError(`SaveSlices: chunk = ${chunk}`);
   f.flush();
   f.close();
 }
