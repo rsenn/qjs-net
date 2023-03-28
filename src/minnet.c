@@ -129,19 +129,11 @@ static JSValue
 minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue data[]) {
   JSValueConst args[] = {argv[0], JS_NULL};
 
-  if(js_is_nullish(argv[1]) != js_is_nullish(data[2])) {
-    args[1] = argv[1];
-    JS_Call(ctx, data[0], JS_UNDEFINED, 2, args);
-    JS_FreeValue(ctx, data[2]);
-    data[2] = JS_DupValue(ctx, argv[1]);
-  }
+  args[1] = argv[1];
+  JS_Call(ctx, data[0], JS_UNDEFINED, 2, args);
 
-  if(js_is_nullish(argv[2]) != js_is_nullish(data[3])) {
-    args[1] = argv[2];
-    JS_Call(ctx, data[1], JS_UNDEFINED, 2, args);
-    JS_FreeValue(ctx, data[3]);
-    data[3] = JS_DupValue(ctx, argv[2]);
-  }
+  args[1] = argv[2];
+  JS_Call(ctx, data[1], JS_UNDEFINED, 2, args);
 
   return JS_UNDEFINED;
 }
