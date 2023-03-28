@@ -15,7 +15,7 @@ server({
   mounts: {
     '/': ['/', '.', 'index.html'],
     '/404.html': function* (req, res) {
-      log('/404.html', { req, res });
+      console.log('/404.html', { req, res });
       yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
     },
     *generator(req, res) {

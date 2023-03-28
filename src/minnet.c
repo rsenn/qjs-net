@@ -125,6 +125,27 @@ minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JS
   JS_FreeValue(ctx, func);
 }
 
+JSValue
+minnet_default_fd_callback_fb(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValueConst data[]) {
+
+  return JS_UNDEFINED;
+}
+
+JSValue
+minnet_default_fd_callback(JSContext* ctx) {
+  JSValue os = js_global_get(ctx, "os");
+
+  if(!JS_IsObject(os))
+    return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
+
+  JSValueConst data[] = {
+      JS_GetPropertyStr(ctx, os, "setReadHandler"),
+      JS_GetPropertyStr(ctx, os, "setWriteHandler"),
+  };
+
+  return JS_NewCFunctionData(ctx, minnet_default_fd_callback_fb, 2, 0, countof(data), data);
+}
+
 void
 minnet_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
