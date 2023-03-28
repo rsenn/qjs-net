@@ -126,17 +126,22 @@ minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JS
 }
 
 JSValue
-minnet_default_fd_callback_fb(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue  data[]) {
+minnet_default_fd_callback_fb(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue data[]) {
   JSValueConst args[] = {argv[0], JS_NULL};
 
+  if(JS_IsNull(argv[1]) != JS_IsNull(data[2])) {
+    args[1] = argv[1];
+    JS_Call(ctx, data[0], JS_UNDEFINED, 2, args);
+    JS_FreeValue(ctx, data[2]);
+    data[2] = JS_DupValue(ctx, argv[1]);
+  }
 
-args[1]=argv[1];
-  JS_Call(ctx, data[0], JS_UNDEFINED, 2, args);
-data[2] = JS_DupValue(ctx, argv[1]);
-
-  args[1] = argv[2];
-  JS_Call(ctx, data[1], JS_UNDEFINED, 2, args);
-data[3] = JS_DupValue(ctx, argv[2]);
+  if(JS_IsNull(argv[2]) != JS_IsNull(data[3])) {
+    args[1] = argv[2];
+    JS_Call(ctx, data[1], JS_UNDEFINED, 2, args);
+    JS_FreeValue(ctx, data[3]);
+    data[3] = JS_DupValue(ctx, argv[2]);
+  }
 
   return JS_UNDEFINED;
 }
