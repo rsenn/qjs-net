@@ -148,7 +148,6 @@ minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
 
 struct FDCallbackChannel {
   JSValue set_fn;
-  BOOL state;
 };
 struct FDCallbackClosure {
   JSContext* ctx;
@@ -168,19 +167,12 @@ static JSValue
 minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int, void* opaque) {
   struct FDCallbackClosure* closure = opaque;
   JSValueConst args[] = {argv[0], JS_NULL};
-  BOOL state;
 
-  if((state = js_is_nullish(argv[1])) != closure->read.state) {
-    args[1] = argv[1];
+     args[1] = argv[1];
     JS_Call(ctx, closure->read.set_fn, JS_UNDEFINED, 2, args);
-    closure->read.state = state;
-  }
-
-  if((state = js_is_nullish(argv[2])) != closure->write.state) {
+ 
     args[1] = argv[2];
     JS_Call(ctx, closure->write.set_fn, JS_UNDEFINED, 2, args);
-    closure->write.state = state;
-  }
 }
 
 JSValue
