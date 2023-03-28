@@ -127,6 +127,11 @@ minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JS
 
 JSValue
 minnet_default_fd_callback_fb(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValueConst data[]) {
+  JSValueConst args[] = {argv[0], argv[1]};
+
+  JS_Call(ctx, data[0], JS_UNDEFINED, 2, args);
+  args[1] = argv[2];
+  JS_Call(ctx, data[1], JS_UNDEFINED, 2, args);
 
   return JS_UNDEFINED;
 }
