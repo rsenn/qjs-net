@@ -168,11 +168,11 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
   struct FDCallbackClosure* closure = opaque;
   JSValueConst args[] = {argv[0], JS_NULL};
 
-     args[1] = argv[1];
-    JS_Call(ctx, closure->read.set_fn, JS_UNDEFINED, 2, args);
- 
-    args[1] = argv[2];
-    JS_Call(ctx, closure->write.set_fn, JS_UNDEFINED, 2, args);
+  args[1] = argv[1];
+  JS_Call(ctx, closure->read.set_fn, JS_UNDEFINED, 2, args);
+
+  args[1] = argv[2];
+  JS_Call(ctx, closure->write.set_fn, JS_UNDEFINED, 2, args);
 }
 
 JSValue
@@ -192,14 +192,14 @@ minnet_default_fd_callback(JSContext* ctx) {
 
     return js_function_cclosure(ctx, minnet_fd_callback_closure, 3, 0, closure, minnet_fd_callback_free);
 
-  /*  JSValueConst data[4] = {
-        JS_GetPropertyStr(ctx, os, "setReadHandler"),
-        JS_GetPropertyStr(ctx, os, "setWriteHandler"),
-        JS_UNDEFINED,
-        JS_UNDEFINED,
-    };
+    /*  JSValueConst data[4] = {
+          JS_GetPropertyStr(ctx, os, "setReadHandler"),
+          JS_GetPropertyStr(ctx, os, "setWriteHandler"),
+          JS_UNDEFINED,
+          JS_UNDEFINED,
+      };
 
-    return JS_NewCFunctionData(ctx, minnet_fd_callback, 3, 0, countof(data), data);*/
+      return JS_NewCFunctionData(ctx, minnet_fd_callback, 3, 0, countof(data), data);*/
   }
 
   return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
