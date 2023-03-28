@@ -125,18 +125,18 @@ minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JS
   JS_FreeValue(ctx, func);
 }
 
-JSValue
-minnet_default_fd_callback_fb(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue data[]) {
+static JSValue
+minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue data[]) {
   JSValueConst args[] = {argv[0], JS_NULL};
 
-  if(JS_IsNull(argv[1]) != JS_IsNull(data[2])) {
+  if(js_is_nullish(argv[1]) != js_is_nullish(data[2])) {
     args[1] = argv[1];
     JS_Call(ctx, data[0], JS_UNDEFINED, 2, args);
     JS_FreeValue(ctx, data[2]);
     data[2] = JS_DupValue(ctx, argv[1]);
   }
 
-  if(JS_IsNull(argv[2]) != JS_IsNull(data[3])) {
+  if(js_is_nullish(argv[2]) != js_is_nullish(data[3])) {
     args[1] = argv[2];
     JS_Call(ctx, data[1], JS_UNDEFINED, 2, args);
     JS_FreeValue(ctx, data[3]);
@@ -146,21 +146,70 @@ minnet_default_fd_callback_fb(JSContext* ctx, JSValueConst this_val, int argc, J
   return JS_UNDEFINED;
 }
 
+struct FDCallbackChannel {
+  JSValue set_fn;
+  BOOL state;
+};
+struct FDCallbackClosure {
+  JSContext* ctx;
+  struct FDCallbackChannel read, write;
+};
+
+void
+minnet_fd_callback_free(void* opaque) {
+  struct FDCallbackClosure* closure = opaque;
+
+  JS_FreeValue(closure->ctx, closure->read.set_fn);
+  JS_FreeValue(closure->ctx, closure->write.set_fn);
+  js_free(closure->ctx, closure);
+}
+
+JSValue
+minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int, void* opaque) {
+  struct FDCallbackClosure* closure = opaque;
+  JSValueConst args[] = {argv[0], JS_NULL};
+  BOOL state;
+
+  if((state = js_is_nullish(argv[1])) != closure->read.state) {
+    args[1] = argv[1];
+    JS_Call(ctx, closure->read.set_fn, JS_UNDEFINED, 2, args);
+    closure->read.state = state;
+  }
+  if((state = js_is_nullish(argv[2])) != closure->write.state) {
+    args[1] = argv[2];
+    JS_Call(ctx, closure->write.set_fn, JS_UNDEFINED, 2, args);
+    closure->write.state = state;
+  }
+}
+
 JSValue
 minnet_default_fd_callback(JSContext* ctx) {
   JSValue os = js_global_get(ctx, "os");
 
-  if(!JS_IsObject(os))
-    return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
+  if(JS_IsObject(os)) {
 
-  JSValueConst data[] = {
-      JS_GetPropertyStr(ctx, os, "setReadHandler"),
-      JS_GetPropertyStr(ctx, os, "setWriteHandler"),
-      JS_UNDEFINED,
-      JS_UNDEFINED,
-  };
+    struct FDCallbackClosure* closure;
 
-  return JS_NewCFunctionData(ctx, minnet_default_fd_callback_fb, 3, 0, countof(data), data);
+    if(!(closure = js_malloc(ctx, sizeof(struct FDCallbackClosure))))
+      return JS_EXCEPTION;
+
+    *closure = (struct FDCallbackClosure){
+        ctx,
+        {JS_GetPropertyStr(ctx, os, "setReadHandler"), FALSE},
+        {JS_GetPropertyStr(ctx, os, "setWriteHandler"), FALSE},
+    };
+
+    return js_function_cclosure(ctx, minnet_fd_callback_closure, 3, 0, closure, minnet_fd_callback_free);
+
+    JSValueConst data[4] = {
+        JS_GetPropertyStr(ctx, os, "setReadHandler"),
+        JS_GetPropertyStr(ctx, os, "setWriteHandler"),
+        JS_UNDEFINED,
+        JS_UNDEFINED,
+    };
+    return JS_NewCFunctionData(ctx, minnet_fd_callback, 3, 0, countof(data), data);
+  }
+  return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
 }
 
 void

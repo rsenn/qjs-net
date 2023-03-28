@@ -70,4 +70,6 @@ JSModuleDef* JS_INIT_MODULE(JSContext*, const char* module_name);
 int minnet_protocol_count(MinnetProtocols**);
 int minnet_protocol_add(MinnetProtocols** plist, struct lws_protocols protocol);
 
+JSValue minnet_default_fd_callback(JSContext* ctx);
+
 #endif /* MINNET_H */

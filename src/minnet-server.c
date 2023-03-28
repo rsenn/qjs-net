@@ -285,6 +285,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   JSValue opt_error_document = JS_GetPropertyStr(ctx, options, "errorDocument");
   JSValue opt_options = JS_GetPropertyStr(ctx, options, "options");
 
+  if(!JS_IsFunction(ctx, opt_on_fd))
+    opt_on_fd = minnet_default_fd_callback(ctx);
+
   if(!JS_IsUndefined(opt_tls)) {
 
     is_tls = JS_ToBool(ctx, opt_tls);

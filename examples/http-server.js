@@ -4,9 +4,9 @@ import { Console } from 'console';
 
 globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 
-setLog((LLL_NOTICE - 1) | LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message));
+setLog(LLL_ALL |(LLL_NOTICE - 1) | LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message));
 
-server({
+server(globalThis.options={
   host: '0.0.0.0',
   port: '8765',
   block: false,
@@ -49,9 +49,9 @@ server({
   onMessage(ws, msg) {
     console.log('onMessage', ws.fd, msg);
     ws.send('ECHO: ' + msg);
-  },
+  }/*,
   onFd(fd, rd, wr) {
     setReadHandler(fd, rd);
     setWriteHandler(fd, wr);
-  }
+  }*/
 });
