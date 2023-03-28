@@ -175,6 +175,7 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
     JS_Call(ctx, closure->read.set_fn, JS_UNDEFINED, 2, args);
     closure->read.state = state;
   }
+  
   if((state = js_is_nullish(argv[2])) != closure->write.state) {
     args[1] = argv[2];
     JS_Call(ctx, closure->write.set_fn, JS_UNDEFINED, 2, args);
@@ -199,15 +200,16 @@ minnet_default_fd_callback(JSContext* ctx) {
 
     return js_function_cclosure(ctx, minnet_fd_callback_closure, 3, 0, closure, minnet_fd_callback_free);
 
-    JSValueConst data[4] = {
+  /*  JSValueConst data[4] = {
         JS_GetPropertyStr(ctx, os, "setReadHandler"),
         JS_GetPropertyStr(ctx, os, "setWriteHandler"),
         JS_UNDEFINED,
         JS_UNDEFINED,
     };
-    
-    return JS_NewCFunctionData(ctx, minnet_fd_callback, 3, 0, countof(data), data);
+
+    return JS_NewCFunctionData(ctx, minnet_fd_callback, 3, 0, countof(data), data);*/
   }
+
   return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
 }
 
