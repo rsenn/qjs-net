@@ -173,6 +173,8 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
 
   args[1] = argv[2];
   JS_Call(ctx, closure->write.set_fn, JS_UNDEFINED, 2, args);
+
+  return JS_UNDEFINED;
 }
 
 JSValue
