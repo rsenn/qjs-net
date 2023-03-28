@@ -155,7 +155,7 @@ struct FDCallbackClosure {
   struct FDCallbackChannel read, write;
 };
 
-void
+static void
 minnet_fd_callback_free(void* opaque) {
   struct FDCallbackClosure* closure = opaque;
 
@@ -164,7 +164,7 @@ minnet_fd_callback_free(void* opaque) {
   js_free(closure->ctx, closure);
 }
 
-JSValue
+static JSValue
 minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int, void* opaque) {
   struct FDCallbackClosure* closure = opaque;
   JSValueConst args[] = {argv[0], JS_NULL};
@@ -175,7 +175,7 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
     JS_Call(ctx, closure->read.set_fn, JS_UNDEFINED, 2, args);
     closure->read.state = state;
   }
-  
+
   if((state = js_is_nullish(argv[2])) != closure->write.state) {
     args[1] = argv[2];
     JS_Call(ctx, closure->write.set_fn, JS_UNDEFINED, 2, args);
