@@ -205,6 +205,7 @@ minnet_default_fd_callback(JSContext* ctx) {
         JS_UNDEFINED,
         JS_UNDEFINED,
     };
+    
     return JS_NewCFunctionData(ctx, minnet_fd_callback, 3, 0, countof(data), data);
   }
   return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
