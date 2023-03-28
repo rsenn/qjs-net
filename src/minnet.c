@@ -138,20 +138,17 @@ minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
   return JS_UNDEFINED;
 }
 
-struct FDCallbackChannel {
-  JSValue set_fn;
-};
 struct FDCallbackClosure {
   JSContext* ctx;
-  struct FDCallbackChannel read, write;
+  JSValue set_read, set_write;
 };
 
 static void
 minnet_fd_callback_free(void* opaque) {
   struct FDCallbackClosure* closure = opaque;
 
-  JS_FreeValue(closure->ctx, closure->read.set_fn);
-  JS_FreeValue(closure->ctx, closure->write.set_fn);
+  JS_FreeValue(closure->ctx, closure->set_read);
+  JS_FreeValue(closure->ctx, closure->set_write);
   js_free(closure->ctx, closure);
 }
 
@@ -161,10 +158,10 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
   JSValueConst args[] = {argv[0], JS_NULL};
 
   args[1] = argv[1];
-  JS_Call(ctx, closure->read.set_fn, JS_UNDEFINED, 2, args);
+  JS_Call(ctx, closure->set_read, JS_UNDEFINED, 2, args);
 
   args[1] = argv[2];
-  JS_Call(ctx, closure->write.set_fn, JS_UNDEFINED, 2, args);
+  JS_Call(ctx, closure->set_write, JS_UNDEFINED, 2, args);
 
   return JS_UNDEFINED;
 }
@@ -181,8 +178,8 @@ minnet_default_fd_callback(JSContext* ctx) {
       return JS_EXCEPTION;
 
     closure->ctx = ctx;
-    closure->read = (struct FDCallbackChannel){JS_GetPropertyStr(ctx, os, "setReadHandler")};
-    closure->write = (struct FDCallbackChannel){JS_GetPropertyStr(ctx, os, "setWriteHandler")};
+    closure->set_read = JS_GetPropertyStr(ctx, os, "setReadHandler");
+    closure->set_write =JS_GetPropertyStr(ctx, os, "setWriteHandler");
 
     return js_function_cclosure(ctx, minnet_fd_callback_closure, 3, 0, closure, minnet_fd_callback_free);
 
