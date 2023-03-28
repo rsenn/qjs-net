@@ -187,8 +187,8 @@ minnet_default_fd_callback(JSContext* ctx) {
       return JS_EXCEPTION;
 
     closure->ctx = ctx;
-    closure->read = (struct FDCallbackChannel){JS_GetPropertyStr(ctx, os, "setReadHandler"), FALSE};
-    closure->write = (struct FDCallbackChannel){JS_GetPropertyStr(ctx, os, "setWriteHandler"), FALSE};
+    closure->read = (struct FDCallbackChannel){JS_GetPropertyStr(ctx, os, "setReadHandler")};
+    closure->write = (struct FDCallbackChannel){JS_GetPropertyStr(ctx, os, "setWriteHandler")};
 
     return js_function_cclosure(ctx, minnet_fd_callback_closure, 3, 0, closure, minnet_fd_callback_free);
 
