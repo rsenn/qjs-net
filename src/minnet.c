@@ -146,6 +146,8 @@ minnet_default_fd_callback(JSContext* ctx) {
   JSValueConst data[] = {
       JS_GetPropertyStr(ctx, os, "setReadHandler"),
       JS_GetPropertyStr(ctx, os, "setWriteHandler"),
+      JS_NULL,
+      JS_NULL,
   };
 
   return JS_NewCFunctionData(ctx, minnet_default_fd_callback_fb, 3, 0, countof(data), data);
