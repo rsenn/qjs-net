@@ -1,10 +1,12 @@
 import { LLL_ALL, LLL_NOTICE, LLL_USER, logLevels, server, setLog } from 'net';
 import { setReadHandler, setWriteHandler } from 'os';
-import { Console } from 'console';
 
-globalThis.console = new Console({ inspectOptions: { compact: 0 } });
+import('console').then(({ Console }) => { globalThis.console = new Console({ inspectOptions: { compact: 0 } });
+});
 
-setLog(/*LLL_ALL |*/ (LLL_NOTICE - 1) | LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message));
+setLog(/*LLL_ALL |*/ (LLL_NOTICE - 1) | LLL_USER, (level, message) =>
+  console.log(logLevels[level].padEnd(10), message)
+);
 
 server(
   (globalThis.options = {
@@ -21,8 +23,16 @@ server(
       },
       *generator(req, res) {
         console.log('/generator', { req, res });
-        yield 'This'; yield ' '; yield 'is'; yield ' '; yield 'a';
-        yield ' '; yield 'generated'; yield ' '; yield 'response'; yield '\n';
+        yield 'This';
+        yield ' ';
+        yield 'is';
+        yield ' ';
+        yield 'a';
+        yield ' ';
+        yield 'generated';
+        yield ' ';
+        yield 'response';
+        yield '\n';
       }
     },
     onConnect(ws, req) {
@@ -42,11 +52,11 @@ server(
     onMessage(ws, msg) {
       console.log('onMessage', ws.fd, msg);
       ws.send('ECHO: ' + msg);
-    }/*,
+    },
     onFd(fd, rd, wr) {
       console.log('onFd', fd, rd, wr);
       setReadHandler(fd, rd);
       setWriteHandler(fd, wr);
-    }*/
+    }
   })
 );
