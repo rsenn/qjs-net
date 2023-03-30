@@ -1,22 +1,19 @@
 #ifndef QJSNET_LIB_RESPONSE_H
 #define QJSNET_LIB_RESPONSE_H
 
-#include <cutils.h>    // for BOOL
-#include <quickjs.h>   // for JSContext, JSRuntime
-#include <stddef.h>    // for size_t
-#include <stdint.h>    // for int32_t
-#include <sys/types.h> // for ssize_t
-#include "buffer.h"    // for ByteBuffer
-#include "callback.h"  // for JSCallback
-#include "generator.h" // for generator_new, Generator
-#include "url.h"       // for url
+#include <stdbool.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include "url.h"
+#include "buffer.h"
+#include "generator.h"
 
 struct session_data;
 
 typedef struct http_response {
   int ref_count;
-  BOOL read_only, headers_sent, compress;
-  struct url url;
+  bool read_only : 1, headers_sent : 1, compress : 1;
+  URL url;
   char* type;
   int status;
   char* status_text;
@@ -24,16 +21,11 @@ typedef struct http_response {
   Generator* generator;
 } Response;
 
-void response_format(const struct http_response*, char*, size_t);
-char* response_dump(const struct http_response*);
-void response_init(struct http_response*, struct url, int32_t, char* status_text, BOOL headers_sent, char* type);
-struct http_response* response_dup(struct http_response*);
-struct http_response* response_redirect(struct http_response* resp, const char* location, JSContext* ctx);
-/*ssize_t response_write(struct http_response*, const void*, size_t, JSContext* ctx);*/
-void response_clear(struct http_response*, JSContext*);
-void response_clear_rt(struct http_response*, JSRuntime*);
-void response_free(struct http_response*, JSContext*);
-void response_free_rt(struct http_response*, JSRuntime*);
+void response_init(Response*, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type);
+Response* response_dup(Response*);
+void response_clear(Response*, JSRuntime* rt);
+void response_free(Response*, JSRuntime* rt);
+Response* response_new(JSContext*);
 
 static inline Generator*
 response_generator(struct http_response* resp, JSContext* ctx) {

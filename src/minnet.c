@@ -125,6 +125,77 @@ minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JS
   JS_FreeValue(ctx, func);
 }
 
+static JSValue
+minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue data[]) {
+  JSValueConst args[] = {argv[0], JS_NULL};
+
+  args[1] = argv[1];
+  JS_Call(ctx, data[0], JS_UNDEFINED, 2, args);
+
+  args[1] = argv[2];
+  JS_Call(ctx, data[1], JS_UNDEFINED, 2, args);
+
+  return JS_UNDEFINED;
+}
+
+struct FDCallbackClosure {
+  JSContext* ctx;
+  JSValue set_read, set_write;
+};
+
+static void
+minnet_fd_callback_free(void* opaque) {
+  struct FDCallbackClosure* closure = opaque;
+
+  JS_FreeValue(closure->ctx, closure->set_read);
+  JS_FreeValue(closure->ctx, closure->set_write);
+  js_free(closure->ctx, closure);
+}
+
+static JSValue
+minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int, void* opaque) {
+  struct FDCallbackClosure* closure = opaque;
+  JSValueConst args[] = {argv[0], JS_NULL};
+
+  args[1] = argv[1];
+  JS_Call(ctx, closure->set_read, JS_UNDEFINED, 2, args);
+
+  args[1] = argv[2];
+  JS_Call(ctx, closure->set_write, JS_UNDEFINED, 2, args);
+
+  return JS_UNDEFINED;
+}
+
+JSValue
+minnet_default_fd_callback(JSContext* ctx) {
+  JSValue os = js_global_get(ctx, "os");
+
+  if(JS_IsObject(os)) {
+
+    struct FDCallbackClosure* closure;
+
+    if(!(closure = js_malloc(ctx, sizeof(struct FDCallbackClosure))))
+      return JS_EXCEPTION;
+
+    closure->ctx = ctx;
+    closure->set_read = JS_GetPropertyStr(ctx, os, "setReadHandler");
+    closure->set_write =JS_GetPropertyStr(ctx, os, "setWriteHandler");
+
+    return js_function_cclosure(ctx, minnet_fd_callback_closure, 3, 0, closure, minnet_fd_callback_free);
+
+    /*  JSValueConst data[4] = {
+          JS_GetPropertyStr(ctx, os, "setReadHandler"),
+          JS_GetPropertyStr(ctx, os, "setWriteHandler"),
+          JS_UNDEFINED,
+          JS_UNDEFINED,
+      };
+
+      return JS_NewCFunctionData(ctx, minnet_fd_callback, 3, 0, countof(data), data);*/
+  }
+
+  return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
+}
+
 void
 minnet_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
@@ -479,31 +550,4 @@ minnet_debug(const char* format, ...) {
     fputc(buf[i], stdout);
   }
   fflush(stdout);
-}
-
-int
-minnet_protocol_count(MinnetProtocols** plist) {
-  int i;
-
-  if(!*plist)
-    return 0;
-
-  for(i = 0;; i++) {
-    if((*plist)[i].name == NULL)
-      break;
-  }
-  return i;
-}
-
-int
-minnet_protocol_add(MinnetProtocols** plist, struct lws_protocols protocol) {
-  size_t pos = minnet_protocol_count(plist);
-
-  if(!(*plist = realloc(*plist, (pos + 1) * sizeof(struct lws_protocols))))
-    return -1;
-
-  memcpy(&(*plist)[pos], &protocol, sizeof(struct lws_protocols));
-  memset(&(*plist)[pos + 1], 0, sizeof(struct lws_protocols));
-
-  return pos;
 }

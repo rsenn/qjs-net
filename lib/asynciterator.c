@@ -41,17 +41,6 @@ asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
   }
 }
 
-AsyncIterator*
-asynciterator_new(JSContext* ctx) {
-  AsyncIterator* it;
-
-  if((it = js_malloc(ctx, sizeof(AsyncIterator)))) {
-    asynciterator_zero(it);
-  }
-
-  return it;
-}
-
 JSValue
 asynciterator_next(AsyncIterator* it, JSContext* ctx) {
   AsyncRead* rd;

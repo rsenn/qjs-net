@@ -8,14 +8,6 @@
 #include "buffer.h"
 
 JSValue
-vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
-  int i;
-  JSValue ret = JS_NewArray(ctx);
-  for(i = 0; i < argc; i++) JS_SetPropertyUint32(ctx, ret, i, argv[i]);
-  return ret;
-}
-
-JSValue
 js_object_constructor(JSContext* ctx, JSValueConst value) {
   JSValue ctor = JS_UNDEFINED;
   if(JS_IsObject(value))
@@ -95,18 +87,6 @@ js_function_bind_this_1(JSContext* ctx, JSValueConst func, JSValueConst this_val
   JSValueConst bound[] = {this_val, arg};
   return js_function_bind(ctx, func, countof(bound) | JS_BIND_THIS, bound);
 }
-
-/*JSValue
-js_function_bind_v(JSContext* ctx, JSValueConst func, ...) {
-  va_list args;
-  DynBuf b;
-  JSValueConst arg;
-  dbuf_init2(&b, ctx, (DynBufReallocFunc*)js_realloc);
-  va_start(args, func);
-  while((arg = va_arg(args, JSValueConst))) { dbuf_put(&b, &arg, sizeof(JSValueConst)); }
-  va_end(args);
-  return js_function_bind(ctx, func, b.size / sizeof(JSValueConst), (JSValueConst*)b.buf);
-}*/
 
 const char*
 js_function_name(JSContext* ctx, JSValueConst value) {
@@ -262,13 +242,6 @@ js_buffer_fromblock(JSContext* ctx, struct byte_block* blk) {
 }
 
 JSBuffer
-js_buffer_data(JSContext* ctx, const void* data, size_t size) {
-  ByteBlock block = {(uint8_t*)data, (uint8_t*)data + size};
-
-  return js_buffer_fromblock(ctx, &block);
-}
-
-JSBuffer
 js_buffer_alloc(JSContext* ctx, size_t size) {
   ByteBlock block = {0, 0};
 
@@ -276,43 +249,6 @@ js_buffer_alloc(JSContext* ctx, size_t size) {
     block.end = block.start + size;
 
   return js_buffer_fromblock(ctx, &block);
-}
-
-void
-js_buffer_to(JSBuffer buf, void** pptr, size_t* plen) {
-  if(pptr)
-    *pptr = buf.data;
-  if(plen)
-    *plen = buf.size;
-}
-
-void
-js_buffer_to3(JSBuffer buf, const char** pstr, void** pptr, unsigned* plen) {
-  if(!JS_IsString(buf.value)) {
-    size_t len = 0;
-    js_buffer_to(buf, pptr, &len);
-    if(plen)
-      *plen = len;
-  } else
-    *pstr = (const char*)buf.data;
-}
-
-BOOL
-js_buffer_valid(const JSBuffer* in) {
-  return !JS_IsException(in->value);
-}
-
-JSBuffer
-js_buffer_clone(const JSBuffer* in, JSContext* ctx) {
-  JSBuffer buf = js_input_buffer(ctx, in->value);
-  buf.pos = in->pos;
-  buf.range = in->range;
-  return buf;
-}
-
-void
-js_buffer_dump(const JSBuffer* in, DynBuf* db) {
-  dbuf_printf(db, "(JSBuffer){ .data = %p, .size = %zu, .free = %p }", in->data, in->size, in->free);
 }
 
 void
@@ -328,25 +264,6 @@ js_buffer_free_rt(JSBuffer* in, JSRuntime* rt) {
 void
 js_buffer_free(JSBuffer* in, JSContext* ctx) {
   js_buffer_free_rt(in, JS_GetRuntime(ctx));
-}
-
-BOOL
-js_is_iterable(JSContext* ctx, JSValueConst obj) {
-  JSAtom atom;
-  BOOL ret = FALSE;
-  atom = js_symbol_static_atom(ctx, "iterator");
-  if(JS_HasProperty(ctx, obj, atom))
-    ret = TRUE;
-
-  JS_FreeAtom(ctx, atom);
-  if(!ret) {
-    atom = js_symbol_static_atom(ctx, "asyncIterator");
-    if(JS_HasProperty(ctx, obj, atom))
-      ret = TRUE;
-
-    JS_FreeAtom(ctx, atom);
-  }
-  return ret;
 }
 
 BOOL
@@ -601,11 +518,6 @@ js_promise_pending(ResolveFunctions const* funcs) {
   return !js_resolve_functions_is_null(funcs);
 }
 
-BOOL
-js_promise_done(ResolveFunctions const* funcs) {
-  return js_resolve_functions_is_null(funcs);
-}
-
 JSValue
 js_promise_then(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
   return js_invoke(ctx, promise, "then", 1, &handler);
@@ -697,28 +609,6 @@ js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value) {
   return ret;
 }
 
-BOOL
-js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str) {
-  BOOL ret = FALSE;
-  JSValue value;
-  value = JS_GetPropertyStr(ctx, obj, str);
-  if(!JS_IsException(value))
-    ret = JS_ToBool(ctx, value);
-
-  JS_FreeValue(ctx, value);
-  return ret;
-}
-
-int64_t
-js_get_propertystr_int64(JSContext* ctx, JSValueConst obj, const char* str) {
-  int64_t ret = 0;
-  JSValue value;
-  value = JS_GetPropertyStr(ctx, obj, str);
-  JS_ToInt64(ctx, &ret, value);
-  JS_FreeValue(ctx, value);
-  return ret;
-}
-
 uint32_t
 js_get_propertystr_uint32(JSContext* ctx, JSValueConst obj, const char* str) {
   uint32_t ret = 0;
@@ -734,89 +624,6 @@ js_has_propertystr(JSContext* ctx, JSValueConst obj, const char* str) {
   JSAtom prop = JS_NewAtom(ctx, str);
   BOOL ret = JS_HasProperty(ctx, obj, prop);
   JS_FreeAtom(ctx, prop);
-  return ret;
-}
-
-struct list_head*
-js_module_list(JSContext* ctx) {
-  void* tmp_opaque;
-  ptrdiff_t needle;
-  void** ptr;
-  tmp_opaque = JS_GetContextOpaque(ctx);
-  memset(&needle, 0xa5, sizeof(needle));
-  JS_SetContextOpaque(ctx, (void*)needle);
-
-  ptr = memmem(ctx, 1024, &needle, sizeof(needle));
-
-  JS_SetContextOpaque(ctx, tmp_opaque);
-
-  return ((struct list_head*)(ptr - 2)) - 1;
-}
-
-JSModuleDef*
-js_module_at(JSContext* ctx, int i) {
-  struct list_head *el = 0, *list = js_module_list(ctx);
-
-  list_for_each(list, el) {
-    JSModuleDef* module = (void*)((char*)el - sizeof(JSAtom) * 2);
-
-    if(i-- == 0)
-      return module;
-  }
-  return 0;
-}
-
-JSModuleDef*
-js_module_find(JSContext* ctx, JSAtom name) {
-  struct list_head *el, *list = js_module_list(ctx);
-
-  list_for_each(el, list) {
-    JSModuleDef* module = (void*)((char*)el - sizeof(JSAtom) * 2);
-
-    if(((JSAtom*)module)[1] == name)
-      return module;
-  }
-  return 0;
-}
-
-JSModuleDef*
-js_module_find_s(JSContext* ctx, const char* name) {
-  JSAtom atom;
-  JSModuleDef* module;
-  atom = JS_NewAtom(ctx, name);
-  module = js_module_find(ctx, atom);
-  JS_FreeAtom(ctx, atom);
-  return module;
-}
-
-void*
-js_module_export_find(JSModuleDef* module, JSAtom name) {
-  void* export_entries = *(void**)((char*)module + sizeof(int) * 2 + sizeof(struct list_head) + sizeof(void*) + sizeof(int) * 2);
-  int i, export_entries_count = *(int*)((char*)module + sizeof(int) * 2 + sizeof(struct list_head) + sizeof(void*) + sizeof(int) * 2 + sizeof(void*));
-  static const size_t export_entry_size = sizeof(void*) * 2 + sizeof(int) * 2;
-
-  for(i = 0; i < export_entries_count; i++) {
-    void* entry = (char*)export_entries + export_entry_size * i;
-
-    JSAtom* export_name = (JSAtom*)(char*)entry + sizeof(void*) * 2 + sizeof(int) * 2;
-
-    if(*export_name == name)
-      return entry;
-  }
-
-  return 0;
-}
-
-extern JSModuleDef* js_module_loader(JSContext* ctx, const char* module_name, void* opaque);
-
-JSValue
-js_module_import_meta(JSContext* ctx, const char* name) {
-  JSModuleDef* m;
-  JSValue ret = JS_UNDEFINED;
-
-  if((m = js_module_loader(ctx, name, 0))) {
-    ret = JS_GetImportMeta(ctx, m);
-  }
   return ret;
 }
 
@@ -844,16 +651,6 @@ js_array_to_argv(JSContext* ctx, int* argcp, JSValueConst array) {
   if(argcp)
     *argcp = len;
   return ret;
-}
-
-int64_t
-js_arraybuffer_length(JSContext* ctx, JSValueConst buffer) {
-  size_t len;
-
-  if(JS_GetArrayBuffer(ctx, &len, buffer))
-    return len;
-
-  return -1;
 }
 
 int
@@ -946,16 +743,6 @@ js_atom_is_symbol(JSContext* ctx, JSAtom atom) {
   BOOL ret;
   value = JS_AtomToValue(ctx, atom);
   ret = JS_IsSymbol(value);
-  JS_FreeValue(ctx, value);
-  return ret;
-}
-
-BOOL
-js_atom_is_string(JSContext* ctx, JSAtom atom) {
-  JSValue value;
-  BOOL ret;
-  value = JS_AtomToValue(ctx, atom);
-  ret = JS_IsString(value);
   JS_FreeValue(ctx, value);
   return ret;
 }
@@ -1082,49 +869,6 @@ js_is_dataview(JSContext* ctx, JSValueConst value) {
 BOOL
 js_is_typedarray(JSContext* ctx, JSValueConst value) {
   return js_is_dataview(ctx, value) && js_has_propertystr(ctx, value, "BYTES_PER_ELEMENT");
-}
-
-BOOL
-js_is_generator(JSContext* ctx, JSValueConst value) {
-  const char* str;
-  BOOL ret = FALSE;
-
-  if((str = JS_ToCString(ctx, value))) {
-    const char* s = str;
-
-    if(!strncmp(s, "async ", 6))
-      s += 6;
-
-    if(!strncmp(s, "function", 8)) {
-      s += 8;
-
-      while(*s == ' ') ++s;
-
-      if(*s == '*')
-        ret = TRUE;
-    }
-
-    JS_FreeCString(ctx, str);
-  }
-  return ret;
-}
-
-BOOL
-js_is_async(JSContext* ctx, JSValueConst value) {
-  const char* str;
-  BOOL ret = FALSE;
-  if((str = JS_ToCString(ctx, value))) {
-    const char* s = str;
-
-    if(!strncmp(s, "async ", 6))
-      ret = TRUE;
-
-    else if(!strncmp(s, "[object Async", 13))
-      ret = TRUE;
-
-    JS_FreeCString(ctx, str);
-  }
-  return ret;
 }
 
 JSValue

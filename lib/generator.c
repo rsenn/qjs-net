@@ -179,20 +179,6 @@ generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
 }
 
 BOOL
-generator_cancel(Generator* gen) {
-  BOOL ret = FALSE;
-
-  if(!queue_complete(gen->q)) {
-    queue_close(gen->q);
-    ret = TRUE;
-  }
-  if(asynciterator_cancel(&gen->iterator, JS_UNDEFINED, gen->ctx))
-    ret = TRUE;
-
-  return ret;
-}
-
-BOOL
 generator_close(Generator* gen, JSValueConst callback) {
   BOOL ret = FALSE;
   QueueItem* item = 0;
@@ -223,19 +209,6 @@ generator_close(Generator* gen, JSValueConst callback) {
   if(asynciterator_stop(&gen->iterator, gen->ctx))
     ret = TRUE;
 
-  return ret;
-}
-
-JSValue
-generator_stop(Generator* gen) {
-  ResolveFunctions funcs = {JS_NULL, JS_NULL};
-  JSValue ret = js_promise_create(gen->ctx, &funcs);
-
-  if(!generator_close(gen, funcs.resolve)) {
-    JS_FreeValue(gen->ctx, JS_Call(gen->ctx, funcs.reject, JS_UNDEFINED, 0, 0));
-  }
-
-  js_promise_free(gen->ctx, &funcs);
   return ret;
 }
 

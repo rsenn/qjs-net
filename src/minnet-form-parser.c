@@ -77,6 +77,7 @@ minnet_form_parser_constructor(JSContext* ctx, JSValueConst new_target, int argc
 
     if(opaque->form_parser)
       form_parser_free(opaque->form_parser, ctx);
+
     opaque->form_parser = fp;
   }
 
@@ -86,28 +87,6 @@ fail:
   js_free(ctx, fp);
   JS_FreeValue(ctx, obj);
   return JS_EXCEPTION;
-}
-
-JSValue
-minnet_form_parser_new(JSContext* ctx, MinnetWebsocket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
-  MinnetFormParser* fp;
-
-  if(!(fp = form_parser_new(ctx, ws, nparams, param_names, chunk_size)))
-    return JS_ThrowOutOfMemory(ctx);
-
-  return minnet_form_parser_wrap(ctx, fp);
-}
-
-JSValue
-minnet_form_parser_wrap(JSContext* ctx, MinnetFormParser* fp) {
-  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_form_parser_proto, minnet_form_parser_class_id);
-
-  if(JS_IsException(ret))
-    return JS_EXCEPTION;
-
-  JS_SetOpaque(ret, form_parser_dup(fp));
-
-  return ret;
 }
 
 static JSValue

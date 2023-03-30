@@ -2,7 +2,6 @@
 #define QJSNET_LIB_LWS_UTILS_H
 
 #include <libwebsockets.h>
-#include <cutils.h>
 #include <stdbool.h>
 
 enum http_method {
@@ -24,19 +23,14 @@ wsi_context(struct lws* wsi) {
 
 bool wsi_http2(struct lws*);
 bool wsi_tls(struct lws*);
-char* wsi_peer(struct lws*);
-char* wsi_host(struct lws*);
 void wsi_cert(struct lws*);
 char* wsi_query_string_len(struct lws*, size_t* len_p);
 bool wsi_token_exists(struct lws*, enum lws_token_indexes token);
 char* wsi_token_len(struct lws*, enum lws_token_indexes token, size_t* len_p);
-int wsi_copy_fragment(struct lws*, enum lws_token_indexes token, int fragment, DynBuf* db);
 char* wsi_uri_and_method(struct lws*, HTTPMethod* method);
 char* wsi_host_and_port(struct lws*, int* port);
-const char* wsi_vhost_name(struct lws*);
 const char* wsi_protocol_name(struct lws*);
 char* wsi_vhost_and_port(struct lws*, int* port);
-enum lws_token_indexes wsi_uri_token(struct lws*);
 HTTPMethod wsi_method(struct lws*);
 char* wsi_ipaddr(struct lws*);
 const char* lws_callback_name(int);

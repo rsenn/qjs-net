@@ -1,14 +1,14 @@
 #define _GNU_SOURCE
 #include "request.h"
-#include "lws-utils.h"
-#include "ringbuffer.h"
+//#include "lws-utils.h"
+//#include "ringbuffer.h"
 #include "headers.h"
-#include "jsutils.h"
+//#include "jsutils.h"
 #include <ctype.h>
 #include <strings.h>
 #include <libwebsockets.h>
 
-struct http_request* minnet_request_data(JSValueConst);
+Request* minnet_request_data(JSValueConst);
 
 static const char* const method_names[] = {
     "GET",
@@ -39,24 +39,7 @@ method_number(const char* name) {
 }
 
 void
-request_format(Request const* req, char* buf, size_t len, JSContext* ctx) {
-  char* headers = buffer_escaped(&req->headers);
-  char* url = url_format(req->url, ctx);
-  snprintf(buf, len, FGC(196, "Request") " { method: '%s', url: '%s', headers: '%s' }", method_name(req->method), url, headers);
-
-  js_free(ctx, headers);
-  js_free(ctx, url);
-}
-
-char*
-request_dump(Request const* req, JSContext* ctx) {
-  static char buf[2048];
-  request_format(req, buf, sizeof(buf), ctx);
-  return buf;
-}
-
-void
-request_init(Request* req, struct url url, enum http_method method) {
+request_init(Request* req, URL url, enum http_method method) {
   // memset(req, 0, sizeof(Request));
 
   req->url = url;
@@ -77,7 +60,7 @@ request_alloc(JSContext* ctx) {
 }
 
 Request*
-request_new(struct url url, HTTPMethod method, JSContext* ctx) {
+request_new(URL url, HTTPMethod method, JSContext* ctx) {
   Request* req;
 
   if((req = request_alloc(ctx)))
@@ -93,44 +76,10 @@ request_dup(Request* req) {
 }
 
 Request*
-request_fromobj(JSValueConst options, JSContext* ctx) {
-  Request* req;
-  JSValue value;
-  const char *url, *path, *method;
-
-  if(!(req = request_alloc(ctx)))
-    return req;
-
-  value = JS_GetPropertyStr(ctx, options, "url");
-  url = JS_ToCString(ctx, value);
-  JS_FreeValue(ctx, value);
-
-  value = JS_GetPropertyStr(ctx, options, "path");
-  path = JS_ToCString(ctx, value);
-  JS_FreeValue(ctx, value);
-
-  JS_GetPropertyStr(ctx, options, "method");
-  method = JS_ToCString(ctx, value);
-  JS_FreeValue(ctx, value);
-
-  JS_GetPropertyStr(ctx, options, "headers");
-
-  JS_FreeValue(ctx, value);
-
-  request_init(req, /*path,*/ url_create(url, ctx), method_number(method));
-
-  JS_FreeCString(ctx, url);
-  JS_FreeCString(ctx, path);
-  JS_FreeCString(ctx, method);
-
-  return req;
-}
-
-Request*
 request_fromwsi(struct lws* wsi, JSContext* ctx) {
   Request* ret = 0;
   HTTPMethod method = wsi_method(wsi);
-  struct url url = URL_INIT();
+  URL url = URL_INIT();
 
   url_fromwsi(&url, wsi, ctx);
 
@@ -143,35 +92,8 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
   return ret;
 }
 
-Request*
-request_fromurl(const char* uri, JSContext* ctx) {
-  HTTPMethod method = METHOD_GET;
-  struct url url = url_create(uri, ctx);
-
-  return request_new(url, method, ctx);
-}
-
 void
-request_zero(Request* req) {
-  memset(req, 0, sizeof(Request));
-  req->headers = BUFFER_0();
-  req->body = 0;
-}
-
-void
-request_clear(Request* req, JSContext* ctx) {
-  url_free(&req->url, ctx);
-  buffer_free(&req->headers);
-  if(req->ip) {
-    free(req->ip);
-    req->ip = 0;
-  }
-  if(req->body)
-    generator_destroy(&req->body);
-}
-
-void
-request_clear_rt(Request* req, JSRuntime* rt) {
+request_clear(Request* req, JSRuntime* rt) {
   url_free_rt(&req->url, rt);
   buffer_free(&req->headers);
   if(req->ip) {
@@ -183,17 +105,9 @@ request_clear_rt(Request* req, JSRuntime* rt) {
 }
 
 void
-request_free(Request* req, JSContext* ctx) {
+request_free(Request* req, JSRuntime* rt) {
   if(--req->ref_count == 0) {
-    request_clear(req, ctx);
-    js_free(ctx, req);
-  }
-}
-
-void
-request_free_rt(Request* req, JSRuntime* rt) {
-  if(--req->ref_count == 0) {
-    request_clear_rt(req, rt);
+    request_clear(req, rt);
     js_free_rt(rt, req);
   }
 }
@@ -201,7 +115,7 @@ request_free_rt(Request* req, JSRuntime* rt) {
 Request*
 request_from(int argc, JSValueConst argv[], JSContext* ctx) {
   Request* req = 0;
-  struct url url = {0, 0, 0, 0};
+  URL url = {0, 0, 0, 0};
 
   if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0]))) {
     req = request_dup(req);

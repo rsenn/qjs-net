@@ -14,10 +14,8 @@ typedef struct async_iterator {
   BOOL closed, closing;
   uint32_t serial;
 } AsyncIterator;
-
 void asynciterator_zero(AsyncIterator*);
 void asynciterator_clear(AsyncIterator*, JSRuntime* rt);
-AsyncIterator* asynciterator_new(JSContext*);
 JSValue asynciterator_next(AsyncIterator*, JSContext* ctx);
 BOOL asynciterator_stop(AsyncIterator*, JSContext* ctx);
 int asynciterator_cancel(AsyncIterator*, JSValueConst error, JSContext* ctx);

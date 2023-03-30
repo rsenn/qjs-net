@@ -28,8 +28,6 @@ uint8_t* block_alloc(ByteBlock*, size_t size);
 uint8_t* block_realloc(ByteBlock*, size_t size);
 void block_free(ByteBlock*);
 uint8_t* block_grow(ByteBlock*, size_t size);
-ssize_t block_concat(ByteBlock*, ByteBlock other);
-ByteBlock block_new(size_t);
 ByteBlock block_copy(const void*, size_t size);
 JSValue block_toarraybuffer(ByteBlock*, JSContext* ctx);
 JSValue block_tostring(ByteBlock*, JSContext* ctx);
@@ -78,7 +76,6 @@ typedef union byte_buffer {
 
 #define buffer_zero(b) memset((b), 0, sizeof(ByteBuffer))
 
-void buffer_init(ByteBuffer*, uint8_t* start, size_t len);
 uint8_t* buffer_alloc(ByteBuffer*, size_t size);
 ssize_t buffer_append(ByteBuffer*, const void* x, size_t n);
 void buffer_free(ByteBuffer*);
@@ -86,31 +83,19 @@ BOOL buffer_write(ByteBuffer*, const void* x, size_t n);
 int buffer_vprintf(ByteBuffer*, const char* format, va_list ap);
 int buffer_printf(ByteBuffer*, const char* format, ...);
 uint8_t* buffer_realloc(ByteBuffer*, size_t size);
-int buffer_fromarraybuffer(ByteBuffer*, JSValueConst value, JSContext* ctx);
 int buffer_fromvalue(ByteBuffer*, JSValueConst value, JSContext* ctx);
 JSValue buffer_tostring(ByteBuffer const*, JSContext* ctx);
 size_t buffer_escape(ByteBuffer*, const void* x, size_t len);
 char* buffer_escaped(ByteBuffer const*);
-void buffer_finalizer(JSRuntime*, void* opaque, void* ptr);
-JSValue buffer_toarraybuffer(ByteBuffer*, JSContext* ctx);
-JSValue buffer_toarraybuffer_size(ByteBuffer*, size_t* sz, JSContext* ctx);
-void buffer_dump(const char*, ByteBuffer const* buf);
 BOOL buffer_clone(ByteBuffer*, const ByteBuffer* other);
-uint8_t* buffer_skip(ByteBuffer*, size_t size);
 BOOL buffer_putchar(ByteBuffer*, char c);
-ByteBuffer buffer_move(ByteBuffer*);
-uint8_t* buffer_grow(ByteBuffer*, size_t size);
+uint8_t* buffer_grow(ByteBuffer* buf, size_t size);
 
 static inline void
 buffer_reset(ByteBuffer* buf) {
   buf->read = buf->start;
   buf->write = buf->start;
 }
-
-/*static inline uint8_t*
-buffer_grow(ByteBuffer* buf, size_t size, JSContext* ctx) {
-  return block_grow(&buf->block, size, ctx);
-}*/
 
 typedef struct writer {
   uint8_t **write, *end;

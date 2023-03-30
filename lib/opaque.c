@@ -17,14 +17,14 @@ opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
     ws_free_rt(ws, rt);
   }
   if(opaque->req) {
-    struct http_request* req = opaque->req;
+    Request* req = opaque->req;
     opaque->req = 0;
-    request_free_rt(req, rt);
+    request_free(req, rt);
   }
   if(opaque->resp) {
-    struct http_response* resp = opaque->resp;
+    Response* resp = opaque->resp;
     opaque->resp = 0;
-    response_free_rt(resp, rt);
+    response_free(resp, rt);
   }
   if(opaque->form_parser) {
     form_parser_free_rt(opaque->form_parser, rt);
@@ -42,11 +42,6 @@ opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
     js_free_rt(rt, opaque);
   }
-}
-
-void
-opaque_clear(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
-  opaque_clear_rt(opaque, JS_GetRuntime(ctx));
 }
 
 void
@@ -85,16 +80,4 @@ lws_opaque(struct lws* wsi, JSContext* ctx) {
 
   lws_set_opaque_user_data(wsi, opaque);
   return opaque;
-}
-
-bool
-opaque_valid(struct wsi_opaque_user_data* opaque) {
-  struct list_head* el;
-
-  if(opaque_list.next == 0 && opaque_list.prev == 0)
-    init_list_head(&opaque_list);
-
-  list_for_each(el, &opaque_list) if(opaque == list_entry(el, struct wsi_opaque_user_data, link)) return true;
-
-  return false;
 }

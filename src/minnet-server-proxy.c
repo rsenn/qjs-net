@@ -15,26 +15,7 @@ typedef struct proxy_conn {
   lws_dll2_owner_t pending_msg_to_raw;
 } proxy_conn_t;
 
-int
-proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
-  proxy_msg_t* msg = lws_container_of(d, proxy_msg_t, list);
-
-  lws_dll2_remove(d);
-  free(msg);
-
-  return 0;
-}
-
-static proxy_conn_t*
-proxy_new() {
-  proxy_conn_t* pc;
-  if((pc = malloc(sizeof(*pc))))
-    memset(pc, 0, sizeof(*pc));
-
-  return pc;
-}
-
-int
+/*int
 proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);
 
@@ -140,8 +121,8 @@ proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* u
 
   return 0;
 }
-
-int
+*/
+/*int
 proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   proxy_conn_t* pc = (proxy_conn_t*)lws_get_opaque_user_data(wsi);
   proxy_msg_t* msg;
@@ -232,3 +213,4 @@ proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reason, void
 
   return 0;
 }
+*/

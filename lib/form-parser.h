@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "callback.h"
 
-struct form_parser {
+typedef struct form_parser {
   int ref_count;
   struct lws_spa_create_info spa_create_info;
   struct lws_spa* spa;
@@ -17,22 +17,19 @@ struct form_parser {
   JSValue exception;
   JSValue name, file;
   size_t read;
-};
+} FormParser;
 
-void form_parser_init(struct form_parser*, struct socket*, int, const char* const* param_names, size_t chunk_size);
-struct form_parser* form_parser_alloc(JSContext*);
-struct form_parser* form_parser_new(JSContext*, struct socket*, int, const char* const* param_names, size_t chunk_size);
-struct form_parser* form_parser_dup(struct form_parser*);
-void form_parser_zero(struct form_parser*);
-void form_parser_clear(struct form_parser*, JSContext*);
-void form_parser_clear_rt(struct form_parser*, JSRuntime*);
-void form_parser_free(struct form_parser*, JSContext*);
-void form_parser_free_rt(struct form_parser*, JSRuntime*);
-const char* form_parser_param_name(struct form_parser*, int);
-bool form_parser_param_valid(struct form_parser*, int);
-size_t form_parser_param_count(struct form_parser*);
-int form_parser_param_index(struct form_parser*, const char*);
-bool form_parser_param_exists(struct form_parser*, const char*);
-int form_parser_process(struct form_parser*, const void*, size_t);
+void form_parser_init(FormParser*, struct socket* ws, int nparams, const char* const* param_names, size_t chunk_size);
+FormParser* form_parser_alloc(JSContext*);
+void form_parser_clear(FormParser*, JSContext* ctx);
+void form_parser_clear_rt(FormParser*, JSRuntime* rt);
+void form_parser_free(FormParser*, JSContext* ctx);
+void form_parser_free_rt(FormParser*, JSRuntime* rt);
+const char* form_parser_param_name(FormParser*, int index);
+bool form_parser_param_valid(FormParser*, int index);
+size_t form_parser_param_count(FormParser*);
+int form_parser_param_index(FormParser*, const char* name);
+bool form_parser_param_exists(FormParser*, const char* name);
+int form_parser_process(FormParser*, const void* data, size_t len);
 
 #endif /* QJSNET_LIB_FORM_PARSER_H */

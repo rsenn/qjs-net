@@ -2,8 +2,6 @@
 #define QJSNET_LIB_WS_H
 
 #include <libwebsockets.h>
-#include <quickjs.h>
-#include <cutils.h>
 #include "opaque.h"
 #include "jsutils.h"
 #include "queue.h"
@@ -28,8 +26,6 @@ void ws_clear(struct socket*, JSContext* ctx);
 void ws_free_rt(struct socket*, JSRuntime* rt);
 void ws_free(struct socket*, JSContext* ctx);
 struct socket* ws_dup(struct socket*);
-int ws_writable(struct socket*, BOOL binary, JSContext* ctx);
-JSValue ws_want_write(struct socket*, JSContext* ctx);
 QueueItem* ws_enqueue(struct socket*, ByteBlock);
 QueueItem* ws_send(struct socket*, const void* data, size_t size, JSContext* ctx);
 

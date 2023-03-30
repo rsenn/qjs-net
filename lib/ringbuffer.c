@@ -5,14 +5,11 @@
 #include <libwebsockets.h>
 #include <pthread.h>
 
-void
+/*void
 ringbuffer_dump(struct ringbuffer const* rb) {
-  /*  printf("\nstruct ringbuffer {\n\tref_count = %zu", rb->ref_count);
-    buffer_dump("buffer", &rb->buffer);
-    fputs("\n}", stderr);
-    fflush(stderr);*/
+  [object Object]
 }
-
+*/
 void
 ringbuffer_destroy_element(void* element) {}
 
@@ -34,22 +31,6 @@ ringbuffer_new(JSContext* ctx) {
 
   if((rb = js_mallocz(ctx, sizeof(struct ringbuffer))))
     rb->ref_count = 1;
-
-  return rb;
-}
-
-void
-ringbuffer_init2(struct ringbuffer* rb, size_t element_len, size_t count) {
-  const char* type = "application/binary";
-  ringbuffer_init(rb, element_len, count, type, strlen(type));
-}
-
-struct ringbuffer*
-ringbuffer_new2(size_t element_len, size_t count, JSContext* ctx) {
-  struct ringbuffer* rb;
-
-  if((rb = ringbuffer_new(ctx)))
-    ringbuffer_init2(rb, element_len, count);
 
   return rb;
 }

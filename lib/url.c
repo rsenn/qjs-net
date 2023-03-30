@@ -8,7 +8,7 @@
 #include <ctype.h>
 #include <strings.h>
 
-struct url* minnet_url_data(JSValueConst);
+URL* minnet_url_data(JSValueConst);
 
 #ifndef HAVE_STRLCPY
 size_t
@@ -109,7 +109,7 @@ start_from(const char* p, char ch) {
 }
 
 void
-url_init(struct url* url, const char* protocol, const char* host, int port, const char* path, JSContext* ctx) {
+url_init(URL* url, const char* protocol, const char* host, int port, const char* path, JSContext* ctx) {
   enum protocol proto = protocol_number(protocol);
 
   url->protocol = protocol_string(proto);
@@ -119,7 +119,7 @@ url_init(struct url* url, const char* protocol, const char* host, int port, cons
 }
 
 void
-url_parse(struct url* url, const char* u, JSContext* ctx) {
+url_parse(URL* url, const char* u, JSContext* ctx) {
   enum protocol proto = PROTOCOL_WS;
   const char *s, *t;
 
@@ -154,15 +154,8 @@ url_parse(struct url* url, const char* u, JSContext* ctx) {
     url->path = s && *s ? js_strdup(ctx, s) : 0;
 }
 
-struct url
-url_create(const char* str, JSContext* ctx) {
-  struct url ret = {1, 0, 0, 0, 0};
-  url_parse(&ret, str, ctx);
-  return ret;
-}
-
 size_t
-url_print(char* buf, size_t size, const struct url url) {
+url_print(char* buf, size_t size, const URL url) {
   size_t pos = 0;
 
   if(url.protocol && *url.protocol) {
@@ -198,7 +191,7 @@ url_print(char* buf, size_t size, const struct url url) {
 }
 
 char*
-url_format(const struct url url, JSContext* ctx) {
+url_format(const URL url, JSContext* ctx) {
   size_t len = (url.protocol ? strlen(url.protocol) + 3 : 0) + (url.host ? strlen(url.host) + 1 + 5 : 0) + (url.path ? strlen(url.path) : 0) + 1;
   char* str;
   enum protocol proto = -1;
@@ -229,7 +222,7 @@ url_format(const struct url url, JSContext* ctx) {
 }
 
 char*
-url_host(const struct url url, JSContext* ctx) {
+url_host(const URL url, JSContext* ctx) {
   size_t len = (url.host ? strlen(url.host) + 1 + 5 : 0) + 1;
   char* str;
 
@@ -251,32 +244,32 @@ url_host(const struct url url, JSContext* ctx) {
 }
 
 size_t
-url_length(const struct url url) {
+url_length(const URL url) {
   return url_print(0, 8192, url);
   /*size_t portlen = url.port >= 10000 ? 6 : url.port >= 1000 ? 5 : url.port >= 100 ? 4 : url.port >= 10 ? 3 : url.port >= 1 ? 2 : 0;
   return (url.protocol ? strlen(url.protocol) + 3 : 0) + (url.host ? strlen(url.host) + portlen : 0) + (url.path ? strlen(url.path) : 0) + 1;*/
 }
 
 void
-url_free(struct url* url, JSContext* ctx) {
+url_free(URL* url, JSContext* ctx) {
   if(url->host)
     js_free(ctx, url->host);
   if(url->path)
     js_free(ctx, url->path);
-  memset(url, 0, sizeof(struct url));
+  memset(url, 0, sizeof(URL));
 }
 
 void
-url_free_rt(struct url* url, JSRuntime* rt) {
+url_free_rt(URL* url, JSRuntime* rt) {
   if(url->host)
     js_free_rt(rt, url->host);
   if(url->path)
     js_free_rt(rt, url->path);
-  memset(url, 0, sizeof(struct url));
+  memset(url, 0, sizeof(URL));
 }
 
 enum protocol
-url_set_protocol(struct url* url, const char* proto) {
+url_set_protocol(URL* url, const char* proto) {
   enum protocol p = protocol_number(proto);
 
   url->protocol = protocol_string(p);
@@ -284,7 +277,7 @@ url_set_protocol(struct url* url, const char* proto) {
 }
 
 BOOL
-url_set_path_len(struct url* url, const char* path, size_t len, JSContext* ctx) {
+url_set_path_len(URL* url, const char* path, size_t len, JSContext* ctx) {
   char* oldpath = url->path;
   BOOL ret = FALSE;
 
@@ -309,7 +302,7 @@ url_set_path_len(struct url* url, const char* path, size_t len, JSContext* ctx) 
 }
 
 BOOL
-url_set_query_len(struct url* url, const char* query, size_t len, JSContext* ctx) {
+url_set_query_len(URL* url, const char* query, size_t len, JSContext* ctx) {
   size_t pathlen;
   char* oldquery;
 
@@ -328,7 +321,7 @@ url_set_query_len(struct url* url, const char* query, size_t len, JSContext* ctx
 }
 
 void
-url_info(const struct url url, struct lws_client_connect_info* info) {
+url_info(const URL url, struct lws_client_connect_info* info) {
   enum protocol proto = url.protocol ? protocol_number(url.protocol) : PROTOCOL_RAW;
 
   memset(info, 0, sizeof(struct lws_client_connect_info));
@@ -377,28 +370,8 @@ url_info(const struct url url, struct lws_client_connect_info* info) {
   info->origin = info->address;
 }
 
-/*int
-url_connect(struct url* url, struct lws_context* context, struct lws** p_wsi) {
-  struct lws_client_connect_info i;
-
-  url_info(url, &i);
-
-  i.context = context;
-  i.pwsi = p_wsi;
-
-  return !lws_client_connect_via_info(&i);
-}*/
-
-char*
-url_location(const struct url url, JSContext* ctx) {
-  const char* query;
-  if((query = url_query(url)))
-    return js_strndup(ctx, url.path, query - url.path);
-  return js_strdup(ctx, url.path);
-}
-
 const char*
-url_query(const struct url url) {
+url_query(const URL url) {
   const char* p;
 
   if(*(p = start_from(url.path, '?')) == '?')
@@ -410,7 +383,7 @@ url_query(const struct url url) {
 }
 
 const char*
-url_search(const struct url url, size_t* len_p) {
+url_search(const URL url, size_t* len_p) {
   const char* s;
 
   if((s = start_from(url.path, '?')))
@@ -421,12 +394,12 @@ url_search(const struct url url, size_t* len_p) {
 }
 
 const char*
-url_hash(const struct url url) {
+url_hash(const URL url) {
   return start_from(url.path, '#');
 }
 
 void
-url_fromobj(struct url* url, JSValueConst obj, JSContext* ctx) {
+url_fromobj(URL* url, JSValueConst obj, JSContext* ctx) {
   JSValue value;
   const char *protocol, *host, *path;
   int32_t port = -1;
@@ -462,8 +435,8 @@ url_fromobj(struct url* url, JSValueConst obj, JSContext* ctx) {
 }
 
 BOOL
-url_fromvalue(struct url* url, JSValueConst value, JSContext* ctx) {
-  struct url* other;
+url_fromvalue(URL* url, JSValueConst value, JSContext* ctx) {
+  URL* other;
 
   if((other = minnet_url_data(value))) {
     url_copy(url, *other, ctx);
@@ -481,7 +454,7 @@ url_fromvalue(struct url* url, JSValueConst value, JSContext* ctx) {
 }
 
 void
-url_fromwsi(struct url* url, struct lws* wsi, JSContext* ctx) {
+url_fromwsi(URL* url, struct lws* wsi, JSContext* ctx) {
   int i, port = -1;
   char* p;
   const char* protocol;
@@ -540,18 +513,12 @@ url_fromwsi(struct url* url, struct lws* wsi, JSContext* ctx) {
   // url->query = minnet_query_string(wsi, ctx);
 }
 
-void
-url_dump(const char* n, struct url const* url) {
-  fprintf(stderr, "%s{ protocol = %s, host = %s, port = %u, path = %s }\n", n, url->protocol, url->host, url->port, url->path);
-  fflush(stderr);
-}
-
-struct url*
+URL*
 url_new(JSContext* ctx) {
 
-  struct url* url;
+  URL* url;
 
-  if(!(url = js_mallocz(ctx, sizeof(struct url))))
+  if(!(url = js_mallocz(ctx, sizeof(URL))))
     return url;
 
   url->ref_count = 1;
@@ -559,7 +526,7 @@ url_new(JSContext* ctx) {
 }
 
 JSValue
-url_object(const struct url url, JSContext* ctx) {
+url_object(const URL url, JSContext* ctx) {
   JSValue ret = JS_NewObject(ctx);
 
   if(url.protocol)

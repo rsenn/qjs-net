@@ -26,53 +26,6 @@ headers_object(JSContext* ctx, const void* start, const void* e) {
   return ret;
 }
 
-char*
-headers_atom(JSAtom atom, JSContext* ctx) {
-  char* ret;
-  const char* str = JS_AtomToCString(ctx, atom);
-  size_t len = strlen(str);
-
-  if((ret = js_malloc(ctx, len + 2))) {
-    strcpy(ret, str);
-    ret[len] = ':';
-    ret[len + 1] = '\0';
-  }
-  return ret;
-}
-
-int
-headers_addobj(ByteBuffer* buffer, struct lws* wsi, JSValueConst obj, JSContext* ctx) {
-  JSPropertyEnum* tab;
-  uint32_t tab_len, i;
-
-  if(JS_GetOwnPropertyNames(ctx, &tab, &tab_len, obj, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK))
-    return 0;
-
-  for(i = 0; i < tab_len; i++) {
-    JSValue value = JS_GetProperty(ctx, obj, tab[i].atom);
-    size_t len;
-    void* prop;
-    const void* str;
-    int ret;
-
-    str = JS_ToCStringLen(ctx, &len, value);
-    JS_FreeValue(ctx, value);
-
-    prop = headers_atom(tab[i].atom, ctx);
-
-    ret = lws_add_http_header_by_name(wsi, prop, str, len, &buffer->write, buffer->end);
-
-    js_free(ctx, prop);
-    JS_FreeCString(ctx, str);
-
-    if(ret)
-      return -1;
-  }
-
-  js_free(ctx, tab);
-  return 0;
-}
-
 size_t
 headers_write(uint8_t** in, uint8_t* end, ByteBuffer* buffer, struct lws* wsi) {
   int ret;
@@ -137,34 +90,20 @@ headers_fromobj(ByteBuffer* buffer, JSValueConst obj, JSContext* ctx) {
 }
 
 ssize_t
-headers_set(JSContext* ctx, ByteBuffer* buffer, const char* name, const char* value) {
-  size_t namelen = strlen(name), valuelen = strlen(value);
-  size_t len = namelen + 2 + valuelen + 2;
-
-  buffer_grow(buffer, len);
-  buffer_write(buffer, name, namelen);
-  buffer_write(buffer, ": ", 2);
-  buffer_write(buffer, value, valuelen);
-  buffer_write(buffer, "\r\n", 2);
-
-  return len;
-}
-
-ssize_t
-headers_findb(ByteBuffer* buffer, const char* name, size_t namelen) {
-  uint8_t* ptr;
+headers_findb(ByteBuffer* b, const char* name, size_t namelen) {
+  uint8_t* x;
   ssize_t ret = 0;
 
-  for(ptr = buffer->start; ptr < buffer->write;) {
-    size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
+  for(x = b->start; x < b->write;) {
+    size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
 
-    // printf("%s %.*s\n", __func__, (int)len, (char*)ptr);
+    // printf("%s %.*s\n", __func__, (int)c, (char*)x);
 
-    if(!strncasecmp((const char*)ptr, name, namelen) && ptr[namelen] == ':')
+    if(!strncasecmp((const char*)x, name, namelen) && x[namelen] == ':')
       return ret;
 
-    while(isspace(ptr[len]) && ptr + len < buffer->write) ++len;
-    ptr += len;
+    while(isspace(x[c]) && x + c < b->write) ++c;
+    x += c;
     ++ret;
   }
 
@@ -172,39 +111,39 @@ headers_findb(ByteBuffer* buffer, const char* name, size_t namelen) {
 }
 
 char*
-headers_at(ByteBuffer* buffer, size_t* lenptr, size_t index) {
-  uint8_t* ptr;
+headers_at(ByteBuffer* b, size_t* lenptr, size_t index) {
+  uint8_t* x;
   size_t i = 0;
-  for(ptr = buffer->start; ptr < buffer->write;) {
-    size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
+  for(x = b->start; x < b->write;) {
+    size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
     if(i == index) {
       if(lenptr)
-        *lenptr = len;
-      return (char*)ptr;
+        *lenptr = c;
+      return (char*)x;
     }
-    while(isspace(ptr[len]) && ptr + len < buffer->write) ++len;
-    ptr += len;
+    while(isspace(x[c]) && x + c < b->write) ++c;
+    x += c;
     ++i;
   }
   return 0;
 }
 
 char*
-headers_getlen(ByteBuffer* buffer, size_t* lenptr, const char* name) {
-  ssize_t index;
+headers_getlen(ByteBuffer* b, size_t* lenptr, const char* name) {
+  ssize_t i;
 
-  if((index = headers_find(buffer, name)) != -1) {
+  if((i = headers_find(b, name)) != -1) {
     size_t l, n;
-    char* ret = headers_at(buffer, &l, index);
-    n = scan_nonwhitenskip(ret, l);
-    ret += n;
+    char* x = headers_at(b, &l, i);
+    n = scan_nonwhitenskip(x, l);
+    x += n;
     l -= n;
-    n = scan_whitenskip(ret, l);
-    ret += n;
+    n = scan_whitenskip(x, l);
+    x += n;
     l -= n;
     if(lenptr)
       *lenptr = l;
-    return ret;
+    return x;
   }
 
   return 0;
@@ -221,47 +160,8 @@ headers_get(ByteBuffer* buffer, const char* name, JSContext* ctx) {
 }
 
 ssize_t
-headers_copy(ByteBuffer* buffer, char* dest, size_t sz, const char* name) {
-  char* hdr;
-  size_t len;
-
-  if((hdr = headers_getlen(buffer, &len, name))) {
-    len = MIN(len, sz);
-
-    strncpy(dest, hdr, len);
-    return len;
-  }
-
-  return -1;
-}
-
-ssize_t
 headers_find(ByteBuffer* buffer, const char* name) {
   return headers_findb(buffer, name, strlen(name));
-}
-
-ssize_t
-headers_unsetb(ByteBuffer* buffer, const char* name, size_t namelen) {
-  ssize_t pos;
-
-  if((pos = headers_findb(buffer, name, namelen)) >= 0) {
-    uint8_t* ptr = buffer->start + pos;
-    size_t len = byte_chrs(ptr, buffer->write - ptr, "\r\n", 2);
-
-    while(isspace(buffer->start[len]) && buffer->start + len < buffer->write) ++len;
-
-    memcpy(ptr, ptr + len, buffer->write - (buffer->start + len));
-    buffer->write -= len;
-
-    if(buffer->write < buffer->end)
-      memset(buffer->write, 0, buffer->end - buffer->write);
-  }
-  return pos;
-}
-
-ssize_t
-headers_unset(ByteBuffer* buffer, const char* name) {
-  return headers_unsetb(buffer, name, strlen(name));
 }
 
 int
@@ -297,30 +197,63 @@ headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   return count;
 }
 
-char*
-headers_gettoken(JSContext* ctx, struct lws* wsi, enum lws_token_indexes tok) {
-  int len;
+ssize_t
+headers_unsetb(ByteBuffer* b, const char* name, size_t namelen) {
+  ssize_t i;
 
-  if((len = lws_hdr_total_length(wsi, tok)) > 0) {
-    char* hdr;
+  if((i = headers_findb(b, name, namelen)) >= 0) {
+    uint8_t* x = b->start + i;
+    size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
 
-    if((hdr = js_malloc(ctx, len + 1))) {
-      lws_hdr_copy(wsi, hdr, len + 1, tok);
-      hdr[len] = '\0';
-      return hdr;
-    }
+    while(isspace(b->start[c]) && b->start + c < b->write) ++c;
+
+    memcpy(x, x + c, b->write - (b->start + c));
+    b->write -= c;
+
+    if(b->write < b->end)
+      memset(b->write, 0, b->end - b->write);
   }
-  return 0;
+  return i;
 }
 
-char*
-headers_tostring(JSContext* ctx, struct lws* wsi) {
-  ByteBuffer buf = BUFFER_0();
-  char* ret = 0;
-  headers_tobuffer(ctx, &buf, wsi);
+ssize_t
+headers_set(ByteBuffer* b, const char* name, const char* value) {
+  size_t namelen = strlen(name), valuelen = strlen(value);
+  size_t c = namelen + 2 + valuelen + 2;
 
-  ret = js_strndup(ctx, (const char*)buf.start, buffer_BYTES(&buf));
+  headers_unsetb(b, name, namelen);
 
-  buffer_free(&buf);
-  return ret;
+  buffer_grow(b, c);
+  buffer_write(b, name, namelen);
+  buffer_write(b, ": ", 2);
+  buffer_write(b, value, valuelen);
+  buffer_write(b, "\r\n", 2);
+
+  return c;
+}
+
+ssize_t
+headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* value, size_t valuelen) {
+  ssize_t i;
+
+  if((i = headers_findb(b, name, namelen)) >= 0) {
+    uint8_t *x = b->start + i, *y;
+    size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
+
+    //    while(isspace(b->start[c]) && b->start + c < b->write) ++c;
+    y = x + c;
+
+    if((b->write - y) > 0 && valuelen > 0) {
+      memmove(y + valuelen, y, b->write - y);
+    }
+    if(valuelen > 0)
+      memcpy(y, value, valuelen);
+
+    b->write += valuelen;
+
+    if(b->write < b->end)
+      memset(b->write, 0, b->end - b->write);
+  }
+
+  return i;
 }

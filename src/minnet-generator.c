@@ -90,16 +90,6 @@ minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
 }
 
 JSValue
-minnet_generator_reader(JSContext* ctx, MinnetGenerator* gen) {
-  JSValue ret = JS_NewObject(ctx);
-
-  JS_SetPropertyStr(ctx, ret, "read", js_function_cclosure(ctx, minnet_generator_next, 0, 0, generator_dup(gen), (void*)&generator_free));
-  JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
-
-  return ret;
-}
-
-JSValue
 minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
   if(!*gen_p)
     *gen_p = generator_new(ctx);
@@ -108,16 +98,3 @@ minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
 
   return minnet_generator_iterator(ctx, *gen_p);
 }
-
-/*
-JSValue
-minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
-  JSValue ret = JS_NewObject(ctx);
-
-    ++gen->ref_count;
-
-  JS_SetPropertyStr(ctx, ret, "next", js_function_cclosure(ctx, minnet_generator_next, 0, 0, gen_p, (void*)&generator_free));
-
-  return ret;
-}
-*/

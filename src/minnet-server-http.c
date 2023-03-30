@@ -140,7 +140,7 @@ vhost_options_free_list(JSContext* ctx, MinnetVhostOptions* vo) {
   } while((vo = next));
 }
 
-void
+/*void
 vhost_options_free(JSContext* ctx, MinnetVhostOptions* vo) {
 
   if(vo->name)
@@ -153,7 +153,7 @@ vhost_options_free(JSContext* ctx, MinnetVhostOptions* vo) {
 
   js_free(ctx, (void*)vo);
 }
-
+*/
 MinnetHttpMount*
 mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, const char* pro, enum lws_mount_protocols origin_proto) {
   MinnetHttpMount* m;
@@ -352,7 +352,7 @@ serve_resolved_free(void* ptr) {
 
   if(--closure->ref_count == 0) {
     if(closure->resp)
-      response_free(closure->resp, closure->ctx);
+      response_free(closure->resp, JS_GetRuntime(closure->ctx));
 
     js_free(closure->ctx, ptr);
   }
@@ -935,11 +935,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       mounts = (MinnetHttpMount*)server->context.info.mounts;
 
       if(!session->mount)
-        if(req->url.path)
-          session->mount = mount_find(mounts, req->url.path, mountpoint_len);
-      if(!session->mount)
         if(path)
           session->mount = mount_find(mounts, path, 0);
+      if(!session->mount)
+        if(req->url.path)
+          session->mount = mount_find(mounts, req->url.path, mountpoint_len);
       if(req->url.path && !session->mount)
         if(!(session->mount = mount_find(mounts, req->url.path, mountpoint_len)))
           session->mount = mount_find(mounts, req->url.path, 0);

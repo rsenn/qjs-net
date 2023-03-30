@@ -1,4 +1,6 @@
 #include "session.h"
+#include "request.h"
+#include "response.h"
 #include "opaque.h"
 #include "ringbuffer.h"
 #include "jsutils.h"
@@ -8,14 +10,10 @@
 #include <assert.h>
 
 struct socket* minnet_ws_data(JSValueConst);
-struct http_request* minnet_request_data(JSValueConst);
-struct http_response* minnet_response_data(JSValueConst);
+Request* minnet_request_data(JSValueConst);
+Response* minnet_response_data(JSValueConst);
 
-struct http_response;
-extern struct http_response* minnet_response_data(JSValueConst);
-
-/*static THREAD_LOCAL uint32_t session_serial = 0;
-THREAD_LOCAL struct list_head session_list = {0, 0};*/
+extern Response* minnet_response_data(JSValueConst);
 
 void
 session_zero(struct session_data* session) {
@@ -33,11 +31,6 @@ session_zero(struct session_data* session) {
   session->client = NULL;
 
   queue_zero(&session->sendq);
-}
-
-void
-session_clear(struct session_data* session, JSContext* ctx) {
-  session_clear_rt(session, JS_GetRuntime(ctx));
 }
 
 void
@@ -127,24 +120,7 @@ session_opaque(struct session_data* sess) {
   return 0;
 }
 
-struct context*
-session_context(struct session_data* sess) {
-  struct lws* wsi;
-
-  if((wsi = session_wsi(sess)))
-    return wsi_context(wsi);
-
-  return 0;
-}
-
-struct http_request*
-session_request(struct session_data* sess) {
-  if(JS_IsObject(sess->req_obj))
-    return minnet_request_data(sess->req_obj);
-  return 0;
-}
-
-struct http_response*
+Response*
 session_response(struct session_data* sess) {
   if(JS_IsObject(sess->resp_obj))
     return minnet_response_data(sess->resp_obj);
