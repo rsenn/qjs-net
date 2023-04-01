@@ -32,7 +32,7 @@ function main(...args) {
   const base = path.basename(process.argv[1], '.js').replace(/\.[a-z]*$/, '');
   const config = ReadJSON(`.${base}-config`) ?? {};
   globalThis.console = new Console({
-    inspectOptions: { compact: 1, customInspect: true,maxStringLength: 100 }
+    inspectOptions: { compact: 1, customInspect: true, maxStringLength: 100 }
   });
   let params = getOpt(
     {
@@ -109,8 +109,8 @@ function main(...args) {
     console.log('createWS', { url, callbacks, listen });
     const { protocol, hostname, port, path } = url;
     console.log('createWS', { protocol, hostname, port, path });
-    setLog((params.debug ? LLL_USER : 0) | (((params.debug ? LLL_NOTICE : LLL_WARN) << 1) - 1), (level, ...args) => {
-      repl.printStatus(...args);
+    setLog((params.debug ? LLL_USER : 0) | (((params.debug ? LLL_NOTICE : LLL_WARN) << 1) - 1), (level, message) => {
+      repl.printStatus(() => std.puts(message));
       //if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
 

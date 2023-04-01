@@ -32,7 +32,7 @@ MinnetVhostOptions*
 vhost_options_create(JSContext* ctx, const char* name, const char* value) {
   MinnetVhostOptions* vo = js_mallocz(ctx, sizeof(MinnetVhostOptions));
 
-  // DEBUG("vhost_options_create %s %s\n", name, value);
+  DEBUG("vhost_options_create %s %s\n", name, value);
 
   vo->name = name ? js_strdup(ctx, name) : 0;
   vo->value = value ? js_strdup(ctx, value) : 0;
@@ -255,7 +255,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
   int protocol = n == 0 ? LWSMPRO_CALLBACK : LWSMPRO_HTTP;
   size_t l = 0;
 
-  // DEBUG("mount_find('%.*s')\n", (int)n, x);
+  DEBUG("mount_find('%.*s')\n", (int)n, x);
 
   if(n == 0)
     n = strlen(x);
@@ -273,7 +273,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
         mnt++;
         len--;
       }
-      // DEBUG("mount_find x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+      DEBUG("mount_find x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
 
       if((len == n || (n > len && (x[len] == '/' || x[len] == '?'))) && !strncmp(x, mnt, n)) {
         m = p;
@@ -299,7 +299,7 @@ mount_find_s(MinnetHttpMount* mounts, const char* x) {
     const char* mnt = p->mountpoint;
     size_t len = p->mountpoint_len;
 
-    // DEBUG("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+    DEBUG("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
 
     if(len == n && !strncmp(x, mnt, n)) {
       m = p;
@@ -947,8 +947,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if((mount = session->mount)) {
         size_t mlen = strlen(mount->mnt);
 
-        // DEBUG("mount->mnt = '%s'\n", mount->mnt);
-        // DEBUG("mount->mnt = '%.*s'\n", (int)mlen, mount->mnt);
+        DEBUG("mount->mnt = '%s'\n", mount->mnt);
+        DEBUG("mount->mnt = '%.*s'\n", (int)mlen, mount->mnt);
 
         assert(req->url.path);
         assert(mount->mnt);

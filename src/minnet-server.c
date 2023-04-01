@@ -254,7 +254,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   ret = JS_NewInt32(ctx, 0);
   options = argv[0];
 
-  if(url_fromvalue(&url, argv[argind], ctx))
+  if(url_fromvalue(&url, argv[argind], ctx) && argc > 1)
     ++argind;
 
   /* if(argc >= 2 && JS_IsString(argv[argind])) {

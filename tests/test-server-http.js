@@ -10,27 +10,27 @@ function TestClient(url) {
 
   return Client(url, {
     onConnect(ws, req) {
-      log('onConnect', { ws, req });
+      console.log('onConnect', { ws, req });
     },
     onClose(ws, reason) {
-      log('onClose', { ws, reason });
+      console.log('onClose', { ws, reason });
       exit(reason);
     },
     onError(ws, error) {
-      log('onError', { ws, error });
+      console.log('onError', { ws, error });
       exit(1);
     },
     onHttp(req, resp) {
       const { url } = resp;
-      log('onHttp', { req, resp });
-      log('req.url', req.url);
-      log('resp.url', resp.url);
-      log('url.path', url.path);
+      console.log('onHttp', { req, resp });
+      console.log('req.url', req.url);
+      console.log('resp.url', resp.url);
+      console.log('url.path', url.path);
 
       let file = loadFile('.' + url.path);
 
       let body = resp.text();
-      log('onHttp', { body, file });
+      console.log('onHttp', { body, file });
 
       if(file.length == body.length) if (file === body) exit(0);
     }
@@ -38,6 +38,8 @@ function TestClient(url) {
 }
 
 function main(...args) {
+   import('console').then(({Console}) => globalThis.console = new Console({ inspectOptions: { compact: 2 } }));
+
   let pid = spawn('server.js', ['localhost', 30000], scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log'));
   let status = [];
 
@@ -47,12 +49,12 @@ function main(...args) {
 
   kill(pid, SIGTERM);
   wait4(pid, status, WNOHANG);
-  log('status', status);
+  console.log('status', status);
 }
 
 try {
   main(...scriptArgs.slice(1));
 } catch(error) {
-  log(`FAIL: ${error && error.message}\n${error && error.stack}`);
+  console.log(`FAIL: ${error && error.message}\n${error && error.stack}`);
   exit(1);
 }

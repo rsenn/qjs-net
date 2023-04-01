@@ -456,7 +456,7 @@ function RPCServerEndpoint(classes = {}) {
     get: objectCommand(({ obj, property }, respond) => {
       if(property in obj && typeof obj[property] != 'function') {
         const result = obj[property];
-        return respond(true, result);
+        return respond(true, SerializeValue(result));
       }
       return respond(false, `No such property on object #${id}: ${property}`);
     }),
@@ -962,6 +962,15 @@ function MakeCommandFunction(cmd, getConnection, thisObj, t) {
   };
 }
 
+const TypedArrayPrototype = Object.getPrototypeOf(Uint32Array.prototype);
+const TypedArrayConstructor = TypedArrayPrototype.constructor;
+
+function isTypedArray(value) {
+  try {
+    return TypedArrayPrototype === Object.getPrototypeOf(Object.getPrototypeOf(value));
+  } catch(e) {}
+}
+
 export function SerializeValue(value, source = false) {
   const type = typeof value;
   let desc = { type };
@@ -975,12 +984,19 @@ export function SerializeValue(value, source = false) {
   } else if(type == 'function') {
     if(value.length !== undefined) desc['length'] = value.length;
   }
-  if(value instanceof ArrayBuffer) {
-    let array = new Uint8Array(value);
-    value = [...array];
-    desc['class'] = 'ArrayBuffer';
-    // delete desc['chain'];
+  if(type == 'object') {
+    if(value instanceof ArrayBuffer) {
+      let array = new Uint8Array(value);
+      value = [...array];
+      desc['class'] = 'ArrayBuffer';
+      // delete desc['chain'];
+    } else if(isTypedArray(value)) {
+      value = [...value].map(n => (typeof n == 'number' ? n : n + ''));
+    } else if(value instanceof Set) {
+      value = [...value];
+    }
   }
+
   if(typeof value == 'function') {
     if(source) desc.source = value + '';
   } else if(typeof value != 'symbol') {
@@ -995,6 +1011,13 @@ export function DeserializeSymbols(names) {
 
 export function DeserializeValue(desc) {
   if(desc.type == 'symbol') return Symbol.for(desc.description);
+  if(desc.type == 'object' && 'class' in desc) {
+    let ctor = globalThis[desc.class];
+
+    if(ctor && ctor !== Array) {
+      desc.value = new ctor(desc.value);
+    }
+  }
   // if(desc.type=='string')
   return desc.value;
 }

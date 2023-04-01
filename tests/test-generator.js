@@ -1,11 +1,9 @@
-import { generator } from 'net';
-import REPL from 'repl';
-import { Console } from 'console';
+import { Generator } from 'net.so';
 
 async function main() {
-  globalThis.console = new Console({ inspectOptions: { compact: 2 } });
+  import('console').then(({Console}) => globalThis.console = new Console({ inspectOptions: { compact: 2 } }));
 
-  let gen = new generator(async (push, stop) => {
+  let gen = new Generator(async (push, stop) => {
     console.log('generator', { push, stop });
     for(let i = 0; i < 100; i++) {
       let pr = push(new Uint32Array([i * 1e6]));
@@ -28,10 +26,6 @@ async function main() {
     let { value, done } = item;
     console.log(`item #${i}`, { value, done });
   }
-
-  let repl = new REPL();
-  console.log('repl', repl);
-  repl.run();
 }
 
 main();

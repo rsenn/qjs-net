@@ -130,7 +130,7 @@ client_zero(MinnetClient* client) {
   js_promise_zero(&client->promise);
   callbacks_zero(&client->on);
 
-  client->recvb = BUFFER_0();
+  client->recvb = BLOCK_0();
 }
 
 MinnetClient*
@@ -599,12 +599,12 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       if((ctx = client->on.message.ctx)) {
         if(!single_fragment) {
-          buffer_append(&client->recvb, in, len);
+          block_append(&client->recvb, in, len);
         }
 
         if(lws_is_final_fragment(wsi)) {
           JSValue msg = single_fragment ? (opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len))
-                                        : (opaque->binary ? block_toarraybuffer(&client->recvb.block, ctx) : block_tostring(&client->recvb.block, ctx));
+                                        : (opaque->binary ? block_toarraybuffer(&client->recvb, ctx) : block_tostring(&client->recvb, ctx));
           JSValue argv[] = {client->session.ws_obj, msg};
 
           client_exception(client, callback_emit(&client->on.message, countof(argv), argv));

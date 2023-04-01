@@ -1,5 +1,5 @@
 import { exit, puts, open } from 'std';
-import { URL, LLL_ALL, LLL_INFO, LLL_USER, setLog } from 'net';
+import { URL, LLL_ALL, LLL_INFO, LLL_USER, setLog } from 'net.so';
 import Client from './client.js';
 import { close, exec, O_RDWR, setReadHandler, setWriteHandler, Worker, ttySetRaw, sleep, kill, signal, SIGINT } from 'os';
 import { in as stdin, out as stdout, err as stderr } from 'std';

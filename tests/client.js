@@ -1,6 +1,6 @@
 import { err, exit, puts } from 'std';
 import { setReadHandler, setWriteHandler } from 'os';
-import { client, setLog, LLL_WARN, LLL_CLIENT, LLL_USER, URL, Generator, logLevels } from 'net';
+import { client, setLog, LLL_WARN, LLL_CLIENT, LLL_USER, URL, Generator, logLevels } from 'net.so';
 import { Levels, DefaultLevels, Init, isDebug, log } from './log.js';
 import { escape, abbreviate } from './common.js';
 

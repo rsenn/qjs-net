@@ -26,7 +26,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
     return http_server_callback(wsi, reason, user, in, len);
 
   if(reason != LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS)
-    LOGCB("WS", "fd=%d, %s%sin='%.*s'", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", (int)len, (char*)in);
+    LOGCB("WS", "fd=%d, %s%slen=%zu in='%.*s'", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", len, (int)len, (char*)in);
 
   switch(reason) {
     case LWS_CALLBACK_CONNECTING: {
