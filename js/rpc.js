@@ -397,7 +397,7 @@ export class Connection extends EventEmitter {
 //inherits(Connection, EventEmitter);
 
 /*define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });*/
-weakAssign(Connection.prototype, /*EventEmitter.prototype, */{ [Symbol.toStringTag]: 'Connection' });
+weakAssign(Connection.prototype, /*EventEmitter.prototype, */ { [Symbol.toStringTag]: 'Connection' });
 
 Connection.list = [];
 
@@ -532,7 +532,7 @@ export class RPCClient extends Connection {
     //this.log('RPCClient.constructor', { socket, instance, log, codec, classes } /*, new Error().stack.replace(/Error\n?/, '')*/);
     //
     //
-    console.log('RPCClient.on',this.on);
+    console.log('RPCClient.on', this.on);
 
     //this.on('error', e => console.error('RPCClient', e));
 
@@ -552,8 +552,8 @@ export class RPCClient extends Connection {
     //this.log('RPCClient.processMessage', response, new Error().stack.replace(/Error\n?/, ''));
     const { success, error, result, seq } = response;
 
-    this.log('RPCClient.processMessage',{ success, error, result, seq });
-    
+    this.log('RPCClient.processMessage', { success, error, result, seq });
+
     if(success) this.emit('response', result);
     else if(error) this.emit('error', error);
   }
@@ -965,7 +965,7 @@ function MakeCommandFunction(cmd, getConnection, thisObj, t) {
 export function SerializeValue(value, source = false) {
   const type = typeof value;
   let desc = { type };
-  
+
   if(type == 'object' && value != null) {
     desc['class'] = getPrototypeName(value) ?? getPrototypeName(Object.getPrototypeOf(value));
     //desc['chain'] = getPrototypeChain(value).map(getPrototypeName);

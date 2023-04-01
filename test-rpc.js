@@ -32,7 +32,7 @@ function main(...args) {
   const base = path.basename(process.argv[1], '.js').replace(/\.[a-z]*$/, '');
   const config = ReadJSON(`.${base}-config`) ?? {};
   globalThis.console = new Console({
-    inspectOptions: { compact: 1, customInspect: true }
+    inspectOptions: { compact: 1, customInspect: true,maxStringLength: 100 }
   });
   let params = getOpt(
     {
@@ -248,12 +248,11 @@ function main(...args) {
         return rsp;
       },
       onMessage(ws, data) {
-        console.log('onMessage', ws, data);
+        console.log('onMessage', ws, `len=${data.length}`, data);
         return callbacks.onMessage(ws, data);
       }
     });
   }
-  
 
   //globalThis[['connection', 'listener'][+listen]] = cli;
 
@@ -278,7 +277,20 @@ function main(...args) {
     WriteJSON
   });
 
-  define(globalThis, serve ? { get server() { return  cli.connection; } } : { get client() { return  cli.connection; } });
+  define(
+    globalThis,
+    serve
+      ? {
+          get server() {
+            return cli.connection;
+          }
+        }
+      : {
+          get client() {
+            return cli.connection;
+          }
+        }
+  );
   /* delete globalThis.DEBUG;
   Object.defineProperty(globalThis, 'DEBUG', { get: DebugFlags });*/
 
