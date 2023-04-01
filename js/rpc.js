@@ -12,37 +12,25 @@ export const LogWrap = (globalThis.LogWrap = function LogWrap(log) {
   return (value, ...args) => (log(value, ...args), value);
 });
 
-export const VfnAdapter = vfn => ({
+/*export const VfnAdapter = vfn => ({
   get: k => vfn(k),
   set: (k, v) => vfn(k, v)
 });
 
 export const VfnDecorator = vfn => define(vfn, VfnAdapter(vfn));
+*/
 
-/*export const DebugFlags = (globalThis.DebugFlags = memoize((environ = (globalThis.process && process.env['DEBUG']) || '') => {
-  let a = Array.isArray(environ) ? environ : environ.split(/[^A-Za-z0-9_]+/g);
-  a = a.filter(n => n !== '');
-  a = a.reduce((acc, n) => {
-    acc[n] = true;
-    return acc;
-  }, {});
-  return a;
-}));*/
-
-globalThis.GetClasses = function* GetClasses(obj) {
+/*globalThis.GetClasses = function* GetClasses(obj) {
   let keys = GetKeys(obj);
-
   for(let name of keys) {
     try {
       if(typeof obj[name] == 'function' && 'prototype' in obj[name]) yield [name, obj[name]];
     } catch(e) {}
   }
-
-  // console.log("desc:", desc);
   return desc;
-};
+};*/
 
-export function Mapper(map = new WeakMap()) {
+/*export function Mapper(map = new WeakMap()) {
   let self;
   self = function(key, value) {
     if(value === undefined) value = map.get(key);
@@ -52,10 +40,11 @@ export function Mapper(map = new WeakMap()) {
   return Object.setPrototypeOf(self, Mapper.prototype);
 }
 
-Mapper.prototype = function() {};
-Mapper.prototype.constructor = Mapper;
+Object.setPrototypeOf(Mapper.prototype, Function.prototype);*/
+//Mapper.prototype = function() {};
+//Mapper.prototype.constructor = Mapper;
 
-export function DefaultConstructor(mapper, fn = (...args) => new Object(...args)) {
+/*export function DefaultConstructor(mapper, fn = (...args) => new Object(...args)) {
   let self;
   self = function(...args) {
     let [key, value] = args;
@@ -72,13 +61,10 @@ export function DefaultConstructor(mapper, fn = (...args) => new Object(...args)
   return Object.setPrototypeOf(self, DefaultConstructor.prototype);
 }
 
-DefaultConstructor.prototype = function() {};
-DefaultConstructor.prototype.constructor = DefaultConstructor;
+Object.setPrototypeOf(DefaultConstructor.prototype, Function.prototype);
+DefaultConstructor.prototype.constructor = DefaultConstructor;*/
 
-export function EventLogger(
-  instance = {},
-  callback = (name, event, thisObj) => console.log('EventLogger', { name, event, thisObj })
-) {
+/*export function EventLogger(instance = {}, callback = (name, event, thisObj) => console.log('EventLogger', { name, event, thisObj })) {
   function WrapEvent(handler, name) {
     return function(e) {
       return callback(name, e, this);
@@ -93,7 +79,7 @@ export function EventLogger(
       return obj[prop];
     }
   });
-}
+}*/
 
 /** @interface MessageReceiver */
 export class MessageReceiver extends EventEmitter {
@@ -125,7 +111,7 @@ export class MessageTransmitter {
  */
 export function MessageTransceiver() {}
 
-Object.assign(MessageTransceiver.prototype, MessageReceiver.prototype, MessageTransmitter.prototype);
+define(MessageTransceiver.prototype, MessageReceiver.prototype, MessageTransmitter.prototype);
 
 Object.defineProperty(MessageTransceiver, Symbol.hasInstance, {
   value: instance => [MessageReceiver, MessageTransmitter].every(ctor => ctor[Symbol.hasInstance](instance))
@@ -214,10 +200,11 @@ RPCFactory.prototype[Symbol.toStringTag] = 'RPCFactory';
 /**
  * @interface Connection
  */
-export class Connection extends MessageTransceiver {
+export class Connection extends EventEmitter {
   static fromSocket = new WeakMap();
 
   lastSeq = 0;
+  //#events = {};
 
   static equal(a, b) {
     return (a.socket != null && a.socket === b.socket) || (typeof a.fd == 'number' && a.fd === b.fd);
@@ -238,7 +225,7 @@ export class Connection extends MessageTransceiver {
       socket,
       exception: null,
       log(...args) {
-        /*if(DebugFlags()[this[Symbol.toStringTag]]) */ console.log(...args);
+        // console.log(...args);
       },
       messages: { requests: {}, responses: {} }
     });
@@ -348,10 +335,11 @@ export class Connection extends MessageTransceiver {
   static getCallbacks(instance, verbosity = 0) {
     const { classes, fdlist, log } = instance;
     const ctor = this;
-    const verbose = verbosity > 1 ? (msg, ...args) => log('VERBOSE ' + msg, args) : () => {};
+    const verbose = verbosity >= 1 ? (msg, ...args) => log('VERBOSE ' + msg, args) : () => {};
     //log(`${ctor.name}.getCallbacks`, { instance, log, verbosity });
     const handle = (sock, event, ...args) => {
       let conn, obj;
+
       if((conn = fdlist[sock.fd])) {
         //verbose(`Handle fd #${sock.fd} ${event}`);
         callHandler(conn, event, ...args);
@@ -366,8 +354,9 @@ export class Connection extends MessageTransceiver {
       delete fdlist[fd];
     };
     return {
+      verbosity,
       onConnect(sock, req) {
-        //        verbose(`Connected`,sock);
+        verbose(`Connected`, sock);
         let connection = fdlist[sock.fd];
         if(!connection) connection = new ctor(sock, instance, log, 'json', classes);
         connection.socket ??= sock;
@@ -407,8 +396,8 @@ export class Connection extends MessageTransceiver {
 
 //inherits(Connection, EventEmitter);
 
-/*define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
-weakAssign(Connection.prototype, EventEmitter.prototype);*/
+/*define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });*/
+weakAssign(Connection.prototype, /*EventEmitter.prototype, */{ [Symbol.toStringTag]: 'Connection' });
 
 Connection.list = [];
 
@@ -541,7 +530,12 @@ export class RPCClient extends Connection {
     this.connected = true;
     RPCClient.set.add(this);
     //this.log('RPCClient.constructor', { socket, instance, log, codec, classes } /*, new Error().stack.replace(/Error\n?/, '')*/);
-    this.on('error', e => console.error('RPCClient', e));
+    //
+    //
+    console.log('RPCClient.on',this.on);
+
+    //this.on('error', e => console.error('RPCClient', e));
+
     //this.on('response', r => console.log('RPCClient.onresponse', r));
     let api;
 
@@ -555,9 +549,11 @@ export class RPCClient extends Connection {
   }
 
   processMessage(response) {
-    this.log('RPCClient.processMessage', response, new Error().stack.replace(/Error\n?/, ''));
+    //this.log('RPCClient.processMessage', response, new Error().stack.replace(/Error\n?/, ''));
     const { success, error, result, seq } = response;
 
+    this.log('RPCClient.processMessage',{ success, error, result, seq });
+    
     if(success) this.emit('response', result);
     else if(error) this.emit('error', error);
   }
@@ -649,10 +645,9 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
       }
       return this;
     },
-    listen(new_ws, os = globalThis.os) {
-      if(!new_ws) new_ws = MakeWebSocket;
+    listen(new_ws = MakeWebSocket, os = globalThis.os) {
       this.log(`${service.name} listening on ${this.url}`);
-      if(os) setHandlers(os, callbacks);
+      if(os) callbacks.onFd = setHandlersFunction(os);
       this.listening = true;
       this.ws = new_ws(this.url, callbacks, true);
       if(new_ws !== MakeWebSocket)
@@ -660,23 +655,21 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
         else this.listening = false;
       return this;
     },
-    async connect(new_ws, os = globalThis.os) {
-      if(!new_ws) new_ws = MakeWebSocket;
+    /*async*/ connect(new_ws = MakeWebSocket, os = globalThis.os) {
       this.log(`${service.name} connecting to ${this.url}`);
-      if(os) setHandlers(os, callbacks);
+      if(os) callbacks.onFd = setHandlersFunction(os);
       this.ws = new_ws(this.url, callbacks, false);
       //console.log('connect()', this.ws);
       return this;
     },
-    /* prettier-ignore */ get connected() {
+    get connected() {
       const ws = this.ws;
-      console.log("ws", ws);
-      if(ws)
-      return typeof ws.readyState == 'number' ? ws.readyState == ws.OPEN : false;
-    const {fdlist} = instance;
-      console.log("fdlist", fdlist);
+      console.log('ws', ws);
+      if(ws) return typeof ws.readyState == 'number' ? ws.readyState == ws.OPEN : false;
+      const { fdlist } = instance;
+      console.log('fdlist', fdlist);
 
-    return  fdlist[Object.keys( fdlist)[0]].connected;
+      return fdlist[Object.keys(fdlist)[0]].connected;
     }
   });
 
@@ -829,13 +822,35 @@ export function define(obj, ...args) {
   return obj;
 }
 
-export function setHandlers(os, handlers) {
-  handlers.onFd = function(fd, readable, writable) {
+export function weakAssign(obj, ...args) {
+  let propdesc = {};
+  for(let props of args) {
+    let desc = Object.getOwnPropertyDescriptors(props);
+    for(let prop of GetKeys(desc)) {
+      if(prop in obj) continue;
+      propdesc[prop] = { ...desc[prop], enumerable: false, configurable: true };
+      if('value' in propdesc[prop]) propdesc[prop].writable = true;
+    }
+  }
+  Object.defineProperties(obj, propdesc);
+  return obj;
+}
+
+export function setHandlersFunction(os) {
+  return function(fd, readable, writable) {
     //console.log('\x1b[38;5;82monFd\x1b[0m(', fd, ',', readable, ',', writable, ')');
     os.setReadHandler(fd, readable);
     os.setWriteHandler(fd, writable);
   };
 }
+
+/*export function setHandlers(os, handlers) {
+  handlers.onFd = function(fd, readable, writable) {
+    //console.log('\x1b[38;5;82monFd\x1b[0m(', fd, ',', readable, ',', writable, ')');
+    os.setReadHandler(fd, readable);
+    os.setWriteHandler(fd, writable);
+  };
+}*/
 
 export function statusResponse(success, result_or_error, data) {
   let r = { success };
@@ -877,6 +892,7 @@ export function MakeListCommand(pred = v => typeof v != 'function', defaults = {
       }
       return acc;
     }, []);
+    console.log('ListCommand', map);
     return respond(true, map);
   });
 }
@@ -949,6 +965,7 @@ function MakeCommandFunction(cmd, getConnection, thisObj, t) {
 export function SerializeValue(value, source = false) {
   const type = typeof value;
   let desc = { type };
+  
   if(type == 'object' && value != null) {
     desc['class'] = getPrototypeName(value) ?? getPrototypeName(Object.getPrototypeOf(value));
     //desc['chain'] = getPrototypeChain(value).map(getPrototypeName);
@@ -982,23 +999,11 @@ export function DeserializeValue(desc) {
   return desc.value;
 }
 
-export const RPCConnect = (url, service = RPCClient) => new RPCSocket(url, service).connect();
-export const RPCListen = (url, service = RPCServer) => new RPCSocket(url, service).listen();
-
-export default {
-  Connection,
-  ServerConnection: RPCServer,
-  ClientConnection: RPCClient,
-  Commands: RPCServerEndpoint,
-  Socket: RPCSocket,
-  Api: RPCApi,
-  Factory: RPCFactory,
-  MessageReceiver,
-  MessageTransmitter,
-  MessageTransceiver,
-  SerializeValue,
-  DeserializeValue,
-  EventLogger,
-  connect: RPCConnect,
-  listen: RPCListen
-};
+export const RPCConnect =
+  (url, verbosity = 1) =>
+  (new_ws = MakeWebSocket) =>
+    new RPCSocket(url, RPCClient, verbosity).connect(new_ws);
+export const RPCListen =
+  (url, verbosity = 1) =>
+  (new_ws = MakeWebSocket) =>
+    new RPCSocket(url, RPCServer, verbosity).listen(new_ws);

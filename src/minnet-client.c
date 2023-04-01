@@ -129,7 +129,8 @@ client_zero(MinnetClient* client) {
   session_zero(&client->session);
   js_promise_zero(&client->promise);
   callbacks_zero(&client->on);
-  // client->link.next = client->link.prev = 0;
+
+  client->recvb = BUFFER_0();
 }
 
 MinnetClient*
@@ -452,7 +453,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if((ctx = client->context.js))
     opaque = lws_opaque(wsi, ctx);
 
-  LOGCB("CLIENT      ", "fd=%d, h2=%i, tls=%i%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), (in && len) ? ", in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
+  LOGCB("CLIENT      ", "fd=%d h2=%i tls=%i len=%zu%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), len, (in && len) ? " in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
 
   switch(reason) {
     case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
@@ -594,14 +595,22 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_RECEIVE:
     case LWS_CALLBACK_RAW_RX: {
       JSContext* ctx;
+      BOOL single_fragment = lws_is_first_fragment(wsi) && lws_is_final_fragment(wsi);
+
       if((ctx = client->on.message.ctx)) {
-        // MinnetWebsocket* ws = minnet_ws_data(client->session.ws_obj);
-        JSValue msg = opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
-        JSValue cb_argv[] = {client->session.ws_obj, msg};
+        if(!single_fragment) {
+          buffer_append(&client->recvb, in, len);
+        }
 
-        client_exception(client, callback_emit(&client->on.message, countof(cb_argv), cb_argv));
+        if(lws_is_final_fragment(wsi)) {
+          JSValue msg = single_fragment ? (opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len))
+                                        : (opaque->binary ? block_toarraybuffer(&client->recvb.block, ctx) : block_tostring(&client->recvb.block, ctx));
+          JSValue argv[] = {client->session.ws_obj, msg};
 
-        JS_FreeValue(ctx, cb_argv[1]);
+          client_exception(client, callback_emit(&client->on.message, countof(argv), argv));
+
+          JS_FreeValue(ctx, argv[1]);
+        }
       }
       break;
     }

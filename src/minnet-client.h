@@ -27,6 +27,7 @@ typedef struct client_context {
   struct lws_client_connect_info connect_info;
   ResolveFunctions promise;
   struct list_head link;
+  ByteBuffer recvb;
 } MinnetClient;
 
 void client_certificate(struct context*, JSValueConst options);

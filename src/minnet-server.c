@@ -254,14 +254,17 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   ret = JS_NewInt32(ctx, 0);
   options = argv[0];
 
-  if(argc >= 2 && JS_IsString(argv[argind])) {
-    const char* str;
-    if((str = JS_ToCString(ctx, argv[argind]))) {
-      url_parse(&url, str, ctx);
-      JS_FreeCString(ctx, str);
-    }
-    argind++;
-  }
+  if(url_fromvalue(&url, argv[argind], ctx))
+    ++argind;
+
+  /* if(argc >= 2 && JS_IsString(argv[argind])) {
+     const char* str;
+     if((str = JS_ToCString(ctx, argv[argind]))) {
+       url_parse(&url, str, ctx);
+       JS_FreeCString(ctx, str);
+     }
+     argind++;
+   }*/
 
   options = argv[argind];
 

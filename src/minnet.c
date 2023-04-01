@@ -179,7 +179,7 @@ minnet_default_fd_callback(JSContext* ctx) {
 
     closure->ctx = ctx;
     closure->set_read = JS_GetPropertyStr(ctx, os, "setReadHandler");
-    closure->set_write =JS_GetPropertyStr(ctx, os, "setWriteHandler");
+    closure->set_write = JS_GetPropertyStr(ctx, os, "setWriteHandler");
 
     return js_function_cclosure(ctx, minnet_fd_callback_closure, 3, 0, closure, minnet_fd_callback_free);
 

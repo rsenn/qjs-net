@@ -16,7 +16,7 @@ typedef struct server_context {
     int ref_count;
     struct context context;
   };
-  struct lws* wsi;
+  /*struct lws* wsi;*/
   CallbackList cb;
   MinnetVhostOptions* mimetypes;
   ResolveFunctions promise;

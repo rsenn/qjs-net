@@ -1,43 +1,26 @@
 import * as std from 'std';
 import * as os from 'os';
-import path from 'path';
 import { Console } from 'console';
 import REPL from 'repl';
 import inspect from 'inspect';
 import { types, define, filter, split, getOpt, toUnixTime } from 'util';
 import * as fs from 'fs';
 import { setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server, URL } from 'net';
-/*import { Socket } from 'sockets';
-import { EventEmitter } from 'events';
-import { Repeater } from 'repeater';*/ import rpc from './js/rpc.js';
-import * as rpc2 from './js/rpc.js';
+import * as rpc from './js/rpc.js';
 
 globalThis.fs = fs;
 
 function ReadJSON(filename) {
-  let data = fs.readFileSync(filename, 'utf-8');
-
+  let data = std.loadFile(filename);
   if(data) console.debug(`${data.length} bytes read from '${filename}'`);
   return data ? JSON.parse(data) : null;
 }
 
 function WriteFile(name, data, verbose = true) {
-  if(types.isGeneratorFunction(data)) {
-    let fd = fs.openSync(name, os.O_WRONLY | os.O_TRUNC | os.O_CREAT, 0x1a4);
-    let r = 0;
-    for(let item of data) {
-      r += fs.writeSync(fd, toArrayBuffer(item + ''));
-    }
-    fs.closeSync(fd);
-    let stat = fs.statSync(name);
-    return stat?.size;
-  }
-  if(types.isIterator(data)) data = [...data];
-  if(types.isArray(data)) data = data.join('\n');
-
-  if(typeof data == 'string' && !data.endsWith('\n')) data += '\n';
-  let ret = fs.writeFileSync(name, data);
-
+  const f = std.open(name, 'w+');
+  typeof data == 'string' ? f.puts(data) : f.write(data, 0, data.byteLength);
+  let ret = f.tell();
+  f.close();
   if(verbose) console.log(`Wrote ${name}: ${ret} bytes`);
 }
 
@@ -53,7 +36,7 @@ function main(...args) {
   });
   let params = getOpt(
     {
-      verbose: [false, (a, v) => (v | 0) + 1, 'v'],
+      verbose: [false, (a, v) => (typeof v == 'number' ? v : 0) + 1, 'v'],
       listen: [false, null, 'l'],
       connect: [false, null, 'c'],
       client: [false, null, 'C'],
@@ -74,15 +57,17 @@ function main(...args) {
   console.log('params', params);
   console.log('setLog', setLog);
   const {
-    '@': [url = 'wss://127.0.0.1:8993/ws'],
+    '@': [url = 'ws://127.0.0.1:8993/ws'],
     'ssl-cert': sslCert = 'localhost.crt',
     'ssl-private-key': sslPrivateKey = 'localhost.key'
   } = params;
 
   const listen = params.connect && !params.listen ? false : true;
   const serve = !params.client || params.server;
+  console.log('listen', listen);
+  console.log('serve', serve);
 
-  Object.assign(globalThis, { ...rpc2, rpc });
+  Object.assign(globalThis, { rpc, ...rpc });
   let name = process.argv[1];
   name = name
     .replace(/.*\//, '')
@@ -113,29 +98,23 @@ function main(...args) {
   let uri = new URL(url);
   console.log('main', { url, uri });
 
-  let cli = (globalThis.sock = new rpc.Socket(
-    uri,
-    rpc[`RPC${serve ? 'Server' : 'Client'}Connection`],
-    +params.verbose
-  ));
+  let ctor = () => new RPCSocket(url, serve ? RPCServer : RPCClient, +params.verbose);
+
+  let cli = (globalThis.sock = ctor());
 
   cli.register({ Worker: os.Worker, REPL });
 
   let connections = new Set();
   function createWS(url, callbacks, listen) {
     console.log('createWS', { url, callbacks, listen });
-    const { protocol, host, port, path } = url;
-    console.log('createWS', { protocol, host, port, path });
+    const { protocol, hostname, port, path } = url;
+    console.log('createWS', { protocol, hostname, port, path });
     setLog((params.debug ? LLL_USER : 0) | (((params.debug ? LLL_NOTICE : LLL_WARN) << 1) - 1), (level, ...args) => {
       repl.printStatus(...args);
       //if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
 
-    return [client, server][+listen]({
-      protocol,
-      host,
-      port,
-      path,
+    return [client, server][+listen](url, {
       tls: params.tls,
       sslCert,
       sslPrivateKey,
@@ -250,8 +229,6 @@ function main(...args) {
           yield JSON.stringify(...[names, ...(verbose ? [null, 2] : [])]);
         }
       },
-      ...url,
-
       ...callbacks,
       onConnect(ws, req) {
         console.log('test-rpc', { ws, req });
@@ -260,10 +237,10 @@ function main(...args) {
         return callbacks.onConnect(ws, req);
       },
       onClose(ws, status, reason, error) {
-        console.log('\x1b[38;5;165monClose\x1b[0m [\n  ', req, ',\n  ', rsp, '\n]');
+        console.log('\x1b[38;5;165monClose\x1b[0m', { ws, status, reason, error });
         connections.delete(ws);
 
-        return callbacks.onClose(ws, req);
+        return callbacks.onClose(ws, status, reason, error);
       },
       onHttp(ws, req, rsp) {
         const { url, method, headers } = req;
@@ -273,15 +250,12 @@ function main(...args) {
       onMessage(ws, data) {
         console.log('onMessage', ws, data);
         return callbacks.onMessage(ws, data);
-      },
-      onFd(fd, rd, wr) {
-        // console.log('onFd', { fd, rd, wr });
-        return callbacks.onFd(fd, rd, wr);
-      },
-      ...(url && url.host ? url : {})
+      }
     });
   }
-  globalThis[['connection', 'listener'][+listen]] = cli;
+  
+
+  //globalThis[['connection', 'listener'][+listen]] = cli;
 
   define(globalThis, {
     get connections() {
@@ -304,7 +278,7 @@ function main(...args) {
     WriteJSON
   });
 
-  define(globalThis, listen ? { server: cli, cli } : { client: cli, cli });
+  define(globalThis, serve ? { get server() { return  cli.connection; } } : { get client() { return  cli.connection; } });
   /* delete globalThis.DEBUG;
   Object.defineProperty(globalThis, 'DEBUG', { get: DebugFlags });*/
 

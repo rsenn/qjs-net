@@ -144,6 +144,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       int status;
       MinnetResponse* resp;
 
+      if(strcmp(lws_get_protocol(wsi)->name, "ws"))
+        opaque->status = OPEN;
+
       // client->req->h2 = wsi_http2(wsi);
 
       if(!(resp = opaque->resp)) {
@@ -164,7 +167,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           resp->generator->block_fn = &block_tostring;
       }
 
-      url_copy(&resp->url, client->request->url, client->on.http.ctx);
+      url_copy(&resp->url, client->request->url, ctx);
 
       // opaque->resp->headers = headers_gettoken(ctx, wsi, WSI_TOKEN_HTTP_CONTENT_TYPE);
 

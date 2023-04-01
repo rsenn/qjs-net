@@ -1,5 +1,3 @@
-const indexOf = (haystack, needle) => Array.prototype.indexOf.call(haystack, needle);
-
 export class EventEmitter {
   #events = {};
 
@@ -13,7 +11,7 @@ export class EventEmitter {
   removeListener(event, listener) {
     const handlers = this.#events[event];
     if(Array.isArray(handlers)) {
-      const idx = indexOf(handlers, listener);
+      const idx = handlers.indexOf(listener);
       if(idx > -1) {
         handlers.splice(idx, 1);
         if(handlers.length == 0) delete this.#events[event];

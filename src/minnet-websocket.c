@@ -21,6 +21,7 @@ enum {
   WEBSOCKET_ADDRESS,
   WEBSOCKET_FAMILY,
   WEBSOCKET_PORT,
+  WEBSOCKET_LOCAL,
   WEBSOCKET_PEER,
   WEBSOCKET_SSL,
   WEBSOCKET_BINARY,
@@ -314,16 +315,17 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       int fd = lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
 
       if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
-        ret = JS_NewInt32(ctx, magic == 2 ? addr.sin_family : ntohs(addr.sin_port));
+        ret = JS_NewInt32(ctx, magic == WEBSOCKET_FAMILY ? addr.sin_family : ntohs(addr.sin_port));
       }
       break;
     }
+    case WEBSOCKET_LOCAL:
     case WEBSOCKET_PEER: {
       struct sockaddr_in addr;
       socklen_t addrlen = sizeof(addr);
       int fd = lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
 
-      if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
+      if((magic == WEBSOCKET_LOCAL ? getsockname : getpeername)(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
         ret = JS_NewArrayBufferCopy(ctx, (const uint8_t*)&addr, addrlen);
       }
       break;
@@ -497,6 +499,7 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_ALIAS_DEF("remoteAddress", "address"),
     JS_CGETSET_MAGIC_FLAGS_DEF("family", minnet_ws_get, 0, WEBSOCKET_FAMILY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("port", minnet_ws_get, 0, WEBSOCKET_PORT, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("local", minnet_ws_get, 0, WEBSOCKET_LOCAL, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_get, 0, WEBSOCKET_PEER, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("ssl", minnet_ws_get, 0, WEBSOCKET_SSL, 0),
     JS_ALIAS_DEF("tls", "ssl"),
