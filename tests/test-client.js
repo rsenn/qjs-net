@@ -16,7 +16,7 @@ function main(...args) {
     pid = spawn(
       'server.js',
       ['localhost', 30000],
-      null //      scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log')
+       scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log')
     );
     sleep(1000);
     args.push('wss://localhost:30000/ws');

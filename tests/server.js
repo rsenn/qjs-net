@@ -150,7 +150,7 @@ if(w) {
           setWriteHandler(fd, wr);
         },
         onMessage: (ws, msg) => {
-          log('onMessage', typeof ws, { ws, msg });
+          console.log('onMessage', typeof ws, { ws, msg });
           ws.send('ECHO: ' + msg);
           //ws.send(JSON.stringify({ type: 'message', msg }));
         }
