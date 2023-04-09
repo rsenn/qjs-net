@@ -291,11 +291,11 @@ minnet_request_getheader(JSContext* ctx, JSValueConst this_val, int argc, JSValu
 
   key = JS_ToCString(ctx, argv[0]);
 
-  value = headers_get(&req->headers, key, ctx);
+  if((value = headers_get(&req->headers, key, ctx))) {
+    ret = JS_NewString(ctx, value);
+    js_free(ctx, (void*)value);
+  }
 
-  ret = JS_NewString(ctx, value);
-
-  js_free(ctx, (void*)value);
   JS_FreeCString(ctx, key);
 
   return ret;
