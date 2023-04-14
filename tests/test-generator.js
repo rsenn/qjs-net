@@ -1,7 +1,7 @@
 import { Generator } from 'net.so';
 
 async function main() {
-  import('console').then(({Console}) => globalThis.console = new Console({ inspectOptions: { compact: 2 } }));
+  import('console').then(({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 2 } })));
 
   let gen = new Generator(async (push, stop) => {
     console.log('generator', { push, stop });

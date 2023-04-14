@@ -204,7 +204,7 @@ export class Connection extends EventEmitter {
   static fromSocket = new WeakMap();
 
   lastSeq = 0;
-  //#events = {};
+  socket = null;
 
   static equal(a, b) {
     return (a.socket != null && a.socket === b.socket) || (typeof a.fd == 'number' && a.fd === b.fd);
@@ -217,22 +217,26 @@ export class Connection extends EventEmitter {
     return ++this.lastSeq;
   }
 
-  constructor(socket, instance, log, codec = 'none') {
+  constructor(log, codec = 'none') {
     super();
-    this.fd = socket.fd;
+
+    /*  if(socket) {
+      this.fd = socket.fd;
+      Connection.fromSocket.set(socket, this);
+    }*/
+
     define(this, {
       seq: 0,
-      socket,
+      //socket,
       exception: null,
-      log(...args) {
-        // console.log(...args);
-      },
+      log: (...args) => console.log(...args),
       messages: { requests: {}, responses: {} }
     });
+
     define(this, typeof codec == 'string' && codecs[codec] ? { codecName: codec, codec: codecs[codec]() } : {});
     define(this, typeof codec == 'object' && codec.name ? { codecName: codec.name, codec } : {});
+
     (this.constructor ?? Connection).set.add(this);
-    Connection.fromSocket.set(socket, this);
   }
 
   error(message) {
@@ -268,7 +272,9 @@ export class Connection extends EventEmitter {
       return this.exception;
     }
     let response = this.processMessage(data);
+
     this.log('Connection.onmessage', { data, response });
+
     if(isThenable(response)) response.then(r => this.sendMessage(r));
     else if(response !== undefined) this.sendMessage(response);
   }
@@ -317,6 +323,8 @@ export class Connection extends EventEmitter {
         obj.seq = this.makeSeq();
       }
     let msg = typeof obj != 'string' ? this.codec.encode(obj) : obj;
+
+    if(!this.socket) throw new Error(`${this.constructor.name} error no socket`);
 
     this.socket.send(msg);
   }
@@ -466,22 +474,24 @@ function RPCServerEndpoint(classes = {}) {
   };
 }
 
-export class RPCServer extends Connection {
-  constructor(socket, instance, log, codec = codecs.json(false), classes) {
-    //log('RPCServer.constructor', { socket, classes, instance, log });
-    super(socket, instance, log, codec);
+export class RPCServer {
+  constructor(log = console.log, codec = codecs.json(false), classes = {}) {
+    //super(log, codec);
 
-    let connection = this;
-    define(connection, {
+    define(this, {
+      log,
+      codec,
       classes,
       instances: {},
       lastId: 0,
       connected: true,
       messages: { requests: {}, responses: {} },
-      commands: RPCServerEndpoint()
+      commands: RPCServerEndpoint(classes)
     });
 
-    RPCServer.set.add(connection);
+    RPCServer.set.add(this);
+
+    this.log('RPCServer.constructor', { classes, codec, log });
   }
 
   makeId() {
@@ -489,15 +499,20 @@ export class RPCServer extends Connection {
   }
 
   processMessage(data) {
+    this.log('\x1b[1;31m'+this[Symbol.toStringTag] ,'processMessage\x1b[0m', { data });
+
     let fn,
       ret = null;
     if(!('command' in data)) return statusResponse(false, `No command specified`);
     const { command, seq, params } = data;
     const { commands } = this;
     fn = commands[command];
-    this.log('RPCServer.processMessage', { command, seq, params });
+
+    this.log('\x1b[1;31m'+this[Symbol.toStringTag] ,'processMessage\x1b[0m',  { command, seq, params });
+    
     if(typeof seq == 'number') this.messages.requests[seq] = data;
     if(typeof fn == 'function') return fn.call(this, data);
+    
     switch (command) {
       default: {
         ret = statusResponse(false, `No such command '${command}'`);
@@ -523,20 +538,15 @@ RPCServer.list = [];
  *
  */
 export class RPCClient extends Connection {
-  constructor(socket, instance, log, codec = codecs.json(false), classes) {
-    super(socket, instance, log, codec);
+  constructor(log, codec = codecs.json(false), classes) {
+    super(log, codec);
     this.instances = {};
     this.classes = classes;
     this.connected = true;
     RPCClient.set.add(this);
-    //this.log('RPCClient.constructor', { socket, instance, log, codec, classes } /*, new Error().stack.replace(/Error\n?/, '')*/);
-    //
-    //
+
     console.log('RPCClient.on', this.on);
 
-    //this.on('error', e => console.error('RPCClient', e));
-
-    //this.on('response', r => console.log('RPCClient.onresponse', r));
     let api;
 
     Object.defineProperties(this, {
@@ -549,7 +559,6 @@ export class RPCClient extends Connection {
   }
 
   processMessage(response) {
-    //this.log('RPCClient.processMessage', response, new Error().stack.replace(/Error\n?/, ''));
     const { success, error, result, seq } = response;
 
     this.log('RPCClient.processMessage', { success, error, result, seq });
@@ -582,30 +591,8 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
 
   console.log('RPCSocket', { url, service, verbosity });
 
-  // const DEBUG = DebugFlags();
   const instance = new.target ? this : new RPCSocket(url, service, verbosity);
-  const log = /*console.config
-    ? (msg, ...args) => {
-        const { console } = globalThis;
-        console 
-          .log(
-            { msg },
-            console.config({
-              multiline: false,
-              compact: false,
-              maxStringLength: 100,
-              stringBreakNewline: false,
-              hideKeys: ['obj']
-            }),
-            ...args
-          );
-      }
-    : console.log; */ (...args) => {
-    let tok = (args[0] || '').replace(/[^A-Za-z0-9_].*/g, '');
-
-    /*if(DEBUG[tok]) console.debug(...args);
-    else */ console.log(...args);
-  };
+  const log = (...args) => console.log(...args);
 
   define(instance, {
     get fd() {
@@ -623,14 +610,12 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
     classes: {},
     log
   });
+  console.log('RPCSocket', service);
 
-  const callbacks = service.getCallbacks(instance, verbosity);
+  const callbacks = Connection.getCallbacks(instance, verbosity);
 
   if(!url) url = globalThis.location?.href;
   if(typeof url != 'object') url = parseURL(url);
-
-  /*if(url.protocol == 'ws') url.protocol = 'http';
-  if(url.protocol == 'wss') url.protocol = 'https';*/
 
   define(instance, {
     service,
@@ -655,11 +640,11 @@ export function RPCSocket(url, service = RPCServer, verbosity = 1) {
         else this.listening = false;
       return this;
     },
-    /*async*/ connect(new_ws = MakeWebSocket, os = globalThis.os) {
+    connect(new_ws = MakeWebSocket, os = globalThis.os) {
       this.log(`${service.name} connecting to ${this.url}`);
       if(os) callbacks.onFd = setHandlersFunction(os);
       this.ws = new_ws(this.url, callbacks, false);
-      //console.log('connect()', this.ws);
+
       return this;
     },
     get connected() {

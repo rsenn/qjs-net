@@ -28,9 +28,10 @@ function FetchNext(array) {
           'accept-language': 'en-US,en;q=0.9',
           pragma: 'no-cache',
           'cache-control': 'no-cache',
-          'connection': 'keep-alive',
+          connection: 'keep-alive',
           'user-agent':
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.27 Safari/537.36'        }
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.27 Safari/537.36'
+        }
       })
     );
     log(`fetching \x1b[1;33m${url}\x1b[0m`);

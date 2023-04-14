@@ -4,11 +4,9 @@ import { Console } from 'console';
 import REPL from 'repl';
 import inspect from 'inspect';
 import { types, define, filter, split, getOpt, toUnixTime } from 'util';
-import * as fs from 'fs';
 import { setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server, URL } from 'net';
 import * as rpc from './js/rpc.js';
-
-globalThis.fs = fs;
+import { Connection, DeserializeSymbols, DeserializeValue, GetKeys, GetProperties, LogWrap, MakeListCommand, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue, callHandler, getPropertyDescriptors, getPrototypeName, hasHandler, isThenable, objectCommand, parseURL, setHandlersFunction, statusResponse, weakAssign } from './js/rpc.js';
 
 function ReadJSON(filename) {
   let data = std.loadFile(filename);
@@ -29,7 +27,10 @@ function WriteJSON(name, data) {
 }
 
 function main(...args) {
-  const base = path.basename(process.argv[1], '.js').replace(/\.[a-z]*$/, '');
+  const base = scriptArgs[0]
+    .replace(/.*\//g, '')
+    .replace(/\.js$/gi, '')
+    .replace(/\.[a-z]*$/, '');
   const config = ReadJSON(`.${base}-config`) ?? {};
   globalThis.console = new Console({
     inspectOptions: { compact: 1, customInspect: true, maxStringLength: 100 }
@@ -67,7 +68,6 @@ function main(...args) {
   console.log('listen', listen);
   console.log('serve', serve);
 
-  Object.assign(globalThis, { rpc, ...rpc });
   let name = process.argv[1];
   name = name
     .replace(/.*\//, '')
@@ -76,7 +76,7 @@ function main(...args) {
 
   let [prefix, suffix] = name.split(' ');
 
-  let repl = new REPL(`\x1b[38;5;165m${prefix} \x1b[38;5;39m${suffix}\x1b[0m`, fs, false);
+  let repl = new REPL(`\x1b[38;5;165m${prefix} \x1b[38;5;39m${suffix}\x1b[0m`, null, false);
 
   repl.historyLoad(null, false);
   repl.loadSaveOptions();
@@ -262,20 +262,54 @@ function main(...args) {
     }
   });
 
-  Object.assign(globalThis, {
-    repl,
-    ...rpc,
-    quit,
-    exit: quit,
-    cli,
-    std,
-    os,
-    fs,
-    path,
-    ReadJSON,
-    WriteFile,
-    WriteJSON
-  });
+  Object.assign(
+    globalThis,
+    {
+      repl,
+      quit,
+      exit: quit,
+      cli,
+      std,
+      os,
+      ReadJSON,
+      WriteFile,
+      WriteJSON,
+      rpc
+    },
+    {
+      Connection,
+      DeserializeSymbols,
+      DeserializeValue,
+
+      GetKeys,
+      GetProperties,
+      LogWrap,
+      MakeListCommand,
+      MessageReceiver,
+      MessageTransceiver,
+      MessageTransmitter,
+      RPCApi,
+      RPCClient,
+      RPCConnect,
+      RPCFactory,
+      RPCListen,
+      RPCObject,
+      RPCProxy,
+      RPCServer,
+      RPCSocket,
+      SerializeValue,
+      callHandler,
+      getPropertyDescriptors,
+      getPrototypeName,
+      hasHandler,
+      isThenable,
+      objectCommand,
+      parseURL,
+      setHandlersFunction,
+      statusResponse,
+      weakAssign
+    }
+  );
 
   define(
     globalThis,

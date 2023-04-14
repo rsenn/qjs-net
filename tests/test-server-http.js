@@ -38,7 +38,7 @@ function TestClient(url) {
 }
 
 function main(...args) {
-   import('console').then(({Console}) => globalThis.console = new Console({ inspectOptions: { compact: 2 } }));
+  import('console').then(({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 2 } })));
 
   let pid = spawn('server.js', ['localhost', 30000], scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log'));
   let status = [];
