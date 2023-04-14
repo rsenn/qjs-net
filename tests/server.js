@@ -210,14 +210,8 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
                   let r = o.generator.push(msg);
                   console.log('o.generator.push() =', r);
                   if(r) return;
-                }
-
-                /*    resolve(msg);
-o.promise=new Promise((resolve,reject) => {
-  o.resolve=resolve;
-  o.reject=reject;
-});
-}*/
+                } 
+                
                 if((serv = fdmap[ws.fd].server)) {
                   let response;
 
