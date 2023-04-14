@@ -225,12 +225,16 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
     case LWS_CALLBACK_RECEIVE: {
       if(ctx) {
         BOOL binary = lws_frame_is_binary(wsi);
+        BOOL first = lws_is_first_fragment(wsi);
+        BOOL final = lws_is_final_fragment(wsi);
         JSValue msg = binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
-        JSValue args[2] = {
+        JSValue args[4] = {
             JS_DupValue(ctx, session->ws_obj),
             msg,
+            JS_NewBool(ctx, first),
+            JS_NewBool(ctx, final),
         };
-        server_exception(server, callback_emit(&server->cb.message, 2, args));
+        server_exception(server, callback_emit(&server->cb.message, countof(args), args));
         JS_FreeValue(ctx, args[0]);
         JS_FreeValue(ctx, args[1]);
       }

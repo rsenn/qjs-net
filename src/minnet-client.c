@@ -595,17 +595,25 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_RECEIVE:
     case LWS_CALLBACK_RAW_RX: {
       JSContext* ctx;
-      BOOL single_fragment = lws_is_first_fragment(wsi) && lws_is_final_fragment(wsi);
+      int first = lws_is_first_fragment(wsi);
+      int final = lws_is_final_fragment(wsi);
+      int single_fragment = first && final;
 
       if((ctx = client->on.message.ctx)) {
-        if(!single_fragment) {
-          block_append(&client->recvb, in, len);
-        }
-
-        if(lws_is_final_fragment(wsi)) {
-          JSValue msg = single_fragment ? (opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len))
-                                        : (opaque->binary ? block_toarraybuffer(&client->recvb, ctx) : block_tostring(&client->recvb, ctx));
-          JSValue argv[] = {client->session.ws_obj, msg};
+        /* if(!single_fragment) {
+           block_append(&client->recvb, in, len);
+         }
+ */
+        /* if(lws_is_final_fragment(wsi))*/ {
+          JSValue msg = /*single_fragment ? */ (opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len)) /*
+                                          : (opaque->binary ? block_toarraybuffer(&client->recvb, ctx) : block_tostring(&client->recvb, ctx))*/
+              ;
+          JSValue argv[4] = {
+              client->session.ws_obj,
+              msg,
+              JS_NewBool(ctx, first),
+              JS_NewBool(ctx, final),
+          };
 
           client_exception(client, callback_emit(&client->on.message, countof(argv), argv));
 

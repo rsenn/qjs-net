@@ -13,11 +13,7 @@ function main(...args) {
   let pid;
 
   if(args.length == 0) {
-    pid = spawn(
-      'server.js',
-      ['localhost', 30000],
-       scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log')
-    );
+    pid = spawn('server.js', ['localhost', 30000], scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log'));
     sleep(1000);
     args.push('wss://localhost:30000/ws');
   }

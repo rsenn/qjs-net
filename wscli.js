@@ -5,7 +5,7 @@ import REPL from 'repl';
 import inspect from 'inspect';
 import net, { URL, Request } from 'net';
 import { Console, ConsoleOptions } from 'console';
-import { toString } from 'util';
+import { toString, startInteractive } from 'util';
 
 const connections = new Set();
 
@@ -276,18 +276,22 @@ async function main(...args) {
 
         let type = (headers['content-type'] ?? 'text/html').replace(/;.*/g, '');
         let extension = '.' + type.replace(/.*\//g, '');
-        let { url } = req;
-        let { path } = url;
-        let name = path.replace(/\/[a-z]\/.*/g, '').replace(/.*\//g, '');
+        let { url } = req || {};
 
-        if(name == '') name = 'index';
-        if(!name.endsWith(extension)) name += extension;
+        if(url) {
+          let { path } = url;
+          let name = path.replace(/\/[a-z]\/.*/g, '').replace(/.*\//g, '');
 
-        let buffer = resp.body;
-        let text = toString(buffer);
-        console.log('this', this);
+          if(name == '') name = 'index';
+          if(!name.endsWith(extension)) name += extension;
 
-        WriteFile(params.output ?? name ?? 'output.bin', buffer);
+          let buffer = resp.body;
+          let text = toString(buffer);
+          console.log('this', this);
+
+          WriteFile(params.output ?? name ?? 'output.bin', buffer);
+        }
+
         let next = urls.length && urls.shift();
 
         if(next) {
@@ -301,8 +305,11 @@ async function main(...args) {
         os.setReadHandler(fd, rd);
         os.setWriteHandler(fd, wr);
       },
-      onMessage(ws, msg) {
-        console.log('onMessage', console.config({ compact: 1 }), { ws, msg });
+      onMessage(ws, msg, first, final) {
+        globalThis.msg = msg;
+        console.log('onMessage', console.config({ compact: 1 }), first, final, msg);
+        //startInteractive();
+
         if(typeof msg == 'string') {
           msg = msg.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
           msg = msg.substring(0, 100);
