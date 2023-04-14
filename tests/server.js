@@ -1,6 +1,6 @@
 import { exit } from 'std';
 import { close, exec, open, realpath, O_RDWR, setReadHandler, setWriteHandler, Worker, kill, SIGUSR1 } from 'os';
-import { Response, Request, Ringbuffer, Generator, Socket, FormParser, Hash, URL, default, server, client, fetch, getSessions, setLog, METHOD_GET, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_HEAD, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD, LLL_ALL, logLevels } from 'net.so'
+import { AsyncIterator, Response, Request, Ringbuffer, Generator, Socket, FormParser, Hash, URL, server, client, fetch, getSessions, setLog, METHOD_GET, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_HEAD, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD, LLL_ALL, logLevels } from 'net.so';
 import { Levels, DefaultLevels, Init, isDebug } from './log.js';
 import { getpid, once, exists } from './common.js';
 import { Connection, DeserializeSymbols, DeserializeValue, GetKeys, GetProperties, LogWrap, MakeListCommand, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue, callHandler, define, getPropertyDescriptors, getPrototypeName, hasHandler, isThenable, objectCommand, parseURL, setHandlersFunction, statusResponse, weakAssign } from '../js/rpc.js';
@@ -11,8 +11,17 @@ const w = Worker.parent;
 const name = w ? 'CHILD\t' : 'PARENT\t';
 const connections = new Set();
 
-const classes= {
-  Response, Request, Ringbuffer, Generator, Socket, FormParser, Hash, URL,Array,Map
+const classes = {
+  Response,
+  Request,
+  Ringbuffer,
+  Generator,
+  Socket,
+  FormParser,
+  Hash,
+  URL,
+  Array,
+  Map
 };
 
 const MimeTypes = [
@@ -110,12 +119,27 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
         let fdmap = (globalThis.fdmap = {});
         let connections = new Map();
 
-        define(globalThis, {
-          get connections() {
-            return [...connections].map(([fd, ws]) => ws);
+        define(
+          globalThis,
+          {
+            get connections() {
+              return [...connections].map(([fd, ws]) => ws);
+            },
+            fd2ws: n => connections.get(n)
           },
-          fd2ws: n => connections.get(n)
-        }, {RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue});
+          {
+            RPCApi,
+            RPCClient,
+            RPCConnect,
+            RPCFactory,
+            RPCListen,
+            RPCObject,
+            RPCProxy,
+            RPCServer,
+            RPCSocket,
+            SerializeValue
+          }
+        );
 
         server(
           (globalThis.options = {
@@ -155,12 +179,8 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
 
               connections.set(ws.fd, ws);
 
-              let o=fdmap[ws.fd] = { server: new RPCServer(undefined,undefined,classes) };
-               
-               o.promise= new Promise((resolve,reject)=> {
-                o.resolve=resolve;
-                o.reject=reject;
-              });
+              let o = (fdmap[ws.fd] = { server: new RPCServer(undefined, undefined, classes) });
+              o.generator = new AsyncIterator();
             },
             onClose: (ws, status, reason) => {
               console.log('onClose', { ws, status, reason });
@@ -181,24 +201,30 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
               setWriteHandler(fd, wr);
             },
             onMessage: (ws, msg) => {
-              let serv,resolve;
+              let serv, resolve;
               try {
-                  console.log('onMessage(1)', msg, fdmap[ws.fd]);
-                let o=fdmap[ws.fd];
-                if((resolve= o.resolve)) {
-                   resolve(msg);
+                console.log('onMessage(1)', msg, fdmap[ws.fd]);
+                let o = fdmap[ws.fd];
+
+                if(o.generator) {
+                  let r = o.generator.push(msg);
+                  console.log('o.generator.push() =', r);
+                  if(r) return;
+                }
+
+                /*    resolve(msg);
 o.promise=new Promise((resolve,reject) => {
   o.resolve=resolve;
   o.reject=reject;
 });
-}
-               if((serv = fdmap[ws.fd].server)) {
+}*/
+                if((serv = fdmap[ws.fd].server)) {
                   let response;
 
-                  if((response  =  Connection.prototype.onmessage.call(serv, msg))) {
-                  ws.send(JSON.stringify(response));
-                  return;
-                   }
+                  if((response = Connection.prototype.onmessage.call(serv, msg))) {
+                    ws.send(JSON.stringify(response));
+                    return;
+                  }
                 }
               } catch(e) {
                 console.log('ERROR', e.message + '\n' + e.stack);

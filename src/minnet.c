@@ -6,6 +6,7 @@
 #include "minnet-websocket.h"
 #include "minnet-ringbuffer.h"
 #include "minnet-generator.h"
+#include "minnet-asynciterator.h"
 #include "minnet-form-parser.h"
 #include "minnet-hash.h"
 #include "minnet-fetch.h"
@@ -489,6 +490,21 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Hash", minnet_hash_ctor);
 
+  // Add class AsyncIterator
+  JS_NewClassID(&minnet_asynciterator_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_asynciterator_class_id, &minnet_asynciterator_class);
+
+  minnet_asynciterator_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_asynciterator_proto, minnet_asynciterator_proto_funcs, minnet_asynciterator_proto_funcs_size);
+  JS_SetClassProto(ctx, minnet_asynciterator_class_id, minnet_asynciterator_proto);
+
+  minnet_asynciterator_ctor = JS_NewCFunction2(ctx, minnet_asynciterator_constructor, "MinnetAsyncIterator", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_asynciterator_ctor, minnet_asynciterator_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "AsyncIterator", minnet_asynciterator_ctor);
+
+
   {
     JSValue minnet_default = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, minnet_default, minnet_funcs, countof(minnet_funcs));
@@ -511,6 +527,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Socket");
   JS_AddModuleExport(ctx, m, "FormParser");
   JS_AddModuleExport(ctx, m, "Hash");
+  JS_AddModuleExport(ctx, m, "AsyncIterator");
   JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExport(ctx, m, "default");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));

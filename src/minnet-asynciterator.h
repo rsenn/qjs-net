@@ -15,6 +15,11 @@ extern const JSCFunctionListEntry minnet_asynciterator_proto_funcs[];
 extern const size_t minnet_asynciterator_proto_funcs_size;
 
 static inline AsyncIterator*
+minnet_asynciterator_data(JSValueConst obj) {
+  return JS_GetOpaque (obj, minnet_asynciterator_class_id);
+}
+
+static inline AsyncIterator*
 minnet_asynciterator_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_asynciterator_class_id);
 }

@@ -8,7 +8,7 @@ THREAD_LOCAL JSClassID minnet_asynciterator_class_id;
 THREAD_LOCAL JSValue minnet_asynciterator_proto, minnet_asynciterator_ctor;
 
 static JSValue
-minnet_asynciterator_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic) {
+minnet_asynciterator_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   AsyncIterator* iter;
   JSValue ret = JS_UNDEFINED;
   if(!(iter = minnet_asynciterator_data2(ctx, this_val)))
@@ -20,7 +20,7 @@ minnet_asynciterator_next(JSContext* ctx, JSValueConst this_val, int argc, JSVal
 }
 
 static JSValue
-minnet_asynciterator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic) {
+minnet_asynciterator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]/*, int magic*/) {
   AsyncIterator* iter;
   JSValue ret = JS_UNDEFINED;
   if(!(iter = minnet_asynciterator_data2(ctx, this_val)))
@@ -37,7 +37,7 @@ minnet_asynciterator_push(JSContext* ctx, JSValueConst this_val, int argc, JSVal
 }
 
 static JSValue
-minnet_asynciterator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic) {
+minnet_asynciterator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]/*, int magic*/) {
   AsyncIterator* iter;
   JSValue ret = JS_UNDEFINED;
 
@@ -82,10 +82,11 @@ fail:
 
 void
 minnet_asynciterator_finalizer(JSRuntime* rt, JSValue val) {
-  AsyncIterator* res;
+  AsyncIterator* iter;
 
-  if((res = minnet_asynciterator_data(val))) {
-    asynciterator_free(res, rt);
+  if((iter = minnet_asynciterator_data(val))) {
+    asynciterator_clear(iter, rt);
+    js_free_rt(rt, iter);
   }
 }
 
@@ -95,6 +96,7 @@ JSClassDef minnet_asynciterator_class = {
 };
 
 const JSCFunctionListEntry minnet_asynciterator_proto_funcs[] = {
+    JS_CFUNC_DEF("next", 0, minnet_asynciterator_next),
     JS_CFUNC_DEF("push", 0, minnet_asynciterator_push),
     JS_CFUNC_DEF("stop", 0, minnet_asynciterator_stop),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "AsyncIterator", JS_PROP_CONFIGURABLE),
