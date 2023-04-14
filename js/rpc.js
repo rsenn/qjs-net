@@ -204,11 +204,12 @@ export class Connection extends EventEmitter {
   static fromSocket = new WeakMap();
 
   lastSeq = 0;
-  socket = null;
+  /* socket = null;
 
   static equal(a, b) {
     return (a.socket != null && a.socket === b.socket) || (typeof a.fd == 'number' && a.fd === b.fd);
-  }
+  }*/
+
   static get last() {
     return this.list.last;
   }
@@ -217,7 +218,7 @@ export class Connection extends EventEmitter {
     return ++this.lastSeq;
   }
 
-  constructor(log=(...args) => console.log(...args), codec = 'none') {
+  constructor(log = (...args) => console.log(...args), codec = 'none') {
     super();
 
     define(this, {
@@ -234,9 +235,6 @@ export class Connection extends EventEmitter {
   }
 
   error(message) {
-    const { socket } = this;
-    const status = socket.CLOSE_STATUS_PROTOCOL_ERR || 1000;
-
     console.log(`ERROR: ${message}`);
     this.exception = new Error(message);
     console.log('error(', status, message, ')');
@@ -245,10 +243,10 @@ export class Connection extends EventEmitter {
   }
 
   close(status, reason) {
-    const { socket } = this;
+    //  const { socket } = this;
     console.log('close(', status, reason, ')');
     socket.close(status, reason);
-    delete this.socket;
+    // delete this.socket;
     delete this.fd;
     this.connected = false;
   }
@@ -273,7 +271,7 @@ export class Connection extends EventEmitter {
     let response = this.processMessage(data);
 
     //this.log('Connection.onmessage', { data, response });
-    console.log('onMessage(1)', { data });
+    console.log('onmessage(1)', { data });
 
     if(this.sendMessage) {
       if(isThenable(response)) response.then(r => this.sendMessage(r));
@@ -322,24 +320,25 @@ export class Connection extends EventEmitter {
       }
     let msg = typeof obj != 'string' ? this.codec.encode(obj) : obj;
 
-    if(!this.socket) throw new Error(`${this.constructor.name} error no socket`);
+    if(this.send) return this.send(msg);
 
-    this.socket.send(msg);
+    if(this.socket) return this.socket.send(msg);
   }
 
   sendCommand(command, params = {}) {
     let message = { command, ...params };
 
     console.log('Connection.sendCommand', { command, params, message });
-    
+
     if(typeof params == 'object' && params != null && typeof params.seq != 'number')
       params.seq = this.seq = (this.seq | 0) + 1;
-    
+
     if(this.messages && this.messages.requests)
       if(typeof params.seq == 'number') this.messages.requests[params.seq] = message;
-    
+
     if(this.messages && this.messages.requests) this.messages.requests[params.seq] = message;
-    this.sendMessage(message);
+
+    return this.sendMessage(message);
   }
 
   static getCallbacks(instance, verbosity = 0) {
@@ -407,7 +406,7 @@ weakAssign(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
 
 Connection.list = [];
 
-function RPCServerEndpoint(log = console.log, codec, classes = {}) {
+function RPCServerEndpoint(classes = {}, log = console.log) {
   return {
     new({ class: name, args = [] }) {
       log('RPCServerEndpoint.new');
@@ -457,7 +456,7 @@ function RPCServerEndpoint(log = console.log, codec, classes = {}) {
     ),
     properties: MakeListCommand(v => typeof v != 'function'),
     methods: MakeListCommand(v => typeof v == 'function', { enumerable: false }),
-    get: objectCommand(({ obj, property }, respond) => {
+    get: objectCommand(({ obj, property, id }, respond) => {
       if(property in obj && typeof obj[property] != 'function') {
         const result = obj[property];
         return respond(true, SerializeValue(result));
@@ -480,7 +479,7 @@ export class RPCServer {
       messages: { requests: {}, responses: {} }
     });
 
-    this.#commands = RPCServerEndpoint(log, codec, classes);
+    this.#commands = RPCServerEndpoint(classes);
 
     RPCServer.set.add(this);
 
@@ -920,29 +919,15 @@ export function MakeCommandFunction(cmd, getConnection, thisObj, t) {
   t ??= { methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
   if(typeof getConnection != 'function')
     getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
- 
- console.log("MakeCommandFunction",{cmd,getConnection,thisObj});
 
-if(false)
+  console.log('MakeCommandFunction', { cmd, getConnection, thisObj });
+
   return function(params = {}) {
-1 /*let r; if(t[cmd]) r = t[cmd](r); return r; */
-    thisObj = thisObj || this;
-    let client = getConnection(thisObj);
-    return new Promise((resolve, reject) => {
-      client.once('response', r => {
-        if(t[cmd]) r = t[cmd](r);
-        resolve(r);
-      });
-
-      client.sendCommand(cmd, params);
-    });
-  };
-  return  function(params = {}) {
     let client = getConnection(this);
-     console.log("MakeCommandFunction",{client});
-let r = client.sendCommand(cmd, params);
-    if(t[cmd]) r = t[cmd](r);
+    console.log('MakeCommandFunction', { client });
+    let r = client.sendCommand(cmd, params);
     console.log(`RESPONSE to '${cmd}'`, r);
+    if(t[cmd]) r = t[cmd](r);
     return r;
   };
   return async function(params = {}) {
@@ -953,6 +938,10 @@ let r = client.sendCommand(cmd, params);
     console.log(`RESPONSE to '${cmd}'`, r);
     return r;
   };
+}
+
+export function MakeSendFunction(sendFn, returnFn) {
+  return returnFn ? msg => (sendFn(msg), returnFn()) : sendFn;
 }
 
 const TypedArrayPrototype = Object.getPrototypeOf(Uint32Array.prototype);

@@ -3,7 +3,7 @@ import { close, exec, open, realpath, O_RDWR, setReadHandler, setWriteHandler, W
 import { AsyncIterator, Response, Request, Ringbuffer, Generator, Socket, FormParser, Hash, URL, server, client, fetch, getSessions, setLog, METHOD_GET, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_HEAD, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD, LLL_ALL, logLevels } from 'net.so';
 import { Levels, DefaultLevels, Init, isDebug } from './log.js';
 import { getpid, once, exists } from './common.js';
-import { Connection, DeserializeSymbols, DeserializeValue, GetKeys, GetProperties, LogWrap, MakeListCommand, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue, callHandler, define, getPropertyDescriptors, getPrototypeName, hasHandler, isThenable, objectCommand, parseURL, setHandlersFunction, statusResponse, weakAssign } from '../js/rpc.js';
+import { MakeSendFunction, Connection, DeserializeSymbols, DeserializeValue, GetKeys, GetProperties, LogWrap, MakeListCommand, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue, callHandler, define, getPropertyDescriptors, getPrototypeName, hasHandler, isThenable, objectCommand, parseURL, setHandlersFunction, statusResponse, weakAssign } from '../js/rpc.js';
 
 let log;
 
@@ -12,16 +12,17 @@ const name = w ? 'CHILD\t' : 'PARENT\t';
 const connections = new Set();
 
 const classes = {
+  AsyncIterator,
   Response,
   Request,
   Ringbuffer,
   Generator,
   Socket,
-  FormParser,
   Hash,
   URL,
   Array,
-  Map
+  Map,
+  Set
 };
 
 const MimeTypes = [
@@ -181,6 +182,10 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
 
               let o = (fdmap[ws.fd] = { server: new RPCServer(undefined, undefined, classes) });
               o.generator = new AsyncIterator();
+              o.send = MakeSendFunction(
+                msg => ws.send(msg),
+                () => o.generator.next()
+              );
             },
             onClose: (ws, status, reason) => {
               console.log('onClose', { ws, status, reason });
@@ -210,8 +215,8 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
                   let r = o.generator.push(msg);
                   console.log('o.generator.push() =', r);
                   if(r) return;
-                } 
-                
+                }
+
                 if((serv = fdmap[ws.fd].server)) {
                   let response;
 
