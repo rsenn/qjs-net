@@ -217,19 +217,13 @@ export class Connection extends EventEmitter {
     return ++this.lastSeq;
   }
 
-  constructor(log, codec = 'none') {
+  constructor(log=(...args) => console.log(...args), codec = 'none') {
     super();
-
-    /*  if(socket) {
-      this.fd = socket.fd;
-      Connection.fromSocket.set(socket, this);
-    }*/
 
     define(this, {
       seq: 0,
-      //socket,
       exception: null,
-      log: (...args) => console.log(...args),
+      log,
       messages: { requests: {}, responses: {} }
     });
 
@@ -261,10 +255,15 @@ export class Connection extends EventEmitter {
 
   onmessage(msg) {
     let { codec, codecName } = this;
+
     if(!msg) return;
+
     if(typeof msg == 'string' && msg.trim() == '') return;
-    this.log('Connection.onmessage', { msg, codec, codecName });
+
+    //this.log('Connection.onmessage', { msg, codec, codecName });
+
     let data;
+
     try {
       data = codec.decode((msg && msg.data) || msg);
     } catch(err) {
@@ -273,10 +272,15 @@ export class Connection extends EventEmitter {
     }
     let response = this.processMessage(data);
 
-    this.log('Connection.onmessage', { data, response });
+    //this.log('Connection.onmessage', { data, response });
+    console.log('onMessage(1)', { data });
 
-    if(isThenable(response)) response.then(r => this.sendMessage(r));
-    else if(response !== undefined) this.sendMessage(response);
+    if(this.sendMessage) {
+      if(isThenable(response)) response.then(r => this.sendMessage(r));
+      else if(response !== undefined) this.sendMessage(response);
+    }
+
+    return response;
   }
 
   processMessage(data) {
@@ -284,15 +288,9 @@ export class Connection extends EventEmitter {
     throw new Error('Virtual method');
   }
 
-  onconnect(sock) {
-    //console.log("Connection.onconnect", sock, this);
-  }
+  onconnect(sock) {}
 
   onopen = LogWrap('Connection.onopen');
-
-  /*  onopen(arg) {
-    this.log('Connection.onopen', { arg });
-  }*/
 
   onpong(data) {
     console.log('Connection.onpong:', data);
@@ -315,7 +313,7 @@ export class Connection extends EventEmitter {
   }
 
   sendMessage(obj) {
-    this.log('Connection.sendMessage', obj);
+    console.log('Connection.sendMessage', obj);
     if(typeof obj == 'object')
       if(typeof obj.seq == 'number') {
         if(this.messages && this.messages.requests) this.messages.requests[obj.seq] = obj;
@@ -331,11 +329,15 @@ export class Connection extends EventEmitter {
 
   sendCommand(command, params = {}) {
     let message = { command, ...params };
-    this.log('Connection.sendCommand', { command, params, message });
+
+    console.log('Connection.sendCommand', { command, params, message });
+    
     if(typeof params == 'object' && params != null && typeof params.seq != 'number')
       params.seq = this.seq = (this.seq | 0) + 1;
+    
     if(this.messages && this.messages.requests)
       if(typeof params.seq == 'number') this.messages.requests[params.seq] = message;
+    
     if(this.messages && this.messages.requests) this.messages.requests[params.seq] = message;
     this.sendMessage(message);
   }
@@ -344,12 +346,11 @@ export class Connection extends EventEmitter {
     const { classes, fdlist, log } = instance;
     const ctor = this;
     const verbose = verbosity >= 1 ? (msg, ...args) => log('VERBOSE ' + msg, args) : () => {};
-    //log(`${ctor.name}.getCallbacks`, { instance, log, verbosity });
+
     const handle = (sock, event, ...args) => {
       let conn, obj;
 
       if((conn = fdlist[sock.fd])) {
-        //verbose(`Handle fd #${sock.fd} ${event}`);
         callHandler(conn, event, ...args);
       } else {
         throw new Error(`No connection for fd #${sock.fd}!`);
@@ -402,37 +403,35 @@ export class Connection extends EventEmitter {
   }
 }
 
-//inherits(Connection, EventEmitter);
-
-/*define(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });*/
-weakAssign(Connection.prototype, /*EventEmitter.prototype, */ { [Symbol.toStringTag]: 'Connection' });
+weakAssign(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
 
 Connection.list = [];
 
-function RPCServerEndpoint(classes = {}) {
+function RPCServerEndpoint(log = console.log, codec, classes = {}) {
   return {
     new({ class: name, args = [] }) {
-      this.log('RPCServerEndpoint.new');
+      log('RPCServerEndpoint.new');
+
       let obj, ret, id;
       try {
-        obj = new this.classes[name](...args);
+        obj = new classes[name](...args);
         id = this.makeId();
         this.instances[id] = obj;
       } catch(e) {
-        return statusResponse(false, e.message);
+        return statusResponse(false, e.message + '\n' + e.stack);
       }
       return { success: true, result: { id, name } };
     },
     list() {
-      this.log('RPCServerEndpoint.list');
+      log('RPCServerEndpoint.list');
 
-      return { success: true, result: Object.keys({ ...classes, ...this.classes }) };
+      return { success: true, result: Object.keys({ ...classes, ...classes }) };
     },
     delete: objectCommand(({ id }, respond) => {
       delete this.instances[id];
       return respond(true);
     }),
-    call: objectCommand(({ obj, method, args = [] }, respond) => {
+    call: objectCommand(({ obj, method, args = [], id }, respond) => {
       if(method in obj && typeof obj[method] == 'function') {
         const result = obj[method](...args);
         if(isThenable(result))
@@ -441,24 +440,21 @@ function RPCServerEndpoint(classes = {}) {
       }
       return respond(false, `No such method on object #${id}: ${method}`);
     }),
-    keys: objectCommand(({ obj, enumerable = true }, respond) => {
-      return respond(
-        true,
-        GetProperties(obj, enumerable ? obj => Object.keys(obj) : obj => Object.getOwnPropertyNames(obj))
-      );
-    }),
-    names: objectCommand(({ obj, enumerable = true }, respond) => {
-      return respond(
+    keys: objectCommand(({ obj, enumerable = true }, respond) =>
+      respond(true, GetProperties(obj, enumerable ? obj => Object.keys(obj) : obj => Object.getOwnPropertyNames(obj)))
+    ),
+    names: objectCommand(({ obj, enumerable = true }, respond) =>
+      respond(
         true,
         GetProperties(obj, obj => Object.getOwnPropertyNames(obj))
-      );
-    }),
-    symbols: objectCommand(({ obj, enumerable = true }, respond) => {
-      return respond(
+      )
+    ),
+    symbols: objectCommand(({ obj, enumerable = true }, respond) =>
+      respond(
         true,
         GetProperties(obj, obj => Object.getOwnPropertySymbols(obj)).map(sym => sym.description)
-      );
-    }),
+      )
+    ),
     properties: MakeListCommand(v => typeof v != 'function'),
     methods: MakeListCommand(v => typeof v == 'function', { enumerable: false }),
     get: objectCommand(({ obj, property }, respond) => {
@@ -468,26 +464,23 @@ function RPCServerEndpoint(classes = {}) {
       }
       return respond(false, `No such property on object #${id}: ${property}`);
     }),
-    set: objectCommand(({ obj, property, value }, respond) => {
-      return respond(true, (obj[property] = value));
-    })
+    set: objectCommand(({ obj, property, value }, respond) => respond(true, (obj[property] = value)))
   };
 }
 
 export class RPCServer {
-  constructor(log = console.log, codec = codecs.json(false), classes = {}) {
-    //super(log, codec);
+  #commands = null;
+  #lastId = 0;
 
+  constructor(log = console.log, codec = codecs.json(false), classes = {}) {
     define(this, {
       log,
       codec,
-      classes,
       instances: {},
-      lastId: 0,
-      connected: true,
-      messages: { requests: {}, responses: {} },
-      commands: RPCServerEndpoint(classes)
+      messages: { requests: {}, responses: {} }
     });
+
+    this.#commands = RPCServerEndpoint(log, codec, classes);
 
     RPCServer.set.add(this);
 
@@ -495,30 +488,31 @@ export class RPCServer {
   }
 
   makeId() {
-    return ++this.lastId;
+    return ++this.#lastId;
+  }
+
+  commandFunction(cmd) {
+    let fn = this.#commands[cmd];
+
+    return (...args) => fn.call(this, ...args);
   }
 
   processMessage(data) {
-    this.log('\x1b[1;31m'+this[Symbol.toStringTag] ,'processMessage\x1b[0m', { data });
-
-    let fn,
-      ret = null;
+    let ret = null;
+    /* prettier-ignore */ this.log('\x1b[1;31m' + this[Symbol.toStringTag], '\x1b[1;33mprocessMessage(1)\x1b[0m', console.config({ compact: 1 }), { data });
     if(!('command' in data)) return statusResponse(false, `No command specified`);
     const { command, seq, params } = data;
-    const { commands } = this;
-    fn = commands[command];
-
-    this.log('\x1b[1;31m'+this[Symbol.toStringTag] ,'processMessage\x1b[0m',  { command, seq, params });
-    
+    let fn = this.commandFunction(command);
+    /* prettier-ignore */ this.log('\x1b[1;31m' + this[Symbol.toStringTag], '\x1b[1;33mprocessMessage(2)\x1b[0m', console.config({ compact: 1 }), { command, seq, fn, params  });
     if(typeof seq == 'number') this.messages.requests[seq] = data;
-    if(typeof fn == 'function') return fn.call(this, data);
-    
-    switch (command) {
+    if(typeof fn == 'function') ret = fn.call(this, data);
+    /*switch (command) {
       default: {
         ret = statusResponse(false, `No such command '${command}'`);
         break;
       }
-    }
+    }*/
+    /* prettier-ignore */ this.log('\x1b[1;31m' + this[Symbol.toStringTag], '\x1b[1;33mprocessMessage(3)\x1b[0m', console.config({ compact: 2 }),ret);
     return ret;
   }
 }
@@ -538,11 +532,13 @@ RPCServer.list = [];
  *
  */
 export class RPCClient extends Connection {
-  constructor(log, codec = codecs.json(false), classes) {
+  constructor(log = console.log, codec = codecs.json(false), classes = {}) {
     super(log, codec);
+
+    //define(this, {log});
+    //
     this.instances = {};
-    this.classes = classes;
-    this.connected = true;
+
     RPCClient.set.add(this);
 
     console.log('RPCClient.on', this.on);
@@ -919,13 +915,17 @@ function ForwardObject(e, thisObj) {
   return obj;
 }
 
-function MakeCommandFunction(cmd, getConnection, thisObj, t) {
+export function MakeCommandFunction(cmd, getConnection, thisObj, t) {
   const pfx = [`RESPONSE to`, typeof cmd == 'symbol' ? cmd : `"${cmd}"`];
   t ??= { methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
   if(typeof getConnection != 'function')
     getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
-  //console.log("MakeCommandFunction",{cmd,getConnection,thisObj});
+ 
+ console.log("MakeCommandFunction",{cmd,getConnection,thisObj});
+
+if(false)
   return function(params = {}) {
+1 /*let r; if(t[cmd]) r = t[cmd](r); return r; */
     thisObj = thisObj || this;
     let client = getConnection(thisObj);
     return new Promise((resolve, reject) => {
@@ -936,6 +936,14 @@ function MakeCommandFunction(cmd, getConnection, thisObj, t) {
 
       client.sendCommand(cmd, params);
     });
+  };
+  return  function(params = {}) {
+    let client = getConnection(this);
+     console.log("MakeCommandFunction",{client});
+let r = client.sendCommand(cmd, params);
+    if(t[cmd]) r = t[cmd](r);
+    console.log(`RESPONSE to '${cmd}'`, r);
+    return r;
   };
   return async function(params = {}) {
     let client = getConnection(this);
