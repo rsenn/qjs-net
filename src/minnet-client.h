@@ -10,6 +10,7 @@
 #include "jsutils.h"
 #include "session.h"
 #include "asynciterator.h"
+#include "generator.h"
 #include "queue.h"
 
 #define client_exception(client, retval) context_exception(&(client->context), (retval))
@@ -27,23 +28,24 @@ typedef struct client_context {
   struct http_response* response;
   struct lws_client_connect_info connect_info;
   ResolveFunctions promise;
-  AsyncIterator* iter;
+  union {
+    AsyncIterator* iter;
+    Generator* gen;
+  };
   Queue* recvq;
   BOOL block;
-  CallbackType callback;
 } MinnetClient;
 
 void client_certificate(struct context*, JSValueConst options);
 MinnetClient* client_new(JSContext*);
-MinnetClient* client_find(struct lws*);
 void client_free(MinnetClient*, JSRuntime* rt);
 void client_zero(MinnetClient*);
 MinnetClient* client_dup(MinnetClient*);
+Generator* client_generator(MinnetClient*, JSContext* ctx);
 struct client_context* lws_client(struct lws*);
 JSValue minnet_client_closure(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr);
 JSValue minnet_client(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[]);
 JSValue minnet_client_wrap(JSContext*, MinnetClient* client);
-uint8_t* scan_backwards(uint8_t*, uint8_t ch);
 
 extern THREAD_LOCAL JSClassID minnet_client_class_id;
 extern THREAD_LOCAL JSValue minnet_client_proto, minnet_client_ctor;

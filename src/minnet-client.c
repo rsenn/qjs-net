@@ -5,6 +5,7 @@
 #include "minnet-request.h"
 #include "minnet-response.h"
 #include "minnet-asynciterator.h"
+#include "minnet-generator.h"
 #include "context.h"
 #include "closure.h"
 #include "minnet.h"
@@ -84,8 +85,7 @@ client_new(JSContext* ctx) {
   /*  list_add_tail(&client->link, &minnet_clients);*/
   context_add(&client->context);
 
-  client->iter = NULL;
-  client->callback = -1;
+  client->gen = NULL;
 
   return client;
 }
@@ -123,9 +123,9 @@ client_free(MinnetClient* client, JSRuntime* rt) {
 
     /*    if(--client->iter.ref_count == 0)
           asynciterator_clear(&client->iter, rt);*/
-    if(client->iter) {
-      asynciterator_free(client->iter, rt);
-      client->iter = 0;
+    if(client->gen) {
+      generator_free(client->gen);
+      client->gen = 0;
     }
 
     js_free_rt(rt, client);
@@ -153,11 +153,12 @@ client_dup(MinnetClient* client) {
   return client;
 }
 
-AsyncIterator*
-client_iterator(MinnetClient* client, JSContext* ctx) {
-  if(!client->iter)
-    client->iter = asynciterator_new(ctx);
-  return client->iter;
+Generator*
+client_generator(MinnetClient* client, JSContext* ctx) {
+  if(!client->gen)
+    client->gen = generator_new(ctx);
+
+  return client->gen;
 }
 
 struct client_context*
@@ -505,9 +506,9 @@ minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
   switch(magic) {
     case CLIENT_ASYNCITERATOR: {
-      AsyncIterator* iter;
-      if((iter = client_iterator(client, ctx)))
-        ret = minnet_asynciterator_wrap(ctx, iter);
+      if(client->gen)
+        ret = minnet_generator_iterator(ctx, client->gen);
+
       break;
     }
 
