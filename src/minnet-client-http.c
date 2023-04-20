@@ -76,9 +76,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       return 0;
     }
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      if(js_promise_pending(&client->promise)) {
+      if(js_async_pending(&client->promise)) {
         JSValue err = js_error_new(ctx, "%s", (char*)in);
-        js_promise_reject(ctx, &client->promise, err);
+        js_async_reject(ctx, &client->promise, err);
         JS_FreeValue(ctx, err);
       }
       return -1;
@@ -113,8 +113,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_WSI_DESTROY: {
       if(client->wsi == wsi) {
-        if(js_promise_pending(&client->promise))
-          js_promise_resolve(ctx, &client->promise, JS_UNDEFINED);
+        if(js_async_pending(&client->promise))
+          js_async_resolve(ctx, &client->promise, JS_UNDEFINED);
       }
       return -1;
       break;

@@ -446,9 +446,9 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
   if((p = js_malloc(ctx, sizeof(HTTPAsyncResolveClosure)))) {
     *p = (HTTPAsyncResolveClosure){2, ctx, session, opaque->resp ? response_dup(opaque->resp) : 0, session_wsi(session)};
     JSValue resolve = js_function_cclosure(ctx, serve_resolved, 1, 0, p, serve_resolved_free);
-    JSValue thened = js_promise_then(ctx, value, resolve);
+    JSValue thened = js_async_then(ctx, value, resolve);
     JSValue reject = js_function_cclosure(ctx, serve_rejected, 1, 0, p, serve_resolved_free);
-    JSValue catched = js_promise_catch(ctx, thened, reject);
+    JSValue catched = js_async_catch(ctx, thened, reject);
 
     LOG("SERVER-HTTP(3)", FG("%d") "%-38s" NC " thened=%s catched=%s", 51, __func__, JS_ToCString(ctx, thened), JS_ToCString(ctx, catched));
 

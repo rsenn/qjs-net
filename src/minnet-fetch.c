@@ -25,8 +25,8 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   switch(magic) {
     case ON_HTTP: {
-      if(js_promise_pending(&client->promise))
-        js_promise_resolve(ctx, &client->promise, argv[1]);
+      if(js_async_pending(&client->promise))
+        js_async_resolve(ctx, &client->promise, argv[1]);
 
       return JS_NewInt32(ctx, 0);
       break;
@@ -39,8 +39,8 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
       JS_FreeCString(ctx, str);
 
       //  JS_SetPropertyStr(ctx, err, "message", JS_DupValue(ctx, argv[1]));
-      if(js_promise_pending(&client->promise))
-        js_promise_reject(ctx, &client->promise, err);
+      if(js_async_pending(&client->promise))
+        js_async_reject(ctx, &client->promise, err);
       JS_FreeValue(ctx, err);
       break;
     }

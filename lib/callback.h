@@ -23,6 +23,9 @@
     JS_FreeValueRT(rt, cb_ptr.func_obj); \
   } while(0);
 
+#define CALLBACK(ctx, func_obj, this_obj) \
+  (JSCallback) { (func_obj), (this_obj), (ctx) }
+
 typedef struct js_callback {
   JSValue func_obj, this_obj;
   JSContext* ctx;

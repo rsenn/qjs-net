@@ -115,7 +115,7 @@ server_free(MinnetServer* server) {
   JSContext* ctx = server->context.js;
 
   if(--server->ref_count == 0) {
-    js_promise_free(ctx, &server->promise);
+    js_async_free(ctx, &server->promise);
 
     context_clear(&server->context);
 

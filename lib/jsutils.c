@@ -441,7 +441,7 @@ js_resolve_functions_call(JSContext* ctx, ResolveFunctions* funcs, int index, JS
 
   assert(!JS_IsNull(func));
   ret = JS_Call(ctx, func, JS_UNDEFINED, 1, &arg);
-  js_promise_free(ctx, funcs);
+  js_async_free(ctx, funcs);
   return ret;
 }
 
@@ -473,58 +473,73 @@ js_invoke(JSContext* ctx, JSValueConst this_obj, const char* method, int argc, J
 }
 
 JSValue
-js_promise_create(JSContext* ctx, ResolveFunctions* funcs) {
+js_async_create(JSContext* ctx, ResolveFunctions* funcs) {
   JSValue ret;
 
   ret = JS_NewPromiseCapability(ctx, &funcs->resolve);
   return ret;
 }
 
+JSValue
+js_async_new(JSContext* ctx, JSValue* resolve, JSValue* reject) {
+  JSValue ret;
+  ResolveFunctions fns;
+
+  ret = js_async_create(ctx, &fns);
+
+  if(resolve)
+    *resolve = fns.resolve;
+  if(reject)
+    *reject = fns.reject;
+
+  return ret;
+}
+
 void
-js_promise_free(JSContext* ctx, ResolveFunctions* funcs) {
+js_async_free(JSContext* ctx, ResolveFunctions* funcs) {
   JS_FreeValue(ctx, funcs->resolve);
   JS_FreeValue(ctx, funcs->reject);
   js_resolve_functions_zero(funcs);
 }
 
 void
-js_promise_free_rt(JSRuntime* rt, ResolveFunctions* funcs) {
+js_async_free_rt(JSRuntime* rt, ResolveFunctions* funcs) {
   JS_FreeValueRT(rt, funcs->resolve);
   JS_FreeValueRT(rt, funcs->reject);
   js_resolve_functions_zero(funcs);
 }
 
 JSValue
-js_promise_resolve(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
+js_async_resolve(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
   if(js_is_nullish(funcs->resolve))
     return JS_UNDEFINED;
   return js_resolve_functions_call(ctx, funcs, 0, value);
 }
 
 JSValue
-js_promise_reject(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
+js_async_reject(JSContext* ctx, ResolveFunctions* funcs, JSValueConst value) {
   if(js_is_nullish(funcs->reject))
     return JS_UNDEFINED;
   return js_resolve_functions_call(ctx, funcs, 1, value);
 }
 
 void
-js_promise_zero(ResolveFunctions* funcs) {
+js_async_zero(ResolveFunctions* funcs) {
   js_resolve_functions_zero(funcs);
 }
 
 BOOL
-js_promise_pending(ResolveFunctions const* funcs) {
+js_async_pending(ResolveFunctions const* funcs) {
   return !js_resolve_functions_is_null(funcs);
 }
 
 JSValue
-js_promise_then(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
+js_async_then(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
   return js_invoke(ctx, promise, "then", 1, &handler);
 }
 
 JSValue
-js_promise_catch(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
+js_async_catch(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
   return js_invoke(ctx, promise, "catch", 1, &handler);
 }
 

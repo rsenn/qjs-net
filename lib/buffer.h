@@ -15,9 +15,7 @@ typedef struct byte_block {
 } ByteBlock;
 
 #define BLOCK_0() \
-  (ByteBlock) { \
-    { 0, 0 } \
-  }
+  (ByteBlock) { 0, 0 }
 
 #define block_SIZE(b) (size_t)((b)->end - (b)->start)
 #define block_BEGIN(b) (void*)(b)->start

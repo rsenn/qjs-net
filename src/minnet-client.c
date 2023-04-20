@@ -4,6 +4,7 @@
 #include "minnet-websocket.h"
 #include "minnet-request.h"
 #include "minnet-response.h"
+#include "minnet-asynciterator.h"
 #include "context.h"
 #include "closure.h"
 #include "minnet.h"
@@ -12,6 +13,9 @@
 #include <strings.h>
 #include <errno.h>
 #include <libwebsockets.h>
+
+THREAD_LOCAL JSValue minnet_client_proto;
+THREAD_LOCAL JSClassID minnet_client_class_id;
 
 // static JSCallback client_cb_message, client_cb_connect, client_cb_close, client_cb_pong, client_cb_fd;
 
@@ -80,6 +84,8 @@ client_new(JSContext* ctx) {
   list_add_tail(&client->link, &minnet_clients);
   context_add(&client->context);
 
+  asynciterator_zero(&client->iter);
+
   return client;
 }
 
@@ -108,12 +114,15 @@ client_free_rt(MinnetClient* client, JSRuntime* rt) {
       client->connect_info.method = 0;
     }
 
-    js_promise_free_rt(rt, &client->promise);
+    js_async_free_rt(rt, &client->promise);
 
     context_clear(&client->context);
     context_delete(&client->context);
 
     session_clear_rt(&client->session, rt);
+
+    if(--client->iter.ref_count == 0)
+      asynciterator_clear(&client->iter, rt);
 
     js_free_rt(rt, client);
   }
@@ -127,8 +136,9 @@ client_zero(MinnetClient* client) {
   client->next = JS_NULL;
 
   session_zero(&client->session);
-  js_promise_zero(&client->promise);
+  js_async_zero(&client->promise);
   callbacks_zero(&client->on);
+  asynciterator_zero(&client->iter);
 
   client->recvb = BLOCK_0();
 }
@@ -142,6 +152,242 @@ client_dup(MinnetClient* client) {
 struct client_context*
 lws_client(struct lws* wsi) {
   return lws_context_user(lws_get_context(wsi));
+}
+
+static int
+client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+  MinnetClient* client = lws_client(wsi);
+  struct wsi_opaque_user_data* opaque = 0;
+  JSContext* ctx = 0;
+  int ret = 0;
+
+  if(lws_reason_poll(reason))
+    return wsi_handle_poll(wsi, reason, &client->on.fd, in);
+
+  if(lws_reason_http(reason))
+    return http_client_callback(wsi, reason, user, in, len);
+
+  if((ctx = client->context.js))
+    opaque = lws_opaque(wsi, ctx);
+
+  LOGCB("CLIENT      ", "fd=%d h2=%i tls=%i len=%zu%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), len, (in && len) ? " in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
+
+  switch(reason) {
+    case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
+      return 0;
+    }
+    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
+    case LWS_CALLBACK_PROTOCOL_INIT: {
+      break;
+    }
+    case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
+      break;
+    }
+    case LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL:
+    case LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL: {
+      session_zero(&client->session);
+      break;
+    }
+    case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
+    case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
+
+      break;
+    }
+
+    case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
+    case LWS_CALLBACK_CONNECTING: {
+      break;
+    }
+    case LWS_CALLBACK_WSI_CREATE:
+    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
+      if(!opaque->ws)
+        opaque->ws = ws_new(wsi, ctx);
+      break;
+    }
+    case LWS_CALLBACK_CLIENT_CLOSED: {
+      if(opaque->status < CLOSED) {
+        opaque->status = CLOSED;
+      }
+    }
+    case LWS_CALLBACK_RAW_CLOSE:
+    case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
+    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
+
+      int32_t result = -1, err = /*opaque ? opaque->error :*/ 0;
+
+      if(opaque->status != CLOSING)
+        opaque->status = CLOSING;
+
+      if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in) {
+        if(!strncmp("conn fail: ", in, 11)) {
+          err = /*opaque->error =*/atoi(&((const char*)in)[11]);
+          client->context.error = JS_NewString(client->context.js, strerror(err));
+        } else {
+          client->context.error = JS_NewStringLen(client->context.js, in, len);
+        }
+      } else
+        client->context.error = JS_UNDEFINED;
+
+      opaque->status = CLOSING;
+
+      js_async_reject(ctx, &client->promise, client->context.error);
+
+      if(client->on.close.ctx) {
+        JSValue ret;
+        int argc = 1;
+        JSValueConst cb_argv[4] = {client->session.ws_obj};
+
+        if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR) {
+
+          cb_argv[argc++] = JS_UNDEFINED;
+          cb_argv[argc++] = JS_DupValue(ctx, client->context.error);
+          cb_argv[argc++] = JS_NewInt32(ctx, err);
+
+        } else {
+          cb_argv[argc++] = close_status(ctx, in, len);
+          cb_argv[argc++] = close_reason(ctx, in, len);
+          cb_argv[argc++] = JS_NewInt32(ctx, err);
+        }
+
+        ret = client_exception(client, callback_emit(&client->on.close, argc, cb_argv));
+        if(JS_IsNumber(ret))
+          JS_ToInt32(ctx, &result, ret);
+        JS_FreeValue(ctx, ret);
+
+        while(--argc >= 0) JS_FreeValue(ctx, cb_argv[argc]);
+      }
+      ret = result;
+      break;
+    }
+    case LWS_CALLBACK_RAW_ADOPT: {
+      // lwsl_user("ADOPT! %s", client->request->url.protocol);
+
+      if(strcasecmp(client->request->url.protocol, "udp"))
+        break;
+    }
+
+    case LWS_CALLBACK_ESTABLISHED:
+    case LWS_CALLBACK_CLIENT_ESTABLISHED:
+    case LWS_CALLBACK_RAW_CONNECTED: {
+
+      opaque->status = OPEN;
+
+      if(js_async_pending(&client->promise)) {
+        JSValue cli = minnet_client_wrap(ctx, client);
+
+        /*  JSValue iterator = minnet_asynciterator_wrap(ctx, &client->iter);
+          JSValue iterable = minnet_asynciterator_iterable(ctx, iterator);
+          JS_FreeValue(ctx, iterator);*/
+        js_async_resolve(ctx, &client->promise, cli);
+
+        JS_FreeValue(ctx, cli);
+      }
+
+      if(client->on.connect.ctx) {
+        client->request->ip = wsi_ipaddr(wsi);
+        client->session.ws_obj = minnet_ws_fromwsi(ctx, wsi);
+
+        if(reason != LWS_CALLBACK_RAW_CONNECTED)
+          client->session.req_obj = minnet_request_wrap(ctx, client->request);
+
+        client_exception(client, callback_emit(&client->on.connect, 3, &client->session.ws_obj));
+      }
+      /*if(!minnet_response_data(sess->resp_obj))*/
+      break;
+    }
+
+    case LWS_CALLBACK_CLIENT_WRITEABLE:
+    case LWS_CALLBACK_RAW_WRITEABLE: {
+
+      /*
+      ByteBuffer* buf = &client->session.send_buf;
+      int ret, size = buffer_REMAIN(buf);
+
+      if((ret = lws_write(wsi, buf->read, size, LWS_WRITE_TEXT)) != size) {
+        lwsl_err("sending message failed: %d < %d\n", ret, size);
+        ret = -1;
+        break;
+      }
+
+      buffer_reset(buf);*/
+
+      session_writable(&client->session, opaque->binary, ctx);
+      break;
+    }
+
+    case LWS_CALLBACK_RECEIVE:
+    case LWS_CALLBACK_CLIENT_RECEIVE:
+    case LWS_CALLBACK_RAW_RX: {
+      JSContext* ctx;
+      int first = lws_is_first_fragment(wsi);
+      int final = lws_is_final_fragment(wsi);
+      int single_fragment = first && final;
+
+      if((ctx = client->on.message.ctx)) {
+        /* if(!single_fragment) {
+           block_append(&client->recvb, in, len);
+         }
+ */
+        /* if(lws_is_final_fragment(wsi))*/ {
+          JSValue msg = /*single_fragment ? */ (opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len)) /*
+                                          : (opaque->binary ? block_toarraybuffer(&client->recvb, ctx) : block_tostring(&client->recvb, ctx))*/
+              ;
+          JSValue argv[4] = {
+              client->session.ws_obj,
+              msg,
+              JS_NewBool(ctx, first),
+              JS_NewBool(ctx, final),
+          };
+
+          client_exception(client, callback_emit(&client->on.message, countof(argv), argv));
+
+          JS_FreeValue(ctx, argv[1]);
+        }
+      }
+      break;
+    }
+    case LWS_CALLBACK_CLIENT_RECEIVE_PONG: {
+      JSContext* ctx;
+      if((ctx = client->on.pong.ctx)) {
+        JSValue data = JS_NewArrayBufferCopy(ctx, in, len);
+        JSValue cb_argv[] = {client->session.ws_obj, data};
+        client_exception(client, callback_emit(&client->on.pong, 2, cb_argv));
+        JS_FreeValue(ctx, cb_argv[1]);
+      }
+      break;
+    }
+    case LWS_CALLBACK_WSI_DESTROY: {
+      if(client->wsi == wsi) {
+        BOOL is_error = JS_IsUndefined(client->context.error);
+
+        (is_error ? js_async_reject : js_async_resolve)(client->context.js, &client->promise, client->context.error);
+        JS_FreeValue(client->context.js, client->context.error);
+        client->context.error = JS_UNDEFINED;
+      }
+      break;
+    }
+    case LWS_CALLBACK_PROTOCOL_DESTROY: {
+      break;
+    }
+    default: {
+      minnet_lws_unhandled(__func__, reason);
+      break;
+    }
+  }
+
+  if(opaque && opaque->status >= CLOSING)
+    ret = -1;
+
+  /*  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu\n",
+              22 + (reason * 2),
+              lws_callback_name(reason) + 13,
+              wsi_tls(wsi),
+              len,
+              (int)MIN(len, 32),
+              (reason == LWS_CALLBACK_RAW_RX || reason == LWS_CALLBACK_CLIENT_RECEIVE || reason == LWS_CALLBACK_RECEIVE) ? 0 : (char*)in,
+              ret);*/
+
+  return ret;
 }
 
 static JSValue
@@ -187,13 +433,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     closure->free_func = (closure_free_t*)client_free_rt;
   }
 
-  *client = (MinnetClient){
-      .context = (struct context){.ref_count = 1},
-      .headers = JS_UNDEFINED,
-      .body = JS_UNDEFINED,
-      .next = JS_UNDEFINED,
-  };
-
   session_zero(&client->session);
 
   if(!(client->request = request_from(argc, argv, ctx))) {
@@ -201,10 +440,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_ThrowTypeError(ctx, "argument 1 must be a Request/URL object or an URL string");
   }
 
-  /*enum protocol p = url_protocol(client->request->url);
-  client->request->secure = protocol_is_tls(p);*/
-
-  js_promise_zero(&client->promise);
+  js_async_zero(&client->promise);
 
   if(argc >= 2) {
 
@@ -254,8 +490,12 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onClose", client->on.close)
   GETCBPROP(options, "onConnect", client->on.connect)
   GETCBPROP(options, "onMessage", client->on.message)
-  GETCBPROP(options, "onFd", client->on.fd)
   GETCBPROP(options, "onHttp", client->on.http)
+  GETCBPROP(options, "onFd", client->on.fd)
+
+  if(JS_IsNull(client->on.fd.func_obj)) {
+    client->on.fd = CALLBACK(ctx, minnet_default_fd_callback(ctx), JS_NULL);
+  }
 
   value = JS_GetPropertyStr(ctx, options, "binary");
   if(!JS_IsUndefined(value))
@@ -332,8 +572,17 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   DEBUG("METHOD: %s\n", client->connect_info.method);
   DEBUG("PROTOCOL: %s\n", client->connect_info.protocol);
 
-  if(!block)
-    ret = js_promise_create(ctx, &client->promise);
+  if(!block) {
+    /*JSValue iter = minnet_asynciterator_wrap(ctx, &client->iter);
+    ret = minnet_asynciterator_iterable(ctx, iter);
+    JS_FreeValue(ctx, iter);*/
+    ret = js_async_create(ctx, &client->promise);
+
+    if(JS_IsNull(client->on.connect.func_obj))
+      client->on.connect = CALLBACK(ctx, JS_DupValue(ctx, client->promise.resolve), JS_NULL);
+    if(JS_IsNull(client->on.close.func_obj))
+      client->on.close = CALLBACK(ctx, JS_DupValue(ctx, client->promise.reject), JS_NULL);
+  }
 
   errno = 0;
 
@@ -354,9 +603,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   if(!client->wsi /*&& !wsi2*/) {
     if(!block) {
-      if(js_promise_pending(&client->promise)) {
+      if(js_async_pending(&client->promise)) {
         JSValue err = js_error_new(ctx, "[2] Connection failed: %s", strerror(errno));
-        js_promise_reject(ctx, &client->promise, err);
+        js_async_reject(ctx, &client->promise, err);
         JS_FreeValue(ctx, err);
       }
     } else {
@@ -421,247 +670,40 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
     JS_FreeValue(ctx, func[0]);
     JS_FreeValue(ctx, func[1]);
-  }
 
-  closure_free(closure);
+    closure_free(closure);
+  }
 
   return ret;
 }
 
-/*uint8_t*
-scan_backwards(uint8_t* ptr, uint8_t ch) {
-  if(ptr[-1] == '\n') {
-    do { --ptr; } while(ptr[-1] != ch);
-    return ptr;
-  }
-  return 0;
-}
-*/
-static int
-client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetClient* client = lws_client(wsi);
-  struct wsi_opaque_user_data* opaque = 0;
-  JSContext* ctx;
-  int ret = 0;
+JSValue
+minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
+  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_client_proto, minnet_client_class_id);
 
-  if(lws_reason_poll(reason))
-    return wsi_handle_poll(wsi, reason, &client->on.fd, in);
+  if(JS_IsException(ret))
+    return JS_EXCEPTION;
 
-  if(lws_reason_http(reason))
-    return http_client_callback(wsi, reason, user, in, len);
-
-  if((ctx = client->context.js))
-    opaque = lws_opaque(wsi, ctx);
-
-  LOGCB("CLIENT      ", "fd=%d h2=%i tls=%i len=%zu%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), len, (in && len) ? " in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
-
-  switch(reason) {
-    case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
-      return 0;
-    }
-    case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
-    case LWS_CALLBACK_PROTOCOL_INIT: {
-      break;
-    }
-    case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
-      break;
-    }
-    case LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL:
-    case LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL: {
-      session_zero(&client->session);
-      break;
-    }
-    case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
-    case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
-
-      break;
-    }
-
-    case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH:
-    case LWS_CALLBACK_CONNECTING: {
-      break;
-    }
-    case LWS_CALLBACK_WSI_CREATE:
-    case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
-      if(!opaque->ws)
-        opaque->ws = ws_new(wsi, ctx);
-      break;
-    }
-    case LWS_CALLBACK_CLIENT_CLOSED: {
-      if(opaque->status < CLOSED) {
-        opaque->status = CLOSED;
-      }
-    }
-    case LWS_CALLBACK_RAW_CLOSE:
-    case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
-    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      if(opaque->status < CLOSING) {
-        JSContext* ctx;
-        int32_t result = -1, err = /*opaque ? opaque->error :*/ 0;
-
-        if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in) {
-          if(!strncmp("conn fail: ", in, 11)) {
-            err = /*opaque->error =*/atoi(&((const char*)in)[11]);
-            client->context.error = JS_NewString(client->context.js, strerror(err));
-          } else {
-            client->context.error = JS_NewStringLen(client->context.js, in, len);
-          }
-        } else
-          client->context.error = JS_UNDEFINED;
-
-        opaque->status = CLOSING;
-        if((ctx = client->on.close.ctx)) {
-          JSValue ret;
-          int argc = 1;
-          JSValueConst cb_argv[4] = {client->session.ws_obj};
-
-          if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR) {
-
-            cb_argv[argc++] = JS_UNDEFINED;
-            cb_argv[argc++] = JS_DupValue(ctx, client->context.error);
-            cb_argv[argc++] = JS_NewInt32(ctx, err);
-
-          } else {
-            cb_argv[argc++] = close_status(ctx, in, len);
-            cb_argv[argc++] = close_reason(ctx, in, len);
-            cb_argv[argc++] = JS_NewInt32(ctx, err);
-          }
-
-          ret = client_exception(client, callback_emit(&client->on.close, argc, cb_argv));
-          if(JS_IsNumber(ret))
-            JS_ToInt32(ctx, &result, ret);
-          JS_FreeValue(ctx, ret);
-
-          while(--argc >= 0) JS_FreeValue(ctx, cb_argv[argc]);
-        }
-        ret = result;
-        break;
-      }
-    }
-    case LWS_CALLBACK_RAW_ADOPT: {
-      // lwsl_user("ADOPT! %s", client->request->url.protocol);
-
-      if(strcasecmp(client->request->url.protocol, "udp"))
-        break;
-    }
-
-    case LWS_CALLBACK_ESTABLISHED:
-    case LWS_CALLBACK_CLIENT_ESTABLISHED:
-    case LWS_CALLBACK_RAW_CONNECTED: {
-      if(opaque->status < OPEN) {
-        JSContext* ctx;
-
-        /* int status;
-         status = lws_http_client_http_response(wsi);*/
-
-        opaque->status = OPEN;
-        if((ctx = client->on.connect.ctx)) {
-          client->request->ip = wsi_ipaddr(wsi);
-          client->session.ws_obj = minnet_ws_fromwsi(ctx, wsi);
-
-          if(reason != LWS_CALLBACK_RAW_CONNECTED) {
-            client->session.req_obj = minnet_request_wrap(ctx, client->request);
-          }
-          // lwsl_user("client   " FGC(171, "%-38s") " fd=%i, in=%.*s\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
-
-          if((client->on.connect.ctx = ctx))
-            client_exception(client, callback_emit(&client->on.connect, 3, &client->session.ws_obj));
-        }
-        /*if(!minnet_response_data(sess->resp_obj))*/
-      }
-      break;
-    }
-
-    case LWS_CALLBACK_CLIENT_WRITEABLE:
-    case LWS_CALLBACK_RAW_WRITEABLE: {
-
-      /*
-      ByteBuffer* buf = &client->session.send_buf;
-      int ret, size = buffer_REMAIN(buf);
-
-      if((ret = lws_write(wsi, buf->read, size, LWS_WRITE_TEXT)) != size) {
-        lwsl_err("sending message failed: %d < %d\n", ret, size);
-        ret = -1;
-        break;
-      }
-
-      buffer_reset(buf);*/
-
-      session_writable(&client->session, opaque->binary, ctx);
-      break;
-    }
-
-    case LWS_CALLBACK_RECEIVE:
-    case LWS_CALLBACK_CLIENT_RECEIVE:
-    case LWS_CALLBACK_RAW_RX: {
-      JSContext* ctx;
-      int first = lws_is_first_fragment(wsi);
-      int final = lws_is_final_fragment(wsi);
-      int single_fragment = first && final;
-
-      if((ctx = client->on.message.ctx)) {
-        /* if(!single_fragment) {
-           block_append(&client->recvb, in, len);
-         }
- */
-        /* if(lws_is_final_fragment(wsi))*/ {
-          JSValue msg = /*single_fragment ? */ (opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len)) /*
-                                          : (opaque->binary ? block_toarraybuffer(&client->recvb, ctx) : block_tostring(&client->recvb, ctx))*/
-              ;
-          JSValue argv[4] = {
-              client->session.ws_obj,
-              msg,
-              JS_NewBool(ctx, first),
-              JS_NewBool(ctx, final),
-          };
-
-          client_exception(client, callback_emit(&client->on.message, countof(argv), argv));
-
-          JS_FreeValue(ctx, argv[1]);
-        }
-      }
-      break;
-    }
-    case LWS_CALLBACK_CLIENT_RECEIVE_PONG: {
-      JSContext* ctx;
-      if((ctx = client->on.pong.ctx)) {
-        JSValue data = JS_NewArrayBufferCopy(ctx, in, len);
-        JSValue cb_argv[] = {client->session.ws_obj, data};
-        client_exception(client, callback_emit(&client->on.pong, 2, cb_argv));
-        JS_FreeValue(ctx, cb_argv[1]);
-      }
-      break;
-    }
-    case LWS_CALLBACK_WSI_DESTROY: {
-      if(client->wsi == wsi) {
-        BOOL is_error = JS_IsUndefined(client->context.error);
-
-        (is_error ? js_promise_reject : js_promise_resolve)(client->context.js, &client->promise, client->context.error);
-        JS_FreeValue(client->context.js, client->context.error);
-        client->context.error = JS_UNDEFINED;
-      }
-      break;
-    }
-    case LWS_CALLBACK_PROTOCOL_DESTROY: {
-      break;
-    }
-    default: {
-      minnet_lws_unhandled(__func__, reason);
-      break;
-    }
-  }
-
-  if(opaque && opaque->status >= CLOSING)
-    ret = -1;
-
-  /*  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu\n",
-              22 + (reason * 2),
-              lws_callback_name(reason) + 13,
-              wsi_tls(wsi),
-              len,
-              (int)MIN(len, 32),
-              (reason == LWS_CALLBACK_RAW_RX || reason == LWS_CALLBACK_CLIENT_RECEIVE || reason == LWS_CALLBACK_RECEIVE) ? 0 : (char*)in,
-              ret);*/
+  JS_SetOpaque(ret, client_dup(client));
 
   return ret;
 }
+
+static void
+minnet_client_finalizer(JSRuntime* rt, JSValue val) {
+  MinnetClient* client;
+  if((client = minnet_client_data(val))) {
+    client_free_rt(client, rt);
+  }
+}
+
+JSClassDef minnet_client_class = {
+    "MinnetClient",
+    .finalizer = minnet_client_finalizer,
+};
+
+const JSCFunctionListEntry minnet_client_proto_funcs[] = {
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetClient", JS_PROP_CONFIGURABLE),
+};
+
+const size_t minnet_client_proto_funcs_size = countof(minnet_client_proto_funcs);

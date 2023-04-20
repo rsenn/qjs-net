@@ -136,7 +136,7 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
 JSValue
 generator_push(Generator* gen, JSValueConst value) {
   ResolveFunctions funcs = {JS_NULL, JS_NULL};
-  JSValue ret = js_promise_create(gen->ctx, &funcs);
+  JSValue ret = js_async_create(gen->ctx, &funcs);
 
   // printf("%-22s reads: %zu value: %.*s\n", __func__, list_size(&gen->iterator.reads), 10, JS_ToCString(gen->ctx, value));
 
@@ -144,7 +144,7 @@ generator_push(Generator* gen, JSValueConst value) {
     JS_FreeValue(gen->ctx, JS_Call(gen->ctx, funcs.reject, JS_UNDEFINED, 0, 0));
   }
 
-  js_promise_free(gen->ctx, &funcs);
+  js_async_free(gen->ctx, &funcs);
   return ret;
 }
 

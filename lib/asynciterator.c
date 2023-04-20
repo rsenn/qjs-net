@@ -24,6 +24,7 @@ asynciterator_check_closing(AsyncIterator* it, JSContext* ctx) {
 
 void
 asynciterator_zero(AsyncIterator* it) {
+  it->ref_count = 1;
   it->closed = FALSE;
   it->closing = FALSE;
   init_list_head(&it->reads);
@@ -36,7 +37,7 @@ asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
   list_for_each_safe(el, next, &it->reads) {
     AsyncRead* rd = list_entry(el, AsyncRead, link);
     list_del(&rd->link);
-    js_promise_free_rt(rt, &rd->promise);
+    js_async_free_rt(rt, &rd->promise);
     js_free_rt(rt, rd);
   }
 }
@@ -51,7 +52,7 @@ asynciterator_next(AsyncIterator* it, JSContext* ctx) {
 
   if((rd = js_malloc(ctx, sizeof(AsyncRead)))) {
     list_add(&rd->link, &it->reads);
-    ret = js_promise_create(ctx, &rd->promise);
+    ret = js_async_create(ctx, &rd->promise);
     rd->id = ++it->serial;
   }
 
@@ -81,7 +82,7 @@ asynciterator_cancel(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
   AsyncRead* rd;
 
   while((rd = asynciterator_shift(it, ctx))) {
-    js_promise_reject(ctx, &rd->promise, error);
+    js_async_reject(ctx, &rd->promise, error);
     js_free(ctx, rd);
     ret++;
   }
@@ -100,7 +101,7 @@ asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContex
     // printf("%-22s reads: %zu read: %" PRIu32 " value: %.*s done: %i\n", __func__, list_size(&it->reads), rd->id, 10, JS_ToCString(ctx, value), done);
 
     JSValue obj = asynciterator_object(value, done, ctx);
-    js_promise_resolve(ctx, &rd->promise, obj);
+    js_async_resolve(ctx, &rd->promise, obj);
     JS_FreeValue(ctx, obj);
     js_free(ctx, rd);
     //    it->serial++;

@@ -134,6 +134,8 @@ const codecs = {
   }
 };
 
+import('inspect') .then(m => (globalThis.inspect = m)) .catch(() => {});
+
 if(globalThis.inspect) {
   codecs.js = function js(verbose = false) {
     return {
@@ -143,6 +145,8 @@ if(globalThis.inspect) {
     };
   };
 }
+
+import('bjson') .then(m => (globalThis.bjson = m)) .catch(() => {});
 
 if(globalThis.bjson) {
   codecs.bjson = function bjson() {
@@ -920,11 +924,11 @@ export function MakeCommandFunction(cmd, getConnection, thisObj, t) {
   if(typeof getConnection != 'function')
     getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
 
-  console.log('MakeCommandFunction', { cmd, getConnection, thisObj });
+  // console.log('MakeCommandFunction', { cmd, getConnection, thisObj });
 
   return function(params = {}) {
     let client = getConnection(this);
-    console.log('MakeCommandFunction', { client });
+    //console.log('MakeCommandFunction', { client });
     let r = client.sendCommand(cmd, params);
     console.log(`RESPONSE to '${cmd}'`, r);
     if(t[cmd]) r = t[cmd](r);

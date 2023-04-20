@@ -201,10 +201,9 @@ async function main(...args) {
   const server = !params.client || params.server;
   const { binary, protocol } = params;
   let urls = params['@'];
-
   function createWS(url, callbacks, listen = 0) {
-    let repl,
-      is_dns,
+    let repl;
+    let is_dns,
       urlObj = new URL(url);
     net.setLog(net.LLL_USER | (((debug ? net.LLL_INFO : net.LLL_NOTICE) << 1) - 1), (level, msg) => {
       let p =
@@ -216,7 +215,7 @@ async function main(...args) {
       if(params.verbose > 1 || params.debug) std.puts(p.padEnd(8) + '\t' + msg + '\n');
     });
     if(params.verbose) console.log(`Connecting to '${url}'...`);
-
+    globalThis.PrintMessage = PrintMessage;
     const fn = [net.client, net.server][+listen];
     return fn(url, {
       sslCert,
@@ -240,6 +239,7 @@ async function main(...args) {
 
         if(params.verbose) console.log('onConnect', { ws, req });
         const remote = `${ws.address}:${ws.port}`;
+
         try {
           repl = globalThis.repl = new CLI(remote);
         } catch(err) {
@@ -307,7 +307,15 @@ async function main(...args) {
       },
       onMessage(ws, msg, first, final) {
         globalThis.msg = msg;
-        console.log('onMessage', console.config({ compact: 1 }), first, final, msg);
+
+        if(typeof globalThis.onMessage == 'function') {
+          globalThis.onMessage(msg);
+          return;
+        }
+
+        //globalThis.onMessage(msg);
+        PrintMessage(msg);
+        //        console.log('onMessage', console.config({ compact: 1 }), msg);
         //startInteractive();
 
         if(typeof msg == 'string') {
@@ -322,22 +330,28 @@ async function main(...args) {
       },
       onError(ws, error) {}
     });
+
+    function PrintMessage(msg) {
+      try {
+        if(/^{.*}\s*$/gm.test(msg)) {
+          let obj = JSON.parse(msg);
+          msg = inspect(obj, { colors: true, depth: Infinity, compact: 3 });
+        }
+      } catch(e) {}
+
+      repl.printStatus(() => std.puts('Message: ' + msg + '\n'));
+    }
+    Object.assign(globalThis, {
+      get connections() {
+        return [...connections];
+      }
+    });
   }
 
-  Object.assign(globalThis, {
-    get connections() {
-      return [...connections];
-    }
-  });
-
   try {
-    await createWS(urls.shift(), {})
-      .then(() => {
-        quit('FINISHED');
-      })
-      .catch(err => {
-        console.log('Failed', err);
-      });
+    let instance = createWS(urls.shift(), {});
+
+    console.log('instance', instance, instance[Symbol.asyncIterator]);
   } catch(error) {
     quit('ERROR: ' + error.message);
   }

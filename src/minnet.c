@@ -142,6 +142,7 @@ minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
 struct FDCallbackClosure {
   JSContext* ctx;
   JSValue set_read, set_write;
+  JSCFunctionMagic* set_handler;
 };
 
 static void
@@ -158,11 +159,25 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
   struct FDCallbackClosure* closure = opaque;
   JSValueConst args[] = {argv[0], JS_NULL};
 
+  const char* arg[3] = {
+      JS_ToCString(ctx, argv[0]),
+      JS_ToCString(ctx, argv[1]),
+      JS_ToCString(ctx, argv[2]),
+  };
+
+  printf("defaultFdCallback(%s, %s, %s)\n", arg[0], arg[1], arg[2]);
+
+  JS_FreeCString(ctx, arg[0]);
+  JS_FreeCString(ctx, arg[1]);
+  JS_FreeCString(ctx, arg[2]);
+
   args[1] = argv[1];
-  JS_Call(ctx, closure->set_read, JS_UNDEFINED, 2, args);
+  closure->set_handler(ctx, JS_NULL, 2, args, 0);
+  // JS_Call(ctx, closure->set_read, JS_UNDEFINED, 2, args);
 
   args[1] = argv[2];
-  JS_Call(ctx, closure->set_write, JS_UNDEFINED, 2, args);
+  closure->set_handler(ctx, JS_NULL, 2, args, 1);
+  // JS_Call(ctx, closure->set_write, JS_UNDEFINED, 2, args);
 
   return JS_UNDEFINED;
 }
@@ -181,6 +196,10 @@ minnet_default_fd_callback(JSContext* ctx) {
     closure->ctx = ctx;
     closure->set_read = JS_GetPropertyStr(ctx, os, "setReadHandler");
     closure->set_write = JS_GetPropertyStr(ctx, os, "setWriteHandler");
+    closure->set_handler = *((void**)JS_VALUE_GET_OBJ(closure->set_read) + 7);
+
+    /*  closure->set_write_handler=*(void**)&JS_VALUE_GET_OBJ( closure->set_write)->u;
+     */
 
     return js_function_cclosure(ctx, minnet_fd_callback_closure, 3, 0, closure, minnet_fd_callback_free);
 
@@ -504,6 +523,18 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "AsyncIterator", minnet_asynciterator_ctor);
 
+  // Add class Client
+  JS_NewClassID(&minnet_client_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_client_class_id, &minnet_client_class);
+  minnet_client_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_client_proto, minnet_client_proto_funcs, minnet_client_proto_funcs_size);
+
+  // minnet_client_ctor = JS_NewCFunction2(ctx, minnet_client_constructor, "MinnetClient", 0, JS_CFUNC_constructor, 0);
+
+  //  JS_SetConstructor(ctx, minnet_client_ctor, minnet_client_proto);
+  /*
+    if(m)
+      JS_SetModuleExport(ctx, m, "Client", minnet_client_ctor);*/
 
   {
     JSValue minnet_default = JS_NewObject(ctx);
@@ -528,7 +559,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "FormParser");
   JS_AddModuleExport(ctx, m, "Hash");
   JS_AddModuleExport(ctx, m, "AsyncIterator");
-  JS_AddModuleExport(ctx, m, "URL");
+  // JS_AddModuleExport(ctx, m, "Client");
   JS_AddModuleExport(ctx, m, "default");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 

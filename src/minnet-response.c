@@ -70,7 +70,7 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   if(!(resp = minnet_response_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  ret = js_promise_create(ctx, &funcs);
+  ret = js_async_create(ctx, &funcs);
 
   switch(magic) {
     case RESPONSE_ARRAYBUFFER: {
@@ -87,7 +87,7 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     }
   }
 
-  js_promise_free(ctx, &funcs);
+  js_async_free(ctx, &funcs);
 
   return ret;
 }

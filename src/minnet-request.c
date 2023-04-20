@@ -257,7 +257,7 @@ minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     case REQUEST_ARRAYBUFFER: {
       if(req->body) {
         ResolveFunctions funcs = {JS_NULL, JS_NULL};
-        ret = js_promise_create(ctx, &funcs);
+        ret = js_async_create(ctx, &funcs);
         JS_FreeValue(ctx, funcs.reject);
 
         generator_continuous(req->body, funcs.resolve);
@@ -268,7 +268,7 @@ minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     case REQUEST_TEXT: {
       if(req->body) {
         ResolveFunctions funcs = {JS_NULL, JS_NULL};
-        ret = js_promise_create(ctx, &funcs);
+        ret = js_async_create(ctx, &funcs);
         JS_FreeValue(ctx, funcs.reject);
 
         generator_continuous(req->body, funcs.resolve);

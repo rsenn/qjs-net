@@ -10,6 +10,7 @@ typedef struct async_read {
 } AsyncRead;
 
 typedef struct async_iterator {
+  int ref_count;
   struct list_head reads;
   BOOL closed, closing;
   uint32_t serial;
@@ -26,6 +27,12 @@ JSValue asynciterator_object(JSValueConst, BOOL done, JSContext* ctx);
 static inline BOOL
 asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   return list_empty(&it->reads) ? FALSE : asynciterator_emplace(it, value, FALSE, ctx);
+}
+
+static inline AsyncIterator*
+asynciterator_dup(AsyncIterator* it) {
+  ++it->ref_count;
+  return it;
 }
 
 #endif /* QJSNET_LIB_ASYNCITERATOR_H */

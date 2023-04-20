@@ -181,6 +181,7 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
               connections.set(ws.fd, ws);
 
               let o = (fdmap[ws.fd] = { server: new RPCServer(undefined, undefined, classes) });
+
               o.generator = new AsyncIterator();
               o.send = MakeSendFunction(
                 msg => ws.send(msg),
@@ -211,23 +212,21 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
                 console.log('onMessage(1)', msg, fdmap[ws.fd]);
                 let o = fdmap[ws.fd];
 
-                if(o.generator) {
+                if(o && o.generator) {
                   let r = o.generator.push(msg);
-                  console.log('o.generator.push() =', r);
+                  console.log(`o.generator.push(${msg}) =`, r);
                   if(r) return;
                 }
+              } catch(e) {}
 
-                if((serv = fdmap[ws.fd].server)) {
-                  let response;
-
+              if((serv = fdmap[ws.fd].server)) {
+                let response;
+                try {
                   if((response = Connection.prototype.onmessage.call(serv, msg))) {
                     ws.send(JSON.stringify(response));
                     return;
                   }
-                }
-              } catch(e) {
-                console.log('ERROR', e.message + '\n' + e.stack);
-                throw e;
+                } catch(e) {}
               }
               //console.log('onMessage(4)', { ws, msg });
               ws.send('ECHO: ' + msg);
