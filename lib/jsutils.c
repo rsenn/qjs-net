@@ -816,7 +816,7 @@ js_input_chars(JSContext* ctx, JSValueConst value) {
 
   if(JS_IsString(value)) {
     ret.data = (uint8_t*)JS_ToCStringLen(ctx, &ret.size, value);
-    ret.value = JS_DupValue(ctx, value);
+    ret.value = value; // JS_DupValue(ctx, value);
     ret.free = &js_buffer_free_default;
   } else {
     ret = js_input_buffer(ctx, value);

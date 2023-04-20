@@ -57,6 +57,7 @@ opaque_new(JSContext* ctx) {
     opaque->serial = ++serial;
     opaque->status = CONNECTING;
     opaque->ref_count = 1;
+    opaque->callback = -1;
 
     if(opaque_list.prev == NULL)
       init_list_head(&opaque_list);

@@ -21,5 +21,5 @@ callback_emit_this(const JSCallback* cb, JSValueConst this_obj, int argc, JSValu
 
 JSValue
 callback_emit(const JSCallback* cb, int argc, JSValue* argv) {
-  return callback_emit_this(cb, cb->this_obj /* ? *cb->this_obj : JS_NULL*/, argc, argv);
+  return callback_emit_this(cb, cb->this_obj, argc, argv);
 }

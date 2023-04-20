@@ -89,11 +89,12 @@ minnet_ws_fromwsi(JSContext* ctx, struct lws* wsi) {
 }
 
 static JSValue
-minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
   JSBuffer jsbuf;
   QueueItem* item;
+  struct wsi_opaque_user_data* opaque;
 
   if(!(ws = minnet_ws_data2(ctx, this_val)))
     return JS_EXCEPTION;
@@ -105,9 +106,19 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   if(argc == 0)
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
 
-  jsbuf = js_input_args(ctx, argc, argv);
+  int argpos = js_buffer_fromargs(ctx, argc, argv, &jsbuf);
 
-  if((item = ws_send(ws, jsbuf.data, jsbuf.size, ctx))) {
+  if((opaque = lws_get_opaque_user_data(ws->lwsi)) && opaque->callback == WRITEABLE) {
+    int result;
+    int32_t protocol = opaque->binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT;
+
+    if(argc > argpos)
+      JS_ToInt32(ctx, &protocol, argv[argpos]);
+
+    result = lws_write(ws->lwsi, jsbuf.data, jsbuf.size, protocol);
+    ret = JS_NewInt32(ctx, result);
+
+  } else if((item = ws_send(ws, jsbuf.data, jsbuf.size, ctx))) {
     ResolveFunctions fns;
 
     ret = js_async_create(ctx, &fns);

@@ -85,6 +85,7 @@ client_new(JSContext* ctx) {
   context_add(&client->context);
 
   client->iter = NULL;
+  client->callback = -1;
 
   return client;
 }
@@ -312,8 +313,16 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
       if(client->on.writeable.ctx) {
+        JSValue ret;
+        opaque->callback = WRITEABLE;
+        ret = client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
 
-        client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
+        if(JS_IsBool(ret)) {
+          if(JS_ToBool(ctx, ret) == FALSE) {
+            client->on.writeable = CALLBACK(0, JS_NULL, JS_NULL);
+          }
+        }
+        opaque->callback = -1;
 
         if(client->on.writeable.ctx)
           lws_callback_on_writable(wsi);

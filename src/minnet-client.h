@@ -30,6 +30,7 @@ typedef struct client_context {
   AsyncIterator* iter;
   Queue* recvq;
   BOOL block;
+  CallbackType callback;
 } MinnetClient;
 
 void client_certificate(struct context*, JSValueConst options);

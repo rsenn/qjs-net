@@ -177,6 +177,7 @@ BOOL js_atom_is_symbol(JSContext*, JSAtom atom);
 JSBuffer js_input_buffer(JSContext*, JSValueConst value);
 JSBuffer js_input_chars(JSContext*, JSValueConst value);
 JSBuffer js_input_args(JSContext*, int argc, JSValueConst argv[]);
+JSBuffer js_input_argv(JSContext* ctx, int*, JSValueConst**);
 int js_buffer_fromargs(JSContext*, int argc, JSValueConst argv[], JSBuffer* buf);
 BOOL js_is_arraybuffer(JSContext*, JSValueConst value);
 BOOL js_is_dataview(JSContext*, JSValueConst value);
