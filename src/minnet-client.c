@@ -311,6 +311,14 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
+      if(client->on.writeable.ctx) {
+
+        client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
+
+        if(client->on.writeable.ctx)
+          lws_callback_on_writable(wsi);
+        return 0;
+      }
 
       /*
       ByteBuffer* buf = &client->session.send_buf;
@@ -517,6 +525,7 @@ enum {
   CLIENT_ONHTTP,
   CLIENT_ONREAD,
   CLIENT_ONPOST,
+  CLIENT_ONWRITEABLE,
 };
 
 static JSValue
@@ -547,7 +556,8 @@ minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
     case CLIENT_ONFD:
     case CLIENT_ONHTTP:
     case CLIENT_ONREAD:
-    case CLIENT_ONPOST: {
+    case CLIENT_ONPOST:
+    case CLIENT_ONWRITEABLE: {
       ret = JS_DupValue(ctx, client->on.cb[magic - CLIENT_ONMESSAGE].func_obj);
       break;
     }
@@ -571,8 +581,16 @@ minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int
     case CLIENT_ONFD:
     case CLIENT_ONHTTP:
     case CLIENT_ONREAD:
-    case CLIENT_ONPOST: {
-      client->on.cb[magic - CLIENT_ONMESSAGE] = CALLBACK(ctx, JS_DupValue(ctx, value), JS_NULL);
+    case CLIENT_ONPOST:
+    case CLIENT_ONWRITEABLE: {
+      BOOL disabled = JS_IsNull(value);
+
+      client->on.cb[magic - CLIENT_ONMESSAGE] = CALLBACK(disabled ? 0 : ctx, JS_DupValue(ctx, value), JS_NULL);
+
+      if(magic == CLIENT_ONWRITEABLE)
+        if(!disabled)
+          lws_callback_on_writable(client->wsi);
+
       break;
     }
   }
@@ -664,6 +682,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onMessage", client->on.message)
   GETCBPROP(options, "onHttp", client->on.http)
   GETCBPROP(options, "onFd", client->on.fd)
+  GETCBPROP(options, "onWriteable", client->on.writeable)
 
   if(JS_IsNull(client->on.fd.func_obj)) {
     client->on.fd = CALLBACK(ctx, minnet_default_fd_callback(ctx), JS_NULL);
@@ -837,7 +856,7 @@ const JSCFunctionListEntry minnet_client_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("onpong", minnet_client_get, minnet_client_set, CLIENT_ONPONG, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("onfd", minnet_client_get, minnet_client_set, CLIENT_ONFD, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("onhttp", minnet_client_get, minnet_client_set, CLIENT_ONHTTP, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("onpost", minnet_client_get, minnet_client_set, CLIENT_ONPOST, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("onwriteable", minnet_client_get, minnet_client_set, CLIENT_ONWRITEABLE, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetClient", JS_PROP_CONFIGURABLE),
 };
 static const JSCFunctionListEntry minnet_client_async_funcs[] = {
