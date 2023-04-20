@@ -42,6 +42,24 @@ asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
   }
 }
 
+AsyncIterator*
+asynciterator_new(JSContext*ctx) {
+  AsyncIterator*iter;
+
+  if((iter = js_malloc(ctx, sizeof(AsyncIterator))))
+    asynciterator_zero(iter);
+  return iter;
+}
+
+
+void
+asynciterator_free(AsyncIterator* it, JSRuntime* rt) {
+  if(--it->ref_count == 0) {
+    asynciterator_clear(it, rt);
+    js_free_rt(rt, it);
+  }
+}
+
 JSValue
 asynciterator_next(AsyncIterator* it, JSContext* ctx) {
   AsyncRead* rd;

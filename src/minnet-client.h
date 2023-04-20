@@ -26,14 +26,13 @@ typedef struct client_context {
   struct http_response* response;
   struct lws_client_connect_info connect_info;
   ResolveFunctions promise;
-  AsyncIterator iter;
+  AsyncIterator* iter;
 } MinnetClient;
 
 void client_certificate(struct context*, JSValueConst options);
 MinnetClient* client_new(JSContext*);
 MinnetClient* client_find(struct lws*);
-void client_free(MinnetClient*, JSContext* ctx);
-void client_free_rt(MinnetClient*, JSRuntime* rt);
+void client_free(MinnetClient*, JSRuntime* rt);
 void client_zero(MinnetClient*);
 MinnetClient* client_dup(MinnetClient*);
 struct client_context* lws_client(struct lws*);

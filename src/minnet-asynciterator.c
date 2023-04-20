@@ -56,12 +56,6 @@ minnet_asynciterator_wrap(JSContext* ctx, AsyncIterator* iter) {
 
 static JSValue
 minnet_asynciterator_asynciterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  /*AsyncIterator* iter;
-
-   if(!(iter = minnet_asynciterator_data2(ctx, this_val)))
-     return JS_EXCEPTION;
-
-   return minnet_asynciterator_wrap(ctx, iter);*/
   return JS_DupValue(ctx, this_val);
 }
 
