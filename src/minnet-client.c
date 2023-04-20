@@ -470,7 +470,6 @@ minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int
     return JS_EXCEPTION;
 
   switch(magic) {
-
     case CLIENT_ONMESSAGE:
     case CLIENT_ONCONNECT:
     case CLIENT_ONCLOSE:
@@ -484,23 +483,6 @@ minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int
     }
   }
   return ret;
-}
-
-static JSValue
-minnet_client_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-
-  /*switch(magic) {
-    case ON_RESOLVE: {
-      DEBUG("%s %s %d\n", __func__, "ON_RESOLVE", ((union closure*)ptr)->ref_count);
-      break;
-    }
-    case ON_REJECT: {
-      DEBUG("%s %s\n", __func__, "ON_REJECT", ((union closure*)ptr)->ref_count);
-      break;
-    }
-  }
-*/
-  return JS_UNDEFINED;
 }
 
 JSValue
