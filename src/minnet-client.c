@@ -337,7 +337,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       JSValue msg = (opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len));
 
       if(client->block) {
-        client->next = msg;
+        if(!client->recvq)
+          client->recvq = queue_new(ctx);
+
+        queue_write(client->recvq, in, len, ctx);
       }
 
       if(client->iter) {
@@ -408,6 +411,38 @@ enum {
   CLIENT_ITERATOR,
 };
 
+typedef struct {
+  JSValue msg;
+  JSContext* ctx;
+} MessageClosure;
+
+static void
+message_closure_free(void* ptr) {
+  MessageClosure* closure = ptr;
+  JSContext* ctx = closure->ctx;
+  js_free(ctx, closure);
+}
+
+static MessageClosure*
+message_closure_new(JSContext* ctx) {
+  MessageClosure* closure;
+
+  if((closure = js_malloc(ctx, sizeof(MessageClosure)))) {
+    closure->ctx = ctx;
+    closure->msg = JS_UNDEFINED;
+  }
+
+  return closure;
+}
+
+static JSValue
+minnet_client_onmessage(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+  MessageClosure* closure = opaque;
+
+  closure->msg = JS_DupValue(ctx, argv[0]);
+  return JS_UNDEFINED;
+}
+
 static JSValue
 minnet_client_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetClient* client;
@@ -418,6 +453,13 @@ minnet_client_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
 
   client->next = JS_UNDEFINED;
 
+  JSValue oldhandler, onmessage = js_function_cclosure(ctx, minnet_client_onmessage, 0, 0, message_closure_new(ctx), message_closure_free);
+
+  oldhandler = client->on.message.func_obj;
+
+  client->on.message.func_obj = onmessage;
+  client->on.message.ctx = ctx;
+
   for(;;) {
     js_std_loop(ctx);
 
@@ -427,6 +469,11 @@ minnet_client_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
       break;
     }
   }
+
+  client->on.message.func_obj = oldhandler;
+  client->on.message.ctx = JS_IsNull(oldhandler) ? 0 : ctx;
+
+  JS_FreeValue(ctx, onmessage);
 
   return ret;
 }

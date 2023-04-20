@@ -10,6 +10,7 @@
 #include "jsutils.h"
 #include "session.h"
 #include "asynciterator.h"
+#include "queue.h"
 
 #define client_exception(client, retval) context_exception(&(client->context), (retval))
 
@@ -27,6 +28,7 @@ typedef struct client_context {
   struct lws_client_connect_info connect_info;
   ResolveFunctions promise;
   AsyncIterator* iter;
+  Queue* recvq;
   BOOL block;
 } MinnetClient;
 
