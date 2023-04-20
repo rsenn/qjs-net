@@ -33,6 +33,7 @@ JSValue generator_push(Generator*, JSValueConst value);
 BOOL generator_yield(Generator*, JSValueConst value, JSValueConst callback);
 BOOL generator_close(Generator*, JSValueConst callback);
 BOOL generator_continuous(Generator*, JSValueConst callback);
+Queue* generator_queue(Generator*);
 
 static inline Generator*
 generator_dup(Generator* gen) {

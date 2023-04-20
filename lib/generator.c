@@ -206,8 +206,8 @@ generator_close(Generator* gen, JSValueConst callback) {
 
   gen->closing = TRUE;
 
-  if(asynciterator_stop(&gen->iterator, gen->ctx))
-    ret = TRUE;
+  /*if(asynciterator_stop(&gen->iterator, gen->ctx))
+    ret = TRUE;*/
 
   return ret;
 }
@@ -218,8 +218,7 @@ generator_continuous(Generator* gen, JSValueConst callback) {
 
   assert(JS_IsNull(gen->callback));
 
-  if(!(q = gen->q))
-    q = gen->q = queue_new(gen->ctx);
+  generator_queue(gen);
 
   if(q) {
     QueueItem* item;
@@ -238,13 +237,21 @@ generator_continuous(Generator* gen, JSValueConst callback) {
   return q != NULL;
 }
 
+Queue*
+generator_queue(Generator* gen) {
+  if(!gen->q) {
+    printf("Creating Queue...\n");
+    gen->q = queue_new(gen->ctx);
+  }
+  return gen->q;
+}
+
 static ssize_t
 enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
   QueueItem* item;
   ssize_t ret = -1;
 
-  if(!gen->q)
-    gen->q = queue_new(gen->ctx);
+  generator_queue(gen);
 
   if((item = queue_put(gen->q, blk, gen->ctx))) {
     ret = block_SIZE(&item->block);

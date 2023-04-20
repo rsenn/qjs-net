@@ -99,5 +99,8 @@ socket_local(int fd) {
 }
 
 size_t list_size(struct list_head*);
+struct list_head* list_at(struct list_head*, int64_t);
+
+#define list_entry_at(list, type, field, index) list_entry(list_at(list, index), type, field)
 
 #endif /* QJSNET_LIB_UTILS_H */

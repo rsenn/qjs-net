@@ -220,3 +220,24 @@ list_size(struct list_head* list) {
   }
   return count;
 }
+
+struct list_head*
+list_at(struct list_head* list, int64_t i) {
+  struct list_head* el;
+  int64_t pos = 0;
+  if(!list_empty(list)) {
+
+    if(i >= 0) {
+      list_for_each(el, list) {
+        if(i-- == 0)
+          return el;
+      }
+    } else {
+      list_for_each_prev(el, list) {
+        if(++i == 0)
+          return el;
+      }
+    }
+  }
+  return 0;
+}
