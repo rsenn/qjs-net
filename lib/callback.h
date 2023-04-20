@@ -58,18 +58,18 @@ typedef struct callbacks {
     struct {
       JSCallback message, connect, close, pong, fd, http, read, post;
     };
-    JSCallback on[NUM_CALLBACKS];
+    JSCallback cb[NUM_CALLBACKS];
   };
 } CallbackList;
 
 static inline void
 callbacks_zero(CallbackList* cbs) {
-  for(int i = 0; i < NUM_CALLBACKS; i++) callback_zero(&cbs->on[i]);
+  for(int i = 0; i < NUM_CALLBACKS; i++) callback_zero(&cbs->cb[i]);
 }
 
 static inline void
 callbacks_clear(CallbackList* cbs) {
-  for(int i = 0; i < NUM_CALLBACKS; i++) callback_clear(&cbs->on[i]);
+  for(int i = 0; i < NUM_CALLBACKS; i++) callback_clear(&cbs->cb[i]);
 }
 
 JSValue callback_emit_this(const struct js_callback*, JSValue, int, JSValue* argv);

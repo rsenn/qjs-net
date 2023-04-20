@@ -28,7 +28,20 @@ void asynciterator_free(AsyncIterator* it, JSRuntime* rt);
 
 static inline BOOL
 asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
-  return list_empty(&it->reads) ? FALSE : asynciterator_emplace(it, value, FALSE, ctx);
+  if(list_empty(&it->reads))
+    return FALSE;
+
+  asynciterator_emplace(it, value, FALSE, ctx);
+  return TRUE;
+}
+
+static inline BOOL
+asynciterator_throw(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
+  if(list_empty(&it->reads))
+    return FALSE;
+
+  asynciterator_cancel(it, error, ctx);
+  return TRUE;
 }
 
 static inline AsyncIterator*

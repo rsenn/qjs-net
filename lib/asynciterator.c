@@ -43,14 +43,13 @@ asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
 }
 
 AsyncIterator*
-asynciterator_new(JSContext*ctx) {
-  AsyncIterator*iter;
+asynciterator_new(JSContext* ctx) {
+  AsyncIterator* iter;
 
   if((iter = js_malloc(ctx, sizeof(AsyncIterator))))
     asynciterator_zero(iter);
   return iter;
 }
-
 
 void
 asynciterator_free(AsyncIterator* it, JSRuntime* rt) {
@@ -87,11 +86,12 @@ asynciterator_stop(AsyncIterator* it, JSContext* ctx) {
     it->closed = TRUE;
 
     asynciterator_cancel(it, JS_NULL, ctx);
+    return TRUE;
   } else {
     it->closing = TRUE;
   }
 
-  return it->closed;
+  return FALSE;
 }
 
 int

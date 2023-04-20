@@ -47,7 +47,7 @@ minnet_asynciterator_wrap(JSContext* ctx, AsyncIterator* iter) {
   if(JS_IsException(ret))
     return JS_EXCEPTION;
 
-  printf("%s() iter=%p\n", __func__, iter);
+  // printf("%s() iter=%p\n", __func__, iter);
 
   JS_SetOpaque(ret, asynciterator_dup(iter));
 
