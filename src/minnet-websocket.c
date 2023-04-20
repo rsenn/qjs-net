@@ -346,7 +346,7 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       const struct lws_protocols* protocol;
       struct lws_client_connect_info* cinfo;
 
-      if((cinfo = ws_opaque(ws)->connect_info) && cinfo->protocol)
+      if(ws_opaque(ws) && (cinfo = ws_opaque(ws)->connect_info) && cinfo->protocol)
         ret = JS_NewString(ctx, cinfo->protocol);
       else if((protocol = lws_get_protocol(ws->lwsi)))
         ret = JS_NewString(ctx, protocol->name);

@@ -20,15 +20,12 @@ typedef struct client_context {
   };
   struct lws* wsi;
   CallbackList on;
-  JSValue headers, body, next;
-  BOOL done;
+  JSValue body, next;
   struct session_data session;
   struct http_request* request;
   struct http_response* response;
   struct lws_client_connect_info connect_info;
   ResolveFunctions promise;
-  struct list_head link;
-  ByteBlock recvb;
   AsyncIterator iter;
 } MinnetClient;
 

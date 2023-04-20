@@ -204,6 +204,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
       /*  case LWS_CALLBACK_HTTP_WRITEABLE: */ {
         if(method_number(client->connect_info.method) == METHOD_POST) {
+          BOOL done = FALSE;
           JSValue value;
           int n;
           ssize_t size, r;
@@ -214,10 +215,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           if(lws_http_is_redirected_to_get(wsi))
             break;
           if(JS_IsObject(client->body)) {
-            while(!client->done) {
-              value = js_iterator_next(ctx, client->body, &client->next, &client->done, 0, 0);
+            while(!done) {
+              value = js_iterator_next(ctx, client->body, &client->next, &done, 0, 0);
 
-              DEBUG("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), client->done);
+              DEBUG("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), done);
 
               if(JS_IsException(value)) {
                 JSValue exception = JS_GetException(ctx);
@@ -236,7 +237,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               break;
             }
           }
-          n = client->done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
+          n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
           size = buf.write - buf.start;
           if((r = lws_write(wsi, buf.start, size, (enum lws_write_protocol)n)) != size)
             return 1;

@@ -81,7 +81,7 @@ client_new(JSContext* ctx) {
   if(minnet_clients.next == NULL)
     init_list_head(&minnet_clients);
 
-  list_add_tail(&client->link, &minnet_clients);
+  /*  list_add_tail(&client->link, &minnet_clients);*/
   context_add(&client->context);
 
   asynciterator_zero(&client->iter);
@@ -99,11 +99,10 @@ client_free_rt(MinnetClient* client, JSRuntime* rt) {
   if(--client->ref_count == 0) {
     DEBUG("%s() client=%p\n", __func__, client);
 
-    if(client->link.prev)
-      list_del(&client->link);
+    // if(client->link.prev) list_del(&client->link);
 
-    JS_FreeValueRT(rt, client->headers);
-    client->headers = JS_UNDEFINED;
+    /*JS_FreeValueRT(rt, client->headers);
+    client->headers = JS_UNDEFINED;*/
     JS_FreeValueRT(rt, client->body);
     client->body = JS_UNDEFINED;
     JS_FreeValueRT(rt, client->next);
@@ -131,7 +130,7 @@ client_free_rt(MinnetClient* client, JSRuntime* rt) {
 void
 client_zero(MinnetClient* client) {
   client->ref_count = 1;
-  client->headers = JS_NULL;
+  /*client->headers = JS_NULL;*/
   client->body = JS_NULL;
   client->next = JS_NULL;
 
@@ -139,8 +138,6 @@ client_zero(MinnetClient* client) {
   js_async_zero(&client->promise);
   callbacks_zero(&client->on);
   asynciterator_zero(&client->iter);
-
-  client->recvb = BLOCK_0();
 }
 
 MinnetClient*
@@ -213,11 +210,11 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
 
-      int32_t result = -1, err = /*opaque ? opaque->error :*/ 0;
+      int32_t result = -1, err = /*opaque ? opaque->error :*/ -1;
 
-      if(opaque->status != CLOSING)
-        opaque->status = CLOSING;
-
+      /* if(opaque->status != CLOSING)
+         opaque->status = CLOSING;
+ */
       if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in) {
         if(!strncmp("conn fail: ", in, 11)) {
           err = /*opaque->error =*/atoi(&((const char*)in)[11]);
@@ -230,9 +227,11 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       opaque->status = CLOSING;
 
-      js_async_reject(ctx, &client->promise, client->context.error);
+      if(js_async_pending(&client->promise)) {
 
-      if(client->on.close.ctx) {
+        js_async_reject(ctx, &client->promise, client->context.error);
+
+      } else if(client->on.close.ctx) {
         JSValue ret;
         int argc = 1;
         JSValueConst cb_argv[4] = {client->session.ws_obj};
@@ -241,13 +240,12 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
           cb_argv[argc++] = JS_UNDEFINED;
           cb_argv[argc++] = JS_DupValue(ctx, client->context.error);
-          cb_argv[argc++] = JS_NewInt32(ctx, err);
 
         } else {
           cb_argv[argc++] = close_status(ctx, in, len);
           cb_argv[argc++] = close_reason(ctx, in, len);
-          cb_argv[argc++] = JS_NewInt32(ctx, err);
         }
+        cb_argv[argc++] = err != -1 ? JS_NewInt32(ctx, err) : JS_UNDEFINED;
 
         ret = client_exception(client, callback_emit(&client->on.close, argc, cb_argv));
         if(JS_IsNumber(ret))
@@ -387,6 +385,32 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
               (reason == LWS_CALLBACK_RAW_RX || reason == LWS_CALLBACK_CLIENT_RECEIVE || reason == LWS_CALLBACK_RECEIVE) ? 0 : (char*)in,
               ret);*/
 
+  return ret;
+}
+
+enum {
+  CLIENT_REQUEST,
+  CLIENT_RESPONSE,
+};
+
+static JSValue
+minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
+  MinnetClient* client;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(client = minnet_client_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case CLIENT_REQUEST: {
+      ret = JS_DupValue(ctx, client->session.req_obj);
+      break;
+    }
+    case CLIENT_RESPONSE: {
+      ret = JS_DupValue(ctx, client->session.resp_obj);
+      break;
+    }
+  }
   return ret;
 }
 
@@ -654,25 +678,25 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
 
-  if(js_is_promise(ctx, ret)) {
-    JSValue func[2], tmp;
+  /*  if(js_is_promise(ctx, ret)) {
+      JSValue func[2], tmp;
 
-    func[0] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
-    func[1] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
+      func[0] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
+      func[1] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
 
-    tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
-    JS_FreeValue(ctx, ret);
-    ret = tmp;
+      tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
+      JS_FreeValue(ctx, ret);
+      ret = tmp;
 
-    tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
-    JS_FreeValue(ctx, ret);
-    ret = tmp;
+      tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
+      JS_FreeValue(ctx, ret);
+      ret = tmp;
 
-    JS_FreeValue(ctx, func[0]);
-    JS_FreeValue(ctx, func[1]);
+      JS_FreeValue(ctx, func[0]);
+      JS_FreeValue(ctx, func[1]);
 
-    closure_free(closure);
-  }
+      closure_free(closure);
+    }*/
 
   return ret;
 }
@@ -703,6 +727,8 @@ JSClassDef minnet_client_class = {
 };
 
 const JSCFunctionListEntry minnet_client_proto_funcs[] = {
+    JS_CGETSET_MAGIC_FLAGS_DEF("request", minnet_client_get, 0, CLIENT_REQUEST, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("response", minnet_client_get, 0, CLIENT_RESPONSE, 0),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetClient", JS_PROP_CONFIGURABLE),
 };
 

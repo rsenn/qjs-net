@@ -158,19 +158,19 @@ static JSValue
 minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   struct FDCallbackClosure* closure = opaque;
   JSValueConst args[] = {argv[0], JS_NULL};
+  /*
+    const char* arg[3] = {
+        JS_ToCString(ctx, argv[0]),
+        JS_ToCString(ctx, argv[1]),
+        JS_ToCString(ctx, argv[2]),
+    };
 
-  const char* arg[3] = {
-      JS_ToCString(ctx, argv[0]),
-      JS_ToCString(ctx, argv[1]),
-      JS_ToCString(ctx, argv[2]),
-  };
+    printf("defaultFdCallback(%s, %s, %s)\n", arg[0], arg[1], arg[2]);
 
-  printf("defaultFdCallback(%s, %s, %s)\n", arg[0], arg[1], arg[2]);
-
-  JS_FreeCString(ctx, arg[0]);
-  JS_FreeCString(ctx, arg[1]);
-  JS_FreeCString(ctx, arg[2]);
-
+    JS_FreeCString(ctx, arg[0]);
+    JS_FreeCString(ctx, arg[1]);
+    JS_FreeCString(ctx, arg[2]);
+  */
   args[1] = argv[1];
   closure->set_handler(ctx, JS_NULL, 2, args, 0);
   // JS_Call(ctx, closure->set_read, JS_UNDEFINED, 2, args);
@@ -559,7 +559,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "FormParser");
   JS_AddModuleExport(ctx, m, "Hash");
   JS_AddModuleExport(ctx, m, "AsyncIterator");
-  // JS_AddModuleExport(ctx, m, "Client");
+  JS_AddModuleExport(ctx, m, "URL");
   JS_AddModuleExport(ctx, m, "default");
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
