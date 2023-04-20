@@ -409,9 +409,12 @@ enum {
 };
 
 static JSValue
-minnet_client_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
-  MinnetClient* client = opaque;
+minnet_client_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  MinnetClient* client;
   JSValue ret = JS_UNDEFINED;
+
+  if(!(client = minnet_client_data2(ctx, this_val)))
+    return JS_EXCEPTION;
 
   client->next = JS_UNDEFINED;
 
@@ -445,10 +448,9 @@ minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     }
 
     case CLIENT_ITERATOR: {
-
       ret = JS_NewObject(ctx);
 
-      JS_SetPropertyStr(ctx, ret, "next", js_function_cclosure(ctx, minnet_client_next, 0, 0, client_dup(client), (void*)&client_free));
+      JS_SetPropertyStr(ctx, ret, "next", js_function_bind_this(ctx, JS_NewCFunction(ctx, &minnet_client_next, "next", 0), this_val));
 
       break;
     }

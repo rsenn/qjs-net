@@ -161,20 +161,20 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
 
   int64_t arg[3] = {
       0,
-      JS_IsNull(argv[1]) ? 0ll : (ptrdiff_t)closure->set_handler,
-      JS_IsNull(argv[2]) ? 0ll : (ptrdiff_t)closure->set_handler,
+      JS_IsNull(argv[1]) ? 0ll : 1ll,
+      JS_IsNull(argv[2]) ? 0ll : 1ll,
   };
   JS_ToInt64(ctx, &arg[0], argv[0]);
 
   printf("defaultFdCallback(%" PRId64 ", %p, %p)\n", arg[0], (void*)(ptrdiff_t)arg[1], (void*)(ptrdiff_t)arg[2]);
 
   args[1] = argv[1];
- // closure->set_handler(ctx, JS_NULL, 2, args, 0);
+  // closure->set_handler(ctx, JS_NULL, 2, args, 0);
   JS_Call(ctx, closure->set_read, JS_UNDEFINED, 2, args);
 
   args[1] = argv[2];
- // closure->set_handler(ctx, JS_NULL, 2, args, 1);
- JS_Call(ctx, closure->set_write, JS_UNDEFINED, 2, args);
+  // closure->set_handler(ctx, JS_NULL, 2, args, 1);
+  JS_Call(ctx, closure->set_write, JS_UNDEFINED, 2, args);
 
   return JS_UNDEFINED;
 }
