@@ -336,6 +336,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       int single_fragment = first && final;
       JSValue msg = (opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len));
 
+      if(client->block) {
+        client->next = msg;
+      }
+
       if(client->iter) {
         if(asynciterator_yield(client->iter, msg, ctx))
           return 0;
@@ -405,6 +409,26 @@ enum {
 };
 
 static JSValue
+minnet_client_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+  MinnetClient* client = opaque;
+  JSValue ret = JS_UNDEFINED;
+
+  client->next = JS_UNDEFINED;
+
+  for(;;) {
+    js_std_loop(ctx);
+
+    if(!JS_IsUndefined(client->next)) {
+      ret = client->next;
+      client->next = JS_UNDEFINED;
+      break;
+    }
+  }
+
+  return ret;
+}
+
+static JSValue
 minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetClient* client;
   JSValue ret = JS_UNDEFINED;
@@ -414,11 +438,18 @@ minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
   switch(magic) {
     case CLIENT_ASYNCITERATOR: {
-      if(!client->block) {
-        AsyncIterator* iter;
-        if((iter = client_iterator(client, ctx)))
-          ret = minnet_asynciterator_wrap(ctx, iter);
-      }
+      AsyncIterator* iter;
+      if((iter = client_iterator(client, ctx)))
+        ret = minnet_asynciterator_wrap(ctx, iter);
+      break;
+    }
+
+    case CLIENT_ITERATOR: {
+
+      ret = JS_NewObject(ctx);
+
+      JS_SetPropertyStr(ctx, ret, "next", js_function_cclosure(ctx, minnet_client_next, 0, 0, client_dup(client), (void*)&client_free));
+
       break;
     }
   }
@@ -778,7 +809,7 @@ static const JSCFunctionListEntry minnet_client_async_funcs[] = {
 };
 
 static const JSCFunctionListEntry minnet_client_sync_funcs[] = {
-    JS_CFUNC_MAGIC_DEF("[Symbol.iterator]", 0, minnet_client_iterator, CLIENT_ASYNCITERATOR),
+    JS_CFUNC_MAGIC_DEF("[Symbol.iterator]", 0, minnet_client_iterator, CLIENT_ITERATOR),
 };
 
 const size_t minnet_client_proto_funcs_size = countof(minnet_client_proto_funcs);
