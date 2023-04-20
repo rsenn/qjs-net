@@ -152,7 +152,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
-        resp->generator = generator_new(ctx);
+        resp->generator = generator_dup(client_generator(client, ctx));
         resp->status = lws_http_client_http_response(wsi);
         headers_tobuffer(ctx, &opaque->resp->headers, wsi);
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
@@ -320,7 +320,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       LOGCB("CLIENT-HTTP(2)", "resp->generator=%p resp->generator->q=%p", resp->generator, resp->generator->q);
 
-      generator_close(resp->generator, JS_UNDEFINED);
+      generator_finish(resp->generator);
 
       if(client->on.http.ctx) {
         /*        MinnetRequest* req;

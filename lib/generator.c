@@ -246,6 +246,19 @@ generator_queue(Generator* gen) {
   return gen->q;
 }
 
+BOOL
+generator_finish(Generator* gen) {
+  if(gen->q->continuous && !JS_IsNull(gen->callback)) {
+    BOOL done = FALSE;
+    JSValue ret = generator_dequeue(gen, &done);
+
+    JS_Call(gen->ctx, gen->callback, JS_UNDEFINED, 1, &ret);
+    JS_FreeValue(gen->ctx, ret);
+    return TRUE;
+  }
+  return FALSE;
+}
+
 static ssize_t
 enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
   QueueItem* item;

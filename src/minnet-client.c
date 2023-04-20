@@ -506,6 +506,7 @@ minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
   switch(magic) {
     case CLIENT_ASYNCITERATOR: {
+      client_generator(client, ctx);
       if(client->gen)
         ret = minnet_generator_iterator(ctx, client->gen);
 

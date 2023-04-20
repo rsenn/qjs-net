@@ -34,6 +34,7 @@ BOOL generator_yield(Generator*, JSValueConst value, JSValueConst callback);
 BOOL generator_close(Generator*, JSValueConst callback);
 BOOL generator_continuous(Generator*, JSValueConst callback);
 Queue* generator_queue(Generator*);
+BOOL generator_finish(Generator* gen);
 
 static inline Generator*
 generator_dup(Generator* gen) {
