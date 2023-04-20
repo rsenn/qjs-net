@@ -698,6 +698,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!block)
     return ret;
 
+  return minnet_client_wrap(ctx, client_dup(client));
+
   for(;;) {
     if(status != opaque->status)
       status = opaque->status;
