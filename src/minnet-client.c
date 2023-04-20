@@ -394,6 +394,11 @@ enum {
 };
 
 static JSValue
+minnet_client_iterator(JSContext* ctx, JSValueConst this_val,int argc, JSValueConst argv[]) {
+return JS_UNDEFINED;
+}
+
+static JSValue
 minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetClient* client;
   JSValue ret = JS_UNDEFINED;
@@ -729,6 +734,7 @@ JSClassDef minnet_client_class = {
 const JSCFunctionListEntry minnet_client_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("request", minnet_client_get, 0, CLIENT_REQUEST, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("response", minnet_client_get, 0, CLIENT_RESPONSE, 0),
+    JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_client_iterator),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetClient", JS_PROP_CONFIGURABLE),
 };
 
