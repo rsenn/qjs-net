@@ -289,7 +289,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       opaque->status = OPEN;
 
       if(js_async_pending(&client->promise)) {
-        JSValue cli = minnet_client_wrap(ctx, client);
+        JSValue cli = minnet_client_wrap(ctx, client_dup(client));
 
         js_async_resolve(ctx, &client->promise, cli);
 
@@ -400,6 +400,32 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 }
 
 enum {
+  CLIENT_ASYNCITERATOR,
+  CLIENT_ITERATOR,
+};
+
+static JSValue
+minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  MinnetClient* client;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(client = minnet_client_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case CLIENT_ASYNCITERATOR: {
+      if(!client->block) {
+        AsyncIterator* iter;
+        if((iter = client_iterator(client, ctx)))
+          ret = minnet_asynciterator_wrap(ctx, iter);
+      }
+      break;
+    }
+  }
+
+  return ret;
+}
+enum {
   CLIENT_REQUEST,
   CLIENT_RESPONSE,
   CLIENT_SOCKET,
@@ -412,18 +438,6 @@ enum {
   CLIENT_ONREAD,
   CLIENT_ONPOST,
 };
-
-static JSValue
-minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  MinnetClient* client;
-  AsyncIterator* iter;
-
-  if(!(client = minnet_client_data2(ctx, this_val)))
-    return JS_EXCEPTION;
-
-  iter = client_iterator(client, ctx);
-  return minnet_asynciterator_wrap(ctx, iter);
-}
 
 static JSValue
 minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
@@ -600,6 +614,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
      headers_fromobj(&client->request->headers, client->headers, ctx);
    }
  */
+  client->block = block;
   client->response = response_new(ctx);
   url_copy(&client->response->url, client->request->url, ctx);
   client->response->generator = generator_new(ctx);
@@ -695,12 +710,10 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   /*opaque->req = client->request;
   opaque->resp = client->response;*/
 
-  if(!block)
-    return ret;
+  if(block)
+    ret = minnet_client_wrap(ctx, client);
 
-  return minnet_client_wrap(ctx, client_dup(client));
-
-  for(;;) {
+/*  for(;;) {
     if(status != opaque->status)
       status = opaque->status;
 
@@ -716,41 +729,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
   // client_free(client);
-
+*/
 fail:
-  return ret;
-}
-
-JSValue
-minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  union closure* closure;
-  JSValue ret;
-
-  if(!(closure = closure_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
-
-  ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
-
-  /*  if(js_is_promise(ctx, ret)) {
-      JSValue func[2], tmp;
-
-      func[0] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
-      func[1] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
-
-      tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
-      JS_FreeValue(ctx, ret);
-      ret = tmp;
-
-      tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
-      JS_FreeValue(ctx, ret);
-      ret = tmp;
-
-      JS_FreeValue(ctx, func[0]);
-      JS_FreeValue(ctx, func[1]);
-
-      closure_free(closure);
-    }*/
-
   return ret;
 }
 
@@ -761,7 +741,7 @@ minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
   if(JS_IsException(ret))
     return JS_EXCEPTION;
 
-  JS_SetOpaque(ret, client_dup(client));
+  JS_SetOpaque(ret, (client));
 
   return ret;
 }
@@ -791,8 +771,53 @@ const JSCFunctionListEntry minnet_client_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("onfd", minnet_client_get, minnet_client_set, CLIENT_ONFD, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("onhttp", minnet_client_get, minnet_client_set, CLIENT_ONHTTP, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("onpost", minnet_client_get, minnet_client_set, CLIENT_ONPOST, 0),
-    JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_client_iterator),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetClient", JS_PROP_CONFIGURABLE),
+};
+static const JSCFunctionListEntry minnet_client_async_funcs[] = {
+    JS_CFUNC_MAGIC_DEF("[Symbol.asyncIterator]", 0, minnet_client_iterator, CLIENT_ASYNCITERATOR),
+};
+
+static const JSCFunctionListEntry minnet_client_sync_funcs[] = {
+    JS_CFUNC_MAGIC_DEF("[Symbol.iterator]", 0, minnet_client_iterator, CLIENT_ASYNCITERATOR),
 };
 
 const size_t minnet_client_proto_funcs_size = countof(minnet_client_proto_funcs);
+
+JSValue
+minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  union closure* closure;
+  JSValue ret;
+  MinnetClient* cl;
+
+  if(!(closure = closure_new(ctx)))
+    return JS_ThrowOutOfMemory(ctx);
+
+  ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
+
+  if((cl = closure->pointer)) {
+    JS_SetPropertyFunctionList(ctx, ret, cl->block ? minnet_client_sync_funcs : minnet_client_async_funcs, 1);
+  }
+
+  /*
+   if(js_is_promise(ctx, ret)) {
+    JSValue func[2], tmp;
+
+    func[0] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
+    func[1] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
+
+    tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
+    JS_FreeValue(ctx, ret);
+    ret = tmp;
+
+    tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
+    JS_FreeValue(ctx, ret);
+    ret = tmp;
+
+    JS_FreeValue(ctx, func[0]);
+    JS_FreeValue(ctx, func[1]);
+
+    closure_free(closure);
+  }*/
+
+  return ret;
+}
