@@ -16,15 +16,16 @@ typedef struct async_iterator {
   uint32_t serial;
 } AsyncIterator;
 
+size_t asynciterator_num_reads(AsyncIterator*);
 void asynciterator_zero(AsyncIterator*);
 void asynciterator_clear(AsyncIterator*, JSRuntime* rt);
+AsyncIterator* asynciterator_new(JSContext*);
+void asynciterator_free(AsyncIterator*, JSRuntime* rt);
 JSValue asynciterator_next(AsyncIterator*, JSContext* ctx);
 BOOL asynciterator_stop(AsyncIterator*, JSContext* ctx);
 int asynciterator_cancel(AsyncIterator*, JSValueConst error, JSContext* ctx);
 BOOL asynciterator_emplace(AsyncIterator*, JSValueConst value, BOOL done, JSContext* ctx);
 JSValue asynciterator_object(JSValueConst, BOOL done, JSContext* ctx);
-AsyncIterator* asynciterator_new(JSContext* ctx);
-void asynciterator_free(AsyncIterator* it, JSRuntime* rt);
 
 static inline BOOL
 asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {

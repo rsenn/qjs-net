@@ -1,4 +1,10 @@
 #include "asynciterator.h"
+#include "utils.h"
+
+size_t
+asynciterator_num_reads(AsyncIterator* it) {
+  return list_size(&it->reads);
+}
 
 static AsyncRead*
 asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
