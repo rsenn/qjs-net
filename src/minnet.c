@@ -159,14 +159,14 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
   struct FDCallbackClosure* closure = opaque;
   JSValueConst args[] = {argv[0], JS_NULL};
 
-  int64_t arg[3] = {
+  /*int64_t arg[3] = {
       0,
       JS_IsNull(argv[1]) ? 0ll : 1ll,
       JS_IsNull(argv[2]) ? 0ll : 1ll,
   };
   JS_ToInt64(ctx, &arg[0], argv[0]);
 
-  printf("defaultFdCallback(%" PRId64 ", %p, %p)\n", arg[0], (void*)(ptrdiff_t)arg[1], (void*)(ptrdiff_t)arg[2]);
+  printf("defaultFdCallback(%" PRId64 ", %p, %p)\n", arg[0], (void*)(ptrdiff_t)arg[1], (void*)(ptrdiff_t)arg[2]);*/
 
   args[1] = argv[1];
   // closure->set_handler(ctx, JS_NULL, 2, args, 0);

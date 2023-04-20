@@ -813,19 +813,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 fail:
   return ret;
 }
-
-JSValue
-minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
-  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_client_proto, minnet_client_class_id);
-
-  if(JS_IsException(ret))
-    return JS_EXCEPTION;
-
-  JS_SetOpaque(ret, (client));
-
-  return ret;
-}
-
 static void
 minnet_client_finalizer(JSRuntime* rt, JSValue val) {
   MinnetClient* client;
@@ -898,6 +885,20 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
     closure_free(closure);
   }*/
+
+  return ret;
+}
+
+JSValue
+minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
+  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_client_proto, minnet_client_class_id);
+
+  if(JS_IsException(ret))
+    return JS_EXCEPTION;
+
+  JS_SetOpaque(ret, (client));
+
+  JS_SetPropertyFunctionList(ctx, ret, client->block ? minnet_client_sync_funcs : minnet_client_async_funcs, 1);
 
   return ret;
 }
