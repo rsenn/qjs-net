@@ -139,11 +139,6 @@ export class Connection extends EventEmitter {
   static fromSocket = new WeakMap();
 
   lastSeq = 0;
-  /* socket = null;
-
-  static equal(a, b) {
-    return (a.socket != null && a.socket === b.socket) || (typeof a.fd == 'number' && a.fd === b.fd);
-  }*/
 
   static get last() {
     return this.list.last;
@@ -178,10 +173,8 @@ export class Connection extends EventEmitter {
   }
 
   close(status, reason) {
-    //  const { socket } = this;
     console.log('close(', status, reason, ')');
     socket.close(status, reason);
-    // delete this.socket;
     delete this.fd;
     this.connected = false;
   }
@@ -365,9 +358,9 @@ function RPCServerEndpoint(classes = {}, log = console.log) {
       delete this.instances[id];
       return respond(true);
     }),
-    call: objectCommand(({ obj, method, args = [], id }, respond) => {
+    call: objectCommand(({ obj, method, params = [], id }, respond) => {
       if(method in obj && typeof obj[method] == 'function') {
-        const result = obj[method](...args);
+        const result = obj[method](...params);
         if(isThenable(result))
           return result.then(result => respond(true, result)).catch(error => respond(false, error));
         return respond(true, result);
