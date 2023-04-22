@@ -1,3 +1,4 @@
+import * as os from 'os';
 import net from 'net';
 
 const cli = net.client('https://github.com/rsenn?tab=repositories', {
@@ -16,6 +17,12 @@ const cli = net.client('https://github.com/rsenn?tab=repositories', {
     );
   },
   onClose(ws, reason) {
-    console.log('closed');
+    console.log('closed',ws.close);
+    ws.close();
+  },
+  onFd(fd, rd, wr) {
+    console.log('onFd', fd, rd, wr);
+    os.setReadHandler(fd, rd);
+    os.setWriteHandler(fd, wr);
   }
 });
