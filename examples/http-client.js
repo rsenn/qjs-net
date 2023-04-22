@@ -18,7 +18,7 @@ const cli = net.client('https://github.com/rsenn?tab=repositories', {
   },
   onClose(ws, reason) {
     console.log('closed',ws.close);
-    ws.close();
+   // ws.close();
   },
   onFd(fd, rd, wr) {
     console.log('onFd', fd, rd, wr);
