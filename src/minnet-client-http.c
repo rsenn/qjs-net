@@ -117,10 +117,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP: {
       opaque->status = CLOSED;
 
-      if(client->iter) {
-        if(asynciterator_emplace(client->iter, JS_NULL, TRUE, ctx))
-          return 0;
-      }
+      if(client->iter)
+        asynciterator_stop(client->iter, ctx);
 
       if(client->on.close.ctx) {
         JSValueConst cb_argv[] = {
