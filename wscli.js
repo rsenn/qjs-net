@@ -10,7 +10,18 @@ let debug = 0,
   repl;
 
 function MakePrompt(prefix, suffix, commandMode = false) {
-  return `\x1b[38;5;40m${prefix} \x1b[38;5;33m${suffix}\x1b[0m ${commandMode ? 'COMMAND' : 'DATA'} > `;
+  return `\x1b[38;5;40m${prefix} \x1b[38;5;33m${suffix}\x1b[0m ${commandMode ? 'COMMAND' : 'DATA'}`;
+}
+
+function GetPrompt(prompt2) {
+  let name = scriptArgs[0]
+    .replace(/.*\//, '')
+    .replace(/-/g, ' ')
+    .replace(/\.[^\/.]*$/, '');
+
+  let [prefix, suffix] = [name, prompt2];
+
+  return MakePrompt(prefix, suffix, false);
 }
 
 function FromDomain(buffer) {
@@ -68,18 +79,12 @@ function DNSResponse(buffer) {
 }
 
 class CLI {
-  constructor(prompt2) {
-    let name = scriptArgs[0]
-      .replace(/.*\//, '')
-      .replace(/-/g, ' ')
-      .replace(/\.[^\/.]*$/, '');
-
-    let [prefix, suffix] = [name, prompt2];
-
-    this.prompt = MakePrompt(prefix, suffix, false);
+  constructor(prompt) {
+    this.prompt = prompt + '> ';
   }
 
   getline() {
+    std.out.puts('\x1b[2K\x1b[1G');
     std.out.puts(this.prompt);
     std.out.flush();
 
@@ -113,17 +118,17 @@ class CLI {
     }
     std.exit(0);
   }
+
+  printStatus(...args) {
+    std.out.puts('\x1b[2K\x1b[1G');
+    std.out.flush();
+    console.log(...args);
+    std.out.puts(this.prompt);
+    std.out.flush();
+  }
 }
 
 async function main(...args) {
-  const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
-  /* globalThis.console = new Console({
-    inspectOptions: {
-      depth: Infinity,
-      compact: 1,
-      customInspect: true
-    }
-  });*/
   let headers = [];
   params = GetOpt(
     {
@@ -161,19 +166,25 @@ async function main(...args) {
   const server = !params.client || params.server;
   const { binary, protocol } = params;
   let urls = params['@'];
+  
   function createWS(url, callbacks, listen = 0) {
     let repl;
     let is_dns,
       urlObj = new URL(url);
+
     net.setLog(net.LLL_USER | (((debug ? net.LLL_INFO : net.LLL_NOTICE) << 1) - 1), (level, msg) => {
       let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
       if(p == 'INFO' || /RECEIVE_CLIENT_HTTP_READ|\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
       msg = msg.replace(/\n/g, '\\n');
       if(params.verbose > 1 || params.debug) std.puts(p.padEnd(8) + '\t' + msg + '\n');
     });
+
     if(params.verbose) console.log(`Connecting to '${url}'...`);
+    
     globalThis.PrintMessage = PrintMessage;
+    
     const fn = [net.client, net.server][+listen];
+    
     return fn(url, {
       sslCert,
       sslPrivateKey,
@@ -189,7 +200,7 @@ async function main(...args) {
         ...Object.fromEntries(headers)
       },
       ...callbacks,
-      onConnect(ws, req) {
+      async onConnect(ws, req) {
         if(params.verbose) console.log('onConnect', { ws, req });
         connections.add(ws);
         Object.assign(globalThis, { ws, req });
@@ -197,7 +208,11 @@ async function main(...args) {
         const remote = `${ws.address}:${ws.port}`;
 
         try {
-          (repl = globalThis.repl = new CLI(remote)).run(data => {
+          const module = await import('repl').catch(() => ({ REPL: CLI }));
+
+          module.REPL;
+
+          (repl = globalThis.repl = new module.REPL(GetPrompt(remote))).run(data => {
             if(typeof data == 'string' && data.length > 0) {
               console.log(`Sending '${data}'`);
               for(let connection of connections) {
@@ -206,7 +221,7 @@ async function main(...args) {
             }
           });
         } catch(err) {
-          console.log('error:', err.message);
+          console.log('error:', err.message + '\n' + err.stack);
         }
 
         // console.log('onConnect', { remote, repl });
@@ -226,7 +241,7 @@ async function main(...args) {
           quit(`Connection error: ${reason}`);
         }
 
-        console.log('onClose', { ws, status, reason, error });
+        repl.printStatus('onClose', { ws, status, reason, error });
         connections.delete(ws);
         if(repl) {
           repl.printStatus(`Closed (${status}): ${reason}`);
@@ -304,7 +319,7 @@ async function main(...args) {
         }
       } catch(e) {}
 
-      repl.printStatus(() => std.puts('Message: ' + msg + '\n'));
+      repl.printStatus('Message: ' + msg);
     }
     Object.assign(globalThis, {
       get connections() {
