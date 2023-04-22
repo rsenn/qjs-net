@@ -358,7 +358,7 @@ static const JSCFunctionListEntry minnet_loglevels[] = {
 
 static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("createServer", 1, minnet_server),
-     JS_CFUNC_DEF("client", 1, minnet_client),
+    JS_CFUNC_DEF("client", 1, minnet_client),
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
     // JS_CFUNC_SPECIAL_DEF("formParser", 0, constructor, minnet_form_parser_constructor),
     // JS_CFUNC_SPECIAL_DEF("generator", 0, constructor, minnet_generator_constructor),
