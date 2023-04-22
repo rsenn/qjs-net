@@ -690,7 +690,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onClose", client->on.close)
   GETCBPROP(options, "onConnect", client->on.connect)
   GETCBPROP(options, "onMessage", client->on.message)
-  GETCBPROP(options, "onRequest", client->on.request)
+  GETCBPROP(options, "onResponse", client->on.http)
   GETCBPROP(options, "onFd", client->on.fd)
   GETCBPROP(options, "onWriteable", client->on.writeable)
 
@@ -891,7 +891,13 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
 
   if((cl = closure->pointer)) {
-    JS_SetPropertyFunctionList(ctx, ret, cl->block ? minnet_client_sync_funcs : minnet_client_async_funcs, 1);
+    JSValue fn = JS_NewCFunctionMagic(ctx, minnet_client_iterator, "iterator", 0, JS_CFUNC_generic_magic, cl->block ? CLIENT_ITERATOR : CLIENT_ASYNCITERATOR);
+    JSAtom prop = js_symbol_static_atom(ctx, cl->block ? "iterator" : "asyncIterator");
+
+    JS_SetProperty(ctx, ret, prop, fn);
+    JS_FreeAtom(ctx, prop);
+
+    //  JS_SetPropertyFunctionList(ctx, ret, cl->block ? minnet_client_sync_funcs : minnet_client_async_funcs, 1);
   }
 
   /*

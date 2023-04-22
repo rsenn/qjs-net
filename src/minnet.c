@@ -366,7 +366,7 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     // JS_CFUNC_SPECIAL_DEF("request", 0, constructor, minnet_request_constructor),
     // JS_CFUNC_SPECIAL_DEF("response", 0, constructor, minnet_response_constructor),
     // JS_CFUNC_SPECIAL_DEF("ringbuffer", 0, constructor, minnet_ringbuffer_constructor),
-    // JS_CFUNC_SPECIAL_DEF("url", 0, constructor, minnet_url_constructor),
+    // JS_CFUNC_SPECIAL_DEF("URL", 0, constructor, minnet_url_constructor),
     // JS_CFUNC_SPECIAL_DEF("socket", 0, constructor, minnet_ws_constructor),
     JS_CFUNC_DEF("getSessions", 0, minnet_get_sessions),
     JS_CFUNC_DEF("setLog", 1, minnet_set_log),
@@ -457,9 +457,6 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
 
-  // Add class URL
-  minnet_url_init(ctx, m);
-
   // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
@@ -533,9 +530,13 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
     if(m)
       JS_SetModuleExport(ctx, m, "Client", minnet_client_ctor);*/
 
+  // Add class URL
+  minnet_url_init(ctx, m);
+
   {
     JSValue minnet_default = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, minnet_default, minnet_funcs, countof(minnet_funcs));
+    JS_SetPropertyStr(ctx, minnet_default, "URL", minnet_url_ctor);
     JS_SetModuleExport(ctx, m, "default", minnet_default);
   }
 

@@ -17,6 +17,7 @@ JSValue minnet_url_constructor(JSContext*, JSValueConst new_target, int argc, JS
 int minnet_url_init(JSContext*, JSModuleDef* m);
 
 extern THREAD_LOCAL JSClassID minnet_url_class_id;
+extern THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;
 
 int minnet_url_init(JSContext*, JSModuleDef* m);
 

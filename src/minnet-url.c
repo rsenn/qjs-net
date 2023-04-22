@@ -7,7 +7,7 @@
 #include <ctype.h>
 #include <strings.h>
 
-static THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;
+THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;
 THREAD_LOCAL JSClassID minnet_url_class_id;
 
 enum {

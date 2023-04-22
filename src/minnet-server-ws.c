@@ -20,7 +20,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
 
   if(lws_reason_poll(reason))
-    return wsi_handle_poll(wsi, reason, &server->cb.fd, in);
+    return wsi_handle_poll(wsi, reason, &server->on.fd, in);
 
   if(lws_reason_http(reason))
     return http_server_callback(wsi, reason, user, in, len);
@@ -167,7 +167,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
 
       opaque->status = OPEN;
 
-      if(server->cb.connect.ctx) {
+      if(server->on.connect.ctx) {
 
         if(!JS_IsObject(session->ws_obj))
           session->ws_obj = minnet_ws_fromwsi(ctx, wsi);
@@ -178,7 +178,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
         }
 
         LOGCB("ws", "wsi#%" PRId64 " req=%p", opaque->serial, opaque->req);
-        server_exception(server, callback_emit_this(&server->cb.connect, session->ws_obj, 2, &session->ws_obj));
+        server_exception(server, callback_emit_this(&server->on.connect, session->ws_obj, 2, &session->ws_obj));
       }
       return 0;
     }
@@ -206,7 +206,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
               code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED,
               why,
           };
-          server_exception(server, callback_emit(&server->cb.close, code != -1 ? 3 : 1, args));
+          server_exception(server, callback_emit(&server->on.close, code != -1 ? 3 : 1, args));
           JS_FreeValue(ctx, args[1]);
         }
         JS_FreeValue(server->context.js, why);
@@ -234,23 +234,23 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
             JS_NewBool(ctx, first),
             JS_NewBool(ctx, final),
         };
-        server_exception(server, callback_emit(&server->cb.message, countof(args), args));
+        server_exception(server, callback_emit(&server->on.message, countof(args), args));
         JS_FreeValue(ctx, args[0]);
         JS_FreeValue(ctx, args[1]);
       }
       return 0;
     }
     case LWS_CALLBACK_RECEIVE_PONG: {
-      if(server->cb.pong.ctx) {
-        // ws_obj = minnet_ws_fromwsi(server->cb.pong.ctx, wsi);
-        JSValue msg = JS_NewArrayBufferCopy(server->cb.pong.ctx, in, len);
+      if(server->on.pong.ctx) {
+        // ws_obj = minnet_ws_fromwsi(server->on.pong.ctx, wsi);
+        JSValue msg = JS_NewArrayBufferCopy(server->on.pong.ctx, in, len);
         JSValue args[2] = {
-            JS_DupValue(server->cb.pong.ctx, session->ws_obj),
+            JS_DupValue(server->on.pong.ctx, session->ws_obj),
             msg,
         };
-        server_exception(server, callback_emit(&server->cb.pong, 2, args));
-        JS_FreeValue(server->cb.pong.ctx, args[0]);
-        JS_FreeValue(server->cb.pong.ctx, args[1]);
+        server_exception(server, callback_emit(&server->on.pong, 2, args));
+        JS_FreeValue(server->on.pong.ctx, args[0]);
+        JS_FreeValue(server->on.pong.ctx, args[1]);
       }
       return 0;
     }

@@ -318,14 +318,14 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   BOOL_OPTION(opt_h2, "h2", is_h2);
   BOOL_OPTION(opt_pmd, "permessageDeflate", per_message_deflate);
 
-  GETCB(opt_on_pong, server->cb.pong)
-  GETCB(opt_on_close, server->cb.close)
-  GETCB(opt_on_connect, server->cb.connect)
-  GETCB(opt_on_message, server->cb.message)
-  GETCB(opt_on_fd, server->cb.fd)
-  GETCB(opt_on_http, server->cb.request)
-  GETCB(opt_on_read, server->cb.read)
-  GETCB(opt_on_post, server->cb.post)
+  GETCB(opt_on_pong, server->on.pong)
+  GETCB(opt_on_close, server->on.close)
+  GETCB(opt_on_connect, server->on.connect)
+  GETCB(opt_on_message, server->on.message)
+  GETCB(opt_on_fd, server->on.fd)
+  GETCB(opt_on_http, server->on.http)
+  GETCB(opt_on_read, server->on.read)
+  GETCB(opt_on_post, server->on.post)
 
   for(int i = 0; i < countof(protocols); i++) protocols[i].user = ctx;
 
@@ -428,7 +428,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       break;
     }
 
-    if(server->cb.fd.ctx)
+    if(server->on.fd.ctx)
       js_std_loop(ctx);
     else
       a = lws_service(server->context.lws, 20);
@@ -473,12 +473,12 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
    js_free(ctx, (void*)info->vhost_name);
  */
-  FREECB(server->cb.pong)
-  FREECB(server->cb.close)
-  FREECB(server->cb.connect)
-  FREECB(server->cb.message)
-  FREECB(server->cb.fd)
-  FREECB(server->cb.request)
+  FREECB(server->on.pong)
+  FREECB(server->on.close)
+  FREECB(server->on.connect)
+  FREECB(server->on.message)
+  FREECB(server->on.fd)
+  FREECB(server->on.http)
 
   return ret;
 }
@@ -529,40 +529,40 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
     }
     case LWS_CALLBACK_ADD_POLL_FD: {
       struct lws_pollargs* args = in;
-      if(server->cb.fd.ctx) {
-        JSValue argv[3] = {JS_NewInt32(server->cb.fd.ctx, args->fd)};
-        minnet_io_handlers(server->cb.fd.ctx, wsi, *args, &argv[1]);
-        server_exception(server, callback_emit(&server->cb.fd, 3, argv));
-        JS_FreeValue(server->cb.fd.ctx, argv[0]);
-        JS_FreeValue(server->cb.fd.ctx, argv[1]);
-        JS_FreeValue(server->cb.fd.ctx, argv[2]);
+      if(server->on.fd.ctx) {
+        JSValue argv[3] = {JS_NewInt32(server->on.fd.ctx, args->fd)};
+        minnet_io_handlers(server->on.fd.ctx, wsi, *args, &argv[1]);
+        server_exception(server, callback_emit(&server->on.fd, 3, argv));
+        JS_FreeValue(server->on.fd.ctx, argv[0]);
+        JS_FreeValue(server->on.fd.ctx, argv[1]);
+        JS_FreeValue(server->on.fd.ctx, argv[2]);
       }
       return 0;
     }
     case LWS_CALLBACK_DEL_POLL_FD: {
       struct lws_pollargs* args = in;
-      if(server->cb.fd.ctx) {
+      if(server->on.fd.ctx) {
         JSValue argv[3] = {
-            JS_NewInt32(server->cb.fd.ctx, args->fd),
+            JS_NewInt32(server->on.fd.ctx, args->fd),
         };
-        minnet_io_handlers(server->cb.fd.ctx, wsi, *args, &argv[1]);
-        server_exception(server, callback_emit(&server->cb.fd, 3, argv));
-        JS_FreeValue(server->cb.fd.ctx, argv[0]);
-        JS_FreeValue(server->cb.fd.ctx, argv[1]);
-        JS_FreeValue(server->cb.fd.ctx, argv[2]);
+        minnet_io_handlers(server->on.fd.ctx, wsi, *args, &argv[1]);
+        server_exception(server, callback_emit(&server->on.fd, 3, argv));
+        JS_FreeValue(server->on.fd.ctx, argv[0]);
+        JS_FreeValue(server->on.fd.ctx, argv[1]);
+        JS_FreeValue(server->on.fd.ctx, argv[2]);
       }
       return 0;
     }
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
       struct lws_pollargs* args = in;
-      if(server->cb.fd.ctx) {
+      if(server->on.fd.ctx) {
         if(args->events != args->prev_events) {
-          JSValue argv[3] = {JS_NewInt32(server->cb.fd.ctx, args->fd)};
-          minnet_io_handlers(server->cb.fd.ctx, wsi, *args, &argv[1]);
-          server_exception(server, callback_emit(&server->cb.fd, 3, argv));
-          JS_FreeValue(server->cb.fd.ctx, argv[0]);
-          JS_FreeValue(server->cb.fd.ctx, argv[1]);
-          JS_FreeValue(server->cb.fd.ctx, argv[2]);
+          JSValue argv[3] = {JS_NewInt32(server->on.fd.ctx, args->fd)};
+          minnet_io_handlers(server->on.fd.ctx, wsi, *args, &argv[1]);
+          server_exception(server, callback_emit(&server->on.fd, 3, argv));
+          JS_FreeValue(server->on.fd.ctx, argv[0]);
+          JS_FreeValue(server->on.fd.ctx, argv[1]);
+          JS_FreeValue(server->on.fd.ctx, argv[2]);
         }
       }
       return 0;

@@ -755,7 +755,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   if(lws_reason_poll(reason)) {
     assert(server);
-    return wsi_handle_poll(wsi, reason, &server->cb.fd, in);
+    return wsi_handle_poll(wsi, reason, &server->on.fd, in);
   }
 
   if(!opaque && ctx)
@@ -844,12 +844,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           generator_write(req->body, in, len, JS_UNDEFINED);
         }
       }
-      if(server->cb.read.ctx) {
+      if(server->on.read.ctx) {
         JSValue args[] = {
-            JS_NewStringLen(server->cb.read.ctx, in, len),
+            JS_NewStringLen(server->on.read.ctx, in, len),
         };
-        JSValue ret = server_exception(server, callback_emit_this(&server->cb.read, session->req_obj, countof(args), args));
-        JS_FreeValue(server->cb.read.ctx, ret);
+        JSValue ret = server_exception(server, callback_emit_this(&server->on.read, session->req_obj, countof(args), args));
+        JS_FreeValue(server->on.read.ctx, ret);
       }
       break;
     }
@@ -889,12 +889,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         generator_close(req->body, JS_UNDEFINED);
       }
 
-      if(server->cb.post.ctx) {
+      if(server->on.post.ctx) {
         JSValue args[] = {
-            minnet_generator_iterator(server->cb.post.ctx, opaque->req->body),
+            minnet_generator_iterator(server->on.post.ctx, opaque->req->body),
         };
-        JSValue ret = server_exception(server, callback_emit_this(&server->cb.post, session->req_obj, countof(args), args));
-        JS_FreeValue(server->cb.post.ctx, ret);
+        JSValue ret = server_exception(server, callback_emit_this(&server->on.post, session->req_obj, countof(args), args));
+        JS_FreeValue(server->on.post.ctx, ret);
 
       } else {
       }
@@ -1033,8 +1033,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           }
         }
 
-        if(server->cb.request.ctx) {
-          cb = &server->cb.request;
+        if(server->on.http.ctx) {
+          cb = &server->on.http;
           JSValue val = server_exception(server, callback_emit_this(cb, session->ws_obj, 3, args));
           JS_FreeValue(ctx, val);
         }
