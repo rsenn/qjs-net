@@ -20,9 +20,9 @@ function TestClient(url) {
       console.log('onError', { ws, error });
       exit(1);
     },
-    onHttp(req, resp) {
+    onRequest(req, resp) {
       const { url } = resp;
-      console.log('onHttp', { req, resp });
+      console.log('onRequest', { req, resp });
       console.log('req.url', req.url);
       console.log('resp.url', resp.url);
       console.log('url.path', url.path);
@@ -30,7 +30,7 @@ function TestClient(url) {
       let file = loadFile('.' + url.path);
 
       let body = resp.text();
-      console.log('onHttp', { body, file });
+      console.log('onRequest', { body, file });
 
       if(file.length == body.length) if (file === body) exit(0);
     }

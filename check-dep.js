@@ -54,9 +54,7 @@ function main() {
   );
   Object.assign(globalThis, decorate([YieldAll, YieldJoin], { fc: FilterComments }));
 
-  let objects = commands
-    .map(({ command }) => command.split(/\s+/g).find(a => /\.o/.test(a)))
-    .map(o => 'build/x86_64-linux-debug/' + o);
+  let objects = commands.map(({ command }) => command.split(/\s+/g).find(a => /\.o/.test(a))).map(o => 'build/x86_64-linux-debug/' + o);
 
   for(let line of PipeStream(['nm', '-A', ...objects])) {
     let fields = line.split(/:/);
@@ -102,10 +100,7 @@ function main() {
             new Map(
               YieldAll(Match)(/^([a-zA-Z_][0-9a-zA-Z_]*)\(.*(,|{)$/gm, code)
                 .filter(Negate(ArrayArgs(Within(comments))))
-                .map(([index, name]) => [
-                  name,
-                  [code.lastIndexOf('\n', code.lastIndexOf('\n', index) - 1) + 1, code.indexOf('\n}', index) + 3]
-                ])
+                .map(([index, name]) => [name, [code.lastIndexOf('\n', code.lastIndexOf('\n', index) - 1) + 1, code.indexOf('\n}', index) + 3]])
             ),
           functionAt:
             ({ functions }) =>
@@ -121,8 +116,7 @@ function main() {
             ({ slices }) =>
             name => {
               let i;
-              if((i = typeof name == 'number' ? name : slices.findIndex(([k, v]) => k === name)) != -1)
-                return slices.splice(i, 1)[0];
+              if((i = typeof name == 'number' ? name : slices.findIndex(([k, v]) => k === name)) != -1) return slices.splice(i, 1)[0];
             },
           save:
             ({ slices, src }) =>
@@ -134,8 +128,7 @@ function main() {
           commentFunction: ({ slices }) => {
             let [get, set] = getset(slices);
             let clean = globalThis.fc || (s => [...FilterComments(s)].join(''));
-            return (name, s = get(name)[1]) =>
-              s.startsWith('/*') ? null : (set(name, `/*${(s = clean(get(name)[1]))}*/`), s);
+            return (name, s = get(name)[1]) => (s.startsWith('/*') ? null : (set(name, `/*${(s = clean(get(name)[1]))}*/`), s));
           },
           slices: obj => /*new Map*/ GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s])
         })

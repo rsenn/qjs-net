@@ -91,7 +91,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   handlers[2] = js_function_cclosure(ctx, &fetch_handler, 2, ON_CLOSE, closure_dup(cc), closure_free);
   handlers[3] = js_function_cclosure(ctx, &fetch_handler, 3, ON_FD, closure_dup(cc), closure_free);
 
-  JS_SetPropertyStr(ctx, args[1], "onHttp", handlers[0]);
+  JS_SetPropertyStr(ctx, args[1], "onRequest", handlers[0]);
   JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);
   JS_SetPropertyStr(ctx, args[1], "onClose", handlers[2]);
   JS_SetPropertyStr(ctx, args[1], "onFd", handlers[3]);

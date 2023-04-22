@@ -3,9 +3,7 @@ import { LLL_ALL, LLL_NOTICE, LLL_USER, logLevels, server, setLog } from 'net';
 import('console').then(({ Console }) => { globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 });
 
-setLog(/*LLL_ALL |*/ (LLL_NOTICE - 1) | LLL_USER, (level, message) =>
-  console.log(logLevels[level].padEnd(10), message)
-);
+setLog(/*LLL_ALL |*/ (LLL_NOTICE - 1) | LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message));
 
 server(
   (globalThis.options = {
@@ -44,8 +42,8 @@ server(
     onError(ws, error) {
       console.log('onError', { ws, error });
     },
-    onHttp(ws, req, resp) {
-      console.log('onHttp', { req, resp });
+    onRequest(ws, req, resp) {
+      console.log('onRequest', { req, resp });
       Object.assign(globalThis, { req, resp });
     },
     onMessage(ws, msg) {

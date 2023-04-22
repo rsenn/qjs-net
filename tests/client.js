@@ -14,7 +14,7 @@ export default function Client(url, options, debug) {
     onConnect,
     onClose,
     onError,
-    onHttp,
+    onRequest,
     onFd,
     onMessage,
     tls = true,
@@ -88,15 +88,15 @@ export default function Client(url, options, debug) {
               : (console.log('onMessage', console.config({ maxStringLen: 100 }), { ws, msg }),
                 puts(escape(abbreviate(msg)) + '\n'));
           },
-          async onHttp(req, resp) {
+          async onRequest(req, resp) {
             let text = await resp.text();
             let { path } = resp.url;
 
             path = path.replace(/.*\//g, '');
             resolve(path || 'index.html');
 
-            log('onHttp(1)', resp.url.path);
-            log('onHttp(2)', text.replace(/\n/g, '\\n').substring(0, 100));
+            log('onRequest(1)', resp.url.path);
+            log('onRequest(2)', text.replace(/\n/g, '\\n').substring(0, 100));
 
             console.log('push', /* await*/ push(text));
           }

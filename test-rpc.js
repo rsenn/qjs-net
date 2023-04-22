@@ -167,13 +167,7 @@ function main(...args) {
 
           resp.type = 'application/json';
 
-          let {
-            dir = 'tmp',
-            filter = '.(brd|sch|G[A-Z][A-Z])$',
-            verbose = false,
-            objects = false,
-            key = 'mtime'
-          } = data;
+          let { dir = 'tmp', filter = '.(brd|sch|G[A-Z][A-Z])$', verbose = false, objects = false, key = 'mtime' } = data;
           let absdir = path.realpath(dir);
           let components = absdir.split(path.sep);
 
@@ -242,9 +236,9 @@ function main(...args) {
 
         return callbacks.onClose(ws, status, reason, error);
       },
-      onHttp(ws, req, rsp) {
+      onRequest(ws, req, rsp) {
         const { url, method, headers } = req;
-        console.log('\x1b[38;5;33monHttp\x1b[0m [\n  ', req, ',\n  ', rsp, '\n]');
+        console.log('\x1b[38;5;33monRequest\x1b[0m [\n  ', req, ',\n  ', rsp, '\n]');
         return rsp;
       },
       onMessage(ws, data) {

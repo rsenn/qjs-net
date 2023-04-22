@@ -25,8 +25,8 @@ async function main(...args) {
       arg,
       {
         block: false,
-        onHttp(req, resp) {
-          log('onHttp', { req, resp });
+        onRequest(req, resp) {
+          log('onRequest', { req, resp });
 
           /*  let body = resp.text();
           puts(body);*/

@@ -690,7 +690,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onClose", client->on.close)
   GETCBPROP(options, "onConnect", client->on.connect)
   GETCBPROP(options, "onMessage", client->on.message)
-  GETCBPROP(options, "onHttp", client->on.http)
+  GETCBPROP(options, "onRequest", client->on.request)
   GETCBPROP(options, "onFd", client->on.fd)
   GETCBPROP(options, "onWriteable", client->on.writeable)
 

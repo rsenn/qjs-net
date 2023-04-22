@@ -1,11 +1,7 @@
 #!/usr/bin/env qjsm
 import * as std from 'std';
 import * as os from 'os';
-import REPL from 'repl';
-import inspect from 'inspect';
-import net, { URL, Request } from 'net';
-import { Console, ConsoleOptions } from 'console';
-import { toString, startInteractive } from 'util';
+import net, { URL, Request } from 'net.so';
 
 const connections = new Set();
 
@@ -43,14 +39,7 @@ function WriteFile(filename, buffer) {
 }
 
 function ToDomain(str, alpha = false) {
-  return str
-    .split('.')
-    .reduce(
-      alpha
-        ? (a, s) => a + String.fromCharCode(s.length) + s
-        : (a, s) => a.concat([s.length, ...s.split('').map(ch => ch.charCodeAt(0))]),
-      alpha ? '' : []
-    );
+  return str.split('.').reduce(alpha ? (a, s) => a + String.fromCharCode(s.length) + s : (a, s) => a.concat([s.length, ...s.split('').map(ch => ch.charCodeAt(0))]), alpha ? '' : []);
 }
 
 function DNSQuery(domain) {
@@ -60,26 +49,7 @@ function DNSQuery(domain) {
     type = 0x0c;
   }
 
-  let outBuf = new Uint8Array([
-    0xff,
-    0xff,
-    0x01,
-    0x00,
-    0x00,
-    0x01,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    ...ToDomain(domain),
-    0x00,
-    0x00,
-    type,
-    0x00,
-    0x01
-  ]).buffer;
+  let outBuf = new Uint8Array([0xff, 0xff, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ...ToDomain(domain), 0x00, 0x00, type, 0x00, 0x01]).buffer;
   new DataView(outBuf).setUint16(0, outBuf.byteLength - 2, false);
   return outBuf;
 }
@@ -97,73 +67,63 @@ function DNSResponse(buffer) {
   return addr;
 }
 
-class CLI extends REPL {
+class CLI {
   constructor(prompt2) {
-    let name = process.argv[1];
-    name = name
+    let name = scriptArgs[0]
       .replace(/.*\//, '')
       .replace(/-/g, ' ')
       .replace(/\.[^\/.]*$/, '');
+
     let [prefix, suffix] = [name, prompt2];
-    let prompt = MakePrompt(prefix, suffix, false).slice(0, -2);
-    super(prompt, false);
-    Object.assign(this, { prefix, suffix });
 
-    this.historyLoad(null, false);
-    this.addCleanupHandler(() => {
-      this.readlineRemovePrompt();
-      this.printStatus(`EXIT`, false);
-      std.exit(0);
-    });
-    let orig_log = console.log;
-    let log = this.printFunction((...args) => orig_log(...args));
-    console.log = (...args) => {
-      let opts = console.config(console.options);
-      this.printStatus(
-        args.reduce((acc, arg) => {
-          if(arg instanceof ConsoleOptions) opts = opts.merge(arg);
-          else acc = (acc != '' ? acc + ' ' : '') + inspect(arg, opts);
-          return acc;
-        }, '')
+    this.prompt = MakePrompt(prefix, suffix, false);
+  }
+
+  getline() {
+    std.out.puts(this.prompt);
+    std.out.flush();
+
+    return readLine(std.in);
+
+    function waitRead(file) {
+      return new Promise(
+        (fd => (resolve, reject) => {
+          os.setReadHandler(fd, () => {
+            os.setReadHandler(fd, null);
+            resolve(file);
+          });
+        })(file.fileno())
       );
-    };
-    this.commandMode = false;
-    this.commands['\x1b'] ??= this.escape;
-    this.commands['§'] = this.escape;
-    this.runSync();
-  }
-
-  help() {}
-
-  show(arg) {
-    std.puts((typeof arg == 'string' ? arg : inspect(arg, globalThis.console.options)) + '\n');
-  }
-
-  escape() {
-    this.commandMode = !this.commandMode;
-    this.readlineRemovePrompt();
-    this.prompt = this.ps1 = MakePrompt(this.prefix, this.suffix, this.commandMode);
-    this.readlinePrintPrompt();
-  }
-
-  handleCmd(data) {
-    if(this.commandMode) return super.handleCmd(data);
-    if(typeof data == 'string' && data.length > 0) {
-      this.printStatus(`Sending '${data}'`, false);
-      for(let connection of connections) connection.send(data);
     }
+
+    async function readLine(file) {
+      await waitRead(file);
+      return file.getline();
+    }
+  }
+
+  async run(callback) {
+    for(;;) {
+      let line = await this.getline();
+
+      if(line === null) break;
+      if(line === '') continue;
+
+      callback(line);
+    }
+    std.exit(0);
   }
 }
 
 async function main(...args) {
   const base = scriptArgs[0].replace(/.*\//g, '').replace(/\.[a-z]*$/, '');
-  globalThis.console = new Console({
+  /* globalThis.console = new Console({
     inspectOptions: {
       depth: Infinity,
       compact: 1,
       customInspect: true
     }
-  });
+  });*/
   let headers = [];
   params = GetOpt(
     {
@@ -206,10 +166,7 @@ async function main(...args) {
     let is_dns,
       urlObj = new URL(url);
     net.setLog(net.LLL_USER | (((debug ? net.LLL_INFO : net.LLL_NOTICE) << 1) - 1), (level, msg) => {
-      let p =
-        ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][
-          level && Math.log2(level)
-        ] ?? level + '';
+      let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
       if(p == 'INFO' || /RECEIVE_CLIENT_HTTP_READ|\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
       msg = msg.replace(/\n/g, '\\n');
       if(params.verbose > 1 || params.debug) std.puts(p.padEnd(8) + '\t' + msg + '\n');
@@ -233,18 +190,26 @@ async function main(...args) {
       },
       ...callbacks,
       onConnect(ws, req) {
-        console.log('onConnect', { ws, req });
+        if(params.verbose) console.log('onConnect', { ws, req });
         connections.add(ws);
         Object.assign(globalThis, { ws, req });
 
-        if(params.verbose) console.log('onConnect', { ws, req });
         const remote = `${ws.address}:${ws.port}`;
 
         try {
-          repl = globalThis.repl = new CLI(remote);
+          (repl = globalThis.repl = new CLI(remote)).run(data => {
+            if(typeof data == 'string' && data.length > 0) {
+              console.log(`Sending '${data}'`);
+              for(let connection of connections) {
+                connection.send(data);
+              }
+            }
+          });
         } catch(err) {
           console.log('error:', err.message);
         }
+
+        // console.log('onConnect', { remote, repl });
 
         repl.printStatus(`Connected to ${remote}`);
         if(req) {
@@ -270,8 +235,8 @@ async function main(...args) {
           }, 100);
         }
       },
-      onHttp(req, resp) {
-        console.log('onHttp', console.config({ compact: false }), { req, resp });
+      onRequest(req, resp) {
+        console.log('onRequest', console.config({ compact: false }), { req, resp });
         let { headers } = resp;
 
         let type = (headers['content-type'] ?? 'text/html').replace(/;.*/g, '');
@@ -286,8 +251,8 @@ async function main(...args) {
           if(!name.endsWith(extension)) name += extension;
 
           let buffer = resp.body;
-          let text = toString(buffer);
-          console.log('this', this);
+          // let text = toString(buffer);
+          console.log('onRequest', { buffer });
 
           WriteFile(params.output ?? name ?? 'output.bin', buffer);
         }
@@ -368,8 +333,7 @@ function GetOpt(options = {}, args) {
   let r = {};
   let positional = (r['@'] = []);
   if(!(options instanceof Array)) options = Object.entries(options);
-  const findOpt = a =>
-    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
+  const findOpt = a => options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
   let [, params] = options.find(o => o[0] == '@') || [];
   if(typeof params == 'string') params = params.split(',');
   for(let i = 0; i < args.length; i++) {

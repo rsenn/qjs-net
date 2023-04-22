@@ -280,7 +280,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   JSValue opt_on_connect = JS_GetPropertyStr(ctx, options, "onConnect");
   JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
-  JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onHttp");
+  JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onRequest");
   JSValue opt_on_read = JS_GetPropertyStr(ctx, options, "onRead");
   JSValue opt_on_post = JS_GetPropertyStr(ctx, options, "onPost");
   JSValue opt_mounts = JS_GetPropertyStr(ctx, options, "mounts");
@@ -323,7 +323,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCB(opt_on_connect, server->cb.connect)
   GETCB(opt_on_message, server->cb.message)
   GETCB(opt_on_fd, server->cb.fd)
-  GETCB(opt_on_http, server->cb.http)
+  GETCB(opt_on_http, server->cb.request)
   GETCB(opt_on_read, server->cb.read)
   GETCB(opt_on_post, server->cb.post)
 
@@ -478,7 +478,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   FREECB(server->cb.connect)
   FREECB(server->cb.message)
   FREECB(server->cb.fd)
-  FREECB(server->cb.http)
+  FREECB(server->cb.request)
 
   return ret;
 }

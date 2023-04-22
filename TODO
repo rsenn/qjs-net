@@ -1,3 +1,8 @@
-- make tests/*.js not requiring qjs-modules
-- make wscli.js not requiring qjs-modules 
+- simplify C code or rewrite from scratch
+
+
 - write some examples in examples/
+
+
+
+- documentation
