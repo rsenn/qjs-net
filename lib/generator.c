@@ -248,7 +248,7 @@ generator_queue(Generator* gen) {
 
 BOOL
 generator_finish(Generator* gen) {
-  if(gen->q->continuous && !JS_IsNull(gen->callback)) {
+  if((gen->q && gen->q->continuous) && !JS_IsNull(gen->callback)) {
     BOOL done = FALSE;
     JSValue ret = generator_dequeue(gen, &done);
 

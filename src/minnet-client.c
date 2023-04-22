@@ -694,7 +694,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onFd", client->on.fd)
   GETCBPROP(options, "onWriteable", client->on.writeable)
 
-  if(JS_IsNull(client->on.fd.func_obj)) {
+  if(!JS_IsFunction(ctx, client->on.fd.func_obj)) {
     client->on.fd = CALLBACK(ctx, minnet_default_fd_callback(ctx), JS_NULL);
   }
 
