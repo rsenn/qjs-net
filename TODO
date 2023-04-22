@@ -3,9 +3,10 @@
 
 - write some examples in examples/
 
-
+   examples/http-client.js  - fix connection reuse !
 
 - documentation
+
 
 
 
