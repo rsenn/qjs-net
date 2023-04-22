@@ -6,3 +6,20 @@
 
 
 - documentation
+
+
+
+- handler names:
+
+   http-server -> onRequest
+   http-client -> onResponse
+
+   (for http, single handler can be given as an argument instead )
+
+   ws-server -> onListen, onConnect
+   ws-client -> onOpen, onMessage, onError, onClose
+
+
+
+
+
