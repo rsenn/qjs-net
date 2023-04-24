@@ -78,10 +78,10 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
     return JS_ThrowTypeError(ctx, "argument 2 must be an object");
   /*
     if(!(fc = fetch_new(ctx)))
-      return JS_ThrowOutOfMemory(ctx);*/
+      return JS_EXCEPTION;*/
 
   if(!(cc = closure_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   args[0] = argv[0];
   args[1] = argc <= 1 ? JS_NewObject(ctx) : JS_DupValue(ctx, argv[1]);

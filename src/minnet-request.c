@@ -42,7 +42,7 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
   BOOL got_url = FALSE;
 
   if(!(req = request_alloc(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");
@@ -88,7 +88,7 @@ minnet_request_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   if((req2 = request_new(url_clone(req->url, ctx), req->method, ctx)))
     return minnet_request_wrap(ctx, req2);
 
-  return JS_ThrowOutOfMemory(ctx);
+  return JS_EXCEPTION;
 }
 
 JSValue

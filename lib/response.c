@@ -50,10 +50,8 @@ Response*
 response_new(JSContext* ctx) {
   Response* resp;
 
-  if(!(resp = js_mallocz(ctx, sizeof(Response))))
-    JS_ThrowOutOfMemory(ctx);
-
-  resp->ref_count = 1;
+  if((resp = js_mallocz(ctx, sizeof(Response))))
+    resp->ref_count = 1;
 
   return resp;
 }

@@ -155,7 +155,7 @@ minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_EXCEPTION;
 
   if(!(clone = response_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   clone->read_only = resp->read_only;
   clone->status = resp->status;
@@ -319,7 +319,7 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
   int i;
 
   if(!(resp = js_mallocz(ctx, sizeof(MinnetResponse))))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");

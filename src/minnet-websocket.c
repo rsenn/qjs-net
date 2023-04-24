@@ -46,7 +46,7 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   JSValue ws_obj;
 
   if(!(ws = ws_new(wsi, ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   ws_obj = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
 
@@ -76,7 +76,7 @@ minnet_ws_fromwsi(JSContext* ctx, struct lws* wsi) {
   JSValue ret;
 
   if(!(ws = ws_new(wsi, ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   ret = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
 
@@ -446,7 +446,7 @@ minnet_ws_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValue
   MinnetWebsocket* ws;
 
   if(!(ws = js_mallocz(ctx, sizeof(MinnetWebsocket))))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");

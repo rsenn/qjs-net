@@ -348,9 +348,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE:
     case LWS_CALLBACK_RAW_RX: {
-      int first = lws_is_first_fragment(wsi);
-      int final = lws_is_final_fragment(wsi);
-      int single_fragment = first && final;
+      /* int first = lws_is_first_fragment(wsi);
+       int final = lws_is_final_fragment(wsi);
+       int single_fragment = first && final;*/
       JSValue msg = (opaque->binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len));
 
       if(client->block) {
@@ -366,11 +366,10 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       }
 
       if((client->on.message.ctx)) {
-        JSValue argv[4] = {
-            client->session.ws_obj,
-            msg,
-            JS_NewBool(client->on.message.ctx, first),
-            JS_NewBool(client->on.message.ctx, final),
+        JSValue argv[] = {
+            client->session.ws_obj, msg,
+            /*JS_NewBool(client->on.message.ctx, first),
+            JS_NewBool(client->on.message.ctx, final),*/
         };
 
         client_exception(client, callback_emit(&client->on.message, countof(argv), argv));
@@ -622,7 +621,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   // SETLOG(LLL_INFO)
 
   if(!(client = client_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   client_zero(client);
 
@@ -886,7 +885,7 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   MinnetClient* cl;
 
   if(!(closure = closure_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
 

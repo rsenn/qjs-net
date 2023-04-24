@@ -53,7 +53,7 @@ minnet_url_new(JSContext* ctx, MinnetURL u) {
   MinnetURL* url;
 
   if(!(url = url_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   url_copy(url, u, ctx);
   return minnet_url_wrap(ctx, url);
@@ -259,7 +259,7 @@ minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
   MinnetURL* url;
 
   if(!(url = url_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   url_fromvalue(url, argv[0], ctx);
 
@@ -303,7 +303,7 @@ minnet_url_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValu
   MinnetURL* url;
 
   if(!(url = js_mallocz(ctx, sizeof(MinnetURL))))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");

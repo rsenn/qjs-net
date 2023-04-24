@@ -6,7 +6,7 @@ import inspect from 'inspect';
 import { types, define, filter, split, getOpt, toUnixTime } from 'util';
 import { setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server, URL } from 'net';
 import * as rpc from './js/rpc.js';
-import { Connection, DeserializeSymbols, DeserializeValue, GetKeys, GetProperties, LogWrap, MakeListCommand, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue, callHandler, getPropertyDescriptors, getPrototypeName, hasHandler, isThenable, objectCommand, parseURL, setHandlersFunction, statusResponse, weakAssign } from './js/rpc.js';
+import { Connection, DeserializeSymbols, DeserializeValue, GetKeys, GetProperties, LogWrap, MakeListCommand, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue, callHandler, getPropertyDescriptors, getPrototypeName, hasHandler, isThenable, objectCommand, parseURL, setHandlersFunction, statusResponse, weakDefine } from './js/rpc.js';
 
 function ReadJSON(filename) {
   let data = std.loadFile(filename);
@@ -167,7 +167,13 @@ function main(...args) {
 
           resp.type = 'application/json';
 
-          let { dir = 'tmp', filter = '.(brd|sch|G[A-Z][A-Z])$', verbose = false, objects = false, key = 'mtime' } = data;
+          let {
+            dir = 'tmp',
+            filter = '.(brd|sch|G[A-Z][A-Z])$',
+            verbose = false,
+            objects = false,
+            key = 'mtime'
+          } = data;
           let absdir = path.realpath(dir);
           let components = absdir.split(path.sep);
 
@@ -301,7 +307,7 @@ function main(...args) {
       parseURL,
       setHandlersFunction,
       statusResponse,
-      weakAssign
+      weakDefine
     }
   );
 

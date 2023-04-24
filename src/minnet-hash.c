@@ -129,10 +129,8 @@ minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSVal
     }
   }
 
-  if(!(h = hash_alloc(ctx, type, buf.data != NULL))) {
-    JS_ThrowOutOfMemory(ctx);
+  if(!(h = hash_alloc(ctx, type, buf.data != NULL)))
     goto fail;
-  }
 
   if(!hash_init(h, buf.data, buf.size)) {
     JS_ThrowInternalError(ctx, "failed to initialize MinnetHash");

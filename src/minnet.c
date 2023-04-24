@@ -103,7 +103,7 @@ minnet_io_handler(JSContext* ctx, int fd, int events, struct lws* wsi) {
   LWSIOHandler* h;
 
   if(!(h = js_mallocz(ctx, sizeof(LWSIOHandler))))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   *h = (LWSIOHandler){ctx, wsi, lws_opaque(wsi, ctx)};
 

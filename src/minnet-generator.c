@@ -62,7 +62,7 @@ minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, 
   JSValue ret, args[2];
 
   if(!(gen = generator_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   if(argc < 1 || !JS_IsFunction(ctx, argv[0]))
     return JS_ThrowInternalError(ctx, "MinnetGenerator needs a function parameter");

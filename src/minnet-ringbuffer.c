@@ -37,7 +37,7 @@ minnet_ringbuffer_constructor(JSContext* ctx, JSValueConst new_target, int argc,
   MinnetRingbuffer* rb;
 
   if(!(rb = ringbuffer_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");

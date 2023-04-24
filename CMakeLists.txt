@@ -338,17 +338,17 @@ function(DUMP_TARGET TARGET)
 endfunction(DUMP_TARGET TARGET)
 
 if(WIN32)
-  add_library(quickjs-minnet MODULE ${JS_BINDINGS_SOURCES})
+  add_library(qjs-net MODULE ${JS_BINDINGS_SOURCES})
 else(WIN32)
-  add_library(quickjs-minnet SHARED ${JS_BINDINGS_SOURCES})
+  add_library(qjs-net SHARED ${JS_BINDINGS_SOURCES})
 endif(WIN32)
 
-#add_dependencies(quickjs-minnet minnet.c)
+#add_dependencies(qjs-net minnet.c)
 
-target_link_libraries(quickjs-minnet ${QUICKJS_LIBRARY})
+target_link_libraries(qjs-net ${QUICKJS_LIBRARY})
 
 if(BUILD_LIBWEBSOCKETS)
-  add_dependencies(quickjs-minnet libwebsockets)
+  add_dependencies(qjs-net libwebsockets)
 endif(BUILD_LIBWEBSOCKETS)
 
 #set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=${CMAKE_INSTALL_RPATH}:${CURL_LIBRARY_DIR}")
@@ -357,8 +357,8 @@ set(OPENSSL_LIBRARIES "${OPENSSL_SSL_LIBRARY};${OPENSSL_CRYPTO_LIBRARY}"
     CACHE STRING "OpenSSL libraries")
 
 if(USE_CURL)
-  target_include_directories(quickjs-minnet PRIVATE ${CURL_INCLUDE_DIR})
-  target_link_libraries(quickjs-minnet ${CURL_LIBRARY})
+  target_include_directories(qjs-net PRIVATE ${CURL_INCLUDE_DIR})
+  target_link_libraries(qjs-net ${CURL_LIBRARY})
 endif(USE_CURL)
 
 list(APPEND OPENSSL_LIBRARIES pthread dl)
@@ -397,7 +397,7 @@ macro(TARGET_LINK TARGET)
     ${ZLIB_LIBRARY})
 endmacro(TARGET_LINK TARGET)
 
-target_link(quickjs-minnet net)
+target_link(qjs-net net)
 
 message(
   "Library directories:\n\
@@ -428,7 +428,7 @@ if(NOT QUICKJS_C_MODULE_DIR)
       "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/quickjs")
 endif(NOT QUICKJS_C_MODULE_DIR)
 
-install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}"
+install(TARGETS qjs-net DESTINATION "${QUICKJS_C_MODULE_DIR}"
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE
                     GROUP_READ WORLD_READ WORLD_EXECUTE)
 #file(GLOB JSLIB js/*.js)
@@ -451,7 +451,7 @@ install(TARGETS quickjs-minnet DESTINATION "${QUICKJS_C_MODULE_DIR}"
 #  #make_module(${NAME} ${SRC})
 #endforeach()
 
-#dump_target(quickjs-minnet)
+#dump_target(qjs-net)
 
 file(GLOB TESTS tests/test-*.js)
 list(FILTER TESTS EXCLUDE REGEX ".*/test-client.js")

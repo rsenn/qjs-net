@@ -83,10 +83,8 @@ minnet_asynciterator_constructor(JSContext* ctx, JSValueConst new_target, int ar
   JSValue proto, obj;
   AsyncIterator* iter;
 
-  if(!(iter = js_malloc(ctx, sizeof(AsyncIterator))))
-    return JS_ThrowOutOfMemory(ctx);
-
-  asynciterator_zero(iter);
+  if(!(iter = asynciterator_new(ctx)))
+    return JS_EXCEPTION;
 
   /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");
@@ -112,12 +110,8 @@ static void
 minnet_asynciterator_finalizer(JSRuntime* rt, JSValue val) {
   AsyncIterator* iter;
 
-  if((iter = minnet_asynciterator_data(val))) {
-    if(--iter->ref_count == 0) {
-      asynciterator_clear(iter, rt);
-      // js_free_rt(rt, iter);
-    }
-  }
+  if((iter = minnet_asynciterator_data(val)))
+    asynciterator_free(iter, rt);
 }
 
 JSClassDef minnet_asynciterator_class = {

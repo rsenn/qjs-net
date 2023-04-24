@@ -445,6 +445,7 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
 
   if((p = js_malloc(ctx, sizeof(HTTPAsyncResolveClosure)))) {
     *p = (HTTPAsyncResolveClosure){2, ctx, session, opaque->resp ? response_dup(opaque->resp) : 0, session_wsi(session)};
+
     JSValue resolve = js_function_cclosure(ctx, serve_resolved, 1, 0, p, serve_resolved_free);
     JSValue thened = js_async_then(ctx, value, resolve);
     JSValue reject = js_function_cclosure(ctx, serve_rejected, 1, 0, p, serve_resolved_free);
@@ -458,7 +459,7 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
     ret = catched;
 
   } else {
-    ret = JS_ThrowOutOfMemory(ctx);
+    ret = JS_EXCEPTION;
   }
 
   return ret;

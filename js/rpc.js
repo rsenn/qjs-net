@@ -330,7 +330,7 @@ export class Connection extends EventEmitter {
   }
 }
 
-weakAssign(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
+weakDefine(Connection.prototype, { [Symbol.toStringTag]: 'Connection' });
 
 Connection.list = [];
 
@@ -730,7 +730,7 @@ export function define(obj, ...args) {
   return obj;
 }
 
-export function weakAssign(obj, ...args) {
+export function weakDefine(obj, ...args) {
   let propdesc = {};
   for(let props of args) {
     let desc = Object.getOwnPropertyDescriptors(props);

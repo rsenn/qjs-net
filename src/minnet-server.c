@@ -239,7 +239,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   struct lws_context_creation_info* info;
 
   if((server = server_new(ctx)) == (void*)-1)
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
   if(!server)
     return JS_ThrowInternalError(ctx, "lws init failed");
 
@@ -489,7 +489,7 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   JSValue ret;
 
   if(!(closure = closure_new(ctx)))
-    return JS_ThrowOutOfMemory(ctx);
+    return JS_EXCEPTION;
 
   ret = minnet_server_closure(ctx, this_val, argc, argv, 0, closure);
 
