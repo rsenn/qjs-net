@@ -188,6 +188,7 @@ MinnetHttpMount*
 mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
   MinnetHttpMount* ret;
   JSValue mnt = JS_UNDEFINED, org = JS_UNDEFINED, def = JS_UNDEFINED, pro = JS_UNDEFINED;
+  const char* path;
 
   if(JS_IsArray(ctx, obj)) {
     mnt = JS_GetPropertyUint32(ctx, obj, 0);
@@ -215,7 +216,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
     org = JS_DupValue(ctx, obj);
   }
 
-  const char* path = JS_ToCString(ctx, mnt);
+   path = JS_ToCString(ctx, mnt);
 
   DEBUG("mount_new '%s'\n", path);
 
