@@ -537,7 +537,7 @@ serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
 
   ret = session_callback(session, cb, wsi_context(wsi));
 
-  DBG("iterator=%d async=%d ret=%d generator=%s", js_is_iterator(cb->ctx, session->generator), js_is_async_generator(cb->ctx, session->generator), ret, JS_ToCString(cb->ctx, session->generator));
+  DBG("iterator=%d async=%d ret=%d generator=%s", js_is_iterator(cb->ctx, session->generator), js_is_async_generator(cb->ctx, session->generator), ret,   JS_ToCString(cb->ctx, session->generator));
 
   if(js_is_iterator(cb->ctx, session->generator)) {
     if(js_is_async_generator(cb->ctx, session->generator)) {
