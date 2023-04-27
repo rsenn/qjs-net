@@ -206,7 +206,7 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
     char buf[namelen + 2];
     size_t i = namestr[0] == '/' ? 0 : 1;
 
-    pstrcpy(&buf[i], namelen + i, namestr);
+    pstrcpy(&buf[i], namelen + 1, namestr);
     buf[0] = '/';
     buf[namelen + i] = '\0';
     mnt = JS_NewString(ctx, buf);

@@ -40,6 +40,7 @@ JSValue session_object(struct session_data*, JSContext*);
 int session_want_write(struct session_data*, struct lws*);
 int session_writable(struct session_data*, BOOL, JSContext*);
 int session_callback(struct session_data*, JSCallback*, struct context*);
+int session_generator(struct session_data* session, JSValue generator, JSContext* ctx);
 struct wsi_opaque_user_data* session_opaque(struct session_data*);
 struct http_response* session_response(struct session_data*);
 
