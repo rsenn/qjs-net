@@ -51,8 +51,7 @@ async function* StreamPulseOutput(streamName = sources[0], bufSize = 512) {
 createServer(
   (globalThis.options = {
     port: 8765,
-    block: false,
-    tls: true,
+     tls: true,
     protocol: 'http',
     mimetypes: [['.mp4', 'video/mp4']],
     mounts: {

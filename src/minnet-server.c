@@ -314,7 +314,6 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-  BOOL_OPTION(opt_block, "block", block);
   BOOL_OPTION(opt_h2, "h2", is_h2);
   BOOL_OPTION(opt_pmd, "permessageDeflate", per_message_deflate);
 
