@@ -90,12 +90,13 @@ headers_fromobj(ByteBuffer* buffer, JSValueConst obj, const char* itemdelim, con
 
 ssize_t
 headers_findb(ByteBuffer* b, const char* name, size_t namelen, const char* itemdelim) {
-  uint8_t* x;
+  uint8_t *y, *x;
   ssize_t ret = 0;
 
   for(x = b->start; x < b->write;) {
     size_t c = headers_next(x, b->write, itemdelim);
-    size_t n = headers_namelen(x, x + c);
+
+    size_t n = headers_namelen(x, (y = x + c));
 
     // printf("%s %.*s\n", __func__, (int)c, (char*)x);
 
@@ -200,11 +201,11 @@ headers_unsetb(ByteBuffer* b, const char* name, size_t namelen, const char* item
   ssize_t i;
 
   if((i = headers_findb(b, name, namelen, itemdelim)) >= 0) {
-    uint8_t* x = b->start + i;
+    uint8_t *y, *x = b->start + i;
     size_t c = headers_next(x, b->write, itemdelim);
-
-    if(b->write > x + c)
-      memcpy(x, x + c, b->write - (x + c));
+    y = x + c;
+    if(b->write > y)
+      memcpy(x, y, b->write - y);
     b->write -= c;
 
     if(b->write < b->end)
@@ -226,7 +227,7 @@ headers_set(ByteBuffer* b, const char* name, const char* value, const char* item
   buffer_write(b, name, namelen);
   buffer_write(b, ": ", 2);
   buffer_write(b, value, valuelen);
-  buffer_write(b, "\r\n", 2);
+  buffer_write(b, itemdelim, strlen(itemdelim));
 
   return c;
 }
