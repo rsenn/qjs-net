@@ -114,6 +114,8 @@ session_callback(struct session_data* session, JSCallback* cb, struct context* c
   JSValue result = callback_emit_this(cb, session->ws_obj, 2, &session->req_obj);
   context_exception(context, result);
 
+  DBG("result=%s",  JS_ToCString(cb->ctx, result));
+
   if(JS_IsException(result)) {
     JS_FreeValue(cb->ctx, result);
     ret = -1;

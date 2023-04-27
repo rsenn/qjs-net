@@ -33,7 +33,7 @@
             (char*)(name), \
             args);
 
-#define DBG(fmt, args...) LOG(__FILE__, FG("%d") "%-38s" NC " " fmt, args)
+#define DBG(fmt, args...) LOG(__FILE__, FG("%d") "%-38s" NC " " fmt, (__LINE__ % 224) + 16, __func__, args)
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
