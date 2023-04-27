@@ -72,6 +72,11 @@ callbacks_clear(CallbackList* cbs) {
   for(int i = 0; i < NUM_CALLBACKS; i++) callback_clear(&cbs->cb[i]);
 }
 
+static inline int
+callback_valid(JSCallback const* cb) {
+  return cb->ctx != 0 && JS_IsObject(cb->func_obj);
+}
+
 JSValue callback_emit_this(const struct js_callback*, JSValue, int, JSValue* argv);
 JSValue callback_emit(const struct js_callback*, int, JSValue*);
 

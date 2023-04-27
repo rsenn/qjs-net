@@ -147,26 +147,50 @@ server_free(MinnetServer* server) {
 }
 
 struct ServerMatchClosure {
+  int ref_count;
   JSContext* ctx;
   const char* path;
   enum http_method method;
   JSValue this_cb, prev_cb;
+  BOOL next;
 };
 
+static BOOL
+server_match_all(struct ServerMatchClosure* closure) {
+  return closure->path == 0 && closure->method == -1;
+}
+static struct ServerMatchClosure*
+server_match_dup(struct ServerMatchClosure* closure) {
+  ++closure->ref_count;
+  return closure;
+}
 static void
 server_match_free(void* ptr) {
   struct ServerMatchClosure* closure = ptr;
-  JSContext* ctx = closure->ctx;
-  JS_FreeCString(ctx, closure->path);
-  JS_FreeValue(ctx, closure->this_cb);
-  JS_FreeValue(ctx, closure->prev_cb);
+
+  if(--closure->ref_count == 0) {
+    JSContext* ctx = closure->ctx;
+    JS_FreeCString(ctx, closure->path);
+    JS_FreeValue(ctx, closure->this_cb);
+    JS_FreeValue(ctx, closure->prev_cb);
+  }
 }
+
+static JSValue
+minnet_server_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+  struct ServerMatchClosure* closure = opaque;
+
+  closure->next = TRUE;
+  return JS_UNDEFINED;
+};
 
 static JSValue
 minnet_server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   struct ServerMatchClosure* closure = opaque;
-  JSValue ret;
+  JSValue ret = JS_UNDEFINED;
   MinnetRequest* req;
+  int32_t n;
+  BOOL all = server_match_all(closure);
   JSValueConst args[] = {
       argv[0],
       argv[1],
@@ -177,16 +201,32 @@ minnet_server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
     /*if(closure->path==0 && closure->method==-1)
       args[2]= js_function_bind(ctx, closure->this_cb, */
 
-    ret = JS_Call(ctx, closure->prev_cb, JS_NULL, countof(args), args);
+    ret = JS_Call(ctx, closure->prev_cb, JS_NULL, 2, args);
   }
+
+  JS_ToInt32(ctx, &n, ret);
+  DBG("all=%s ret=%" PRId32 " path=%s method=%s", all ? "TRUE" : "FALSE", n, closure->path, method_name(closure->method));
+
+  if(n == 1)
+    return ret;
 
   if((req = minnet_request_data2(ctx, argv[0]))) {
     BOOL match = request_match(req, closure->path, closure->method);
 
-    DBG("match=%s", match ? "TRUE" : "FALSE");
+    DBG("match=%s all=%s", match ? "TRUE" : "FALSE", all ? "TRUE" : "FALSE");
 
-    if(match)
-      ret = JS_Call(ctx, closure->this_cb, JS_NULL, argc, argv);
+    if(match) {
+
+      //    if(all)
+      args[2] = js_function_cclosure(ctx, minnet_server_next, 0, 0, server_match_dup(closure), server_match_free);
+
+      ret = JS_Call(ctx, closure->this_cb, JS_NULL, all ? 3 : 2, args);
+
+      if(all && !closure->next)
+        ret = JS_NewInt32(ctx, 1);
+
+      JS_FreeValue(ctx, args[2]);
+    }
   }
 
   return ret;
@@ -200,7 +240,7 @@ server_match(MinnetServer* server, const char* path, enum http_method method, JS
   if(!(closure = js_mallocz(ctx, sizeof(struct ServerMatchClosure))))
     return JS_EXCEPTION;
 
-  *closure = (struct ServerMatchClosure){ctx, path, method, callback, prev_callback};
+  *closure = (struct ServerMatchClosure){1, ctx, path, method, callback, prev_callback};
 
   JSValue ret = js_function_cclosure(ctx, minnet_server_match, 0, 0, closure, server_match_free);
   JS_DefinePropertyValueStr(ctx, ret, "name", JS_NewString(ctx, "matcher"), JS_PROP_CONFIGURABLE);

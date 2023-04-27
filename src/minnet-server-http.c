@@ -1074,7 +1074,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         }
       }
 
-      if(server->on.http.ctx) {
+      if(callback_valid(&server->on.http)) {
         cb = &server->on.http;
         JSValue val = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &session->req_obj));
         JS_FreeValue(ctx, val);
