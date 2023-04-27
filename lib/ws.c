@@ -86,7 +86,7 @@ ws_enqueue(struct socket* ws, ByteBlock chunk) {
 
     if((item = queue_add(&session->sendq, chunk))) {
 
-      lws_callback_on_writable(ws->lwsi);
+      session_want_write(session, ws->lwsi);
     }
   }
 

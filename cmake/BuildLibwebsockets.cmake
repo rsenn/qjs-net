@@ -91,7 +91,7 @@ macro(build_libwebsockets)
         #-DLWS_HAVE_EVP_PKEY_new_raw_private_key:BOOL=ON
         -DLWS_WITH_NETWORK:BOOL=OFF
         -DLWS_WITH_DIR:BOOL=OFF
-        -DLWS_WITH_RANGES:BOOL=OFF
+        # -DLWS_WITH_RANGES:BOOL=ON
         -DLWS_WITH_JOSE:BOOL=OFF
         -DLWS_WITH_ACCESS_LOG:BOOL=OFF
         -DLWS_WITH_SSL:BOOL=OFF
@@ -130,7 +130,7 @@ macro(build_libwebsockets)
     endif(WOLFSSL_FOUND)
 
   elseif(WITH_WOLFSSL)
-    set(LIBWEBSOCKETS_ARGS "-DLWS_ROLE_H2:BOOL=ON -DLWS_WITH_RANGES:BOOL=ON")
+    set(LIBWEBSOCKETS_ARGS -DLWS_ROLE_H2:BOOL=ON -DLWS_WITH_RANGES:BOOL=ON)
     if(1)
 
     elseif(WITH_SSL)

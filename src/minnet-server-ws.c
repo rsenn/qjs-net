@@ -75,8 +75,10 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       if(!opaque && ctx)
         opaque = lws_opaque(wsi, ctx);
 
-      if(opaque && session)
+      if(opaque && session) {
+        session_zero(session);
         opaque->sess = session;
+      }
 
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);

@@ -142,6 +142,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
       int status;
       MinnetResponse* resp;
+      char* type;
 
       if(strcmp(lws_get_protocol(wsi)->name, "ws"))
         opaque->status = OPEN;
@@ -158,12 +159,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       headers_tobuffer(ctx, &opaque->resp->headers, wsi);
 
-      if(!resp->type)
-        resp->type = headers_get(&resp->headers, "content-type", ctx);
-
-      if(resp->type) {
-        if(!strncmp(resp->type, "text/", 5))
+      if((type = response_type(resp, ctx))) {
+        if(!strncmp(type, "text/", 5))
           resp->generator->block_fn = &block_tostring;
+        js_free(ctx, type);
       }
 
       url_copy(&resp->url, client->request->url, ctx);

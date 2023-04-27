@@ -161,7 +161,6 @@ minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   clone->status = resp->status;
   clone->read_only = resp->read_only;
   clone->url = url_clone(resp->url, ctx);
-  clone->type = js_strdup(ctx, resp->type);
 
   buffer_clone(&clone->headers, &resp->headers);
   // buffer_clone(clone->body, resp->body);
@@ -350,8 +349,6 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
       const char* str = JS_ToCString(ctx, argv[i]);
       if(!resp->url.path)
         url_parse(&resp->url, str, ctx);
-      else if(!resp->type)
-        resp->type = js_strdup(ctx, str);
       JS_FreeCString(ctx, str);
 
     } else if(JS_IsBool(argv[i])) {

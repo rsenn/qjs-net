@@ -26,15 +26,20 @@ session_zero(struct session_data* session) {
   session->next = JS_NULL;
   session->in_body = FALSE;
   session->response_sent = FALSE;
+  session->want_write = FALSE;
   session->wait_resolve = FALSE;
+  session->generator_run = FALSE;
+  session->callback_count = 0;
   session->server = NULL;
   session->client = NULL;
+  session->callback = NULL;
+  session->wait_resolve_ptr = NULL;
 
   queue_zero(&session->sendq);
 }
 
 void
-session_clear_rt(struct session_data* session, JSRuntime* rt) {
+session_clear(struct session_data* session, JSRuntime* rt) {
 
   JS_FreeValueRT(rt, session->ws_obj);
   session->ws_obj = JS_UNDEFINED;
@@ -47,6 +52,11 @@ session_clear_rt(struct session_data* session, JSRuntime* rt) {
   session->generator = JS_UNDEFINED;
   JS_FreeValueRT(rt, session->next);
   session->next = JS_UNDEFINED;
+
+  if(session->wait_resolve_ptr) {
+    *session->wait_resolve_ptr = 0;
+    session->wait_resolve_ptr = 0;
+  }
 
   if(queue_size(&session->sendq))
     queue_clear_rt(&session->sendq, rt);
@@ -62,6 +72,16 @@ session_object(struct session_data* session, JSContext* ctx) {
   JS_SetPropertyUint32(ctx, ret, 3, JS_DupValue(ctx, session->resp_obj));
 
   return ret;
+}
+
+int
+session_want_write(struct session_data* session, struct lws* wsi) {
+  assert(!session->want_write);
+
+  lws_callback_on_writable(wsi);
+  session->want_write = TRUE;
+
+  // printf("%s\n", __func__);
 }
 
 int
@@ -82,8 +102,8 @@ session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
     block_free(&chunk);
   }
 
-  if(queue_size(&session->sendq) > 0)
-    lws_callback_on_writable(ws->lwsi);
+  if(queue_bytes(&session->sendq) > 0)
+    session_want_write(session, ws->lwsi);
 
   return ret;
 }

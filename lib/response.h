@@ -14,18 +14,19 @@ typedef struct http_response {
   int ref_count;
   bool read_only : 1, headers_sent : 1, compress : 1;
   URL url;
-  char* type;
   int status;
   char* status_text;
   ByteBuffer headers;
   Generator* generator;
 } Response;
 
-void response_init(Response*, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type);
+void response_init(Response*, URL, int32_t, char* status_text, BOOL headers_sent, char* type);
 Response* response_dup(Response*);
-void response_clear(Response*, JSRuntime* rt);
-void response_free(Response*, JSRuntime* rt);
+void response_clear(Response*, JSRuntime*);
+void response_free(Response*, JSRuntime*);
 Response* response_new(JSContext*);
+ssize_t response_settype(Response*, const char*);
+char* response_type(Response*, JSContext*);
 
 static inline Generator*
 response_generator(struct http_response* resp, JSContext* ctx) {

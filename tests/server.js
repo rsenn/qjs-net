@@ -54,24 +54,7 @@ const MimeTypes = [
 
 export function MakeCert(sslCert, sslPrivateKey) {
   let stderr = open('/dev/null', O_RDWR);
-  let ret = exec(
-    [
-      'openssl',
-      'req',
-      '-x509',
-      '-out',
-      sslCert,
-      '-keyout',
-      sslPrivateKey,
-      '-newkey',
-      'rsa:2048',
-      '-nodes',
-      '-sha256',
-      '-subj',
-      '/CN=localhost'
-    ],
-    { stderr }
-  );
+  let ret = exec(['openssl', 'req', '-x509', '-out', sslCert, '-keyout', sslPrivateKey, '-newkey', 'rsa:2048', '-nodes', '-sha256', '-subj', '/CN=localhost'], { stderr });
   close(stderr);
   return ret;
 }
@@ -109,12 +92,7 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
 
         console.log('MinnetServer', { host, port });
 
-        setLog(
-          LLL_WARN | LLL_USER,
-          (level, message) =>
-            !/LOAD_EXTRA|VHOST_CERT_AGING|EVENT_WAIT/.test(message) &&
-            log(`${logLevels[level].padEnd(10)} ${message.trim()}`)
-        );
+        setLog(LLL_WARN | LLL_USER, (level, message) => !/LOAD_EXTRA|VHOST_CERT_AGING|EVENT_WAIT/.test(message) && log(`${logLevels[level].padEnd(10)} ${message.trim()}`));
         //  setLog(0, (level, message) => {});
         //
         let fdmap = (globalThis.fdmap = {});

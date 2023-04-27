@@ -119,7 +119,7 @@ client_free(MinnetClient* client, JSRuntime* rt) {
     context_clear(&client->context);
     context_delete(&client->context);
 
-    session_clear_rt(&client->session, rt);
+    session_clear(&client->session, rt);
 
     /*    if(--client->iter.ref_count == 0)
           asynciterator_clear(&client->iter, rt);*/

@@ -54,7 +54,7 @@ asynciterator_new(JSContext* ctx) {
 
   if((iter = js_malloc(ctx, sizeof(AsyncIterator))))
     asynciterator_zero(iter);
-  
+
   return iter;
 }
 

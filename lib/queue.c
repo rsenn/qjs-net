@@ -186,14 +186,14 @@ queue_close(Queue* q) {
   return i;
 }
 
-int64_t
+size_t
 queue_bytes(Queue* q) {
   QueueItem* i;
   struct list_head* el;
   size_t bytes = 0;
 
-  if(!queue_complete(q))
-    return -1;
+  if(queue_size(q) == 0)
+    return 0;
 
   list_for_each(el, &q->items) {
     i = list_entry(el, QueueItem, link);

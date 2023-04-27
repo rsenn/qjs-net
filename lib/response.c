@@ -15,7 +15,6 @@ response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL h
   resp->status_text = status_text;
   resp->headers_sent = headers_sent;
   resp->url = url;
-  resp->type = type;
   resp->headers = BUFFER_0();
   resp->generator = NULL;
 }
@@ -29,11 +28,6 @@ response_dup(Response* resp) {
 void
 response_clear(Response* resp, JSRuntime* rt) {
   url_free_rt(&resp->url, rt);
-  if(resp->type) {
-    js_free_rt(rt, (void*)resp->type);
-    resp->type = 0;
-  }
-
   buffer_free(&resp->headers);
   generator_destroy(&resp->generator);
 }
@@ -54,4 +48,14 @@ response_new(JSContext* ctx) {
     resp->ref_count = 1;
 
   return resp;
+}
+
+ssize_t
+response_settype(Response* resp, const char* type) {
+  return headers_set(&resp->headers, "content-type", type);
+}
+
+char*
+response_type(Response* resp, JSContext* ctx) {
+  return headers_get(&resp->headers, "content-type", ctx);
 }

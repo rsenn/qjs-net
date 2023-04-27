@@ -3,9 +3,7 @@ import { LLL_ALL, LLL_NOTICE, LLL_USER, logLevels, createServer, setLog } from '
 import('console').then(({ Console }) => { globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 });
 
-setLog(/*LLL_ALL |*/ (LLL_NOTICE - 1) | LLL_USER, (level, message) =>
-  console.log(logLevels[level].padEnd(10), message)
-);
+setLog(/*LLL_ALL |*/ (LLL_NOTICE - 1) | LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message));
 
 createServer(
   (globalThis.options = {
