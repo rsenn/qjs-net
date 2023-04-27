@@ -246,7 +246,7 @@ headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* val
     y = x + c;
 
     if((b->write - y) > 0 && valuelen > 0) {
-      memmove(y + valuelen, y, b->write - y);
+      memmove(y + 2+valuelen, y, b->write - y);
     }
     memcpy(y, ", ", 2);
 
