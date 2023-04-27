@@ -117,6 +117,7 @@ const char* js_function_name(JSContext*, JSValueConst value);
 JSValue js_function_prototype(JSContext*);
 JSAtom js_iterable_method(JSContext*, JSValueConst obj);
 JSValue js_iterator_result(JSContext*, JSValueConst value, BOOL done);
+JSValue js_iterator_nextfn(JSContext*, JSValueConst obj, JSValueConst* next);
 JSValue js_iterator_next(JSContext*, JSValueConst obj, JSValueConst* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValueConst dst, JSValueConst src, int flags);
 void js_buffer_free_default(JSRuntime*, void* opaque, void* ptr);

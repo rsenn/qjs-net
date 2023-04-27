@@ -173,6 +173,13 @@ js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done) {
   return ret;
 }
 
+void
+js_iterator_func(JSContext* ctx, JSValue generator, JSValue* next) {
+  if(js_is_nullish(*next)) {
+    *next = JS_GetPropertyStr(ctx, generator, "next");
+  }
+}
+
 JSValue
 js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
   JSValue fn, result, done, value;

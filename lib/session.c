@@ -111,23 +111,23 @@ session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
 int
 session_callback(struct session_data* session, JSCallback* cb, struct context* context) {
   int ret = 0;
-  JSValue result;
+  JSValue body;
 
-  context_exception(context, (result = callback_emit_this(cb, session->ws_obj, 2, &session->req_obj)));
+  context_exception(context, (body = callback_emit_this(cb, session->ws_obj, 2, &session->req_obj)));
 
-  DBG("result=%s", JS_ToCString(cb->ctx, result));
+  DBG("body=%s", JS_ToCString(cb->ctx, body));
 
-  if(JS_IsException(result))
+  if(JS_IsException(body))
     return 0;
 
-  if(!(ret = session_generator(session, result, cb->ctx))) {
-    JS_FreeValue(cb->ctx, result);
-    result = JS_GetPropertyStr(cb->ctx, session->resp_obj, "body");
+  if(!(ret = session_generator(session, body, cb->ctx))) {
+    JS_FreeValue(cb->ctx, body);
+    body = JS_GetPropertyStr(cb->ctx, session->resp_obj, "body");
 
-    ret = session_generator(session, result, cb->ctx);
+    ret = session_generator(session, body, cb->ctx);
   }
 
-  JS_FreeValue(cb->ctx, result);
+  JS_FreeValue(cb->ctx, body);
   return ret;
 }
 
@@ -150,7 +150,8 @@ session_generator(struct session_data* session, JSValue generator, JSContext* ct
   ret = js_is_iterator(ctx, generator);
 
   session->generator = ret ? JS_DupValue(ctx, generator) : JS_NULL;
-  session->next = JS_UNDEFINED;
+  session->next = JS_NULL;
+
   return ret;
 }
 
