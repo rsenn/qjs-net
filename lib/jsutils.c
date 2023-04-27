@@ -307,23 +307,25 @@ js_buffer_free(JSBuffer* in, JSContext* ctx) {
 
 BOOL
 js_function_is_generator(JSContext* ctx, JSValueConst obj) {
-  BOOL ret=FALSE;
+  BOOL ret = FALSE;
   const char *str, *x;
-  
+
   if(!JS_IsFunction(ctx, obj))
     return FALSE;
 
   x = str = JS_ToCString(ctx, obj);
 
-  if(strncmp(x, "async ", 6))
+  if(!strncmp(x, "async ", 6))
     x += 6;
 
   if(!strncmp(x, "function", 8)) {
     x += 8;
     while(isspace(*x)) ++x;
-    if(*x == '*')
-      ret=TRUE;
   }
+
+  if(*x == '*')
+    ret = TRUE;
+
   JS_FreeCString(ctx, str);
   return ret;
 }

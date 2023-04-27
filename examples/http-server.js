@@ -8,12 +8,12 @@ setLog(/*LLL_ALL |*/ (LLL_NOTICE - 1) | LLL_USER, (level, message) => console.lo
 createServer(
   (globalThis.options = {
     port: 8765,
-     tls: true,
+    tls: true,
     protocol: 'http',
     mounts: {
       '/': ['/', '.', 'index.html'],
-      *'/404.html' (req, res) {
-         yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
+      *'/404.html'(req, res) {
+        yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
       },
       *generator(req, res) {
         console.log('/generator', { req, res });
@@ -29,10 +29,10 @@ createServer(
         yield '\n';
       }
     },
- 
+
     onRequest(ws, req, resp) {
       console.log('onRequest', { req, resp });
       Object.assign(globalThis, { req, resp });
-    } 
+    }
   })
 );

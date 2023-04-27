@@ -6,11 +6,12 @@ import('console').then(({ Console }) => { globalThis.console = new Console({ ins
 
 setLog((LLL_NOTICE - 1) | LLL_USER, (level, message) => {
   if(level == LLL_USER)
-  //if(!/minnet-server-http.c/.test(message))
-      console.log(
-        logLevels[level].padEnd(10),
-        message/*.replaceAll(/\n/g, '\\\\n')*/     .replaceAll(/\x1b\[[^m]*m/g, '')
-      );
+    //if(!/minnet-server-http.c/.test(message))
+    console.log(
+      logLevels[level].padEnd(10),
+      message /*.replaceAll(/\n/g, '\\\\n')*/
+        .replaceAll(/\x1b\[[^m]*m/g, '')
+    );
 });
 
 function GetPulseSources() {
@@ -22,7 +23,7 @@ function GetPulseSources() {
   }
   pipe.close();
   return sources;
-} 
+}
 let sources = GetPulseSources();
 
 async function* StreamPulseOutput(streamName = sources[0], bufSize = 512) {
@@ -34,8 +35,7 @@ async function* StreamPulseOutput(streamName = sources[0], bufSize = 512) {
 
   let r, fd, buf;
 
-  const waitRead = fd =>
-    new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
+  const waitRead = fd => new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
 
   fd = file.fileno();
   buf = new ArrayBuffer(bufSize);
@@ -51,7 +51,7 @@ async function* StreamPulseOutput(streamName = sources[0], bufSize = 512) {
 createServer(
   (globalThis.options = {
     port: 8765,
-     tls: true,
+    tls: true,
     protocol: 'http',
     mimetypes: [['.mp4', 'video/mp4']],
     mounts: {

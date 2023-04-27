@@ -5,7 +5,7 @@ import net from 'net';
 function request(url) {
   return net
     .client(url, {
-       async onResponse(ws, resp) {
+      async onResponse(ws, resp) {
         console.log('Response for', resp.url);
 
         let chunks = [];
