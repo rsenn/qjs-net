@@ -16,7 +16,20 @@
 #include "../libwebsockets/plugins/protocol_lws_mirror.c"
 #include "minnet-plugin-broker.c"
 
+THREAD_LOCAL JSValue minnet_server_proto;
+THREAD_LOCAL JSClassID minnet_server_class_id = 0;
+
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int ws_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+
+static JSValue minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr);
+
+enum {
+  SERVER_LISTEN,
+  SERVER_GET,
+  SERVER_POST,
+  SERVER_USE,
+};
 
 static struct lws_protocols protocols[] = {
     {"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
@@ -96,8 +109,14 @@ server_new(JSContext* ctx) {
   return server;
 }
 
+MinnetServer*
+server_dup(MinnetServer* srv) {
+  ++srv->ref_count;
+  return srv;
+}
+
 static BOOL
-server_init(MinnetServer* server) {
+server_listen(MinnetServer* server) {
   if(!(server->context.lws = lws_create_context(&server->context.info))) {
     lwsl_err("libwebsockets init failed\n");
     return FALSE;
@@ -107,6 +126,14 @@ server_init(MinnetServer* server) {
     lwsl_err("Failed to create vhost\n");
     return FALSE;
   }
+
+  JSValue timer_cb = js_function_cclosure(server->context.js, minnet_server_timeout, 4, 0, server, 0);
+  uint32_t interval = lws_service_adjust_timeout(server->context.lws, 15000, 0);
+  if(interval == 0)
+    interval = 10;
+  server->context.timer = js_timer_interval(server->context.js, timer_cb, interval);
+
+  server->listening = TRUE;
 
   return TRUE;
 }
@@ -122,6 +149,56 @@ server_free(MinnetServer* server) {
 
     js_free(ctx, server);
   }
+}
+
+struct ServerMatchClosure {
+  JSContext* ctx;
+  const char* path;
+  enum http_method method;
+  JSValue this_cb, prev_cb;
+};
+
+static void
+server_match_free(void* ptr) {
+  struct ServerMatchClosure* closure = ptr;
+  JSContext* ctx = closure->ctx;
+  JS_FreeCString(ctx, closure->path);
+  JS_FreeValue(ctx, closure->this_cb);
+  JS_FreeValue(ctx, closure->prev_cb);
+}
+
+static JSValue
+minnet_server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+  struct ServerMatchClosure* closure = opaque;
+  JSValue ret;
+  MinnetRequest* req;
+
+  if(!js_is_nullish(closure->prev_cb))
+    ret = JS_Call(ctx, closure->prev_cb, JS_NULL, argc, argv);
+
+  if((req = minnet_request_data2(ctx, argv[0]))) {
+    BOOL match = request_match(req, closure->path, closure->method);
+
+    DBG("match=%s", match ? "TRUE" : "FALSE");
+
+    if(match)
+      ret = JS_Call(ctx, closure->this_cb, JS_NULL, argc, argv);
+  }
+
+  return ret;
+}
+
+JSValue
+server_match(MinnetServer* server, const char* path, enum http_method method, JSValue callback, JSValue prev_callback) {
+
+  struct ServerMatchClosure* closure;
+
+  if(!(closure = js_mallocz(server->context.js, sizeof(struct ServerMatchClosure))))
+    return JS_EXCEPTION;
+
+  *closure = (struct ServerMatchClosure){server->context.js, path, method, callback, prev_callback};
+
+  return js_function_cclosure(server->context.js, minnet_server_match, 0, 0, closure, server_match_free);
 }
 
 void
@@ -197,6 +274,49 @@ server_certificate(struct context* context, JSValueConst options) {
   }
 }
 
+JSValue
+minnet_server_wrap(JSContext* ctx, MinnetServer* srv) {
+  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_server_proto, minnet_server_class_id);
+
+  if(JS_IsException(ret))
+    return JS_EXCEPTION;
+
+  JS_SetOpaque(ret, server_dup(srv));
+  return ret;
+}
+
+JSValue
+minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  MinnetServer* server;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(server = minnet_server_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case SERVER_LISTEN: {
+      if(!server_listen(server))
+        ret = JS_ThrowInternalError(ctx, "server_listen failed");
+
+      break;
+    }
+    case SERVER_GET:
+    case SERVER_POST: {
+      const char* path;
+      enum http_method method = magic == SERVER_GET ? METHOD_GET : METHOD_POST;
+
+      if((path = JS_ToCString(ctx, argv[0]))) {
+        JSValue new_cb = server_match(server, path, method, argv[1], server->on.http.func_obj);
+        server->on.http.func_obj = new_cb;
+      }
+
+      break;
+    }
+  }
+
+  return ret;
+}
+
 static JSValue
 minnet_server_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   return JS_UNDEFINED;
@@ -233,7 +353,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 JSValue
 minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   int argind = 0, a = 0;
-  BOOL block = TRUE, is_tls = FALSE, is_h2 = TRUE, per_message_deflate = FALSE;
+  BOOL block = FALSE, is_tls = FALSE, is_h2 = TRUE, per_message_deflate = FALSE;
   MinnetServer* server;
   MinnetURL url = {0};
   JSValue ret, options;
@@ -410,14 +530,10 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   server_mounts(server, opt_mounts);
 
-  if(!server_init(server))
+  if(!server_listen(server))
     return JS_ThrowInternalError(ctx, "libwebsockets init failed");
 
-  JSValue timer_cb = js_function_cclosure(ctx, minnet_server_timeout, 4, 0, server, 0);
-  uint32_t interval = lws_service_adjust_timeout(server->context.lws, 15000, 0);
-  if(interval == 0)
-    interval = 10;
-  server->context.timer = js_timer_interval(ctx, timer_cb, interval);
+  ret = minnet_server_wrap(ctx, server);
 
   if(!block)
     return ret;
@@ -509,11 +625,51 @@ minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
     JS_FreeValue(ctx, func[0]);
     JS_FreeValue(ctx, func[1]);
+  } else if(closure->pointer) {
+    ret = minnet_server_wrap(ctx, closure->pointer);
   }
 
   closure_free(closure);
 
   return ret;
+}
+
+static const JSCFunctionListEntry minnet_server_proto_funcs[] = {
+    JS_CFUNC_MAGIC_DEF("listen", 0, minnet_server_method, SERVER_LISTEN),
+    JS_CFUNC_MAGIC_DEF("get", 2, minnet_server_method, SERVER_GET),
+    JS_CFUNC_MAGIC_DEF("post", 2, minnet_server_method, SERVER_POST),
+    JS_CFUNC_MAGIC_DEF("use", 2, minnet_server_method, SERVER_USE),
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetServer", JS_PROP_CONFIGURABLE),
+};
+
+static void
+minnet_server_finalizer(JSRuntime* rt, JSValue val) {
+  MinnetServer* srv;
+
+  if((srv = minnet_server_data(val))) {
+
+    /*ptr->free_func(ptr->opaque, rt);
+    ptr->server = 0;
+    js_free_rt(rt, ptr);*/
+  }
+}
+
+static JSClassDef minnet_server_class = {
+    .class_name = "MinnetServer",
+    .finalizer = minnet_server_finalizer,
+};
+
+int
+minnet_server_init(JSContext* ctx, JSModuleDef* m) {
+  JSAtom inspect_atom;
+
+  // Add class Headers
+  JS_NewClassID(&minnet_server_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_server_class_id, &minnet_server_class);
+  minnet_server_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_server_proto, minnet_server_proto_funcs, countof(minnet_server_proto_funcs));
+
+  return 0;
 }
 
 int

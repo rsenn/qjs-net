@@ -30,6 +30,7 @@ Request* request_fromwsi(struct lws*, JSContext* ctx);
 void request_clear(Request*, JSRuntime* rt);
 void request_free(Request*, JSRuntime* rt);
 Request* request_from(int, JSValueConst argv[], JSContext* ctx);
+BOOL request_match(Request* req, const char* path, enum http_method method);
 
 static inline const char*
 method_name(int m) {

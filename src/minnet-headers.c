@@ -270,7 +270,7 @@ static const JSCFunctionListEntry minnet_headers_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("get", 1, minnet_headers_method, HEADERS_GET),
     JS_CFUNC_MAGIC_DEF("has", 1, minnet_headers_method, HEADERS_HAS),
     JS_CFUNC_MAGIC_DEF("set", 2, minnet_headers_method, HEADERS_SET),
-    JS_CGETSET_MAGIC_DEF("buffer", minnet_headers_get,0, HEADERS_BUFFER),
+    JS_CGETSET_MAGIC_DEF("buffer", minnet_headers_get, 0, HEADERS_BUFFER),
     JS_CFUNC_DEF("inspect", 0, minnet_headers_inspect),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetHeaders", JS_PROP_CONFIGURABLE),
 };

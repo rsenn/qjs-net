@@ -137,3 +137,15 @@ request_from(int argc, JSValueConst argv[], JSContext* ctx) {
 
   return req;
 }
+
+BOOL
+request_match(Request* req, const char* path, enum http_method method) {
+
+  if(strcmp(req->url.path, path))
+    return FALSE;
+
+  if(method != req->method)
+    return FALSE;
+
+  return TRUE;
+}

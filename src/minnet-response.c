@@ -67,23 +67,26 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   JSValue ret;
   ResolveFunctions funcs;
   MinnetResponse* resp;
+  Generator* gen;
 
   if(!(resp = minnet_response_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   ret = js_async_create(ctx, &funcs);
 
+  gen = response_generator(resp, ctx);
+
   switch(magic) {
     case RESPONSE_ARRAYBUFFER: {
+      generator_continuous(gen, funcs.resolve);
       break;
     }
     case RESPONSE_TEXT: {
-      if(resp->generator) {
-        generator_continuous(resp->generator, funcs.resolve);
-      }
+      generator_continuous(gen, funcs.resolve);
       break;
     }
     case RESPONSE_JSON: {
+      generator_continuous(gen, funcs.resolve);
       break;
     }
   }
@@ -361,27 +364,27 @@ JSClassDef minnet_response_class = {
     "MinnetResponse",
     .finalizer = minnet_response_finalizer,
 };
-
 const JSCFunctionListEntry minnet_response_proto_funcs[] = {
-    JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_response_method, RESPONSE_ARRAYBUFFER),
-    JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
-    JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
-    JS_CFUNC_MAGIC_DEF("set", 2, minnet_response_header, HEADERS_SET),
-    JS_CFUNC_MAGIC_DEF("get", 1, minnet_response_header, HEADERS_GET),
     JS_CFUNC_MAGIC_DEF("append", 2, minnet_response_header, HEADERS_APPEND),
+    JS_CFUNC_MAGIC_DEF("get", 1, minnet_response_header, HEADERS_GET),
+    JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
     JS_CFUNC_MAGIC_DEF("location", 1, minnet_response_header, HEADERS_LOCATION),
+    JS_CFUNC_MAGIC_DEF("set", 2, minnet_response_header, HEADERS_SET),
+    JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
+
     JS_CFUNC_DEF("clone", 0, minnet_response_clone),
-    JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("statusText", minnet_response_get, minnet_response_set, RESPONSE_STATUSTEXT, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("bodyUsed", minnet_response_get, 0, RESPONSE_BODYUSED, JS_PROP_ENUMERABLE),
-    // JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_response_get, minnet_response_set, RESPONSE_BODY, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("ok", minnet_response_get, 0, RESPONSE_OK, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headersSent", minnet_response_get, 0, RESPONSE_HEADERS_SENT, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("redirected", minnet_response_get, minnet_response_set, RESPONSE_REDIRECTED, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, 0, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_response_iterator),
+
+    // JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_response_get, minnet_response_set, RESPONSE_BODY, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("bodyUsed", minnet_response_get, 0, RESPONSE_BODYUSED, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, 0, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_DEF("headersSent", minnet_response_get, 0, RESPONSE_HEADERS_SENT),
+    JS_CGETSET_MAGIC_DEF("ok", minnet_response_get, 0, RESPONSE_OK),
+    JS_CGETSET_MAGIC_DEF("redirected", minnet_response_get, minnet_response_set, RESPONSE_REDIRECTED),
+    JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_DEF("statusText", minnet_response_get, minnet_response_set, RESPONSE_STATUSTEXT),
+    JS_CGETSET_MAGIC_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),
 };
 
