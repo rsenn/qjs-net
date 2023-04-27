@@ -112,7 +112,7 @@ JSValue js_function_bind_1(JSContext*, JSValueConst func, JSValueConst arg);
 JSValue js_function_bind_this(JSContext*, JSValueConst func, JSValueConst this_val);
 JSValue js_function_bind_this_1(JSContext*, JSValueConst func, JSValueConst this_val, JSValueConst arg);
 JSValue js_function_name_value(JSContext*, JSValueConst value);
-BOOL                 js_function_is_generator(JSContext*, JSValueConst);
+BOOL js_function_is_generator(JSContext*, JSValueConst);
 const char* js_function_name(JSContext*, JSValueConst value);
 JSValue js_function_prototype(JSContext*);
 JSAtom js_iterable_method(JSContext*, JSValueConst obj);
