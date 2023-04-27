@@ -108,31 +108,27 @@ session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
   return ret;
 }
 
-JSValue
+int
 session_callback(struct session_data* session, JSCallback* cb, struct context* context) {
   int ret = 0;
   JSValue body;
 
   context_exception(context, (body = callback_emit_this(cb, session->ws_obj, 2, &session->req_obj)));
 
-  /* DBG("body=%s", JS_ToCString(cb->ctx, body));
+  do {
+    ret = session_generator(session, body, context);
+    JS_FreeValue(cb->ctx, body);
+    if(ret)
+      break;
+    body = JS_GetPropertyStr(cb->ctx, session->resp_obj, "body");
+  } while(!js_is_nullish(body));
 
-   if(JS_IsException(body))
-     return 0;
-
-   if(!(ret = session_generator(session, body, cb->ctx))) {
-     JS_FreeValue(cb->ctx, body);
-     body = JS_GetPropertyStr(cb->ctx, session->resp_obj, "body");
-
-     ret = session_generator(session, body, cb->ctx);
-   }
-
-   JS_FreeValue(cb->ctx, body);*/
-  return body;
+  return ret;
 }
 
 int
-session_generator(struct session_data* session, JSValue generator, JSContext* ctx) {
+session_generator(struct session_data* session, JSValue generator, struct context* context) {
+  JSContext* ctx = context->js;
   JSValue this = session->resp_obj;
   JSAtom prop;
   int ret = 0;
@@ -148,7 +144,7 @@ session_generator(struct session_data* session, JSValue generator, JSContext* ct
   if(JS_IsFunction(ctx, generator)) {
     if(!async)
       async = js_function_is_async(ctx, generator);
-    generator = JS_Call(ctx, generator, this, 2, &session->req_obj);
+    context_exception(context, (generator = JS_Call(ctx, generator, this, 2, &session->req_obj)));
   }
 
   ret = !js_is_nullish(generator);
