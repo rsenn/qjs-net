@@ -24,13 +24,6 @@ int ws_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, siz
 
 static JSValue minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr);
 
-enum {
-  SERVER_LISTEN,
-  SERVER_GET,
-  SERVER_POST,
-  SERVER_USE,
-};
-
 static struct lws_protocols protocols[] = {
     {"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
@@ -106,6 +99,8 @@ server_new(JSContext* ctx) {
 
   context_add(&server->context);
 
+  callbacks_zero(&server->on);
+
   return server;
 }
 
@@ -172,9 +167,18 @@ minnet_server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
   struct ServerMatchClosure* closure = opaque;
   JSValue ret;
   MinnetRequest* req;
+  JSValueConst args[] = {
+      argv[0],
+      argv[1],
+      JS_NULL,
+  };
 
-  if(!js_is_nullish(closure->prev_cb))
-    ret = JS_Call(ctx, closure->prev_cb, JS_NULL, argc, argv);
+  if(!js_is_nullish(closure->prev_cb)) {
+    /*if(closure->path==0 && closure->method==-1)
+      args[2]= js_function_bind(ctx, closure->this_cb, */
+
+    ret = JS_Call(ctx, closure->prev_cb, JS_NULL, countof(args), args);
+  }
 
   if((req = minnet_request_data2(ctx, argv[0]))) {
     BOOL match = request_match(req, closure->path, closure->method);
@@ -190,15 +194,17 @@ minnet_server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
 JSValue
 server_match(MinnetServer* server, const char* path, enum http_method method, JSValue callback, JSValue prev_callback) {
-
+  JSContext* ctx = server->context.js;
   struct ServerMatchClosure* closure;
 
-  if(!(closure = js_mallocz(server->context.js, sizeof(struct ServerMatchClosure))))
+  if(!(closure = js_mallocz(ctx, sizeof(struct ServerMatchClosure))))
     return JS_EXCEPTION;
 
-  *closure = (struct ServerMatchClosure){server->context.js, path, method, callback, prev_callback};
+  *closure = (struct ServerMatchClosure){ctx, path, method, callback, prev_callback};
 
-  return js_function_cclosure(server->context.js, minnet_server_match, 0, 0, closure, server_match_free);
+  JSValue ret = js_function_cclosure(ctx, minnet_server_match, 0, 0, closure, server_match_free);
+  JS_DefinePropertyValueStr(ctx, ret, "name", JS_NewString(ctx, "matcher"), JS_PROP_CONFIGURABLE);
+  return ret;
 }
 
 void
@@ -285,6 +291,58 @@ minnet_server_wrap(JSContext* ctx, MinnetServer* srv) {
   return ret;
 }
 
+enum {
+  SERVER_ONREQUEST,
+  SERVER_LISTENING,
+};
+
+JSValue
+minnet_server_get(JSContext* ctx, JSValueConst this_val, int magic) {
+  MinnetServer* server;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(server = minnet_server_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case SERVER_ONREQUEST: {
+      ret = JS_DupValue(ctx, server->on.http.func_obj);
+      break;
+    }
+    case SERVER_LISTENING: {
+      ret = JS_NewBool(ctx, server->context.lws != 0);
+      break;
+    }
+  }
+  return ret;
+}
+
+JSValue
+minnet_server_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+  MinnetServer* server;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(server = minnet_server_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case SERVER_ONREQUEST: {
+      JS_FreeValue(ctx, server->on.http.func_obj);
+      server->on.http.func_obj = JS_DupValue(ctx, value);
+      server->on.http.ctx = JS_IsFunction(ctx, value) ? ctx : 0;
+      break;
+    }
+  }
+  return ret;
+}
+
+enum {
+  SERVER_LISTEN,
+  SERVER_GET,
+  SERVER_POST,
+  SERVER_USE,
+};
+
 JSValue
 minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetServer* server;
@@ -295,21 +353,46 @@ minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 
   switch(magic) {
     case SERVER_LISTEN: {
+      int32_t port = -1;
+      if(argc > 0)
+        JS_ToInt32(ctx, &port, argv[0]);
+
+      if(port != -1)
+        server->context.info.port = port;
+
       if(!server_listen(server))
         ret = JS_ThrowInternalError(ctx, "server_listen failed");
 
       break;
     }
     case SERVER_GET:
-    case SERVER_POST: {
-      const char* path;
-      enum http_method method = magic == SERVER_GET ? METHOD_GET : METHOD_POST;
+    case SERVER_POST:
+    case SERVER_USE: {
+      const char* path = 0;
+      int index = 0;
+      enum http_method method = magic == SERVER_GET ? METHOD_GET : magic == SERVER_POST ? METHOD_POST : -1;
+      JSValue fn, new_cb;
 
-      if((path = JS_ToCString(ctx, argv[0]))) {
-        JSValue new_cb = server_match(server, path, method, argv[1], server->on.http.func_obj);
-        server->on.http.func_obj = new_cb;
+      if(JS_IsString(argv[0]) && argc > 1)
+        path = JS_ToCString(ctx, argv[index++]);
+
+      if(!JS_IsFunction(ctx, argv[index])) {
+        ret = JS_ThrowTypeError(ctx, "argument %d must be a function", index + 1);
+        break;
       }
 
+      if(method == -1 && path == 0 && server->on.http.ctx == 0) {
+        new_cb = JS_DupValue(ctx, argv[index]);
+      } else {
+        new_cb = server_match(server, path, method, JS_DupValue(ctx, argv[index]), server->on.http.func_obj);
+        path = 0;
+      }
+
+      server->on.http.func_obj = new_cb;
+      server->on.http.ctx = ctx;
+
+      if(path)
+        JS_FreeCString(ctx, path);
       break;
     }
   }
@@ -530,8 +613,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   server_mounts(server, opt_mounts);
 
-  if(!server_listen(server))
-    return JS_ThrowInternalError(ctx, "libwebsockets init failed");
+  if(server->context.info.port > 0)
+    if(!server_listen(server))
+      return JS_ThrowInternalError(ctx, "libwebsockets init failed");
 
   ret = minnet_server_wrap(ctx, server);
 
@@ -639,6 +723,8 @@ static const JSCFunctionListEntry minnet_server_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("get", 2, minnet_server_method, SERVER_GET),
     JS_CFUNC_MAGIC_DEF("post", 2, minnet_server_method, SERVER_POST),
     JS_CFUNC_MAGIC_DEF("use", 2, minnet_server_method, SERVER_USE),
+    JS_CGETSET_MAGIC_DEF("onrequest", minnet_server_get, minnet_server_set, SERVER_ONREQUEST),
+    JS_CGETSET_MAGIC_FLAGS_DEF("listening", minnet_server_get, 0, SERVER_LISTENING, JS_PROP_ENUMERABLE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetServer", JS_PROP_CONFIGURABLE),
 };
 
