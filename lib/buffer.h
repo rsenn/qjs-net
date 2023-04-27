@@ -71,7 +71,8 @@ typedef union byte_buffer {
 #define buffer_BEGIN(b) block_BEGIN(&(b)->block)
 #define buffer_END(b) block_END(&(b)->block)
 #define buffer_SIZE(b) block_SIZE(&(b)->block)
-
+#define buffer_WRITE(b) (void*)(b)->write
+#define buffer_READ(b) (void*)(b)->read
 #define buffer_zero(b) memset((b), 0, sizeof(ByteBuffer))
 
 uint8_t* buffer_alloc(ByteBuffer*, size_t size);

@@ -47,22 +47,31 @@ wsi_cert(struct lws* wsi) {
     lwsl_hexdump_notice(ci->ns.name, (unsigned int)ci->ns.len);
   }
 
+#ifdef LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID
+
   if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID, ci, 0)) {
     lwsl_notice(" AUTHORITY_KEY_ID\n");
     lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
   }
+#endif
+#if LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID_ISSUER
   if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID_ISSUER, ci, 0)) {
     lwsl_notice(" AUTHORITY_KEY_ID ISSUER\n");
     lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
   }
+#endif
+#if LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID_SERIAL
   if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_AUTHORITY_KEY_ID_SERIAL, ci, 0)) {
     lwsl_notice(" AUTHORITY_KEY_ID SERIAL\n");
     lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
   }
+#endif
+#if LWS_TLS_CERT_INFO_SUBJECT_KEY_ID
   if(!lws_tls_peer_cert_info(wsi, LWS_TLS_CERT_INFO_SUBJECT_KEY_ID, ci, 0)) {
     lwsl_notice(" AUTHORITY_KEY_ID SUBJECT_KEY_ID\n");
     lwsl_hexdump_notice(ci->ns.name, (size_t)ci->ns.len);
   }
+#endif
 }
 
 char*

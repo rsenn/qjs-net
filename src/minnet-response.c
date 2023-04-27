@@ -117,7 +117,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       size_t vlen;
       char* v;
 
-      if((v = headers_getlen(&resp->headers, &vlen, key)))
+      if((v = headers_getlen(&resp->headers, &vlen, key, "\r\n")))
         ret = JS_NewStringLen(ctx, v, vlen);
 
       break;
@@ -126,7 +126,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       const char* v;
 
       if((v = JS_ToCString(ctx, argv[1])))
-        ret = JS_NewInt32(ctx, headers_set(&resp->headers, key, v));
+        ret = JS_NewInt32(ctx, headers_set(&resp->headers, key, v, "\r\n"));
 
       break;
     }
@@ -135,12 +135,12 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       size_t vlen;
 
       if((v = JS_ToCStringLen(ctx, &vlen, argv[1])))
-        ret = JS_NewInt32(ctx, headers_appendb(&resp->headers, key, keylen, v, vlen));
+        ret = JS_NewInt32(ctx, headers_appendb(&resp->headers, key, keylen, v, vlen, "\r\n"));
 
       break;
     }
     case HEADERS_LOCATION: {
-      ret = JS_NewInt32(ctx, headers_set(&resp->headers, "Location", key));
+      ret = JS_NewInt32(ctx, headers_set(&resp->headers, "Location", key, "\r\n"));
       break;
     }
   }
@@ -205,7 +205,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       /*   if((type = resp->type))
            len = strlen(type);
          else*/
-      type = headers_getlen(&resp->headers, &len, "content-type");
+      type = headers_getlen(&resp->headers, &len, "content-type", "\r\n");
 
       ret = type ? JS_NewStringLen(ctx, type, len) : JS_NULL;
       break;
@@ -263,7 +263,7 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       break;
     }
     case RESPONSE_TYPE: {
-      headers_set(&resp->headers, "content-type", str);
+      headers_set(&resp->headers, "content-type", str, "\r\n");
       //  resp->type = js_strdup(ctx, str);
       break;
     }

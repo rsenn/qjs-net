@@ -26,6 +26,9 @@ struct MinnetHeadersOpaque {
   ByteBuffer* headers;
   void* opaque;
   HeadersFreeFunc* free_func;
+  struct {
+    const char *item, *field;
+  } separator;
 };
 
 void*
@@ -131,7 +134,9 @@ static JSValue
 minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   ByteBuffer* headers;
   JSValue ret = JS_UNDEFINED;
+  struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(this_val);
 
+  return JS_EXCEPTION;
   if(!(headers = minnet_headers_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
@@ -142,8 +147,8 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       const char* value = JS_ToCStringLen(ctx, &valuelen, argv[1]);
 
       ssize_t index;
-      if((index = headers_appendb(headers, name, namelen, value, valuelen)) == -1)
-        index = headers_set(headers, name, value);
+      if((index = headers_appendb(headers, name, namelen, value, valuelen, ptr->separator.item)) == -1)
+        index = headers_set(headers, name, value, ptr->separator.item);
       ret = JS_NewInt64(ctx, index);
       JS_FreeCString(ctx, name);
       JS_FreeCString(ctx, value);
@@ -153,7 +158,7 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       size_t namelen;
       const char* name = JS_ToCStringLen(ctx, &namelen, argv[0]);
 
-      ret = JS_NewInt64(ctx, headers_unsetb(headers, name, namelen));
+      ret = JS_NewInt64(ctx, headers_unsetb(headers, name, namelen, ptr->separator.item));
       break;
     }
     case HEADERS_GET: {
@@ -161,7 +166,7 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       const char* name = JS_ToCString(ctx, argv[0]);
       const char* value;
 
-      if((value = headers_getlen(headers, &valuelen, name)))
+      if((value = headers_getlen(headers, &valuelen, name, ptr->separator.item)))
         ret = JS_NewStringLen(ctx, value, valuelen);
       break;
     }
@@ -169,7 +174,7 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       size_t namelen;
       const char* name = JS_ToCStringLen(ctx, &namelen, argv[0]);
 
-      ret = JS_NewBool(ctx, headers_findb(headers, name, namelen) != -1);
+      ret = JS_NewBool(ctx, headers_findb(headers, name, namelen, ptr->separator.item) != -1);
       break;
     }
 
@@ -177,7 +182,7 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       size_t valuelen;
       const char* name = JS_ToCString(ctx, argv[0]);
       const char* value = JS_ToCString(ctx, argv[1]);
-      ret = JS_NewInt64(ctx, headers_set(headers, name, value));
+      ret = JS_NewInt64(ctx, headers_set(headers, name, value, ptr->separator.item));
 
       break;
     }
@@ -189,27 +194,28 @@ static JSValue
 minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   ByteBuffer* headers;
   JSValue ret = JS_UNDEFINED;
+  struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(this_val);
 
   if(!(headers = minnet_headers_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   ret = JS_NewArray(ctx);
   uint32_t i = 0;
-  uint8_t *ptr, *end = headers->write;
+  uint8_t *x, *end = headers->write;
 
-  for(ptr = headers->start; ptr != end; ptr += headers_next(ptr, end)) {
+  for(x = headers->start; x != end; x += headers_next(x, end, ptr->separator.item)) {
     size_t len;
     JSValue name = JS_NULL, value = JS_NULL, entry = JS_NULL;
 
     if(magic == HEADERS_KEYS || magic == HEADERS_ENTRIES) {
-      len = headers_namelen(ptr, end);
-      name = JS_NewStringLen(ctx, ptr, len);
+      len = headers_namelen(x, end);
+      name = JS_NewStringLen(ctx, x, len);
     }
 
     if(magic == HEADERS_VALUES || magic == HEADERS_ENTRIES) {
-      ptr += headers_value(ptr, end);
-      len = headers_length(ptr, end);
-      value = JS_NewStringLen(ctx, ptr, len);
+      x += headers_value(x, end);
+      len = headers_length(x, end);
+      value = JS_NewStringLen(ctx, x, len);
     }
 
     if(magic == HEADERS_ENTRIES) {
@@ -271,8 +277,9 @@ minnet_headers_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSV
   char* value;
   size_t len;
   BOOL ret = FALSE;
+  struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(obj);
 
-  if((value = headers_getlen(headers, &len, propstr))) {
+  if((value = headers_getlen(headers, &len, propstr, ptr->separator.item))) {
     if(pdesc) {
       pdesc->flags = JS_PROP_ENUMERABLE;
       pdesc->value = JS_NewStringLen(ctx, value, len);
@@ -289,13 +296,14 @@ minnet_headers_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSV
 static int
 minnet_headers_get_own_property_names(JSContext* ctx, JSPropertyEnum** ptab, uint32_t* plen, JSValueConst obj) {
   ByteBuffer* headers = minnet_headers_data2(ctx, obj);
-  uint32_t i = 0, size = headers_size(headers);
-  uint8_t *ptr, *end = headers->write;
+  struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(obj);
+  uint32_t i = 0, size = headers_size(headers, ptr->separator.item);
+  uint8_t *x, *end = headers->write;
   JSPropertyEnum* props = js_malloc(ctx, sizeof(JSPropertyEnum) * size);
 
-  for(ptr = headers->start; i < size && ptr != end; ptr += headers_next(ptr, end)) {
-    size_t len = headers_namelen(ptr, end);
-    JSAtom prop = JS_NewAtomLen(ctx, ptr, len);
+  for(x = headers->start; i < size && x != end; x += headers_next(x, end, ptr->separator.item)) {
+    size_t len = headers_namelen(x, end);
+    JSAtom prop = JS_NewAtomLen(ctx, x, len);
 
     props[i].is_enumerable = TRUE;
     props[i].atom = prop;
@@ -314,8 +322,9 @@ minnet_headers_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
   const char* propstr = JS_AtomToCString(ctx, prop);
   ssize_t index;
   BOOL ret = FALSE;
+  struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(obj);
 
-  if((index = headers_find(headers, propstr)) != -1)
+  if((index = headers_find(headers, propstr, ptr->separator.item)) != -1)
     ret = TRUE;
 
   JS_FreeCString(ctx, propstr);
@@ -336,9 +345,10 @@ minnet_headers_set_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSVal
   ByteBuffer* headers = minnet_headers_data2(ctx, obj);
   const char* propstr = JS_AtomToCString(ctx, prop);
   const char* valuestr = JS_ToCString(ctx, value);
+  struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(obj);
 
   if(1) {
-    headers_set(headers, propstr, valuestr);
+    headers_set(headers, propstr, valuestr, ptr->separator.item);
     return TRUE;
   }
 

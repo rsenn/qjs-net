@@ -566,7 +566,7 @@ has_transfer_encoding(MinnetRequest* req, const char* enc) {
   const char* accept;
   size_t len, enclen = strlen(enc);
 
-  if((accept = headers_getlen(&req->headers, &len, "accept-encoding"))) {
+  if((accept = headers_getlen(&req->headers, &len, "accept-encoding", "\r\n"))) {
     size_t toklen, pos;
 
     for(pos = 0; pos < len; (pos += toklen, pos += scan_charsetnskip(&accept[pos], ", ", len - pos))) {
@@ -604,7 +604,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
     size_t len;
     char* loc;
 
-    if((loc = headers_getlen(&resp->headers, &len, "location")))
+    if((loc = headers_getlen(&resp->headers, &len, "location", "\r\n")))
 
       if(lws_http_redirect(wsi, resp->status, loc, len, &buf->write, buf->end))
         return 1;
@@ -618,7 +618,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
 
   // headers_write(&resp->headers, wsi, &buf->write, buf->end);
 
-  for(const uint8_t *x = resp->headers.start, *end = resp->headers.write; x < end; x += headers_next(x, end)) {
+  for(const uint8_t *x = resp->headers.start, *end = resp->headers.write; x < end; x += headers_next(x, end, "\r\n")) {
     size_t len, n;
     len = headers_length(x, end);
     n = headers_namelen(x, end);

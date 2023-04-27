@@ -78,6 +78,16 @@ size_t scan_nextline(const void*, size_t);
 size_t scan_charsetnskip(const void*, const char*, size_t);
 size_t scan_noncharsetnskip(const void*, const char*, size_t);
 
+static inline size_t
+scan_past(const void* s, const char* charset, size_t limit) {
+  size_t i;
+
+  if((i = scan_noncharsetnskip(s, charset, limit)) < limit)
+    i += scan_charsetnskip(s, charset, limit - i);
+
+  return i;
+}
+
 size_t skip_brackets(const char*, size_t len);
 size_t skip_directory(const char*, size_t len);
 size_t strip_trailing_newline(const char*, size_t* len_p);

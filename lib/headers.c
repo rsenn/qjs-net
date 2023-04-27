@@ -90,19 +90,20 @@ headers_fromobj(ByteBuffer* buffer, JSValueConst obj, JSContext* ctx) {
 }
 
 ssize_t
-headers_findb(ByteBuffer* b, const char* name, size_t namelen) {
+headers_findb(ByteBuffer* b, const char* name, size_t namelen, const char* itemdelim) {
   uint8_t* x;
   ssize_t ret = 0;
 
   for(x = b->start; x < b->write;) {
-    size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
+    size_t c = scan_past(x, itemdelim, b->write - x);
+    size_t n = headers_namelen(x, b->write);
 
     // printf("%s %.*s\n", __func__, (int)c, (char*)x);
 
-    if(!strncasecmp((const char*)x, name, namelen) && x[namelen] == ':')
-      return ret;
+    if(n == namelen)
+      if(!strncasecmp((const char*)x, name, namelen))
+        return ret;
 
-    while(isspace(x[c]) && x + c < b->write) ++c;
     x += c;
     ++ret;
   }
@@ -129,10 +130,10 @@ headers_at(ByteBuffer* b, size_t* lenptr, size_t index) {
 }
 
 char*
-headers_getlen(ByteBuffer* b, size_t* lenptr, const char* name) {
+headers_getlen(ByteBuffer* b, size_t* lenptr, const char* name, const char* itemdelim) {
   ssize_t i;
 
-  if((i = headers_find(b, name)) != -1) {
+  if((i = headers_find(b, name, itemdelim)) != -1) {
     size_t l, n;
     char* x = headers_at(b, &l, i);
     n = scan_nonwhitenskip(x, l);
@@ -150,18 +151,18 @@ headers_getlen(ByteBuffer* b, size_t* lenptr, const char* name) {
 }
 
 char*
-headers_get(ByteBuffer* buffer, const char* name, JSContext* ctx) {
+headers_get(ByteBuffer* buffer, const char* name, const char* itemdelim, JSContext* ctx) {
   size_t len;
   char* str;
 
-  if((str = headers_getlen(buffer, &len, name)))
+  if((str = headers_getlen(buffer, &len, name, itemdelim)))
     return js_strndup(ctx, str, len);
   return 0;
 }
 
 ssize_t
-headers_find(ByteBuffer* buffer, const char* name) {
-  return headers_findb(buffer, name, strlen(name));
+headers_find(ByteBuffer* buffer, const char* name, const char* itemdelim) {
+  return headers_findb(buffer, name, strlen(name), itemdelim);
 }
 
 int
@@ -198,12 +199,12 @@ headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
 }
 
 ssize_t
-headers_unsetb(ByteBuffer* b, const char* name, size_t namelen) {
+headers_unsetb(ByteBuffer* b, const char* name, size_t namelen, const char* itemdelim) {
   ssize_t i;
 
-  if((i = headers_findb(b, name, namelen)) >= 0) {
+  if((i = headers_findb(b, name, namelen, itemdelim)) >= 0) {
     uint8_t* x = b->start + i;
-    size_t c = headers_next(x, b->write);
+    size_t c = headers_next(x, b->write, itemdelim);
 
     if(b->write > x + c)
       memcpy(x, x + c, b->write - (x + c));
@@ -217,12 +218,12 @@ headers_unsetb(ByteBuffer* b, const char* name, size_t namelen) {
 }
 
 ssize_t
-headers_set(ByteBuffer* b, const char* name, const char* value) {
+headers_set(ByteBuffer* b, const char* name, const char* value, const char* itemdelim) {
   size_t namelen = strlen(name), valuelen = strlen(value);
   size_t c = namelen + 2 + valuelen + 2;
 
   if(buffer_SIZE(b))
-    headers_unsetb(b, name, namelen);
+    headers_unsetb(b, name, namelen, itemdelim);
 
   buffer_grow(b, c);
   buffer_write(b, name, namelen);
@@ -234,17 +235,16 @@ headers_set(ByteBuffer* b, const char* name, const char* value) {
 }
 
 ssize_t
-headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* value, size_t valuelen) {
+headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* value, size_t valuelen, const char* itemdelim) {
   ssize_t i;
 
   buffer_grow(b, valuelen + 2);
 
-  if((i = headers_findb(b, name, namelen)) >= 0) {
-    uint8_t *x = b->start + i, *y;
-    size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
+  if((i = headers_findb(b, name, namelen, itemdelim)) >= 0) {
+    uint8_t *y, *x = buffer_BEGIN(b) + i;
+    size_t len  = headers_next(x,  b->write,  itemdelim);
 
-    //    while(isspace(b->start[c]) && b->start + c < b->write) ++c;
-    y = x + c;
+    y = x + len;
 
     if((b->write - y) > 0 && valuelen > 0) {
       memmove(y + 2 + valuelen, y, b->write - y);
@@ -264,10 +264,10 @@ headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* val
 }
 
 size_t
-headers_size(ByteBuffer* headers) {
+headers_size(ByteBuffer* headers, const char* itemdelim) {
   uint8_t *ptr, *end = headers->write;
   size_t i = 0;
 
-  for(ptr = headers->start; ptr != end; ptr += headers_next(ptr, end)) { ++i; }
+  for(ptr = headers->start; ptr != end; ptr += headers_next(ptr, end, itemdelim)) { ++i; }
   return i;
 }

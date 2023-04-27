@@ -52,16 +52,16 @@ response_new(JSContext* ctx) {
 
 ssize_t
 response_settype(Response* resp, const char* type) {
-  return headers_set(&resp->headers, "content-type", type);
+  return headers_set(&resp->headers, "content-type", type, "\r\n");
 }
 
 void
 response_redirect(Response* resp, int code, const char* location) {
   resp->status = code;
-  headers_set(&resp->headers, "location", location);
+  headers_set(&resp->headers, "location", location, "\r\n");
 }
 
 char*
 response_type(Response* resp, JSContext* ctx) {
-  return headers_get(&resp->headers, "content-type", ctx);
+  return headers_get(&resp->headers, "content-type", "\r\n", ctx);
 }

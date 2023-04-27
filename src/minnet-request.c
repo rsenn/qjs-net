@@ -120,7 +120,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
     case REQUEST_TYPE: {
       char* type;
 
-      if((type = headers_get(&req->headers, "content-type", ctx))) {
+      if((type = headers_get(&req->headers, "content-type", "\r\n", ctx))) {
         ret = JS_NewString(ctx, type);
         js_free(ctx, type);
       }
@@ -142,7 +142,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
     case REQUEST_REFERER: {
       char* ref;
 
-      if((ref = headers_get(&req->headers, "referer", ctx))) {
+      if((ref = headers_get(&req->headers, "referer", "\r\n", ctx))) {
         ret = JS_NewString(ctx, ref);
         js_free(ctx, ref);
       }
@@ -289,7 +289,7 @@ minnet_request_getheader(JSContext* ctx, JSValueConst this_val, int argc, JSValu
 
   key = JS_ToCString(ctx, argv[0]);
 
-  if((value = headers_get(&req->headers, key, ctx))) {
+  if((value = headers_get(&req->headers, key, "\r\n", ctx))) {
     ret = JS_NewString(ctx, value);
     js_free(ctx, (void*)value);
   }
