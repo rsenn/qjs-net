@@ -8,7 +8,7 @@
 #include <strings.h>
 
 THREAD_LOCAL JSValue minnet_headers_proto;
-THREAD_LOCAL JSClassID minnet_headers_class_id;
+THREAD_LOCAL JSClassID minnet_headers_class_id = 0;
 
 enum {
   HEADERS_APPEND,
@@ -42,8 +42,8 @@ minnet_headers_free_obj(void* obj, JSRuntime* rt) {
   JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_OBJECT, obj));
 }
 
-ByteBuffer*
-minnet_headers_data(JSValueConst obj) {
+struct MinnetHeadersOpaque*
+minnet_headers_opaque(JSValueConst obj) {
   return JS_GetOpaque(obj, minnet_headers_class_id);
 }
 
@@ -59,6 +59,9 @@ JSValue
 minnet_headers_value(JSContext* ctx, ByteBuffer* headers, JSValueConst obj) {
   JSValue headers_obj = JS_NewObjectProtoClass(ctx, minnet_headers_proto, minnet_headers_class_id);
   struct MinnetHeadersOpaque* ptr;
+
+  if(!minnet_headers_class_id)
+    minnet_headers_init(ctx, 0);
 
   if(!(ptr = js_malloc(ctx, sizeof(struct MinnetHeadersOpaque))))
     return JS_EXCEPTION;
@@ -77,6 +80,9 @@ minnet_headers_wrap(JSContext* ctx, ByteBuffer* headers, void* opaque, void (*fr
   JSValue headers_obj = JS_NewObjectProtoClass(ctx, minnet_headers_proto, minnet_headers_class_id);
   struct MinnetHeadersOpaque* ptr;
 
+  if(!minnet_headers_class_id)
+    minnet_headers_init(ctx, 0);
+
   if(!(ptr = js_malloc(ctx, sizeof(struct MinnetHeadersOpaque))))
     return JS_EXCEPTION;
 
@@ -87,24 +93,6 @@ minnet_headers_wrap(JSContext* ctx, ByteBuffer* headers, void* opaque, void (*fr
   JS_SetOpaque(headers_obj, ptr);
 
   return headers_obj;
-}
-
-static void
-minnet_headers_free(void* opaque, JSRuntime* rt) {
-  buffer_free(opaque);
-  js_free_rt(rt, opaque);
-}
-
-JSValue
-minnet_headers_new(JSContext* ctx, ByteBuffer* b) {
-  ByteBuffer* headers;
-
-  if(!(headers = js_malloc(ctx, sizeof(ByteBuffer))))
-    return JS_EXCEPTION;
-
-  *headers = buffer_move(b);
-
-  return minnet_headers_wrap(ctx, headers, headers, (HeadersFreeFunc*)&buffer_free);
 }
 
 static JSValue
@@ -276,137 +264,94 @@ static const JSCFunctionListEntry minnet_headers_proto_funcs[] = {
 static int
 minnet_headers_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSValueConst obj, JSAtom prop) {
   ByteBuffer* headers = minnet_headers_data2(ctx, obj);
-  JSValue value = JS_UNDEFINED;
-  int64_t index;
+  const char* propstr = JS_AtomToCString(ctx, prop);
+  char* value;
+  size_t len;
+  BOOL ret = FALSE;
 
-  if(js_atom_is_index(ctx, &index, prop)) {
-    /*    if(index < 0)
-          index = ((index % headers->n) + headers->n) % headers->n;
-
-        if(index < (int64_t)headers->n) {
-          JSAtom key = headers->atoms[index];
-          value = (key & (1U << 31)) ? JS_NewUint32(ctx, key & (~(1U << 31))) : JS_AtomToValue(ctx, key);
-
-          if(pdesc) {
-            pdesc->flags = JS_PROP_ENUMERABLE;
-            pdesc->value = value;
-            pdesc->getter = JS_UNDEFINED;
-            pdesc->setter = JS_UNDEFINED;
-          }
-          return TRUE;
-        }*/
+  if((value = headers_getlen(headers, &len, propstr))) {
+    if(pdesc) {
+      pdesc->flags = JS_PROP_ENUMERABLE;
+      pdesc->value = JS_NewStringLen(ctx, value, len);
+      pdesc->getter = JS_UNDEFINED;
+      pdesc->setter = JS_UNDEFINED;
+    }
+    ret = TRUE;
   }
-  return FALSE;
+  JS_FreeCString(ctx, propstr);
+
+  return ret;
 }
 
 static int
 minnet_headers_get_own_property_names(JSContext* ctx, JSPropertyEnum** ptab, uint32_t* plen, JSValueConst obj) {
-  ByteBuffer* headers;
-  uint32_t i, len;
-  JSPropertyEnum* props;
+  ByteBuffer* headers = minnet_headers_data2(ctx, obj);
+  uint32_t i = 0, size = headers_size(headers);
+  uint8_t *ptr, *end = headers->write;
+  JSPropertyEnum* props = js_malloc(ctx, sizeof(JSPropertyEnum) * size);
 
-  if((headers = minnet_headers_data2(ctx, obj)))
-    len = buffer_SIZE(headers);
-  else {
-    JSValue length = JS_GetPropertyStr(ctx, obj, "length");
-    JS_ToUint32(ctx, &len, length);
-    JS_FreeValue(ctx, length);
-  }
+  for(ptr = headers->start; i < size && ptr != end; ptr += headers_next(ptr, end)) {
+    size_t len = headers_namelen(ptr, end);
+    JSAtom prop = JS_NewAtomLen(ctx, ptr, len);
 
-  props = js_malloc(ctx, sizeof(JSPropertyEnum) * (len + 1));
-
-  for(i = 0; i < len; i++) {
     props[i].is_enumerable = TRUE;
-    props[i].atom = i | (1U << 31);
+    props[i].atom = prop;
+
+    ++i;
   }
-
-  props[len].is_enumerable = TRUE;
-  props[len].atom = JS_NewAtom(ctx, "length");
-
   *ptab = props;
-  *plen = len + 1;
+  *plen = size;
+
   return 0;
 }
 
 static int
 minnet_headers_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
   ByteBuffer* headers = minnet_headers_data2(ctx, obj);
-  int64_t index;
+  const char* propstr = JS_AtomToCString(ctx, prop);
+  ssize_t index;
+  BOOL ret = FALSE;
 
-  /*  if(js_atom_is_index(ctx, &index, prop)) {
-      if(index < 0)
-        index = ((index % (int64_t)(headers->n + 1)) + headers->n);
+  if((index = headers_find(headers, propstr)) != -1)
+    ret = TRUE;
 
-      if(index < (int64_t)headers->n)
-        return TRUE;
-    } else if(js_atom_is_length(ctx, prop)) {
-      return TRUE;
-    } else {
-      JSValue proto = JS_GetPrototype(ctx, obj);
-      if(JS_IsObject(proto) && JS_HasProperty(ctx, proto, prop))
-        return TRUE;
-    }*/
-
-  return FALSE;
+  JS_FreeCString(ctx, propstr);
+  return ret;
 }
 
 static JSValue
 minnet_headers_get_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueConst receiver) {
   ByteBuffer* headers = minnet_headers_data2(ctx, obj);
   JSValue value = JS_UNDEFINED;
-  int64_t index;
-  int32_t entry;
+  const char* propstr = JS_AtomToCString(ctx, prop);
 
-  /*  if(js_atom_is_index(ctx, &index, prop)) {
-      if(index < 0)
-        index = ((index % (int64_t)(headers->n + 1)) + headers->n);
-
-      if(index < (int64_t)headers->n) {
-        JSAtom key = headers->atoms[index];
-        value = (key & (1U << 31)) ? JS_NewUint32(ctx, key & (~(1U << 31))) : JS_AtomToValue(ctx, key);
-      }
-    } else if(js_atom_is_length(ctx, prop)) {
-      value = JS_NewUint32(ctx, headers->n);
-    } else if((entry = js_find_cfunction_atom(ctx, minnet_headers_proto_funcs, countof(minnet_headers_proto_funcs), prop, JS_DEF_CGETSET_MAGIC)) >= 0) {
-
-      // printf("entry: %d magic: %d\n", entry,
-      // minnet_headers_proto_funcs[entry].magic);
-      value = minnet_headers_get(ctx, obj, minnet_headers_proto_funcs[entry].magic);
-
-    } else {
-      JSValue proto = JS_IsUndefined(headers_proto) ? JS_GetPrototype(ctx, obj) : headers_proto;
-      if(JS_IsObject(proto))
-        value = JS_GetProperty(ctx, proto, prop);
-    }
-  */
   return value;
 }
 
 static int
 minnet_headers_set_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueConst value, JSValueConst receiver, int flags) {
   ByteBuffer* headers = minnet_headers_data2(ctx, obj);
-  int64_t index;
+  const char* propstr = JS_AtomToCString(ctx, prop);
+  const char* valuestr = JS_ToCString(ctx, value);
 
-  /*if(js_atom_is_index(ctx, &index, prop)) {
-    if(index < 0)
-      index = ((index % (int64_t)(headers->n + 1)) + headers->n);
-
-    if(index == (int64_t)headers->n)
-      headers_push(headers, ctx, value);
-    else if(index < (int64_t)headers->n)
-      headers->atoms[index] = JS_ValueToAtom(ctx, value);
+  if(1) {
+    headers_set(headers, propstr, valuestr);
     return TRUE;
   }
-*/
+
   return FALSE;
 }
 
 static void
 minnet_headers_finalizer(JSRuntime* rt, JSValue val) {
-  ByteBuffer* headers = JS_GetOpaque(val, minnet_headers_class_id);
-  if(headers) {
-    buffer_free(headers);
-    js_free_rt(rt, headers);
+  struct MinnetHeadersOpaque* ptr;
+
+  if((ptr = minnet_headers_opaque(val))) {
+
+    ptr->free_func(ptr->opaque, rt);
+
+    // buffer_free(headers);
+    js_free_rt(rt, ptr);
   }
 }
 
@@ -414,7 +359,7 @@ static JSClassExoticMethods minnet_headers_exotic_methods = {
     .get_own_property = minnet_headers_get_own_property,
     .get_own_property_names = minnet_headers_get_own_property_names,
     .has_property = minnet_headers_has_property,
-    .get_property = minnet_headers_get_property,
+    //   .get_property = minnet_headers_get_property,
     .set_property = minnet_headers_set_property,
 };
 
@@ -434,22 +379,17 @@ minnet_headers_init(JSContext* ctx, JSModuleDef* m) {
   minnet_headers_proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, minnet_headers_proto, minnet_headers_proto_funcs, countof(minnet_headers_proto_funcs));
 
-  // minnet_headers_ctor = JS_NewObject(ctx);
-  // JS_SetPropertyFunctionList(ctx, minnet_headers_ctor, minnet_headers_static_funcs, countof(minnet_headers_static_funcs));
+  /* inspect_atom = js_symbol_static_atom(ctx, "inspect");
 
-  // JS_SetConstructor(ctx, minnet_headers_ctor, minnet_headers_proto);
+   if(!js_atom_is_symbol(ctx, inspect_atom)) {
+     JS_FreeAtom(ctx, inspect_atom);
+     inspect_atom = js_symbol_for_atom(ctx, "quickjs.inspect.custom");
+   }
 
-  inspect_atom = js_symbol_static_atom(ctx, "inspect");
+   if(js_atom_is_symbol(ctx, inspect_atom))
+     JS_SetProperty(ctx, minnet_headers_proto, inspect_atom, JS_NewCFunction(ctx, minnet_headers_inspect, "inspect", 0));
 
-  if(!js_atom_is_symbol(ctx, inspect_atom)) {
-    JS_FreeAtom(ctx, inspect_atom);
-    inspect_atom = js_symbol_for_atom(ctx, "quickjs.inspect.custom");
-  }
-
-  if(js_atom_is_symbol(ctx, inspect_atom))
-    JS_SetProperty(ctx, minnet_headers_proto, inspect_atom, JS_NewCFunction(ctx, minnet_headers_inspect, "inspect", 0));
-
-  JS_FreeAtom(ctx, inspect_atom);
+   JS_FreeAtom(ctx, inspect_atom);*/
 
   /*  if(m)
       JS_SetModuleExport(ctx, m, "Headers", minnet_headers_ctor);

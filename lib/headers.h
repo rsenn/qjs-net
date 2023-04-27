@@ -46,6 +46,8 @@ headers_value(const void* start, const void* end) {
   return pos;
 }
 
+size_t headers_size(ByteBuffer* headers);
+
 static inline char*
 headers_name(const void* start, const void* end, JSContext* ctx) {
   return js_strndup(ctx, start, headers_namelen(start, end));

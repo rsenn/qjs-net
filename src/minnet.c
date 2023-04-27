@@ -10,6 +10,7 @@
 #include "minnet-form-parser.h"
 #include "minnet-hash.h"
 #include "minnet-fetch.h"
+#include "minnet-headers.h"
 #include "jsutils.h"
 #include "utils.h"
 #include "buffer.h"
@@ -532,6 +533,7 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
 
   // Add class URL
   minnet_url_init(ctx, m);
+  minnet_headers_init(ctx, m);
 
   {
     JSValue minnet_default = JS_NewObject(ctx);

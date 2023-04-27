@@ -236,6 +236,8 @@ ssize_t
 headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* value, size_t valuelen) {
   ssize_t i;
 
+  buffer_grow(b, valuelen + 2);
+
   if((i = headers_findb(b, name, namelen)) >= 0) {
     uint8_t *x = b->start + i, *y;
     size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
@@ -246,14 +248,25 @@ headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* val
     if((b->write - y) > 0 && valuelen > 0) {
       memmove(y + valuelen, y, b->write - y);
     }
-    if(valuelen > 0)
-      memcpy(y, value, valuelen);
+    memcpy(y, ", ", 2);
 
-    b->write += valuelen;
+    if(valuelen > 0)
+      memcpy(y + 2, value, valuelen);
+
+    b->write += valuelen + 2;
 
     if(b->write < b->end)
       memset(b->write, 0, b->end - b->write);
   }
 
+  return i;
+}
+
+size_t
+headers_size(ByteBuffer* headers) {
+  uint8_t *ptr, *end = headers->write;
+  size_t i = 0;
+
+  for(ptr = headers->start; ptr != end; ptr += headers_next(ptr, end)) { ++i; }
   return i;
 }

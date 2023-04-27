@@ -1,6 +1,7 @@
 #include "minnet-websocket.h"
 #include "minnet-response.h"
 #include "minnet-generator.h"
+#include "minnet-headers.h"
 #include "minnet.h"
 #include "buffer.h"
 #include "jsutils.h"
@@ -214,7 +215,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
          break;
        }*/
     case RESPONSE_HEADERS: {
-      ret = headers_object(ctx, resp->headers.start, resp->headers.write);
+      ret = minnet_headers_wrap(ctx, &resp->headers, response_dup(resp), (HeadersFreeFunc*)&response_free);
       break;
     }
     case RESPONSE_BODYUSED: {
@@ -267,29 +268,6 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       break;
     }
     case RESPONSE_BODYUSED: {
-      break;
-    }
-      /*    case RESPONSE_BODY: {
-            struct session_data* session;
-
-            if((session =lws_session()))
-      struct wsi_opaque_user_data*opaque;
-
-      if((opaque=lws))
-
-            break;
-          }*/
-    case RESPONSE_HEADERS: {
-      int n = headers_fromobj(&resp->headers, value, ctx);
-
-      if(n <= 0) {
-        ret = JS_ThrowTypeError(ctx, "Invalid headers object");
-      } else {
-        DEBUG("minnet-response: %d headers added\n", n);
-
-        ret = JS_DupValue(ctx, value);
-      }
-
       break;
     }
   }
@@ -402,7 +380,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("redirected", minnet_response_get, minnet_response_set, RESPONSE_REDIRECTED, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_response_get, minnet_response_set, RESPONSE_URL, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_response_get, minnet_response_set, RESPONSE_TYPE, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, minnet_response_set, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, 0, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_response_iterator),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),
 };

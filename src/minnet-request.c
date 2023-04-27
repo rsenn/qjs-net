@@ -317,7 +317,7 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, minnet_request_set, 0, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, 0, REQUEST_HEADERS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("referer", minnet_request_get, 0, REQUEST_REFERER, 0),
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_request_method, REQUEST_ARRAYBUFFER),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_request_method, REQUEST_TEXT),
