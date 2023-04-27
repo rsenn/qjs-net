@@ -134,17 +134,21 @@ session_generator(struct session_data* session, JSValue generator, struct contex
   int ret = 0;
   BOOL async = FALSE;
 
-  if((prop = js_iterable_method(ctx, generator, &async)) > 0) {
-    JSValue tmp = JS_GetProperty(ctx, generator, prop);
-    JS_FreeAtom(ctx, prop);
-    this = generator;
-    generator = tmp;
+  if(!js_is_iterator(ctx, generator)) {
+    if((prop = js_iterable_method(ctx, generator, &async)) > 0) {
+      JSValue tmp = JS_GetProperty(ctx, generator, prop);
+      JS_FreeAtom(ctx, prop);
+      this = generator;
+      generator = tmp;
+    }
   }
 
-  if(JS_IsFunction(ctx, generator)) {
-    if(!async)
-      async = js_function_is_async(ctx, generator);
-    context_exception(context, (generator = JS_Call(ctx, generator, this, 2, &session->req_obj)));
+  if(!js_is_iterator(ctx, generator)) {
+    if(JS_IsFunction(ctx, generator)) {
+      if(!async)
+        async = js_function_is_async(ctx, generator);
+      context_exception(context, (generator = JS_Call(ctx, generator, this, 2, &session->req_obj)));
+    }
   }
 
   ret = !js_is_nullish(generator);
