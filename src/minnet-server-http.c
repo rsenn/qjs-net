@@ -911,11 +911,14 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(gen) {
         DBG("gen=%p", gen);
-        BOOL done = FALSE;
-        JSValue value = generator_dequeue(gen, &done);
 
-        js_async_resolve(ctx, &session->async, value);
-        JS_FreeValue(ctx, value);
+        if(js_async_pending(&session->async)) {
+          BOOL done = FALSE;
+          JSValue value = generator_dequeue(gen, &done);
+
+          js_async_resolve(ctx, &session->async, value);
+          JS_FreeValue(ctx, value);
+        }
 
         generator_close(req->body, JS_UNDEFINED);
       }
