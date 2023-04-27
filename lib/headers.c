@@ -95,7 +95,7 @@ headers_findb(ByteBuffer* b, const char* name, size_t namelen, const char* itemd
   ssize_t ret = 0;
 
   for(x = b->start; x < b->write;) {
-    size_t c = scan_past(x, itemdelim, b->write - x);
+    size_t c = headers_next(x, b->write, itemdelim);
     size_t n = headers_namelen(x, b->write);
 
     // printf("%s %.*s\n", __func__, (int)c, (char*)x);
@@ -112,18 +112,19 @@ headers_findb(ByteBuffer* b, const char* name, size_t namelen, const char* itemd
 }
 
 char*
-headers_at(ByteBuffer* b, size_t* lenptr, size_t index) {
+headers_at(ByteBuffer* b, size_t* lenptr, size_t index, const char* itemdelim) {
   uint8_t* x;
   size_t i = 0;
+
   for(x = b->start; x < b->write;) {
-    size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
+    size_t c =      headers_next(x, b->write, itemdelim);
+
     if(i == index) {
       if(lenptr)
         *lenptr = c;
       return (char*)x;
     }
-    while(isspace(x[c]) && x + c < b->write) ++c;
-    x += c;
+     x += c;
     ++i;
   }
   return 0;
@@ -135,7 +136,7 @@ headers_getlen(ByteBuffer* b, size_t* lenptr, const char* name, const char* item
 
   if((i = headers_find(b, name, itemdelim)) != -1) {
     size_t l, n;
-    char* x = headers_at(b, &l, i);
+    char* x = headers_at(b, &l, i, itemdelim);
     n = scan_nonwhitenskip(x, l);
     x += n;
     l -= n;

@@ -620,7 +620,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
 
   for(const uint8_t *x = resp->headers.start, *end = resp->headers.write; x < end; x += headers_next(x, end, "\r\n")) {
     size_t len, n;
-    len = headers_length(x, end);
+    len = headers_length(x, end, "\r\n");
     n = headers_namelen(x, end);
 
     if(n == 8 && !strncasecmp(x, "location", n))
@@ -628,7 +628,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
 
     if(len > n) {
       char* prop = headers_name(x, end, ctx);
-      n = headers_value(x, end);
+      n = headers_value(x, end, ":");
 
       DBG("header=%s = value='%.*s'", prop, (int)(len - n), &x[n]);
       if((lws_add_http_header_by_name(wsi, (const unsigned char*)prop, (const unsigned char*)&x[n], len - n, &buf->write, buf->end)))

@@ -213,8 +213,8 @@ minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValue
     }
 
     if(magic == HEADERS_VALUES || magic == HEADERS_ENTRIES) {
-      x += headers_value(x, end);
-      len = headers_length(x, end);
+      x += headers_value(x, end, ":");
+      len = headers_length(x, end, ptr->separator.item);
       value = JS_NewStringLen(ctx, x, len);
     }
 
