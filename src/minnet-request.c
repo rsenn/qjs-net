@@ -246,33 +246,26 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
 static JSValue
 minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetRequest* req;
+  ResolveFunctions funcs = {JS_NULL, JS_NULL};
   JSValue ret = JS_UNDEFINED;
 
   if(!(req = minnet_request_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
+
+  ret = js_async_create(ctx, &funcs);
+  JS_FreeValue(ctx, funcs.reject);
+  if(!req->body)
+    req->body = generator_new(ctx);
+  generator_continuous(req->body, funcs.resolve);
+
   switch(magic) {
-
     case REQUEST_ARRAYBUFFER: {
-      if(req->body) {
-        ResolveFunctions funcs = {JS_NULL, JS_NULL};
-        ret = js_async_create(ctx, &funcs);
-        JS_FreeValue(ctx, funcs.reject);
-
-        generator_continuous(req->body, funcs.resolve);
-        req->body->block_fn = &block_toarraybuffer;
-      }
+      req->body->block_fn = &block_toarraybuffer;
       break;
     }
     case REQUEST_TEXT: {
-      if(req->body) {
-        ResolveFunctions funcs = {JS_NULL, JS_NULL};
-        ret = js_async_create(ctx, &funcs);
-        JS_FreeValue(ctx, funcs.reject);
-
-        generator_continuous(req->body, funcs.resolve);
-        req->body->block_fn = &block_tostring;
-      }
+      req->body->block_fn = &block_tostring;
       break;
     }
   }

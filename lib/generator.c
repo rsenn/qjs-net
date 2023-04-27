@@ -230,6 +230,7 @@ generator_continuous(Generator* gen, JSValueConst callback) {
         // item->unref = deferred_newjs(JS_DupValue(gen->ctx, callback), gen->ctx);
         // item->unref = deferred_new(&JS_Call, gen->ctx, JS_DupValue(gen->ctx, callback), JS_UNDEFINED);
       }
+      q->continuous = TRUE;
     }
 
     return item != NULL;

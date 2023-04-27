@@ -854,6 +854,11 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
       session->in_body = TRUE;
+
+      if(req->body == 0) {
+        req->body = generator_new(ctx);
+      }
+
       if(len) {
         if(opaque->form_parser) {
           form_parser_process(opaque->form_parser, in, len);
