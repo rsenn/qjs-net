@@ -203,16 +203,16 @@ headers_unsetb(ByteBuffer* b, const char* name, size_t namelen) {
 
   if((i = headers_findb(b, name, namelen)) >= 0) {
     uint8_t* x = b->start + i;
-    size_t c = byte_chrs(x, b->write - x, "\r\n", 2);
+    size_t c = headers_next(x, b->write);
 
-    while(isspace(b->start[c]) && b->start + c < b->write) ++c;
-
-    memcpy(x, x + c, b->write - (b->start + c));
+    if(b->write > x + c)
+      memcpy(x, x + c, b->write - (x + c));
     b->write -= c;
 
     if(b->write < b->end)
       memset(b->write, 0, b->end - b->write);
   }
+
   return i;
 }
 
@@ -221,7 +221,8 @@ headers_set(ByteBuffer* b, const char* name, const char* value) {
   size_t namelen = strlen(name), valuelen = strlen(value);
   size_t c = namelen + 2 + valuelen + 2;
 
-  headers_unsetb(b, name, namelen);
+  if(buffer_SIZE(b))
+    headers_unsetb(b, name, namelen);
 
   buffer_grow(b, c);
   buffer_write(b, name, namelen);
@@ -246,7 +247,7 @@ headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* val
     y = x + c;
 
     if((b->write - y) > 0 && valuelen > 0) {
-      memmove(y + 2+valuelen, y, b->write - y);
+      memmove(y + 2 + valuelen, y, b->write - y);
     }
     memcpy(y, ", ", 2);
 

@@ -127,7 +127,7 @@ enum {
   HEADERS_TO_OBJECT,
 };
 
-JSValue
+static JSValue
 minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   ByteBuffer* headers;
   JSValue ret = JS_UNDEFINED;
@@ -141,7 +141,10 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       const char* name = JS_ToCStringLen(ctx, &namelen, argv[0]);
       const char* value = JS_ToCStringLen(ctx, &valuelen, argv[1]);
 
-      ret = JS_NewInt64(ctx, headers_appendb(headers, name, namelen, value, valuelen));
+      ssize_t index;
+      if((index = headers_appendb(headers, name, namelen, value, valuelen)) == -1)
+        index = headers_set(headers, name, value);
+      ret = JS_NewInt64(ctx, index);
       JS_FreeCString(ctx, name);
       JS_FreeCString(ctx, value);
       break;
@@ -182,7 +185,7 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return ret;
 }
 
-JSValue
+static JSValue
 minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   ByteBuffer* headers;
   JSValue ret = JS_UNDEFINED;
@@ -224,7 +227,7 @@ minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValue
   return ret;
 }
 
-JSValue
+static JSValue
 minnet_headers_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   ByteBuffer* headers;
   JSValue ret = JS_NULL;
@@ -241,7 +244,7 @@ minnet_headers_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
   return ret;
 }
 
-JSValue
+static JSValue
 minnet_headers_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret = JS_NULL;
 
