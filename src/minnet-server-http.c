@@ -610,6 +610,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
         return 1;
 
     headers_unset(&resp->headers, "location");
+
   } else {
     if(lws_add_http_common_headers(wsi, resp->status, 0, content_len, &buf->write, buf->end))
       return 1;
@@ -618,9 +619,13 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
   for(const uint8_t *x = resp->headers.start, *end = resp->headers.write; x < end; x += headers_next(x, end)) {
     size_t len, n;
     len = headers_length(x, end);
-    if(len > (n = headers_namelen(x, end))) {
-      char* prop = headers_name(x, end, ctx);
+    n = headers_namelen(x, end);
 
+    if(n == 8 && !strncasecmp(x, "location", n))
+      continue;
+
+    if(len > n) {
+      char* prop = headers_name(x, end, ctx);
       n = headers_value(x, end);
 
       DBG("header=%s = value='%.*s'", prop, (int)(len - n), &x[n]);
