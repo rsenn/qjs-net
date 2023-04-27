@@ -527,31 +527,36 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
   if(/*!queue_complete(&session->sendq) ||*/ queue_bytes(&session->sendq))
     session_want_write(session, wsi);
 
+  if(session->wait_resolve)
+    lws_set_timeout(wsi, PENDING_TIMEOUT_HTTP_CONTENT, 30);
+
   return 0;
 }
 
 static int
 serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
   JSValue body;
-  //  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-  int ret = 0;
+  enum { NONE = 0, SYNC = 1, ASYNC = 2 } type;
 
-  ret = session_callback(session, cb, wsi_context(wsi));
+  type = session_callback(session, cb, wsi_context(wsi));
 
-  DBG("ret=%d generator=%s", ret, JS_ToCString(cb->ctx, session->generator));
+  DBG("type=%s generator=%s", ((const char*[]){"NONE", "SYNC", "ASYNC"})[type], JS_ToCString(cb->ctx, session->generator));
 
-  if(ret) {
-    // js_iterator_func(cb->ctx, session->generator, &session->next);
-
-    if(ret == 2) {
+  switch(type) {
+    case ASYNC:{
       BOOL done = FALSE;
-      ret = serve_generator(cb->ctx, session, wsi, &done);
-    } else {
-      session_want_write(session, wsi);
+      if(serve_generator(cb->ctx, session, wsi, &done))
+        return 1;
+      break;
+}
+    case SYNC: {
+      session_want_write(session, wsi); break;
     }
+    default: 
+      return -1;
   }
 
-  return ret <= 0;
+  return 0;
 }
 
 static BOOL
@@ -1099,9 +1104,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if(!(queue_closed(&session->sendq) || queue_complete(&session->sendq)) && !session->wait_resolve)
           ret = serve_generator(ctx, session, wsi, &done);
       }
-
-      if(session->wait_resolve)
-        lws_set_timeout(wsi, PENDING_TIMEOUT_HTTP_CONTENT, 30);
 
       LOGCB("HTTP(3)", "callback=%" PRIu32 " ret=%d sendq=%zu want_write=%d wait_resolve=%d", session->callback_count, ret, queue_bytes(&session->sendq), session->want_write, session->wait_resolve);
 

@@ -58,7 +58,7 @@ createServer(
       stream(req, resp) {
         resp.type = 'audio/mpeg';
 
-        resp.body = StreamPulseOutput();
+        resp.body= StreamPulseOutput();
       }
     }
   })
