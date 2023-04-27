@@ -243,7 +243,17 @@ server_match(MinnetServer* server, const char* path, enum http_method method, JS
   *closure = (struct ServerMatchClosure){1, ctx, path, method, callback, prev_callback};
 
   JSValue ret = js_function_cclosure(ctx, minnet_server_match, 0, 0, closure, server_match_free);
-  JS_DefinePropertyValueStr(ctx, ret, "name", JS_NewString(ctx, "matcher"), JS_PROP_CONFIGURABLE);
+
+  JS_DefinePropertyValueStr(ctx, ret, "name", JS_NewString(ctx, path != 0 ? path : "*"), 0);
+
+  if(method != -1)
+    JS_SetPropertyStr(ctx, ret, "method", JS_NewString(ctx, method_name(method)));
+
+  if(JS_IsFunction(ctx, prev_callback)) {
+    JS_SetPropertyStr(ctx, prev_callback, "next", ret);
+    JS_SetPropertyStr(ctx, ret, "prev", JS_DupValue(ctx, prev_callback));
+  }
+
   return ret;
 }
 
@@ -421,9 +431,10 @@ minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
         break;
       }
 
-      if(method == -1 && path == 0 && server->on.http.ctx == 0) {
+      /*if(method == -1 && path == 0 && server->on.http.ctx == 0) {
         new_cb = JS_DupValue(ctx, argv[index]);
-      } else {
+      } else */
+      {
         new_cb = server_match(server, path, method, JS_DupValue(ctx, argv[index]), server->on.http.func_obj);
         path = 0;
       }
