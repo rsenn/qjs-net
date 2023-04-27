@@ -130,7 +130,7 @@ request_from(int argc, JSValueConst argv[], JSContext* ctx) {
     if(argc >= 2 && JS_IsObject(argv[1])) {
       JSValue headers = JS_GetPropertyStr(ctx, argv[1], "headers");
       if(!JS_IsUndefined(headers))
-        headers_fromobj(&req->headers, headers, ctx);
+        headers_fromobj(&req->headers, headers, "\r\n", ": ", ctx);
 
       JS_FreeValue(ctx, headers);
     }

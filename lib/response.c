@@ -63,5 +63,5 @@ response_redirect(Response* resp, int code, const char* location) {
 
 char*
 response_type(Response* resp, JSContext* ctx) {
-  return headers_get(&resp->headers, "content-type", "\r\n", ctx);
+  return headers_get(&resp->headers, "content-type", "\r\n", ":", ctx);
 }

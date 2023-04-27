@@ -117,7 +117,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       size_t vlen;
       char* v;
 
-      if((v = headers_getlen(&resp->headers, &vlen, key, "\r\n")))
+      if((v = headers_getlen(&resp->headers, &vlen, key, "\r\n", ":")))
         ret = JS_NewStringLen(ctx, v, vlen);
 
       break;
@@ -205,7 +205,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       /*   if((type = resp->type))
            len = strlen(type);
          else*/
-      type = headers_getlen(&resp->headers, &len, "content-type", "\r\n");
+      type = headers_getlen(&resp->headers, &len, "content-type", "\r\n", ":");
 
       ret = type ? JS_NewStringLen(ctx, type, len) : JS_NULL;
       break;

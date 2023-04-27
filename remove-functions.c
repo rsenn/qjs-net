@@ -424,7 +424,7 @@ headers_copy(ByteBuffer* buffer, char* dest, size_t sz, const char* name) {
   char* hdr;
   size_t len;
 
-  if((hdr = headers_getlen(buffer, &len, name))) {
+  if((hdr = headers_getlen(buffer, &len, name, "\r\n", ":"))) {
     len = MIN(len, sz);
 
     strncpy(dest, hdr, len);
