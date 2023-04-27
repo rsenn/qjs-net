@@ -4,37 +4,39 @@ import { LLL_USER, logLevels, createServer, setLog } from 'net';
 import('console').then(({ Console }) => { globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 });
 
-const sources = [...GetPulseSources()];
-
 setLog(LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
 
-function* GetPulseSources() {
-  let pipe = popen('pacmd list-sources', 'r');
-  while(!pipe.eof()) {
-    let s = pipe.getline();
-    if(/name:/.test(s)) yield s.slice(s.indexOf('<') + 1, -1);
+class PulseAudio {
+  
+  static *getSources() {
+    let pipe = popen(`pacmd list-sources`, 'r');
+    while(!pipe.eof()) {
+      let s = pipe.getline();
+      if(/name:/.test(s)) yield s.slice(s.indexOf('<') + 1, -1);
+    }
+    pipe.close();
   }
-  pipe.close();
-}
 
-async function* StreamPulseOutput(streamName = sources[0], bufSize = 512) {
-  /* LAME has problems reading from stdin/writing to stdout, but you can try */
+  static async *streamSource(streamName = sources[0], bufSize = 512) {
+    /* LAME has problems reading from stdin/writing to stdout, but you can try */
 
-  //let cmd = `pacat --stream-name '${streamName}' -r --rate=44100 --format=s16le --channels=2 --raw | lame --quiet -r --alt-preset 128 - -`;
+    //let cmd = `pacat --stream-name '${streamName}' -r --rate=44100 --format=s16le --channels=2 --raw | lame --quiet -r --alt-preset 128 - -`;
 
-  const cmd = `sox -q -t pulseaudio '${streamName}' -r 44100 -t mp3 -`;
-  const file = popen(cmd, 'r');
+    const cmd = `sox -q -t pulseaudio '${streamName}' -r 44100 -t mp3 -`;
+    const file = popen(cmd, 'r');
 
-  const waitRead = fd => new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
-  const fd = file.fileno();
-  const buf = new ArrayBuffer(bufSize);
-  for(;;) {
-    await waitRead(fd);
-    let r;
-    if((r = os.read(fd, buf, 0, buf.byteLength)) <= 0) break;
-    yield buf.slice(0, r);
+    const waitRead = fd => new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
+    const fd = file.fileno();
+    const buf = new ArrayBuffer(bufSize);
+    
+    for(;;) {
+      await waitRead(fd);
+      let r;
+      if((r = os.read(fd, buf, 0, buf.byteLength)) <= 0) break;
+      yield buf.slice(0, r);
+    }
+    file.close();
   }
-  file.close();
 }
 
 createServer(
@@ -49,8 +51,10 @@ createServer(
       },
       async *stream(req, resp) {
         resp.type = 'audio/mpeg';
+        
+        const [source] = [...PulseAudio.getSources()];
 
-        yield* StreamPulseOutput();
+        yield* PulseAudio.streamSource(source);
       }
     }
   })
