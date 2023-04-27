@@ -41,12 +41,9 @@ typedef union {
     (ptr) = &(*(ptr))->member; \
   } while(0);
 
-#define LOG(name, fmt, args...) \
-  lwsl_user("%-15s" \
-            " " fmt "\n", \
-            (char*)(name), \
-            args);
-#define LOGCB(name, fmt, args...) LOG((name), FG("%d") "%-38s" NC " wsi#%" PRId64 " " fmt "", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, args);
+#define LOGCB(name, fmt, args...) LOG((name), FG("%d") "%-38s" NC " wsi#%" PRId64 " " fmt "", 22 + (reason * 2), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, args)
+
+#define STRINGIFY(arg) #arg
 
 #define BOOL_OPTION(name, prop, var) \
   JSValue name = JS_GetPropertyStr(ctx, options, prop); \

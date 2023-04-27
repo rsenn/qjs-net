@@ -4,7 +4,11 @@ import { LLL_ALL, LLL_NOTICE, LLL_USER, logLevels, createServer, setLog } from '
 import('console').then(({ Console }) => { globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 });
 
-//setLog((LLL_NOTICE - 1) | LLL_USER, (level, message) => level == LLL_USER /*|| !/writeable/i.test(message)*/ && console.log(logLevels[level].padEnd(10), message));
+setLog(
+  (LLL_NOTICE - 1) | LLL_USER,
+  (level, message) =>
+    level == LLL_USER /*|| !/writeable/i.test(message)*/ && console.log(logLevels[level].padEnd(10), message)
+);
 
 function GetPulseSources() {
   let pipe = popen('pacmd list-sources', 'r');
@@ -51,8 +55,8 @@ createServer(
     mounts: {
       '/': ['/', '.', 'index.html'],
       *'/404.html'(req, res) {
-        console.log('/404.html', { req, res });
-        yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>404</h1></body></html>';
+        console.log('/404.html', console.config({ compact: 2 }), { req, res });
+        yield `<html>\n\t<head>\n\t\t<meta charset=utf-8 http-equiv="Content-Language" content="en" />\n\t\t<link rel="stylesheet" type="text/css" href="/error.css" />\n\t</head>\n\t<body>\n\t\t<h1>404</h1>\n\t\tThe requested URL ${req.url.path} was not found on this server.\n\t</body>\n</html>\n`;
       },
       async *stream(req, res) {
         res.type = 'audio/mpeg';
@@ -71,7 +75,7 @@ createServer(
       console.log('onError', { ws, error });
     },
     onRequest(ws, req, resp) {
-      console.log('onRequest', { req, resp });
+      console.log('onRequest', req.url.path, { req, resp });
       Object.assign(globalThis, { req, resp });
     },
     onMessage(ws, msg) {

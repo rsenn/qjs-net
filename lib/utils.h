@@ -27,6 +27,14 @@
 #error No TLS implementation found.
 #endif
 
+#define LOG(name, fmt, args...) \
+  lwsl_user("%-25s" \
+            " " fmt "\n", \
+            (char*)(name), \
+            args);
+
+#define DBG(fmt, args...) LOG(__FILE__, FG("%d") "%-38s" NC " " fmt, args)
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
