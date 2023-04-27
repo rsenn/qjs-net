@@ -609,12 +609,14 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
       if(lws_http_redirect(wsi, resp->status, loc, len, &buf->write, buf->end))
         return 1;
 
-    headers_unset(&resp->headers, "location");
+    // headers_unset(&resp->headers, "location");
 
   } else {
     if(lws_add_http_common_headers(wsi, resp->status, 0, content_len, &buf->write, buf->end))
       return 1;
   }
+
+  // headers_write(&resp->headers, wsi, &buf->write, buf->end);
 
   for(const uint8_t *x = resp->headers.start, *end = resp->headers.write; x < end; x += headers_next(x, end)) {
     size_t len, n;
@@ -630,7 +632,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
 
       DBG("header=%s = value='%.*s'", prop, (int)(len - n), &x[n]);
       if((lws_add_http_header_by_name(wsi, (const unsigned char*)prop, (const unsigned char*)&x[n], len - n, &buf->write, buf->end)))
-        JS_ThrowInternalError(ctx, "lws_add_http_header_by_name failed");
+        JS_ThrowInternalError(ctx, "Adding header '%s' failed", prop);
       js_free(ctx, (void*)prop);
     }
   }

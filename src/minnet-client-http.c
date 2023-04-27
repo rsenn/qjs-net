@@ -93,7 +93,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       req->h2 = wsi_http2(wsi);
 
-      size_t n = headers_write(&buf.write, buf.end, &req->headers, wsi);
+      size_t n = headers_write(&req->headers, wsi, &buf.write, buf.end);
 
       DEBUG("APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
       *(uint8_t**)in += n;

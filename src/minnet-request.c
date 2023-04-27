@@ -4,6 +4,7 @@
 #include "minnet-request.h"
 #include "minnet-ringbuffer.h"
 #include "minnet-generator.h"
+#include "minnet-headers.h"
 #include "minnet.h"
 #include "headers.h"
 #include "jsutils.h"
@@ -134,11 +135,8 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case REQUEST_HEADERS: {
-      DEBUG("REQUEST_HEADERS start=%p, end=%p\n", req->headers.start, req->headers.end);
-
-      if(buffer_BYTES(&req->headers))
-        ret = headers_object(ctx, req->headers.start, req->headers.write);
-      // ret = buffer_tostring(&req->headers, ctx);
+      ret = minnet_headers_wrap(ctx, &req->headers, request_dup(req), (HeadersFreeFunc*)&request_free);
+      // minnet_headers_value(ctx,  this_val);
       break;
     }
     case REQUEST_REFERER: {
@@ -226,17 +224,17 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
       req->url.path = js_strdup(ctx, str);
       break;
     }
-    case REQUEST_HEADERS: {
+      /*  case REQUEST_HEADERS: {
 
-      if(JS_IsObject(value)) {
-        headers_fromobj(&req->headers, value, ctx);
-      } else {
-        const char* str = JS_ToCString(ctx, value);
-        ret = JS_ThrowReferenceError(ctx, "Cannot set headers to '%s'", str);
-        JS_FreeCString(ctx, str);
-      }
-      break;
-    }
+          if(JS_IsObject(value)) {
+            headers_fromobj(&req->headers, value, ctx);
+          } else {
+            const char* str = JS_ToCString(ctx, value);
+            ret = JS_ThrowReferenceError(ctx, "Cannot set headers to '%s'", str);
+            JS_FreeCString(ctx, str);
+          }
+          break;
+        }*/
   }
 
   JS_FreeCString(ctx, str);
@@ -319,7 +317,7 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, minnet_request_set, REQUEST_HEADERS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, minnet_request_set, 0, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("referer", minnet_request_get, 0, REQUEST_REFERER, 0),
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_request_method, REQUEST_ARRAYBUFFER),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_request_method, REQUEST_TEXT),

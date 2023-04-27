@@ -27,7 +27,7 @@ headers_object(JSContext* ctx, const void* start, const void* e) {
 }
 
 size_t
-headers_write(uint8_t** in, uint8_t* end, ByteBuffer* buffer, struct lws* wsi) {
+headers_write(ByteBuffer* buffer, struct lws* wsi, uint8_t** in, uint8_t* end) {
   int ret;
   uint8_t *p = buffer->read, *q = buffer->write, *start = *in;
 

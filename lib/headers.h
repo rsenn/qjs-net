@@ -7,7 +7,7 @@
 #include "utils.h"
 
 JSValue headers_object(JSContext*, const void* start, const void* e);
-size_t headers_write(uint8_t**, uint8_t* end, ByteBuffer* buffer, struct lws* wsi);
+size_t headers_write(ByteBuffer* buffer, struct lws* wsi, uint8_t**, uint8_t* end);
 int headers_fromobj(ByteBuffer*, JSValueConst obj, JSContext* ctx);
 ssize_t headers_findb(ByteBuffer*, const char* name, size_t namelen);
 char* headers_at(ByteBuffer*, size_t* lenptr, size_t index);

@@ -112,4 +112,11 @@ buffer_reader(ByteBuffer* bb) {
   return (BufferReader){&bb->read, bb->write};
 }
 
+static inline ByteBuffer
+buffer_move(ByteBuffer* buf) {
+  ByteBuffer ret = {buf->start, buf->end, buf->read, buf->write, buf->alloc};
+  buf->start = buf->end = buf->read = buf->write = buf->alloc = 0;
+  return ret;
+}
+
 #endif /* QJSNET_LIB_BUFFER_H */
