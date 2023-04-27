@@ -147,17 +147,23 @@ js_function_prototype(JSContext* ctx) {
 }
 
 JSAtom
-js_iterable_method(JSContext* ctx, JSValueConst obj) {
+js_iterable_method(JSContext* ctx, JSValueConst obj, BOOL* async_ptr) {
   JSAtom atom;
   atom = js_symbol_static_atom(ctx, "asyncIterator");
-  if(JS_HasProperty(ctx, obj, atom))
+  if(JS_HasProperty(ctx, obj, atom)) {
+    if(async_ptr)
+      *async_ptr = TRUE;
     return atom;
+  }
 
   JS_FreeAtom(ctx, atom);
 
   atom = js_symbol_static_atom(ctx, "iterator");
-  if(JS_HasProperty(ctx, obj, atom))
+  if(JS_HasProperty(ctx, obj, atom)) {
+    if(async_ptr)
+      *async_ptr = FALSE;
     return atom;
+  }
 
   JS_FreeAtom(ctx, atom);
   return 0;
@@ -174,7 +180,7 @@ js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done) {
 }
 
 void
-js_iterator_func(JSContext* ctx, JSValue generator, JSValue* next) {
+js_iterator_func(JSContext* ctx, JSValueConst generator, JSValue* next) {
   if(js_is_nullish(*next)) {
     *next = JS_GetPropertyStr(ctx, generator, "next");
   }
@@ -313,8 +319,22 @@ js_buffer_free(JSBuffer* in, JSContext* ctx) {
 }
 
 BOOL
-js_function_is_generator(JSContext* ctx, JSValueConst obj) {
+js_function_is_async(JSContext* ctx, JSValueConst obj) {
   BOOL ret = FALSE;
+  const char* str;
+
+  if(!JS_IsFunction(ctx, obj))
+    return FALSE;
+
+  str = JS_ToCString(ctx, obj);
+  ret = !strncmp(str, "async", 5);
+  JS_FreeCString(ctx, str);
+  return ret;
+}
+
+BOOL
+js_function_is_generator(JSContext* ctx, JSValueConst obj, BOOL* async_ptr) {
+  BOOL ret = FALSE, async = FALSE;
   const char *str, *x;
 
   if(!JS_IsFunction(ctx, obj))
@@ -322,8 +342,11 @@ js_function_is_generator(JSContext* ctx, JSValueConst obj) {
 
   x = str = JS_ToCString(ctx, obj);
 
-  if(!strncmp(x, "async ", 6))
+  if(!strncmp(x, "async ", 6)) {
     x += 6;
+    if(async)
+      async = TRUE;
+  }
 
   if(!strncmp(x, "function", 8)) {
     x += 8;
@@ -332,6 +355,9 @@ js_function_is_generator(JSContext* ctx, JSValueConst obj) {
 
   if(*x == '*')
     ret = TRUE;
+
+  if(ret && async_ptr)
+    *async_ptr = async;
 
   JS_FreeCString(ctx, str);
   return ret;

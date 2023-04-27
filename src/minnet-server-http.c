@@ -532,15 +532,26 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
 
 static int
 serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
-  int ret;
+  JSValue body;
   //  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+  int ret = 0;
 
-  ret = session_callback(session, cb, wsi_context(wsi));
+  body = session_callback(session, cb, wsi_context(wsi));
+
+  do {
+    ret = session_generator(session, body, cb->ctx);
+    JS_FreeValue(cb->ctx, body);
+    if(ret)
+      break;
+    body = JS_GetPropertyStr(cb->ctx, session->resp_obj, "body");
+  } while(!js_is_nullish(body));
 
   DBG("iterator=%d async=%d ret=%d generator=%s", js_is_iterator(cb->ctx, session->generator), js_is_async_generator(cb->ctx, session->generator), ret, JS_ToCString(cb->ctx, session->generator));
 
-  if(js_is_iterator(cb->ctx, session->generator)) {
-    if(js_is_async_generator(cb->ctx, session->generator)) {
+  if(ret) {
+    // js_iterator_func(cb->ctx, session->generator, &session->next);
+
+    if(ret == 2) {
       BOOL done = FALSE;
       ret = serve_generator(cb->ctx, session, wsi, &done);
     } else {
