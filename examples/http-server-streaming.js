@@ -7,7 +7,6 @@ import('console').then(({ Console }) => { globalThis.console = new Console({ ins
 setLog(LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
 
 class PulseAudio {
-  
   static *getSources() {
     let pipe = popen(`pacmd list-sources`, 'r');
     while(!pipe.eof()) {
@@ -28,7 +27,7 @@ class PulseAudio {
     const waitRead = fd => new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
     const fd = file.fileno();
     const buf = new ArrayBuffer(bufSize);
-    
+
     for(;;) {
       await waitRead(fd);
       let r;
@@ -39,23 +38,21 @@ class PulseAudio {
   }
 }
 
-createServer(
-  (globalThis.options = {
-    port: 8765,
-    tls: true,
-    mimetypes: [['.mp4', 'video/mp4']],
-    mounts: {
-      '/': ['.', 'index.html'],
-      *'/404.html'(req, res) {
-        yield `<html>\n\t<head>\n\t\t<meta charset=utf-8 http-equiv="Content-Language" content="en" />\n\t\t<link rel="stylesheet" type="text/css" href="/error.css" />\n\t</head>\n\t<body>\n\t\t<h1>404</h1>\n\t\tThe requested URL ${req.url.path} was not found on this server.\n\t</body>\n</html>\n`;
-      },
-      async *stream(req, resp) {
-        resp.type = 'audio/mpeg';
-        
-        const [source] = [...PulseAudio.getSources()];
+createServer({
+  port: 8765,
+  tls: true,
+  mimetypes: [['.mp4', 'video/mp4']],
+  mounts: {
+    '/': ['.', 'index.html'],
+    *'/404.html'(req, res) {
+      yield `<html>\n\t<head>\n\t\t<meta charset=utf-8 http-equiv="Content-Language" content="en" />\n\t\t<link rel="stylesheet" type="text/css" href="/error.css" />\n\t</head>\n\t<body>\n\t\t<h1>404</h1>\n\t\tThe requested URL ${req.url.path} was not found on this server.\n\t</body>\n</html>\n`;
+    },
+    async *stream(req, resp) {
+      resp.type = 'audio/mpeg';
 
-        yield* PulseAudio.streamSource(source);
-      }
+      const [source] = [...PulseAudio.getSources()];
+
+      yield* PulseAudio.streamSource(source);
     }
-  })
-);
+  }
+});
