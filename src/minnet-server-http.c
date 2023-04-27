@@ -469,8 +469,8 @@ static int
 serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, BOOL* done_p) {
   MinnetResponse* resp = session_response(session);
 
-  if(!resp->generator)
-    response_generator(resp, ctx);
+  /* if(!resp->generator)
+     response_generator(resp, ctx);*/
 
   DBG("callback=%" PRIu32 " run=%" PRIu32 " done=%s wait_resolve=%i closed=%i complete=%i",
       session->callback_count,
@@ -492,7 +492,7 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
     while(!*done_p && !session->wait_resolve) {
       JSValue ret = js_iterator_next(ctx, session->generator, &session->next, done_p, 0, 0);
 
-      DBG("i=%" PRIu32 " done=%s wait_resolve=%i ret=%s", resp->generator->chunks_read, *done_p ? "TRUE" : "FALSE", session->wait_resolve, JS_ToCString(ctx, ret));
+      DBG("done=%s wait_resolve=%i ret=%s", *done_p ? "TRUE" : "FALSE", session->wait_resolve, JS_ToCString(ctx, ret));
 
       if(js_is_promise(ctx, ret)) {
         JSValue promise = serve_promise(ctx, session, ret);
@@ -578,8 +578,8 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
   if(session->response_sent)
     return 0;
 
-  if(!resp->generator)
-    response_generator(resp, ctx);
+  /*  if(!resp->generator)
+      response_generator(resp, ctx);*/
 
   DBG("status=%d generator=%d", resp->status, resp->generator != NULL);
 

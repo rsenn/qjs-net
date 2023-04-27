@@ -221,11 +221,11 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_NewBool(ctx, resp->generator != NULL);
       break;
     }
-    case RESPONSE_BODY: {
-      if(resp->generator)
-        ret = minnet_generator_iterator(ctx, generator_dup(resp->generator));
-      break;
-    }
+      /* case RESPONSE_BODY: {
+         if(resp->generator)
+           ret = minnet_generator_iterator(ctx, generator_dup(resp->generator));
+         break;
+       }*/
   }
 
   return ret;
@@ -269,15 +269,16 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
     case RESPONSE_BODYUSED: {
       break;
     }
-    case RESPONSE_BODY: {
-      /* if(!resp->body)
-         response_generator(resp, ctx);
+      /*    case RESPONSE_BODY: {
+            struct session_data* session;
 
-       resp->body->read = resp->body->write = resp->body->start;
+            if((session =lws_session()))
+      struct wsi_opaque_user_data*opaque;
 
-       buffer_fromvalue(resp->body, value, ctx);*/
-      break;
-    }
+      if((opaque=lws))
+
+            break;
+          }*/
     case RESPONSE_HEADERS: {
       int n = headers_fromobj(&resp->headers, value, ctx);
 
@@ -395,7 +396,7 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("status", minnet_response_get, minnet_response_set, RESPONSE_STATUS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("statusText", minnet_response_get, minnet_response_set, RESPONSE_STATUSTEXT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("bodyUsed", minnet_response_get, 0, RESPONSE_BODYUSED, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_response_get, minnet_response_set, RESPONSE_BODY, 0),
+    // JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_response_get, minnet_response_set, RESPONSE_BODY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("ok", minnet_response_get, 0, RESPONSE_OK, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("headersSent", minnet_response_get, 0, RESPONSE_HEADERS_SENT, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("redirected", minnet_response_get, minnet_response_set, RESPONSE_REDIRECTED, 0),

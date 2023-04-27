@@ -111,6 +111,9 @@ session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
 int
 session_callback(struct session_data* session, JSCallback* cb, struct context* context) {
   int ret = 0;
+  JSAtom prop;
+  Response* resp;
+  JSValue body, this = session->resp_obj, fn = JS_NULL, iter = JS_UNDEFINED;
   JSValue result = callback_emit_this(cb, session->ws_obj, 2, &session->req_obj);
   context_exception(context, result);
 
@@ -123,9 +126,28 @@ session_callback(struct session_data* session, JSCallback* cb, struct context* c
     assert(js_is_iterator(cb->ctx, result));
     session->generator = result;
     session->next = JS_UNDEFINED;
+    return ret;
   } else {
     JS_FreeValue(cb->ctx, result);
   }
+
+  body = JS_GetPropertyStr(cb->ctx, session->resp_obj, "body");
+
+  if((prop = js_iterable_method(cb->ctx, body)) > 0) {
+    JSValue tmp = JS_GetProperty(cb->ctx, body, prop);
+    this = body;
+    body = tmp;
+  }
+
+  if(js_function_is_generator(cb->ctx, body)) {
+    JSValue tmp;
+    tmp = JS_Call(cb->ctx, body, this, 2, &session->req_obj);
+    JS_FreeValue(cb->ctx, body);
+    body = tmp;
+  }
+
+  session->generator = body;
+  session->next = JS_UNDEFINED;
 
   return ret;
 }
