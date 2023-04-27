@@ -66,24 +66,6 @@ createServer(
 
         for await(let chunk of StreamPulseOutput()) yield chunk;
       }
-    },
-    onConnect(ws, req) {
-      console.log('onConnect', { ws, req });
-    },
-    onClose(ws, status, reason) {
-      console.log('onClose', { ws, status, reason });
-      ws.close(status);
-    },
-    onError(ws, error) {
-      console.log('onError', { ws, error });
-    },
-    onRequest(ws, req, resp) {
-      console.log('onRequest', req.url.path, { req, resp });
-      Object.assign(globalThis, { req, resp });
-    },
-    onMessage(ws, msg) {
-      console.log('onMessage', ws.fd, msg);
-      ws.send('ECHO: ' + msg);
     }
   })
 );
