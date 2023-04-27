@@ -1,10 +1,11 @@
-import { popen } from 'std';
+import { popen,getenv } from 'std';
 import { LLL_USER, logLevels, createServer, setLog } from 'net';
 
 import('console').then(({ Console }) => { globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 });
 
-setLog(LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
+if(std.getenv('DEBUG'))
+  setLog(LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
 
 class PulseAudio {
   static *getSources() {
@@ -16,13 +17,13 @@ class PulseAudio {
     pipe.close();
   }
 
-  static async *streamSource(streamName = sources[0], bufSize = 512) {
-    /* LAME has problems reading from stdin/writing to stdout, but you can try */
-
-    //let cmd = `pacat --stream-name '${streamName}' -r --rate=44100 --format=s16le --channels=2 --raw | lame --quiet -r --alt-preset 128 - -`;
-
-    const cmd = `sox -q -t pulseaudio '${streamName}' -r 44100 -t mp3 -`;
-    const file = popen(cmd, 'r');
+  static async *streamSource(sourceName = sources[0], bufSize = 512) {
+    /* pacat |lame has libmp3lame problems reading from stdin/writing to stdout, but you can try */
+    const pipelines = {
+      pacat: name => `pacat --stream-name '${name}' -r --rate=44100 --format=s16le --channels=2 --raw | lame --quiet -r --alt-preset 128 - -`,
+      sox: name => `sox -q -t pulseaudio '${name}' -r 44100 -t mp3 -`
+    };
+    const file = popen(pipelines.sox(sourceName), 'r');
 
     const waitRead = fd => new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
     const fd = file.fileno();
