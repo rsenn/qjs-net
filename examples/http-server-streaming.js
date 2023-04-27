@@ -9,7 +9,7 @@ setLog((LLL_NOTICE - 1) | LLL_USER, (level, message) => {
      console.log(
       logLevels[level].padEnd(10),
       message .replaceAll(/\n/g, '\\\\n')
-        .replaceAll(/\x1b\[[^m]*m/g, '')
+       /* .replaceAll(/\x1b\[[^m]*m/g, '')*/
     );
 });
 
@@ -55,10 +55,10 @@ createServer(
       *'/404.html'(req, res) {
         yield `<html>\n\t<head>\n\t\t<meta charset=utf-8 http-equiv="Content-Language" content="en" />\n\t\t<link rel="stylesheet" type="text/css" href="/error.css" />\n\t</head>\n\t<body>\n\t\t<h1>404</h1>\n\t\tThe requested URL ${req.url.path} was not found on this server.\n\t</body>\n</html>\n`;
       },
-      async *stream(req, res) {
-        res.type = 'audio/mpeg';
+      stream(req, resp) {
+        resp.type = 'audio/mpeg';
 
-        for await(let chunk of StreamPulseOutput()) yield chunk;
+        resp.body= StreamPulseOutput();
       }
     }
   })
