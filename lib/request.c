@@ -48,6 +48,7 @@ request_init(Request* req, URL url, enum http_method method) {
   req->ip = 0;
   req->read_only = FALSE;
   req->secure = url_is_tls(url);
+  req->promise = JS_UNDEFINED;
 }
 
 Request*
@@ -65,6 +66,8 @@ request_new(URL url, HTTPMethod method, JSContext* ctx) {
 
   if((req = request_alloc(ctx)))
     request_init(req, url, method);
+
+  req->body = generator_new(ctx);
 
   return req;
 }
@@ -100,10 +103,11 @@ request_clear(Request* req, JSRuntime* rt) {
     js_free_rt(rt, req->ip);
     req->ip = 0;
   }
-  if(req->body)
-    generator_destroy(&req->body);
+  if(req->body) {
+    generator_free(req->body);
+    req->body = 0;
+  }
 }
-
 void
 request_free(Request* req, JSRuntime* rt) {
   if(--req->ref_count == 0) {

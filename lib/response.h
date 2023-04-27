@@ -17,7 +17,7 @@ typedef struct http_response {
   int status;
   char* status_text;
   ByteBuffer headers;
-  Generator* generator;
+  Generator* body;
 } Response;
 
 void response_init(Response*, URL, int32_t, char* status_text, BOOL headers_sent, char* type);
@@ -31,9 +31,9 @@ void response_redirect(Response* resp, int code, const char* location);
 
 static inline Generator*
 response_generator(struct http_response* resp, JSContext* ctx) {
-  if(!resp->generator)
-    resp->generator = generator_new(ctx);
-  return resp->generator;
+  if(!resp->body)
+    resp->body = generator_new(ctx);
+  return resp->body;
 }
 
 struct http_response* response_new(JSContext*);

@@ -121,7 +121,6 @@ queue_add(Queue* q, ByteBlock chunk) {
     i->unref = 0;
 
     list_add_tail(&i->link, &q->items);
-
     ++q->size;
   }
 
@@ -167,9 +166,9 @@ QueueItem*
 queue_close(Queue* q) {
   QueueItem* i;
 
-  if(q->items.next == 0 && q->items.prev == 0)
-    init_list_head(&q->items);
-
+  /* if(q->items.next == 0 && q->items.prev == 0)
+     init_list_head(&q->items);
+ */
   if(queue_complete(q))
     return queue_back(q);
 
@@ -181,6 +180,7 @@ queue_close(Queue* q) {
     i->unref = 0;
 
     list_add_tail(&i->link, &q->items);
+    ++q->size;
   }
 
   return i;
@@ -217,6 +217,7 @@ queue_continuous(Queue* q) {
       i->unref = 0;
 
       list_add_tail(&i->link, &q->items);
+      ++q->size;
     }
   }
 

@@ -29,6 +29,7 @@ uint8_t* block_grow(ByteBlock*, size_t size);
 ByteBlock block_copy(const void*, size_t size);
 JSValue block_toarraybuffer(ByteBlock*, JSContext* ctx);
 JSValue block_tostring(ByteBlock*, JSContext* ctx);
+JSValue block_tojson(ByteBlock* blk, JSContext* ctx);
 ssize_t block_append(ByteBlock*, const void* data, size_t size);
 
 static inline ByteBlock

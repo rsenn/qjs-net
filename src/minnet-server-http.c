@@ -467,9 +467,9 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
 
 static int
 serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, BOOL* done_p) {
-  MinnetResponse* resp = session_response(session);
+  MinnetResponse* resp = minnet_response_data(session->resp_obj);
 
-  /* if(!resp->generator)
+  /* if(!resp->body)
      response_generator(resp, ctx);*/
 
   DBG("callback=%" PRIu32 " run=%" PRIu32 " done=%s wait_resolve=%s closed=%s complete=%s",
@@ -588,10 +588,10 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
   if(session->response_sent)
     return 0;
 
-  /*  if(!resp->generator)
+  /*  if(!resp->body)
       response_generator(resp, ctx);*/
 
-  DBG("status=%d generator=%d", resp->status, resp->generator != NULL);
+  DBG("status=%d generator=%d", resp->status, resp->body != NULL);
 
   /*if(!wsi_http2(wsi)) {
     BOOL done = FALSE;
@@ -710,20 +710,20 @@ serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const 
 
   session_want_write(session, wsi);
 
-  lwsl_user("serve_file path=%s mount=%.*s gen=%d mime=%s", path, mount->lws.mountpoint_len, mount->lws.mountpoint, resp->generator != NULL, mime);
+  lwsl_user("serve_file path=%s mount=%.*s gen=%d mime=%s", path, mount->lws.mountpoint_len, mount->lws.mountpoint, resp->body != NULL, mime);
 
   return 0;
 }
 
 static int
 http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) {
-  struct http_response* resp = session_response(session);
+  struct http_response* resp = minnet_response_data(session->resp_obj);
   enum lws_write_protocol n, wp = -1;
   size_t remain = 0;
   ssize_t ret = 0;
   size_t qsize = queue_bytes(&session->sendq);
 
-  DBG("callback=%" PRIu32 " generator=%d qsize=%zu done=%d", session->callback_count, resp->generator != NULL, qsize, done);
+  DBG("callback=%" PRIu32 " generator=%d qsize=%zu done=%d", session->callback_count, resp->body != NULL, qsize, done);
 
   n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
 
@@ -855,24 +855,21 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
       session->in_body = TRUE;
 
-      if(req->body == 0) {
-        req->body = generator_new(ctx);
-      }
 
       if(len) {
         if(opaque->form_parser) {
           form_parser_process(opaque->form_parser, in, len);
         } else {
-          if(!req->body) {
+          if(!req->body)
             req->body = generator_new(ctx);
-            req->body->block_fn = &block_tostring;
-          }
-        }
 
-        if(req->body) {
+          if(!req->body->q || !req->body->q->continuous)
+            generator_continuous(req->body, JS_NULL);
+
           generator_write(req->body, in, len, JS_UNDEFINED);
         }
       }
+
       if(server->on.read.ctx) {
         JSValue args[] = {
             JS_NewStringLen(server->on.read.ctx, in, len),
@@ -888,6 +885,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       ByteBuffer b = BUFFER(buf);
       JSCallback* cb;
       MinnetRequest* req = opaque->req;
+      Generator* gen = req->body;
 
       session->in_body = FALSE;
 
@@ -912,15 +910,17 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             session->generator = ret;*/
       }
 
-      req = minnet_request_data2(ctx, session->req_obj);
-      if(req->body) {
-        DBG("body=%p", req->body);
+      //  req = minnet_request_data2(ctx, session->req_obj);
+      if(gen) {
+        DBG("gen=%p", gen);
         generator_close(req->body, JS_UNDEFINED);
       }
 
+      //js_async_resolve(ctx, &session->async, 
+
       if(server->on.post.ctx) {
         JSValue args[] = {
-            minnet_generator_iterator(server->on.post.ctx, opaque->req->body),
+            minnet_generator_iterator(server->on.post.ctx, gen),
         };
         JSValue ret = server_exception(server, callback_emit_this(&server->on.post, session->req_obj, countof(args), args));
         JS_FreeValue(server->on.post.ctx, ret);
@@ -1078,6 +1078,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           }
         }
       }
+      //_O_ if(req->method == METHOD_POST)
+
+      request_promise(req, &session->async, ctx);
 
       if(callback_valid(&server->on.http)) {
         cb = &server->on.http;

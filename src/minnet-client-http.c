@@ -51,7 +51,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       /*if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
 
-        resp->generator = generator_new(ctx);
+        resp->body = generator_new(ctx);
         resp->status = lws_http_client_http_response(wsi);
 
         headers_tobuffer(ctx, &opaque->resp->headers, wsi);
@@ -131,8 +131,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       if(opaque->resp) {
-        /*      if(opaque->resp->generator)
-                generator_close(opaque->resp->generator, JS_UNDEFINED);*/
+        /*      if(opaque->resp->body)
+                generator_close(opaque->resp->body, JS_UNDEFINED);*/
       }
 
       lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
@@ -151,7 +151,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
-        resp->generator = generator_dup(client_generator(client, ctx));
+        resp->body = generator_dup(client_generator(client, ctx));
         resp->status = lws_http_client_http_response(wsi);
         headers_tobuffer(ctx, &opaque->resp->headers, wsi);
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
@@ -161,7 +161,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if((type = response_type(resp, ctx))) {
         if(!strncmp(type, "text/", 5))
-          resp->generator->block_fn = &block_tostring;
+          resp->body->block_fn = &block_tostring;
         js_free(ctx, type);
       }
 
@@ -306,18 +306,18 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       DEBUG("LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ len=%zu in='%.*s'", len, /*len > 30 ? 30 :*/ (int)len, (char*)in);
 
-      generator_write(resp->generator, in, len, JS_UNDEFINED);
+      generator_write(resp->body, in, len, JS_UNDEFINED);
 
       return 0;
     }
 
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
       MinnetResponse* resp = opaque->resp;
-      /*  Generator* gen = resp->generator;*/
+      /*  Generator* gen = resp->body;*/
 
-      LOGCB("CLIENT-HTTP(2)", "resp->generator=%p resp->generator->q=%p", resp->generator, resp->generator->q);
+      LOGCB("CLIENT-HTTP(2)", "resp->body=%p resp->body->q=%p", resp->body, resp->body->q);
 
-      generator_finish(resp->generator);
+      generator_finish(resp->body);
 
       if(client->on.http.ctx) {
         /*        MinnetRequest* req;

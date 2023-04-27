@@ -16,7 +16,6 @@ THREAD_LOCAL JSClassID minnet_request_class_id;
 THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;
 
 enum {
-  REQUEST_ARRAYBUFFER,
   REQUEST_BODY,
   REQUEST_H2,
   REQUEST_HEADERS,
@@ -27,7 +26,6 @@ enum {
   REQUEST_PROTOCOL,
   REQUEST_REFERER,
   REQUEST_SECURE,
-  REQUEST_TEXT,
   REQUEST_TYPE,
   REQUEST_URI,
 };
@@ -243,21 +241,21 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
   return ret;
 }
 
+enum {
+  REQUEST_ARRAYBUFFER,
+  REQUEST_TEXT,
+  REQUEST_JSON,
+};
+
 static JSValue
 minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetRequest* req;
-  ResolveFunctions funcs = {JS_NULL, JS_NULL};
   JSValue ret = JS_UNDEFINED;
 
   if(!(req = minnet_request_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-
-  ret = js_async_create(ctx, &funcs);
-  JS_FreeValue(ctx, funcs.reject);
-  if(!req->body)
-    req->body = generator_new(ctx);
-  generator_continuous(req->body, funcs.resolve);
+  ret = JS_DupValue(ctx, req->promise);
 
   switch(magic) {
     case REQUEST_ARRAYBUFFER: {
@@ -266,6 +264,10 @@ minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
     case REQUEST_TEXT: {
       req->body->block_fn = &block_tostring;
+      break;
+    }
+    case REQUEST_JSON: {
+      req->body->block_fn = &block_tojson;
       break;
     }
   }

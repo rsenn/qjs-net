@@ -222,12 +222,12 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
     case RESPONSE_BODYUSED: {
-      ret = JS_NewBool(ctx, resp->generator != NULL);
+      ret = JS_NewBool(ctx, resp->body != NULL);
       break;
     }
       /* case RESPONSE_BODY: {
-         if(resp->generator)
-           ret = minnet_generator_iterator(ctx, generator_dup(resp->generator));
+         if(resp->body)
+           ret = minnet_generator_iterator(ctx, generator_dup(resp->body));
          break;
        }*/
   }
@@ -287,8 +287,8 @@ minnet_response_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValu
   if(!(resp = minnet_response_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  if(resp->generator)
-    ret = minnet_generator_create(ctx, &resp->generator);
+  if(resp->body)
+    ret = minnet_generator_create(ctx, &resp->body);
 
   return ret;
 }

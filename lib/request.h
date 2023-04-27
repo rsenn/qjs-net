@@ -17,11 +17,11 @@ typedef struct http_request {
   ByteBuffer headers;
   Generator* body;
   char* ip;
+  JSValue promise;
 } Request;
 
 const char* method_string(enum http_method);
 int method_number(const char*);
-
 void request_init(Request*, URL url, enum http_method method);
 Request* request_alloc(JSContext*);
 Request* request_new(URL, HTTPMethod method, JSContext* ctx);
@@ -30,7 +30,14 @@ Request* request_fromwsi(struct lws*, JSContext* ctx);
 void request_clear(Request*, JSRuntime* rt);
 void request_free(Request*, JSRuntime* rt);
 Request* request_from(int, JSValueConst argv[], JSContext* ctx);
-BOOL request_match(Request* req, const char* path, enum http_method method);
+BOOL request_match(Request*, const char* path, enum http_method method);
+
+static inline JSValue
+request_promise(Request* req, ResolveFunctions* fns, JSContext* ctx) {
+  JSValue pr = js_async_create(ctx, fns);
+  req->promise = pr;
+  return pr;
+}
 
 static inline const char*
 method_name(int m) {

@@ -6,6 +6,7 @@ static ssize_t enqueue_value(Generator* gen, JSValueConst value, JSValueConst ca
 
 void
 generator_zero(Generator* gen) {
+  memset(gen, 0, sizeof(Generator));
   asynciterator_zero(&gen->iterator);
   gen->q = 0;
   gen->bytes_written = 0;
@@ -13,16 +14,6 @@ generator_zero(Generator* gen) {
   gen->chunks_written = 0;
   gen->chunks_read = 0;
   gen->ref_count = 0;
-}
-
-void
-generator_destroy(Generator** gen_p) {
-  Generator* gen;
-
-  if((gen = *gen_p)) {
-    if(generator_free(gen))
-      *gen_p = 0;
-  }
 }
 
 BOOL
@@ -181,25 +172,28 @@ generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
 BOOL
 generator_close(Generator* gen, JSValueConst callback) {
   BOOL ret = FALSE;
+  Queue* q;
   QueueItem* item = 0;
 
-  if(gen->q) {
-    if(!queue_complete(gen->q)) {
-      item = queue_close(gen->q);
+  printf("generator_close(%s)\n", JS_ToCString(gen->ctx, callback));
+
+  if((q = gen->q)) {
+    if(!queue_complete(q)) {
+      item = queue_close(q);
       ret = TRUE;
     }
 
-    if(gen->q->continuous) {
-      if((item = queue_last_chunk(gen->q))) {
+    if(q->continuous) {
+      if((item = queue_last_chunk(q))) {
+        JSValue chunk = block_SIZE(&item->block) ? gen->block_fn(&item->block, gen->ctx) : JS_UNDEFINED;
         if(item->unref) {
-          JSValue chunk = block_SIZE(&item->block) ? gen->block_fn(&item->block, gen->ctx) : JS_UNDEFINED;
           deferred_call(item->unref, chunk);
-          JS_FreeValue(gen->ctx, chunk);
-
-          // queue_next(gen->q, NULL);
-          gen->closed = TRUE;
-          return TRUE;
         }
+        if(JS_IsFunction(gen->ctx, gen->callback)) {
+          JS_Call(gen->ctx, gen->callback, JS_NULL, 1, &chunk);
+        }
+        JS_FreeValue(gen->ctx, chunk);
+        gen->closed = TRUE;
       }
     }
   }
@@ -216,21 +210,21 @@ BOOL
 generator_continuous(Generator* gen, JSValueConst callback) {
   Queue* q;
 
-  assert(JS_IsNull(gen->callback));
+  printf("generator_continuous(%s)\n", JS_ToCString(gen->ctx, callback));
 
-  generator_queue(gen);
+  //  assert(JS_IsNull(gen->callback));
 
-  if(q) {
+  if((q = generator_queue(gen))) {
     QueueItem* item;
 
     if((item = queue_continuous(q))) {
 
       if(JS_IsFunction(gen->ctx, callback)) {
         gen->callback = JS_DupValue(gen->ctx, callback);
-        // item->unref = deferred_newjs(JS_DupValue(gen->ctx, callback), gen->ctx);
-        // item->unref = deferred_new(&JS_Call, gen->ctx, JS_DupValue(gen->ctx, callback), JS_UNDEFINED);
+        item->unref = deferred_newjs(JS_DupValue(gen->ctx, callback), gen->ctx);
+        item->unref = deferred_new(&JS_Call, gen->ctx, JS_DupValue(gen->ctx, callback), JS_UNDEFINED);
       }
-      q->continuous = TRUE;
+      // q->continuous = TRUE;
     }
 
     return item != NULL;
@@ -241,7 +235,7 @@ generator_continuous(Generator* gen, JSValueConst callback) {
 Queue*
 generator_queue(Generator* gen) {
   if(!gen->q) {
-    printf("Creating Queue...\n");
+    printf("Creating Queue... %s\n", JS_ToCString(gen->ctx, gen->callback));
     gen->q = queue_new(gen->ctx);
   }
   return gen->q;

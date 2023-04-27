@@ -80,6 +80,14 @@ block_tostring(ByteBlock* blk, JSContext* ctx) {
   return str;
 }
 
+JSValue
+block_tojson(ByteBlock* blk, JSContext* ctx) {
+  ByteBlock mem = block_move((ByteBlock*)blk);
+  JSValue str = JS_ParseJSON(ctx, block_BEGIN(&mem), block_SIZE(&mem), 0);
+  block_free(&mem);
+  return str;
+}
+
 ssize_t
 block_append(ByteBlock* blk, const void* data, size_t size) {
   size_t offset = block_SIZE(blk);

@@ -16,7 +16,7 @@ response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL h
   resp->headers_sent = headers_sent;
   resp->url = url;
   resp->headers = BUFFER_0();
-  resp->generator = NULL;
+  resp->body = NULL;
 }
 
 Response*
@@ -29,7 +29,10 @@ void
 response_clear(Response* resp, JSRuntime* rt) {
   url_free_rt(&resp->url, rt);
   buffer_free(&resp->headers);
-  generator_destroy(&resp->generator);
+  if(resp->body) {
+    generator_free(resp->body);
+    resp->body = 0;
+  }
 }
 
 void

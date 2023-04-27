@@ -30,6 +30,7 @@ struct session_data {
   struct client_context* client;
   Queue sendq;
   lws_callback_function* callback;
+  ResolveFunctions async;
 };
 
 // extern THREAD_LOCAL struct list_head session_list;
@@ -42,12 +43,8 @@ int session_writable(struct session_data*, BOOL, JSContext*);
 int session_callback(struct session_data*, JSCallback*, struct context*);
 int session_generator(struct session_data* session, JSValueConst, JSValueConst, struct context*);
 struct wsi_opaque_user_data* session_opaque(struct session_data*);
-struct http_response* session_response(struct session_data*);
 
 #define session_ws(sess) minnet_ws_data((sess)->ws_obj)
 #define session_wsi(sess) session_ws(sess)->lwsi
-
-struct wsi_opaque_user_data* session_opaque(struct session_data*);
-struct http_response* session_response(struct session_data*);
 
 #endif /* QJSNET_LIB_SESSION_H */
