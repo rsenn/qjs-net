@@ -32,7 +32,7 @@ MinnetVhostOptions*
 vhost_options_create(JSContext* ctx, const char* name, const char* value) {
   MinnetVhostOptions* vo = js_mallocz(ctx, sizeof(MinnetVhostOptions));
 
-  DEBUG("vhost_options_create %s %s\n", name, value);
+  DBG("name=%s value=%s", name, value);
 
   vo->name = name ? js_strdup(ctx, name) : 0;
   vo->value = value ? js_strdup(ctx, value) : 0;
@@ -116,7 +116,7 @@ vhost_options_dump(MinnetVhostOptions* vo) {
   uint32_t i = 0;
   while(vo) {
     i++;
-    DEBUG("option %u %s = %s\n", i, vo->name, vo->value);
+    DBG("option=#%u name=%s value=%s", i, vo->name, vo->value);
 
     vo = vo->next;
   }
@@ -159,20 +159,13 @@ mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const c
   MinnetHttpMount* m;
 
   if((m = js_mallocz(ctx, sizeof(MinnetHttpMount)))) {
-    DEBUG("mount_create mnt=%-10s org=%-20s def=%-15s protocol=%-10s origin_protocol=%s\n",
-          mountpoint,
-          origin,
-          def,
-          pro,
-          ((const char*[]){
-              "HTTP",
-              "HTTPS",
-              "FILE",
-              "CGI",
-              "REDIR_HTTP",
-              "REDIR_HTTPS",
-              "CALLBACK",
-          })[origin_proto]);
+    DBG("mountpoint=%s origin=%s default=%s protocol=%-10s origin_protocol=%s",
+        mountpoint,
+        origin,
+        def,
+        pro,
+        ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK"})[origin_proto]);
+
     m->lws.mountpoint = js_strdup(ctx, mountpoint);
     m->lws.origin = origin ? js_strdup(ctx, origin) : 0;
     m->lws.def = def ? js_strdup(ctx, def) : 0;
@@ -191,34 +184,37 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
   const char* path;
 
   if(JS_IsArray(ctx, obj)) {
-    mnt = JS_GetPropertyUint32(ctx, obj, 0);
-    org = JS_GetPropertyUint32(ctx, obj, 1);
-    def = JS_GetPropertyUint32(ctx, obj, 2);
-    pro = JS_GetPropertyUint32(ctx, obj, 3);
-    // opt = JS_GetPropertyUint32(ctx, obj, 4);
+    int i = 0;
+    if(!key)
+      mnt = JS_GetPropertyUint32(ctx, obj, i++);
+    org = JS_GetPropertyUint32(ctx, obj, i++);
+    def = JS_GetPropertyUint32(ctx, obj, i++);
+    pro = JS_GetPropertyUint32(ctx, obj, i++);
+
   } else if(JS_IsFunction(ctx, obj)) {
-
-    if(!key) {
-      size_t namelen;
-      JSValue name = JS_GetPropertyStr(ctx, obj, "name");
-      const char* namestr = JS_ToCStringLen(ctx, &namelen, name);
-      char buf[namelen + 2];
-      pstrcpy(&buf[1], namelen + 1, namestr);
-      buf[0] = '/';
-      buf[namelen + 1] = '\0';
-      JS_FreeCString(ctx, namestr);
-      mnt = JS_NewString(ctx, buf);
-      JS_FreeValue(ctx, name);
-    } else {
-      mnt = JS_NewString(ctx, key);
-    }
-
+    if(!key)
+      mnt = js_function_name_value(ctx, obj);
     org = JS_DupValue(ctx, obj);
+  }
+
+  if(key)
+    mnt = JS_NewString(ctx, key);
+
+  {
+    size_t namelen;
+    const char* namestr = JS_ToCStringLen(ctx, &namelen, mnt);
+    char buf[namelen + 2];
+    size_t i = namestr[0] == '/' ? 0 : 1;
+
+    pstrcpy(&buf[i], namelen + i, namestr);
+    buf[0] = '/';
+    buf[namelen + i] = '\0';
+    mnt = JS_NewString(ctx, buf);
   }
 
   path = JS_ToCString(ctx, mnt);
 
-  DEBUG("mount_new '%s'\n", path);
+  DBG("key=%s path='%s'", key, path);
 
   if(JS_IsFunction(ctx, org)) {
     ret = mount_create(ctx, path, 0, 0, 0, LWSMPRO_CALLBACK);
@@ -227,11 +223,11 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
 
   } else {
     const char* dest = JS_ToCString(ctx, org);
-    char* protocol = JS_IsString(pro) ? js_tostring(ctx, pro) : 0;
+    char* protocol = js_is_nullish(pro) ? 0 : js_tostring(ctx, pro);
     const char* dotslashslash = strstr(dest, "://");
     size_t plen = dotslashslash ? dotslashslash - dest : 0;
     const char* origin = &dest[plen ? plen + 3 : 0];
-    const char* index = JS_IsUndefined(def) ? 0 : JS_ToCString(ctx, def);
+    const char* index = js_is_nullish(def) ? 0 : JS_ToCString(ctx, def);
     enum lws_mount_protocols proto = plen == 0 ? LWSMPRO_FILE : (plen == 5 && !strncmp(dest, "https", plen)) ? LWSMPRO_HTTPS : LWSMPRO_HTTP;
 
     ret = mount_create(ctx, path, origin, index, protocol, proto);
@@ -256,7 +252,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
   int protocol = n == 0 ? LWSMPRO_CALLBACK : LWSMPRO_HTTP;
   size_t l = 0;
 
-  DEBUG("mount_find('%.*s')\n", (int)n, x);
+  DBG("x='%.*s'", (int)n, x);
 
   if(n == 0)
     n = strlen(x);
@@ -274,7 +270,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
         mnt++;
         len--;
       }
-      DEBUG("mount_find x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+      DBG("x='%.*s' '%.*s'", (int)n, x, (int)len, mnt);
 
       if((len == n || (n > len && (x[len] == '/' || x[len] == '?'))) && !strncmp(x, mnt, n)) {
         m = p;
@@ -286,7 +282,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
     }
   }
   if(m) {
-    DEBUG("mount_find org=%s mnt=%s cb.ctx=%p\n", ((MinnetHttpMount*)m)->org, ((MinnetHttpMount*)m)->mnt, ((MinnetHttpMount*)m)->callback.ctx);
+    DBG("org=%s mnt=%s cb.ctx=%p", ((MinnetHttpMount*)m)->org, ((MinnetHttpMount*)m)->mnt, ((MinnetHttpMount*)m)->callback.ctx);
   }
   return (MinnetHttpMount*)m;
 }
@@ -300,7 +296,7 @@ mount_find_s(MinnetHttpMount* mounts, const char* x) {
     const char* mnt = p->mountpoint;
     size_t len = p->mountpoint_len;
 
-    DEBUG("mount x='%.*s' '%.*s'\n", (int)n, x, (int)len, mnt);
+    DBG("x='%.*s' '%.*s'", (int)n, x, (int)len, mnt);
 
     if(len == n && !strncmp(x, mnt, n)) {
       m = p;
@@ -605,7 +601,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
 
       n = headers_value(x, end);
 
-      DEBUG("HTTP header %s = %.*s\n", prop, (int)(len - n), &x[n]);
+      DBG("header=%s = value='%.*s'", prop, (int)(len - n), &x[n]);
       if((lws_add_http_header_by_name(wsi, (const unsigned char*)prop, (const unsigned char*)&x[n], len - n, &buf->write, buf->end)))
         JS_ThrowInternalError(ctx, "lws_add_http_header_by_name failed");
       js_free(ctx, (void*)prop);
@@ -619,7 +615,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
 
   int ret = lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end);
 
-  DEBUG("HTTP headers '%.*s'\n", (int)buffer_HEAD(buf), buf->start);
+  DBG("headers='%.*s'", (int)buffer_HEAD(buf), buf->start);
 
   if(ret)
     return 2;
@@ -649,7 +645,7 @@ serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const 
   const char* mime = lws_get_mimetype(path, &mount->lws);
   // BOOL compressed = has_transfer_encoding(req, "gzip");
 
-  DEBUG("serve_file path=%s mount=%s mime=%s\n", path, mount->mnt, mime);
+  DBG("path=%s mount=%s mime=%s", path, mount->mnt, mime);
 
   if(path[0] == '\0')
     path = mount->def;
@@ -884,7 +880,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       req = minnet_request_data2(ctx, session->req_obj);
       if(req->body) {
-        DEBUG("POST body: %p\n", req->body);
+        DBG("body=%p", req->body);
         generator_close(req->body, JS_UNDEFINED);
       }
 
@@ -946,8 +942,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if((mount = session->mount)) {
         size_t mlen = strlen(mount->mnt);
 
-        DEBUG("mount->mnt = '%s'\n", mount->mnt);
-        DEBUG("mount->mnt = '%.*s'\n", (int)mlen, mount->mnt);
+        DBG("mnt='%s'", mount->mnt);
+        DBG("mnt='%.*s'", (int)mlen, mount->mnt);
 
         assert(req->url.path);
         assert(mount->mnt);

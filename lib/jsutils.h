@@ -54,6 +54,8 @@ typedef struct input_buffer {
   OffsetLength range;
 } JSBuffer;
 
+typedef JSValue CClosureFunc(JSContext*, JSValueConst, int, JSValueConst[], int, void*);
+
 #define JS_BUFFER_DEFAULT() JS_BUFFER(0, 0, &js_buffer_free_default)
 
 #define JS_BUFFER_0(free) JS_BUFFER(0, 0, (free))
@@ -98,16 +100,21 @@ js_vector_free(JSContext* ctx, int argc, JSValue argv[]) {
 }
 
 struct byte_block;
+
 JSValue js_object_constructor(JSContext*, JSValueConst value);
 char* js_object_classname(JSContext*, JSValueConst value);
+const char* js_object_tostring(JSContext*, JSValueConst value);
+const char* js_object_tostring2(JSContext*, JSValueConst method, JSValueConst value);
 void js_console_log(JSContext*, JSValueConst* console, JSValueConst* console_log);
 JSValue js_function_bound(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValueConst* func_data);
 JSValue js_function_bind(JSContext*, JSValueConst func, int flags, JSValueConst argv[]);
 JSValue js_function_bind_1(JSContext*, JSValueConst func, JSValueConst arg);
 JSValue js_function_bind_this(JSContext*, JSValueConst func, JSValueConst this_val);
 JSValue js_function_bind_this_1(JSContext*, JSValueConst func, JSValueConst this_val, JSValueConst arg);
+JSValue js_function_name_value(JSContext*, JSValueConst value);
 const char* js_function_name(JSContext*, JSValueConst value);
 JSValue js_function_prototype(JSContext*);
+JSAtom js_iterable_method(JSContext*, JSValueConst obj);
 JSValue js_iterator_result(JSContext*, JSValueConst value, BOOL done);
 JSValue js_iterator_next(JSContext*, JSValueConst obj, JSValueConst* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValueConst dst, JSValueConst src, int flags);
@@ -119,6 +126,7 @@ JSBuffer js_buffer_alloc(JSContext*, size_t size);
 void js_buffer_free_rt(JSBuffer*, JSRuntime* rt);
 void js_buffer_free(JSBuffer*, JSContext* ctx);
 BOOL js_is_iterator(JSContext*, JSValueConst obj);
+BOOL js_is_generator(JSContext*, JSValueConst obj);
 BOOL js_is_async_generator(JSContext*, JSValueConst obj);
 JSAtom js_symbol_static_atom(JSContext*, const char* name);
 JSValue js_symbol_static_value(JSContext*, const char* name);
@@ -127,6 +135,8 @@ JSAtom js_symbol_for_atom(JSContext*, const char* name);
 JSValue js_symbol_ctor(JSContext*);
 JSValue js_global_get(JSContext*, const char* prop);
 JSValue js_global_os(JSContext*);
+JSValue js_global_prototype(JSContext*, const char* class_name);
+JSValue js_global_prototype_func(JSContext*, const char* class_name, const char* func_name);
 JSValue js_os_get(JSContext*, const char* prop);
 JSValue js_timer_start(JSContext*, JSValueConst fn, uint32_t ms);
 void js_timer_cancel(JSContext*, JSValueConst timer);
@@ -137,8 +147,8 @@ void js_timer_restart(struct TimerClosure*);
 char* js_tostringlen(JSContext*, size_t* lenp, JSValueConst value);
 char* js_tostring(JSContext*, JSValueConst value);
 JSValue js_invoke(JSContext*, JSValueConst this_obj, const char* method, int argc, JSValueConst argv[]);
-JSValue js_async_new(JSContext* ctx, JSValue* resolve, JSValue* reject);
 JSValue js_async_create(JSContext*, ResolveFunctions* funcs);
+JSValue js_async_new(JSContext*, JSValueConst* resolve, JSValueConst* reject);
 void js_async_free(JSContext*, ResolveFunctions* funcs);
 void js_async_free_rt(JSRuntime*, ResolveFunctions* funcs);
 JSValue js_async_resolve(JSContext*, ResolveFunctions* funcs, JSValueConst value);
@@ -153,11 +163,25 @@ void js_error_print(JSContext*, JSValueConst error);
 uint8_t* js_toptrsize(JSContext*, unsigned int* plen, JSValueConst value);
 uint32_t js_get_propertystr_uint32(JSContext*, JSValueConst obj, const char* str);
 BOOL js_has_propertystr(JSContext*, JSValueConst obj, const char* str);
-struct list_head* js_module_list(JSContext*);
 int64_t js_array_length(JSContext*, JSValueConst array);
 char** js_array_to_argv(JSContext*, int* argcp, JSValueConst array);
 int js_offset_length(JSContext*, int64_t size, int argc, JSValueConst argv[], OffsetLength* off_len_p);
 JSValue js_argv_to_array(JSContext*, const char* const* argv);
+BOOL js_atom_is_index(JSContext*, int64_t* pval, JSAtom atom);
+BOOL js_atom_compare_string(JSContext*, JSAtom atom, const char* other);
+BOOL js_atom_is_length(JSContext*, JSAtom atom);
+BOOL js_atom_is_symbol(JSContext*, JSAtom atom);
+JSBuffer js_input_buffer(JSContext*, JSValueConst value);
+JSBuffer js_input_chars(JSContext*, JSValueConst value);
+JSBuffer js_input_args(JSContext*, int argc, JSValueConst argv[]);
+int js_buffer_fromargs(JSContext*, int argc, JSValueConst argv[], JSBuffer* buf);
+BOOL js_is_arraybuffer(JSContext*, JSValueConst value);
+BOOL js_is_dataview(JSContext*, JSValueConst value);
+BOOL js_is_typedarray(JSContext*, JSValueConst value);
+JSValue js_typedarray_constructor(JSContext*, int bits, BOOL floating, BOOL sign);
+JSValue js_typedarray_new(JSContext*, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length);
+JSValue js_function_cclosure(JSContext*, CClosureFunc* func, int length, int magic, void* opaque, void (*opaque_finalize)(void*));
+
 static inline BOOL
 js_atom_is_int32(JSAtom atom) {
   if((int32_t)atom < 0)
@@ -169,21 +193,6 @@ static inline BOOL
 js_atom_valid(JSAtom atom) {
   return atom != 0x7fffffff;
 }
-
-BOOL js_atom_is_index(JSContext*, int64_t* pval, JSAtom atom);
-BOOL js_atom_compare_string(JSContext*, JSAtom atom, const char* other);
-BOOL js_atom_is_length(JSContext*, JSAtom atom);
-BOOL js_atom_is_symbol(JSContext*, JSAtom atom);
-JSBuffer js_input_buffer(JSContext*, JSValueConst value);
-JSBuffer js_input_chars(JSContext*, JSValueConst value);
-JSBuffer js_input_args(JSContext*, int argc, JSValueConst argv[]);
-JSBuffer js_input_argv(JSContext* ctx, int*, JSValueConst**);
-int js_buffer_fromargs(JSContext*, int argc, JSValueConst argv[], JSBuffer* buf);
-BOOL js_is_arraybuffer(JSContext*, JSValueConst value);
-BOOL js_is_dataview(JSContext*, JSValueConst value);
-BOOL js_is_typedarray(JSContext*, JSValueConst value);
-JSValue js_typedarray_constructor(JSContext*, int bits, BOOL floating, BOOL sign);
-JSValue js_typedarray_new(JSContext*, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length);
 
 static inline void
 js_entry_init(JSEntry* entry) {
@@ -376,12 +385,5 @@ static inline const uint8_t*
 js_buffer_end(const JSBuffer* in) {
   return in->data + in->size;
 }
-
-JSValue js_typedarray_constructor(JSContext*, int bits, BOOL floating, BOOL sign);
-JSValue js_typedarray_new(JSContext*, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length);
-
-typedef JSValue CClosureFunc(JSContext*, JSValueConst, int, JSValueConst[], int, void*);
-
-JSValue js_function_cclosure(JSContext*, CClosureFunc* func, int length, int magic, void* opaque, void (*opaque_finalize)(void*));
 
 #endif /* QJSNET_LIB_JS_UTILS_H */

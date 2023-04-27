@@ -6,10 +6,10 @@ import('console').then(({ Console }) => { globalThis.console = new Console({ ins
 
 setLog((LLL_NOTICE - 1) | LLL_USER, (level, message) => {
   if(level == LLL_USER)
-    if(!/minnet-server-http.c/.test(message))
+  //if(!/minnet-server-http.c/.test(message))
       console.log(
         logLevels[level].padEnd(10),
-        message.replaceAll(/\b([a-z0-9_]+)=([^=]+)(\s|$)/g, '\x1b[1;33m$1\x1b[1;36m=\x1b[1;35m$2\x1b[0m$3')
+        message/*.replaceAll(/\n/g, '\\\\n')*/     .replaceAll(/\x1b\[[^m]*m/g, '')
       );
 });
 
@@ -22,7 +22,7 @@ function GetPulseSources() {
   }
   pipe.close();
   return sources;
-}
+} 
 let sources = GetPulseSources();
 
 async function* StreamPulseOutput(streamName = sources[0], bufSize = 512) {
@@ -55,7 +55,7 @@ createServer(
     protocol: 'http',
     mimetypes: [['.mp4', 'video/mp4']],
     mounts: {
-      '/': ['/', '.', 'index.html'],
+      '/': ['.', 'index.html'],
       *'/404.html'(req, res) {
         yield `<html>\n\t<head>\n\t\t<meta charset=utf-8 http-equiv="Content-Language" content="en" />\n\t\t<link rel="stylesheet" type="text/css" href="/error.css" />\n\t</head>\n\t<body>\n\t\t<h1>404</h1>\n\t\tThe requested URL ${req.url.path} was not found on this server.\n\t</body>\n</html>\n`;
       },

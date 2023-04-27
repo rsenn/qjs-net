@@ -35,6 +35,22 @@ js_object_classname(JSContext* ctx, JSValueConst value) {
   return s;
 }
 
+const char*
+js_object_tostring(JSContext* ctx, JSValueConst value) {
+  JSValue method = js_global_prototype_func(ctx, "Object", "toString");
+  const char* str = js_object_tostring2(ctx, method, value);
+  JS_FreeValue(ctx, method);
+  return str;
+}
+
+const char*
+js_object_tostring2(JSContext* ctx, JSValueConst method, JSValueConst value) {
+  JSValue str = JS_Call(ctx, method, value, 0, 0);
+  const char* s = JS_ToCString(ctx, str);
+  JS_FreeValue(ctx, str);
+  return s;
+}
+
 void
 js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
   JSValue global = JS_GetGlobalObject(ctx);
@@ -88,8 +104,8 @@ js_function_bind_this_1(JSContext* ctx, JSValueConst func, JSValueConst this_val
   return js_function_bind(ctx, func, countof(bound) | JS_BIND_THIS, bound);
 }
 
-const char*
-js_function_name(JSContext* ctx, JSValueConst value) {
+JSValue
+js_function_name_value(JSContext* ctx, JSValueConst value) {
   JSValue str, name, args[2], idx;
   const char* s = 0;
   int32_t i = -1;
@@ -100,7 +116,7 @@ js_function_name(JSContext* ctx, JSValueConst value) {
   JS_ToInt32(ctx, &i, idx);
   if(i != 0) {
     JS_FreeValue(ctx, str);
-    return 0;
+    return JS_UNDEFINED;
   }
   args[0] = JS_NewString(ctx, "(");
   idx = js_invoke(ctx, str, "indexOf", 1, args);
@@ -111,9 +127,15 @@ js_function_name(JSContext* ctx, JSValueConst value) {
   JS_FreeValue(ctx, args[0]);
   JS_FreeValue(ctx, args[1]);
   JS_FreeValue(ctx, str);
-  s = JS_ToCString(ctx, name);
+  return name;
+}
+
+const char*
+js_function_name(JSContext* ctx, JSValueConst value) {
+  JSValue name = js_function_name_value(ctx, value);
+  const char* str = js_is_nullish(name) ? 0 : JS_ToCString(ctx, name);
   JS_FreeValue(ctx, name);
-  return s;
+  return str;
 }
 
 JSValue
@@ -122,6 +144,23 @@ js_function_prototype(JSContext* ctx) {
   ret = JS_GetPrototype(ctx, fn);
   JS_FreeValue(ctx, fn);
   return ret;
+}
+
+JSAtom
+js_iterable_method(JSContext* ctx, JSValueConst obj) {
+  JSAtom atom;
+  atom = js_symbol_static_atom(ctx, "asyncIterator");
+  if(JS_HasProperty(ctx, obj, atom))
+    return atom;
+
+  JS_FreeAtom(ctx, atom);
+
+  atom = js_symbol_static_atom(ctx, "iterator");
+  if(JS_HasProperty(ctx, obj, atom))
+    return atom;
+
+  JS_FreeAtom(ctx, atom);
+  return 0;
 }
 
 JSValue
@@ -267,6 +306,29 @@ js_buffer_free(JSBuffer* in, JSContext* ctx) {
 }
 
 BOOL
+js_function_is_generator(JSContext* ctx, JSValueConst obj) {
+  BOOL ret=FALSE;
+  const char *str, *x;
+  
+  if(!JS_IsFunction(ctx, obj))
+    return FALSE;
+
+  x = str = JS_ToCString(ctx, obj);
+
+  if(strncmp(x, "async ", 6))
+    x += 6;
+
+  if(!strncmp(x, "function", 8)) {
+    x += 8;
+    while(isspace(*x)) ++x;
+    if(*x == '*')
+      ret=TRUE;
+  }
+  JS_FreeCString(ctx, str);
+  return ret;
+}
+
+BOOL
 js_is_iterator(JSContext* ctx, JSValueConst obj) {
   if(JS_IsObject(obj)) {
     JSValue next = JS_GetPropertyStr(ctx, obj, "next");
@@ -278,11 +340,23 @@ js_is_iterator(JSContext* ctx, JSValueConst obj) {
 }
 
 BOOL
+js_is_generator(JSContext* ctx, JSValueConst obj) {
+  BOOL ret = FALSE;
+  const char* str;
+
+  if((str = js_object_tostring(ctx, obj))) {
+    ret = !!strstr(str, "Generator");
+    JS_FreeCString(ctx, str);
+  }
+  return ret;
+}
+
+BOOL
 js_is_async_generator(JSContext* ctx, JSValueConst obj) {
   BOOL ret = FALSE;
   const char* str;
 
-  if((str = JS_ToCString(ctx, obj))) {
+  if((str = js_object_tostring(ctx, obj))) {
     ret = !!strstr(str, "AsyncGenerator");
     JS_FreeCString(ctx, str);
   }
@@ -343,6 +417,24 @@ js_global_get(JSContext* ctx, const char* prop) {
 JSValue
 js_global_os(JSContext* ctx) {
   return js_global_get(ctx, "os");
+}
+
+JSValue
+js_global_prototype(JSContext* ctx, const char* class_name) {
+  JSValue ctor, ret;
+  ctor = js_global_get(ctx, class_name);
+  ret = JS_GetPropertyStr(ctx, ctor, "prototype");
+  JS_FreeValue(ctx, ctor);
+  return ret;
+}
+
+JSValue
+js_global_prototype_func(JSContext* ctx, const char* class_name, const char* func_name) {
+  JSValue proto, func;
+  proto = js_global_prototype(ctx, class_name);
+  func = JS_GetPropertyStr(ctx, proto, func_name);
+  JS_FreeValue(ctx, proto);
+  return func;
 }
 
 JSValue
