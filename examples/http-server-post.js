@@ -23,7 +23,9 @@ let srv = createServer({
 srv.listen(3333);
 srv.post('/api', async (req, resp) => {
   console.log(req.url + '', req, resp);
-  let json = await req.json();
+  let json = req.json();
+  console.log('json', json);
+  json=await json;
   console.log('json', json);
 });
 

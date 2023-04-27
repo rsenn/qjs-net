@@ -855,7 +855,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
       session->in_body = TRUE;
 
-
       if(len) {
         if(opaque->form_parser) {
           form_parser_process(opaque->form_parser, in, len);
@@ -910,13 +909,18 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             session->generator = ret;*/
       }
 
-      //  req = minnet_request_data2(ctx, session->req_obj);
       if(gen) {
         DBG("gen=%p", gen);
+        BOOL done = FALSE;
+        JSValue value = generator_dequeue(gen, &done);
+
+        js_async_resolve(ctx, &session->async, value);
+        JS_FreeValue(ctx, value);
+
         generator_close(req->body, JS_UNDEFINED);
       }
 
-      //js_async_resolve(ctx, &session->async, 
+      // js_async_resolve(ctx, &session->async,
 
       if(server->on.post.ctx) {
         JSValue args[] = {

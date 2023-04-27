@@ -255,6 +255,9 @@ minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!(req = minnet_request_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
+  if(!js_is_promise(ctx, req->promise))
+    return JS_ThrowInternalError(ctx, "no Request Promise");
+
   ret = JS_DupValue(ctx, req->promise);
 
   switch(magic) {
