@@ -89,6 +89,7 @@ server_new(JSContext* ctx) {
   server->context.error = JS_NULL;
   server->context.js = ctx;
   server->context.info = (struct lws_context_creation_info){.protocols = protocols2, .user = server};
+  server->promise = (ResolveFunctions){JS_NULL, JS_NULL};
 
   context_add(&server->context);
 

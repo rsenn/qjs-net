@@ -3,9 +3,7 @@ import { LLL_USER, logLevels, createServer, setLog } from 'net';
 
 import('console').then(({ Console }) => { globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 });
-
-if(std.getenv('DEBUG'))
-  setLog(LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
+if(std.getenv('DEBUG')) setLog(LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
 
 class PulseAudio {
   static *getSources() {
@@ -20,14 +18,12 @@ class PulseAudio {
   static async *streamSource(sourceName = sources[0], bufSize = 512) {
     /* pacat |lame has libmp3lame problems reading from stdin/writing to stdout, but you can try */
     const pipelines = {
-      pacat: name =>
-        `pacat --stream-name '${name}' -r --rate=44100 --format=s16le --channels=2 --raw | lame --quiet -r --alt-preset 128 - -`,
+      pacat: name => `pacat --stream-name '${name}' -r --rate=44100 --format=s16le --channels=2 --raw | lame --quiet -r --alt-preset 128 - -`,
       sox: name => `sox -q -t pulseaudio '${name}' -r 44100 -t mp3 -`
     };
     const file = popen(pipelines.sox(sourceName), 'r');
 
-    const waitRead = fd =>
-      new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
+    const waitRead = fd => new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
     const fd = file.fileno();
     const buf = new ArrayBuffer(bufSize);
 
@@ -48,7 +44,16 @@ createServer({
   mounts: {
     '/': ['.', 'index.html'],
     *'/404.html'(req, res) {
-      yield `<html>\n\t<head>\n\t\t<meta charset=utf-8 http-equiv="Content-Language" content="en" />\n\t\t<link rel="stylesheet" type="text/css" href="/error.css" />\n\t</head>\n\t<body>\n\t\t<h1>404</h1>\n\t\tThe requested URL ${req.url.path} was not found on this server.\n\t</body>\n</html>\n`;
+      yield `<html>\n`;
+      yield `  <head>\n`;
+      yield `    <meta charset=utf-8 http-equiv="Content-Language" content="en" />\n`;
+      yield `    <link rel="stylesheet" type="text/css" href="/error.css" />\n`;
+      yield `  </head>\n`;
+      yield `  <body>\n`;
+      yield `    <h1>404</h1>\n`;
+      yield `    The requested URL ${req.url.path} was not found on this server.\n`;
+      yield `  </body>\n`;
+      yield `</html>\n`;
     },
     async *stream(req, resp) {
       resp.type = 'audio/mpeg';
@@ -57,5 +62,9 @@ createServer({
 
       yield* PulseAudio.streamSource(source);
     }
+  },
+  onRequest(req, resp) {
+    console.log('onRequest',   req, resp);
+    resp.headers.set('server', `qjs-net pulseaudio streamer`);
   }
 });

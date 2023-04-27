@@ -5,11 +5,13 @@
 #include <cutils.h>
 #include <list.h>
 #include <libwebsockets.h>
+#include "jsutils.h"
 
 struct context {
   int ref_count;
   JSContext* js;
   struct lws_context* lws;
+  ResolveFunctions promise;
   BOOL exception;
   JSValue error;
   JSValue crt, key, ca;

@@ -17,7 +17,12 @@
 
 typedef struct client_context {
   union {
-    int ref_count;
+    struct {
+      int ref_count;
+      JSContext* js;
+      struct lws_context* lws;
+      ResolveFunctions promise;
+    };
     struct context context;
   };
   struct lws* wsi;
@@ -27,7 +32,6 @@ typedef struct client_context {
   struct http_request* request;
   struct http_response* response;
   struct lws_client_connect_info connect_info;
-  ResolveFunctions promise;
   union {
     AsyncIterator* iter;
     Generator* gen;

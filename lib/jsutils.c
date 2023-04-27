@@ -721,6 +721,7 @@ js_error_print(JSContext* ctx, JSValueConst error) {
       exception += typelen + 2;
     }
     lwsl_err("Exception %s: %s", type, exception);
+    printf("Exception %s: %s\n", type, exception);
   }
   if(stack) {
     size_t pos = 0, i = 0, len, end = strlen(stack);

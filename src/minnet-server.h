@@ -13,12 +13,16 @@ struct http_mount;
 
 typedef struct server_context {
   union {
-    int ref_count;
+    struct {
+      int ref_count;
+      JSContext* js;
+      struct lws_context* lws;
+      ResolveFunctions promise;
+    };
     struct context context;
   };
   CallbackList on;
   MinnetVhostOptions* mimetypes;
-  ResolveFunctions promise;
 } MinnetServer;
 
 struct proxy_connection;

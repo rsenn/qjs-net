@@ -15,10 +15,14 @@ context_exception(struct context* context, JSValue retval) {
     const char* err = JS_ToCString(context->js, context->error);
     const char* stk = JS_ToCString(context->js, stack);
     // printf("Got exception: %s\n%s\n", err, stk);
+    js_error_print(context->js, context->error);
+
     JS_FreeCString(context->js, err);
     JS_FreeCString(context->js, stk);
     JS_FreeValue(context->js, stack);
+
     JS_Throw(context->js, context->error);
+    js_async_reject(context->js, &context->promise, context->error);
   }
 
   return retval;

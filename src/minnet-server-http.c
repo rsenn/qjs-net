@@ -934,7 +934,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_HTTP: {
       MinnetRequest* req = opaque->req ? opaque->req : (opaque->req = request_fromwsi(wsi, ctx));
-      JSValue* args = &session->ws_obj;
       char* path = in;
       size_t mountpoint_len = 0, pathlen = 0;
       MinnetHttpMount *mounts, *mount;
@@ -1018,8 +1017,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             response_redirect(resp, HTTP_STATUS_MOVED_PERMANENTLY, mount->def);
             session_want_write(session, wsi);
             lws_set_timeout(wsi, PENDING_TIMEOUT_USER_REASON_BASE, 30);
-            return 0;
-
           } else {
             mount = mount_find_s(mounts, "/404.html");
 
@@ -1075,12 +1072,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             }
           }
         }
+      }
 
-        if(server->on.http.ctx) {
-          cb = &server->on.http;
-          JSValue val = server_exception(server, callback_emit_this(cb, session->ws_obj, 3, args));
-          JS_FreeValue(ctx, val);
-        }
+      if(server->on.http.ctx) {
+        cb = &server->on.http;
+        JSValue val = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &session->req_obj));
+        JS_FreeValue(ctx, val);
       }
 
       return ret;
