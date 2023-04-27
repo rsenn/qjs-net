@@ -536,24 +536,26 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
 static int
 serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
   JSValue body;
-  enum { NONE = 0, SYNC = 1, ASYNC = 2 } type;
+  enum { SYNC = 1, ASYNC = 2 } type;
 
   type = session_callback(session, cb, wsi_context(wsi));
 
   DBG("type=%s generator=%s", ((const char*[]){"NONE", "SYNC", "ASYNC"})[type], JS_ToCString(cb->ctx, session->generator));
 
   switch(type) {
-    case ASYNC:{
+    case ASYNC: {
       BOOL done = FALSE;
       if(serve_generator(cb->ctx, session, wsi, &done))
         return 1;
       break;
-}
-    case SYNC: {
-      session_want_write(session, wsi); break;
     }
-    default: 
+    case SYNC: {
+      session_want_write(session, wsi);
+      break;
+    }
+    default: {
       return -1;
+    }
   }
 
   return 0;
@@ -598,8 +600,20 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
   if(queue_complete(&session->sendq))
     content_len = queue_bytes(&session->sendq);
 
-  if(lws_add_http_common_headers(wsi, resp->status, 0, content_len, &buf->write, buf->end))
-    return 1;
+  if(resp->status >= 300 && resp->status <= 399) {
+    size_t len;
+    char* loc;
+
+    if((loc = headers_getlen(&resp->headers, &len, "location")))
+
+      if(lws_http_redirect(wsi, resp->status, loc, len, &buf->write, buf->end))
+        return 1;
+
+    headers_unset(&resp->headers, "location");
+  } else {
+    if(lws_add_http_common_headers(wsi, resp->status, 0, content_len, &buf->write, buf->end))
+      return 1;
+  }
 
   for(const uint8_t *x = resp->headers.start, *end = resp->headers.write; x < end; x += headers_next(x, end)) {
     size_t len, n;
@@ -993,9 +1007,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           cb = 0;
 
         if(mount && mount->lws.origin_protocol == LWSMPRO_FILE) {
-          mount = mount_find_s(mounts, "/404.html");
+          if(*path == '\0' && mount->def) {
 
-          cb = &mount->callback;
+          } else {
+            mount = mount_find_s(mounts, "/404.html");
+
+            cb = &mount->callback;
+          }
           /*  session_want_write(session, wsi);
             opaque->resp->status = HTTP_STATUS_NOT_FOUND;
             ret = 0;

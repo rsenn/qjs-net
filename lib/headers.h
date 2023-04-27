@@ -51,4 +51,9 @@ headers_name(const void* start, const void* end, JSContext* ctx) {
   return js_strndup(ctx, start, headers_namelen(start, end));
 }
 
+static inline ssize_t
+headers_unset(ByteBuffer* buf, const char* name) {
+  return headers_unsetb(buf, name, strlen(name));
+}
+
 #endif /* QJSNET_LIB_HEADERS_H */

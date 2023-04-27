@@ -1,17 +1,12 @@
 import { popen } from 'std';
-import { LLL_ALL, LLL_NOTICE, LLL_USER, logLevels, createServer, setLog } from 'net';
+import { LLL_USER, logLevels, createServer, setLog } from 'net';
 
 import('console').then(({ Console }) => { globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 });
 
-setLog((LLL_NOTICE - 1) | LLL_USER, (level, message) => {
-  if(level == LLL_USER)
-     console.log(
-      logLevels[level].padEnd(10),
-      message .replaceAll(/\n/g, '\\\\n')
-       /* .replaceAll(/\x1b\[[^m]*m/g, '')*/
-    );
-});
+const sources = [...GetPulseSources()];
+
+setLog(LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
 
 function* GetPulseSources() {
   let pipe = popen('pacmd list-sources', 'r');
@@ -21,8 +16,6 @@ function* GetPulseSources() {
   }
   pipe.close();
 }
-
-const sources = [...GetPulseSources()];
 
 async function* StreamPulseOutput(streamName = sources[0], bufSize = 512) {
   /* LAME has problems reading from stdin/writing to stdout, but you can try */
@@ -48,17 +41,16 @@ createServer(
   (globalThis.options = {
     port: 8765,
     tls: true,
-    protocol: 'http',
     mimetypes: [['.mp4', 'video/mp4']],
     mounts: {
       '/': ['.', 'index.html'],
       *'/404.html'(req, res) {
         yield `<html>\n\t<head>\n\t\t<meta charset=utf-8 http-equiv="Content-Language" content="en" />\n\t\t<link rel="stylesheet" type="text/css" href="/error.css" />\n\t</head>\n\t<body>\n\t\t<h1>404</h1>\n\t\tThe requested URL ${req.url.path} was not found on this server.\n\t</body>\n</html>\n`;
       },
-      stream(req, resp) {
+      async *stream(req, resp) {
         resp.type = 'audio/mpeg';
 
-        resp.body= StreamPulseOutput();
+        yield* StreamPulseOutput();
       }
     }
   })
