@@ -111,7 +111,7 @@ session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
 int
 session_callback(struct session_data* session, JSCallback* cb, struct context* context) {
   int ret = 0;
-  JSValue body,this=session->ws_obj;
+  JSValue body, this = session->ws_obj;
 
   context_exception(context, (body = callback_emit_this(cb, session->ws_obj, 2, &session->req_obj)));
 
@@ -121,14 +121,14 @@ session_callback(struct session_data* session, JSCallback* cb, struct context* c
     if(ret)
       break;
     body = JS_GetPropertyStr(cb->ctx, session->resp_obj, "body");
-    this=session->resp_obj;
+    this = session->resp_obj;
   } while(!js_is_nullish(body));
 
   return ret;
 }
 
 int
-session_generator(struct session_data* session, JSValue generator,JSValueConst this, struct context* context) {
+session_generator(struct session_data* session, JSValue generator, JSValueConst this, struct context* context) {
   JSContext* ctx = context->js;
   JSAtom prop;
   BOOL async = FALSE;
@@ -150,10 +150,13 @@ session_generator(struct session_data* session, JSValue generator,JSValueConst t
     }
   }
 
+  if(!async)
+    async = js_is_async_generator(ctx, generator);
+
   session->generator = JS_DupValue(ctx, generator);
   session->next = JS_NULL;
 
-  return JS_IsObject(generator) ?  (async ? 2 : 1) : 0;
+  return JS_IsObject(generator) ? (async ? 2 : 1) : 0;
 }
 
 struct wsi_opaque_user_data*

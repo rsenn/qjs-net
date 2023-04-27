@@ -476,9 +476,9 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
       session->callback_count,
       ++session->generator_run,
       *done_p ? "TRUE" : "FALSE",
-      session->wait_resolve? "TRUE" : "FALSE",
-      queue_closed(&session->sendq)? "TRUE" : "FALSE",
-      queue_complete(&session->sendq)? "TRUE" : "FALSE");
+      session->wait_resolve ? "TRUE" : "FALSE",
+      queue_closed(&session->sendq) ? "TRUE" : "FALSE",
+      queue_complete(&session->sendq) ? "TRUE" : "FALSE");
 
   assert(session->wait_resolve == 0);
   assert(!queue_complete(&session->sendq));
@@ -492,7 +492,7 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
     while(!*done_p && !session->wait_resolve) {
       JSValue ret = js_iterator_next(ctx, session->generator, &session->next, done_p, 0, 0);
 
-      DBG("done=%s wait_resolve=%s ret=%s", *done_p ? "TRUE" : "FALSE", session->wait_resolve? "TRUE" : "FALSE", JS_ToCString(ctx, ret));
+      DBG("done=%s wait_resolve=%s ret=%s", *done_p ? "TRUE" : "FALSE", session->wait_resolve ? "TRUE" : "FALSE", JS_ToCString(ctx, ret));
 
       if(js_is_promise(ctx, ret)) {
         JSValue promise = serve_promise(ctx, session, ret);
