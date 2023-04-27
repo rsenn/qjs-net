@@ -27,6 +27,7 @@ void response_free(Response*, JSRuntime*);
 Response* response_new(JSContext*);
 ssize_t response_settype(Response*, const char*);
 char* response_type(Response*, JSContext*);
+void response_redirect(Response* resp, int code, const char* location);
 
 static inline Generator*
 response_generator(struct http_response* resp, JSContext* ctx) {

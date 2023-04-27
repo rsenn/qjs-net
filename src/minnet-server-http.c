@@ -1004,7 +1004,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if(!JS_IsObject(session->resp_obj))
           session->resp_obj = minnet_response_new(ctx, req->url, 200, 0, TRUE, "text/html");
 
-        opaque->resp = minnet_response_data2(ctx, session->resp_obj);
+        Response* resp = opaque->resp = minnet_response_data2(ctx, session->resp_obj);
         LOGCB("HTTP(3)", "req=%p, header=%zu mnt=%s org=%s", req, buffer_HEAD(&req->headers), mount->mnt, mount->org);
         request_dup(req);
         cb = &mount->callback;
@@ -1013,6 +1013,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         if(mount && mount->lws.origin_protocol == LWSMPRO_FILE) {
           if(*path == '\0' && mount->def) {
+            response_redirect(resp, HTTP_STATUS_MOVED_PERMANENTLY, mount->def);
+            session_want_write(session, wsi);
+            lws_set_timeout(wsi, PENDING_TIMEOUT_USER_REASON_BASE, 30);
+            return 0;
 
           } else {
             mount = mount_find_s(mounts, "/404.html");
@@ -1183,7 +1187,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
   }
   // int ret = 0;
   if(/*reason != LWS_CALLBACK_HTTP_WRITEABLE && reason != LWS_CALLBACK_CLOSED_HTTP &&*/ (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
-    LOGCB("SERVER-HTTP(/)", "%s%sfd=%i ret=%d\n", wsi_http2(wsi) ? "h2, " : "http/1.1, ", wsi_tls(wsi) ? "TLS, " : "plain, ", lws_get_socket_fd(lws_get_network_wsi(wsi)), ret);
+    LOGCB("SERVER-HTTP(/)",
+          "%s%sfd=%i ret=%d want_write=%d\n",
+          wsi_http2(wsi) ? "h2, " : "http/1.1, ",
+          wsi_tls(wsi) ? "TLS, " : "plain, ",
+          lws_get_socket_fd(lws_get_network_wsi(wsi)),
+          ret,
+          session ? session->want_write : 0);
   }
 
   if(ret == 0)
