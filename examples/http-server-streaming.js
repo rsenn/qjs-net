@@ -1,10 +1,9 @@
 import { popen, getenv } from 'std';
-import { LLL_USER, logLevels, createServer, setLog } from 'net';
+import { LLL_USER, logLevels, createServer, setLog, Generator } from 'net';
 
 import('console').then(({ Console }) => { globalThis.console = new Console({ inspectOptions: { compact: 0 } });
 });
-if(std.getenv('DEBUG'))
-  setLog(LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
+if(std.getenv('DEBUG')) setLog(LLL_USER, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
 
 class PulseAudio {
   static *getSources() {
@@ -19,24 +18,26 @@ class PulseAudio {
   static async *streamSource(sourceName = sources[0], bufSize = 512) {
     /* pacat |lame has libmp3lame problems reading from stdin/writing to stdout, but you can try */
     const pipelines = {
-      pacat: name =>
-        `pacat --stream-name '${name}' -r --rate=44100 --format=s16le --channels=2 --raw | lame --quiet -r --alt-preset 128 - -`,
+      pacat: name => `pacat --stream-name '${name}' -r --rate=44100 --format=s16le --channels=2 --raw | lame --quiet -r --alt-preset 128 - -`,
       sox: name => `sox -q -t pulseaudio '${name}' -r 44100 -t mp3 -`
     };
-    const file = popen(pipelines.sox(sourceName), 'r');
 
-    const waitRead = fd =>
-      new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
-    const fd = file.fileno();
-    const buf = new ArrayBuffer(bufSize);
+    try {
+      const file = popen(pipelines.sox(sourceName), 'r');
 
-    for(;;) {
-      await waitRead(fd);
-      let r;
-      if((r = os.read(fd, buf, 0, buf.byteLength)) <= 0) break;
-      yield buf.slice(0, r);
+      const waitRead = fd => new Promise((resolve, reject) => os.setReadHandler(fd, () => (os.setReadHandler(fd, null), resolve(file))));
+      const fd = file.fileno();
+      const buf = new ArrayBuffer(bufSize);
+
+      for(;;) {
+        await waitRead(fd);
+        let r;
+        if((r = os.read(fd, buf, 0, buf.byteLength)) <= 0) break;
+        yield buf.slice(0, r);
+      }
+    } finally {
+      file.close();
     }
-    file.close();
   }
 }
 

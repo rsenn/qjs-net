@@ -121,6 +121,16 @@ socket_local(int fd) {
 size_t list_size(struct list_head*);
 struct list_head* list_at(struct list_head*, int64_t);
 
+static inline struct list_head*
+list_front(const struct list_head* list) {
+  return list->next != list ? list->next : 0;
+}
+
+static inline struct list_head*
+list_back(const struct list_head* list) {
+  return list->prev != list ? list->prev : 0;
+}
+
 #define list_entry_at(list, type, field, index) list_entry(list_at(list, index), type, field)
 
 #endif /* QJSNET_LIB_UTILS_H */

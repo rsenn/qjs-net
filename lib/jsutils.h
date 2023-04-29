@@ -90,6 +90,19 @@ struct TimerClosure {
 };
 
 #define JS_BIND_THIS 0x8000
+#define JS_BIND_RETVAL 0x4000
+#define JS_BOUND_MASK (~(JS_BIND_THIS | JS_RETURN_MASK))
+#define JS_RETURN_SHIFT 10
+#define JS_RETURN_MASK (0xf << JS_RETURN_SHIFT)
+#define JS_RETURN_ARG_1 (1 << JS_RETURN_SHIFT)
+#define JS_RETURN_ARG_2 (2 << JS_RETURN_SHIFT)
+#define JS_BIND_RETURN(arg) ((arg) << JS_RETURN_SHIFT)
+
+#define JS_NUM_SHIFT 16
+#define JS_NUM_MASK (~0xffff)
+#define JS_NUM_FUNCTIONS(flags) (((flags) >> JS_NUM_SHIFT) + 1)
+
+#define JS_BIND_MAGIC(num_functions, flags) ((((num_functions)-1) << JS_NUM_SHIFT) | (flags))
 
 static inline void
 js_vector_free(JSContext* ctx, int argc, JSValue argv[]) {
@@ -107,10 +120,12 @@ const char* js_object_tostring(JSContext*, JSValueConst value);
 const char* js_object_tostring2(JSContext*, JSValueConst method, JSValueConst value);
 void js_console_log(JSContext*, JSValueConst* console, JSValueConst* console_log);
 JSValue js_function_bound(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValueConst* func_data);
-JSValue js_function_bind(JSContext*, JSValueConst func, int flags, JSValueConst argv[]);
+JSValue js_function_bind_functions(JSContext* ctx, int num, ...);
+JSValue js_function_bind_argv(JSContext*, JSValueConst func, int flags, JSValueConst argv[]);
 JSValue js_function_bind_1(JSContext*, JSValueConst func, JSValueConst arg);
 JSValue js_function_bind_this(JSContext*, JSValueConst func, JSValueConst this_val);
 JSValue js_function_bind_this_1(JSContext*, JSValueConst func, JSValueConst this_val, JSValueConst arg);
+JSValue js_function_bind_return(JSContext* ctx, JSValueConst func, int argument);
 JSValue js_function_name_value(JSContext*, JSValueConst value);
 BOOL js_function_is_generator(JSContext*, JSValueConst, BOOL* async_ptr);
 BOOL js_function_is_async(JSContext* ctx, JSValueConst obj);
@@ -150,8 +165,10 @@ void js_timer_restart(struct TimerClosure*);
 char* js_tostringlen(JSContext*, size_t* lenp, JSValueConst value);
 char* js_tostring(JSContext*, JSValueConst value);
 JSValue js_invoke(JSContext*, JSValueConst this_obj, const char* method, int argc, JSValueConst argv[]);
+BOOL js_is_promise(JSContext*, JSValueConst value);
+JSValue js_promise_resolve(JSContext* ctx, JSValueConst value);
+JSValue js_promise_new(JSContext*, JSValueConst* resolve, JSValueConst* reject);
 JSValue js_async_create(JSContext*, ResolveFunctions* funcs);
-JSValue js_async_new(JSContext*, JSValueConst* resolve, JSValueConst* reject);
 void js_async_free(JSContext*, ResolveFunctions* funcs);
 void js_async_free_rt(JSRuntime*, ResolveFunctions* funcs);
 JSValue js_async_resolve(JSContext*, ResolveFunctions* funcs, JSValueConst value);
@@ -159,12 +176,13 @@ JSValue js_async_reject(JSContext*, ResolveFunctions* funcs, JSValueConst value)
 void js_async_zero(ResolveFunctions*);
 BOOL js_async_pending(ResolveFunctions const*);
 JSValue js_async_then(JSContext*, JSValueConst promise, JSValueConst handler);
+JSValue js_async_then2(JSContext* ctx, JSValueConst promise, JSValueConst, JSValueConst);
 JSValue js_async_catch(JSContext*, JSValueConst promise, JSValueConst handler);
-BOOL js_is_promise(JSContext*, JSValueConst value);
 JSValue js_error_new(JSContext*, const char* fmt, ...);
 void js_error_print(JSContext*, JSValueConst error);
 uint8_t* js_toptrsize(JSContext*, unsigned int* plen, JSValueConst value);
 uint32_t js_get_propertystr_uint32(JSContext*, JSValueConst obj, const char* str);
+const char* js_get_propertystr_cstring(JSContext* ctx, JSValueConst obj, const char* prop);
 BOOL js_has_propertystr(JSContext*, JSValueConst obj, const char* str);
 int64_t js_array_length(JSContext*, JSValueConst array);
 char** js_array_to_argv(JSContext*, int* argcp, JSValueConst array);

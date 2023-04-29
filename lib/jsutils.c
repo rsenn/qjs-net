@@ -61,25 +61,42 @@ js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
 
 JSValue
 js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue* func_data) {
-  BOOL bind_this = !!(magic & JS_BIND_THIS);
-  int i = 0, k = 0, count = magic & ~(JS_BIND_THIS);
-  JSValue args[argc + count], fn;
+  int i, j = 0, k = 0, l, count = magic & JS_BOUND_MASK;
+  JSValue args[argc + count], n, return_val, ret = JS_UNDEFINED;
 
-  fn = *func_data++;
+  l = JS_NUM_FUNCTIONS(magic);
+  i = l;
 
-  if(bind_this)
+  if(magic & JS_RETURN_MASK) {
+    int index = ((magic & JS_RETURN_MASK) >> JS_RETURN_SHIFT) - 1;
+    return_val = index >= argc ? JS_UNDEFINED : argv[index];
+  } else if(magic & JS_BIND_RETVAL) {
+    return_val = func_data[i++];
+  }
+
+  if(magic & JS_BIND_THIS)
     this_val = func_data[i++];
 
-  for(; i < count; i++) args[k++] = func_data[i];
+  for(j = 0; j < count; j++) args[k++] = func_data[i + j];
 
-  for(i = 0; i < argc; i++) args[k++] = argv[i];
+  for(j = 0; j < argc; j++) args[k++] = argv[j];
 
-  return JS_Call(ctx, fn, this_val, k, args);
+  for(i = 0; i < l; i++) {
+    JS_FreeValue(ctx, ret);
+    ret = JS_Call(ctx, func_data[i], this_val, k, args);
+  }
+
+  if(magic & JS_RETURN_MASK) {
+    JS_FreeValue(ctx, ret);
+    ret = JS_DupValue(ctx, return_val);
+  }
+
+  return ret;
 }
 
 JSValue
-js_function_bind(JSContext* ctx, JSValueConst func, int flags, JSValueConst argv[]) {
-  int i, argc = flags & ~(JS_BIND_THIS);
+js_function_bind_argv(JSContext* ctx, JSValueConst func, int flags, JSValueConst argv[]) {
+  int i, argc = flags & JS_BOUND_MASK;
   JSValue data[argc + 1];
 
   data[0] = JS_DupValue(ctx, func);
@@ -89,19 +106,38 @@ js_function_bind(JSContext* ctx, JSValueConst func, int flags, JSValueConst argv
 }
 
 JSValue
+js_function_bind_functions(JSContext* ctx, int num, ...) {
+  int i;
+  JSValue data[num];
+  va_list list;
+
+  va_start(list, num);
+
+  for(i = 0; i < num; i++) { data[i] = JS_DupValue(ctx, va_arg(list, JSValueConst)); }
+
+  va_end(list);
+  return JS_NewCFunctionData(ctx, js_function_bound, 0, JS_BIND_MAGIC(num, 0), i, data);
+}
+
+JSValue
 js_function_bind_1(JSContext* ctx, JSValueConst func, JSValueConst arg) {
-  return js_function_bind(ctx, func, 1, &arg);
+  return js_function_bind_argv(ctx, func, 1, &arg);
 }
 
 JSValue
 js_function_bind_this(JSContext* ctx, JSValueConst func, JSValueConst this_val) {
-  return js_function_bind(ctx, func, 1 | JS_BIND_THIS, &this_val);
+  return js_function_bind_argv(ctx, func, 1 | JS_BIND_THIS, &this_val);
 }
 
 JSValue
 js_function_bind_this_1(JSContext* ctx, JSValueConst func, JSValueConst this_val, JSValueConst arg) {
   JSValueConst bound[] = {this_val, arg};
-  return js_function_bind(ctx, func, countof(bound) | JS_BIND_THIS, bound);
+  return js_function_bind_argv(ctx, func, countof(bound) | JS_BIND_THIS, bound);
+}
+
+JSValue
+js_function_bind_return(JSContext* ctx, JSValueConst func, int argument) {
+  return js_function_bind_argv(ctx, func, JS_BIND_RETURN(argument), 0);
 }
 
 JSValue
@@ -600,16 +636,24 @@ js_invoke(JSContext* ctx, JSValueConst this_obj, const char* method, int argc, J
   return ret;
 }
 
-JSValue
-js_async_create(JSContext* ctx, ResolveFunctions* funcs) {
-  JSValue ret;
+BOOL
+js_is_promise(JSContext* ctx, JSValueConst value) {
+  BOOL ret = FALSE;
 
-  ret = JS_NewPromiseCapability(ctx, &funcs->resolve);
+  if(JS_IsObject(value)) {
+    JSValue ctor;
+
+    ctor = js_global_get(ctx, "Promise");
+    ret = JS_IsInstanceOf(ctx, value, ctor);
+
+    JS_FreeValue(ctx, ctor);
+  }
+
   return ret;
 }
 
 JSValue
-js_async_new(JSContext* ctx, JSValue* resolve, JSValue* reject) {
+js_promise_new(JSContext* ctx, JSValue* resolve, JSValue* reject) {
   JSValue ret;
   ResolveFunctions fns;
 
@@ -620,6 +664,22 @@ js_async_new(JSContext* ctx, JSValue* resolve, JSValue* reject) {
   if(reject)
     *reject = fns.reject;
 
+  return ret;
+}
+
+JSValue
+js_promise_resolve(JSContext* ctx, JSValueConst value) {
+  JSValueConst ret, promise_ctor = js_global_get(ctx, "Promise");
+  ret = js_invoke(ctx, promise_ctor, "resolve", 1, &value);
+  JS_FreeValue(ctx, promise_ctor);
+  return ret;
+}
+
+JSValue
+js_async_create(JSContext* ctx, ResolveFunctions* funcs) {
+  JSValue ret;
+
+  ret = JS_NewPromiseCapability(ctx, &funcs->resolve);
   return ret;
 }
 
@@ -667,20 +727,14 @@ js_async_then(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
 }
 
 JSValue
-js_async_catch(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
-  return js_invoke(ctx, promise, "catch", 1, &handler);
+js_async_then2(JSContext* ctx, JSValueConst promise, JSValueConst onresolved, JSValueConst onrejected) {
+  JSValueConst args[] = {onresolved, onrejected};
+  return js_invoke(ctx, promise, "then", countof(args), args);
 }
 
-BOOL
-js_is_promise(JSContext* ctx, JSValueConst value) {
-  JSValue ctor;
-  BOOL ret;
-
-  ctor = js_global_get(ctx, "Promise");
-  ret = JS_IsInstanceOf(ctx, value, ctor);
-
-  JS_FreeValue(ctx, ctor);
-  return ret;
+JSValue
+js_async_catch(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
+  return js_invoke(ctx, promise, "catch", 1, &handler);
 }
 
 JSValue
@@ -760,6 +814,20 @@ js_get_propertystr_uint32(JSContext* ctx, JSValueConst obj, const char* str) {
   value = JS_GetPropertyStr(ctx, obj, str);
   JS_ToUint32(ctx, &ret, value);
   JS_FreeValue(ctx, value);
+  return ret;
+}
+
+const char*
+js_get_propertystr_cstring(JSContext* ctx, JSValueConst obj, const char* prop) {
+  JSAtom atom = JS_NewAtom(ctx, prop);
+  const char* ret = 0;
+
+  if(JS_HasProperty(ctx, obj, atom)) {
+    JSValue value = JS_GetProperty(ctx, obj, atom);
+    ret = JS_ToCString(ctx, value);
+    JS_FreeValue(ctx, value);
+  }
+
   return ret;
 }
 

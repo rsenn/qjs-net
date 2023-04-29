@@ -1,5 +1,6 @@
 #include "asynciterator.h"
 #include "utils.h"
+#include <assert.h>
 
 size_t
 asynciterator_num_reads(AsyncIterator* it) {
@@ -9,7 +10,7 @@ asynciterator_num_reads(AsyncIterator* it) {
 static AsyncRead*
 asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
   if(!list_empty(&it->reads)) {
-    AsyncRead* rd = list_entry(it->reads.prev, AsyncRead, link);
+    AsyncRead* rd = list_entry(it->reads.next, AsyncRead, link);
     list_del(&rd->link);
     return rd;
   }
@@ -67,20 +68,32 @@ asynciterator_free(AsyncIterator* it, JSRuntime* rt) {
 }
 
 JSValue
-asynciterator_next(AsyncIterator* it, JSContext* ctx) {
+asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
   AsyncRead* rd;
   JSValue ret = JS_UNDEFINED;
+  ResolveFunctions async;
 
   if(it->closed)
     return JS_ThrowInternalError(ctx, "%s: iterator closed", __func__);
 
-  if((rd = js_malloc(ctx, sizeof(AsyncRead)))) {
-    list_add(&rd->link, &it->reads);
-    ret = js_async_create(ctx, &rd->promise);
+  ret = js_async_create(ctx, &async);
+
+  if(it->closing) {
+    assert(list_empty(&it->reads));
+    js_async_resolve(ctx, &async, js_iterator_result(ctx, JS_UNDEFINED, TRUE));
+    js_async_free(ctx, &async);
+  } else {
+
+    if(!(rd = js_malloc(ctx, sizeof(AsyncRead))))
+      return JS_ThrowOutOfMemory(ctx);
+
+    list_add_tail(&rd->link, &it->reads);
+    rd->promise = async;
+    rd->argument = JS_DupValue(ctx, argument);
     rd->id = ++it->serial;
   }
 
-  asynciterator_check_closing(it, ctx);
+  // asynciterator_check_closing(it, ctx);
 
   return ret;
 }
@@ -108,6 +121,7 @@ asynciterator_cancel(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
 
   while((rd = asynciterator_shift(it, ctx))) {
     js_async_reject(ctx, &rd->promise, error);
+    JS_FreeValue(ctx, rd->argument);
     js_free(ctx, rd);
     ret++;
   }
@@ -125,7 +139,7 @@ asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContex
 
     // printf("%-22s reads: %zu read: %" PRIu32 " value: %.*s done: %i\n", __func__, list_size(&it->reads), rd->id, 10, JS_ToCString(ctx, value), done);
 
-    JSValue obj = asynciterator_object(value, done, ctx);
+    JSValue obj = js_iterator_result(ctx, value, done);
     js_async_resolve(ctx, &rd->promise, obj);
     JS_FreeValue(ctx, obj);
     js_free(ctx, rd);
@@ -134,14 +148,4 @@ asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContex
   }
 
   return FALSE;
-}
-
-JSValue
-asynciterator_object(JSValueConst value, BOOL done, JSContext* ctx) {
-  JSValue obj = JS_NewObject(ctx);
-
-  JS_SetPropertyStr(ctx, obj, "value", JS_DupValue(ctx, value));
-  JS_SetPropertyStr(ctx, obj, "done", JS_NewBool(ctx, done));
-
-  return obj;
 }

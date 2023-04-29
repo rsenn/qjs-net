@@ -9,28 +9,28 @@ typedef struct generator {
   union {
     AsyncIterator iterator;
     struct {
+      int ref_count;
       struct list_head reads;
       BOOL closed, closing;
     };
   };
   JSContext* ctx;
   Queue* q;
-  JSValue callback;
+  JSValue executor,callback;
   uint64_t bytes_written, bytes_read;
   uint32_t chunks_written, chunks_read;
   JSValue (*block_fn)(ByteBlock*, JSContext*);
-  int ref_count;
 } Generator;
 
 void generator_zero(Generator*);
-BOOL generator_free(Generator*);
+void generator_free(Generator*);
 Generator* generator_new(JSContext*);
 JSValue generator_dequeue(Generator*, BOOL* done_p);
-JSValue generator_next(Generator*);
+JSValue generator_next(Generator*, JSValueConst arg);
 ssize_t generator_write(Generator*, const void* data, size_t len, JSValueConst callback);
 JSValue generator_push(Generator*, JSValueConst value);
 BOOL generator_yield(Generator*, JSValueConst value, JSValueConst callback);
-BOOL generator_close(Generator*, JSValueConst callback);
+BOOL generator_stop(Generator*, JSValueConst callback);
 BOOL generator_continuous(Generator*, JSValueConst callback);
 Queue* generator_queue(Generator*);
 BOOL generator_finish(Generator* gen);

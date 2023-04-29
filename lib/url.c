@@ -110,9 +110,9 @@ start_from(const char* p, char ch) {
 
 void
 url_init(URL* url, const char* protocol, const char* host, int port, const char* path, JSContext* ctx) {
-  enum protocol proto = protocol_number(protocol);
+  enum protocol proto = protocol ? protocol_number(protocol) : -1;
 
-  url->protocol = protocol_string(proto);
+  url->protocol = protocol ? protocol_string(proto) : 0;
   url->host = js_strdup(ctx, host && *host ? host : "0.0.0.0");
   url->port = URL_IS_VALID_PORT(port) ? port : protocol_default_port(proto);
   url->path = js_strdup(ctx, path ? path : "");
@@ -404,25 +404,16 @@ url_fromobj(URL* url, JSValueConst obj, JSContext* ctx) {
   const char *protocol, *host, *path;
   int32_t port = -1;
 
-  value = JS_GetPropertyStr(ctx, obj, "protocol");
-  protocol = JS_ToCString(ctx, value);
-  JS_FreeValue(ctx, value);
+  protocol = js_get_propertystr_cstring(ctx, obj, "protocol");
 
-  value = JS_GetPropertyStr(ctx, obj, "hostname");
-  if(JS_IsUndefined(value))
-    value = JS_GetPropertyStr(ctx, obj, "host");
-  host = JS_ToCString(ctx, value);
-  JS_FreeValue(ctx, value);
+  if(!(host = js_get_propertystr_cstring(ctx, obj, "hostname")))
+    host = js_get_propertystr_cstring(ctx, obj, "host");
 
-  value = JS_GetPropertyStr(ctx, obj, "port");
-  JS_ToInt32(ctx, &port, value);
-  JS_FreeValue(ctx, value);
+  if(js_has_propertystr(ctx, obj, "port"))
+    port = js_get_propertystr_uint32(ctx, obj, "port");
 
-  value = JS_GetPropertyStr(ctx, obj, "pathname");
-  if(JS_IsUndefined(value))
-    value = JS_GetPropertyStr(ctx, obj, "path");
-  path = JS_ToCString(ctx, value);
-  JS_FreeValue(ctx, value);
+  if(!(path = js_get_propertystr_cstring(ctx, obj, "pathname")))
+    path = js_get_propertystr_cstring(ctx, obj, "path");
 
   url_init(url, protocol, host, port, path, ctx);
 

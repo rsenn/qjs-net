@@ -427,7 +427,7 @@ minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
         else if(opaque && opaque->ws)
           ret = minnet_ws_wrap(ctx, opaque->ws);
         else
-          ret = JS_ThrowInternalError(ctx, "Socket.byFd(): wsi existing, but not tracked");
+          ret = JS_ThrowInternalError(ctx, "Socket.byFd(): wsi existing (wsi=%p, context=%p), but not tracked", wsi, context);
       }
 
       break;

@@ -20,9 +20,11 @@ static const JSCFunctionListEntry minnet_generator_funcs[] = {
 static JSValue
 minnet_generator_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
-  JSValue ret = JS_UNDEFINED;
+  JSValue ret, arg = argc > 0 ? argv[0] : JS_UNDEFINED;
 
-  ret = generator_next(gen);
+  ret = generator_next(gen, arg);
+
+  // js_async_then(ctx, ret, js_function_bind_return(ctx, ))
 
   return ret;
 }
@@ -35,10 +37,10 @@ minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(argc < 1)
     return JS_ThrowInternalError(ctx, "argument required");
 
-  JSValue callback = argc > 1 ? JS_DupValue(ctx, argv[1]) : JS_NULL;
+  // JSValue callback = argc > 1 ? JS_DupValue(ctx, argv[1]) : JS_NULL;
 
   ret = generator_push(gen, argv[0]);
-  JS_FreeValue(ctx, callback);
+  // JS_FreeValue(ctx, callback);
   return ret;
 }
 
@@ -47,11 +49,11 @@ minnet_generator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
   JSValue ret = JS_UNDEFINED;
 
-  JSValue callback = argc > 1 ? JS_DupValue(ctx, argv[1]) : JS_NULL;
+  // JSValue callback = argc > 1 ? JS_DupValue(ctx, argv[1]) : JS_NULL;
 
-  ret = JS_NewBool(ctx, generator_close(gen, callback));
+  ret = JS_NewBool(ctx, generator_stop(gen, JS_NULL));
 
-  JS_FreeValue(ctx, callback);
+  // JS_FreeValue(ctx, callback);
 
   return ret;
 }
@@ -59,7 +61,7 @@ minnet_generator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 JSValue
 minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   MinnetGenerator* gen;
-  JSValue ret, args[2];
+  JSValue args[2];
 
   if(!(gen = generator_new(ctx)))
     return JS_EXCEPTION;
@@ -67,12 +69,13 @@ minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, 
   if(argc < 1 || !JS_IsFunction(ctx, argv[0]))
     return JS_ThrowInternalError(ctx, "MinnetGenerator needs a function parameter");
 
-  args[0] = js_function_cclosure(ctx, minnet_generator_push, 0, 0, generator_dup(gen), (void*)&generator_free);
-  args[1] = js_function_cclosure(ctx, minnet_generator_stop, 0, 0, generator_dup(gen), (void*)&generator_free);
+  args[0] = js_function_cclosure(ctx, minnet_generator_push, 0, 0, generator_dup(gen), (void (*)(void*)) & generator_free);
+  args[1] = js_function_cclosure(ctx, minnet_generator_stop, 0, 0, generator_dup(gen), (void (*)(void*)) & generator_free);
 
-  ret = JS_Call(ctx, argv[0], JS_UNDEFINED, 2, args);
+  gen->executor = js_function_bind_argv(ctx, argv[0], 2, args);
+  /*  ret = JS_Call(ctx, argv[0], JS_UNDEFINED, 2, args);
 
-  JS_FreeValue(ctx, ret);
+    JS_FreeValue(ctx, ret);*/
   JS_FreeValue(ctx, args[0]);
   JS_FreeValue(ctx, args[1]);
 

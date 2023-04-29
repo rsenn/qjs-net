@@ -132,7 +132,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(opaque->resp) {
         /*      if(opaque->resp->body)
-                generator_close(opaque->resp->body, JS_UNDEFINED);*/
+                generator_stop(opaque->resp->body, JS_UNDEFINED);*/
       }
 
       lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */

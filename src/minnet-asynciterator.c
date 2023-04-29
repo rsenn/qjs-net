@@ -14,7 +14,7 @@ minnet_asynciterator_next(JSContext* ctx, JSValueConst this_val, int argc, JSVal
   if(!(iter = minnet_asynciterator_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  return asynciterator_next(iter, ctx);
+  return asynciterator_next(iter, argc > 0 ? argv[0] : JS_UNDEFINED, ctx);
 }
 
 static JSValue

@@ -199,7 +199,7 @@ minnet_server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
   if(!js_is_nullish(closure->prev_cb)) {
     /*if(closure->path==0 && closure->method==-1)
-      args[2]= js_function_bind(ctx, closure->this_cb, */
+      args[2]= js_function_bind_argv(ctx, closure->this_cb, */
 
     ret = JS_Call(ctx, closure->prev_cb, JS_NULL, 2, args);
   }
@@ -571,9 +571,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsObject(options))
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
-  JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
+ /* JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
   JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
-  JSValue opt_protocol = JS_GetPropertyStr(ctx, options, "protocol");
+  JSValue opt_protocol = JS_GetPropertyStr(ctx, options, "protocol");*/
   JSValue opt_tls = JS_GetPropertyStr(ctx, options, "tls");
   JSValue opt_on_pong = JS_GetPropertyStr(ctx, options, "onPong");
   JSValue opt_on_close = JS_GetPropertyStr(ctx, options, "onClose");
@@ -597,14 +597,15 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     DEBUG("is_tls = %d\n", is_tls);
   }
 
-  if(!JS_IsUndefined(opt_port)) {
+  /*if(!JS_IsUndefined(opt_port)) {
     int32_t port;
     JS_ToInt32(ctx, &port, opt_port);
     url.port = port;
   }
 
-  if(JS_IsString(opt_host))
+  if(!JS_IsUndefined(opt_host)) 
     js_replace_string(ctx, opt_host, &url.host);
+
   if(JS_IsString(opt_protocol)) {
     const char* protocol;
 
@@ -613,7 +614,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       JS_FreeCString(ctx, protocol);
     }
   }
-
+*/
   BOOL_OPTION(opt_h2, "h2", is_h2);
   BOOL_OPTION(opt_pmd, "permessageDeflate", per_message_deflate);
 
@@ -745,7 +746,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
   if(info->server_ssl_ca_mem)
-    js_clear(ctx, &info->server_ssl_ca_mem);
+  js_clear(ctx, &info->server_ssl_ca_mem);
   if(info->server_ssl_cert_mem)
     js_clear(ctx, &info->server_ssl_cert_mem);
   if(info->server_ssl_private_key_mem)

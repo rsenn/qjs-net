@@ -786,10 +786,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     return wsi_handle_poll(wsi, reason, &server->on.fd, in);
   }
 
-  if(!opaque && ctx)
-    opaque = lws_opaque(wsi, ctx);
+  if(user) {
+    if(!opaque && ctx)
+      opaque = lws_opaque(wsi, ctx);
 
-  assert(opaque);
+    assert(opaque);
+  }
 
   if(session) {
 
@@ -813,7 +815,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           (char*)in,
           opaque && opaque->req ? url_string(&opaque->req->url) : 0);
 
-  if(opaque->upstream)
+  if(opaque && opaque->upstream)
     if(reason != LWS_CALLBACK_FILTER_HTTP_CONNECTION)
       return lws_callback_http_dummy(wsi, reason, user, in, len);
 
@@ -935,7 +937,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           JS_FreeValue(ctx, value);
         }
 
-        generator_close(req->body, JS_UNDEFINED);
+        generator_stop(req->body, JS_UNDEFINED);
       }
 
       // js_async_resolve(ctx, &session->async,
