@@ -30,8 +30,7 @@ session_zero(struct session_data* session) {
   session->wait_resolve = FALSE;
   session->generator_run = FALSE;
   session->callback_count = 0;
-  session->server = NULL;
-  session->client = NULL;
+  session->context = NULL;
   session->callback = NULL;
   session->wait_resolve_ptr = NULL;
 

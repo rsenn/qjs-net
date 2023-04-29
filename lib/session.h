@@ -26,8 +26,11 @@ struct session_data {
   BOOL in_body, response_sent, want_write;
   uint32_t wait_resolve, generator_run, callback_count;
   struct session_data** wait_resolve_ptr;
-  struct server_context* server;
-  struct client_context* client;
+  struct context* context;
+  /*union {
+    struct server_context* server;
+    struct client_context* client;
+  };*/
   Queue sendq;
   lws_callback_function* callback;
   ResolveFunctions async;

@@ -419,19 +419,15 @@ minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
         JS_ToInt32(ctx, &fd, argv[0]);
 
       if((context = context_for_fd(fd, &wsi))) {
-        struct wsi_opaque_user_data* opaque;
+        struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
         struct session_data* sess;
 
-        if((opaque = opaque_fromwsi(wsi))) {
-          if(!opaque->ws)
-            opaque->ws = ws_new(wsi, ctx);
-
+        if(opaque && opaque->sess && JS_IsObject(opaque->sess->ws_obj))
+          ret = JS_DupValue(ctx, opaque->sess->ws_obj);
+        else if(opaque && opaque->ws)
           ret = minnet_ws_wrap(ctx, opaque->ws);
-        } else if((sess = lws_session(wsi))) {
-          ret = JS_NewInt32(ctx, -2);
-        } else {
-          ret = minnet_ws_new(ctx, wsi);
-        }
+        else
+          ret = JS_ThrowInternalError(ctx, "Socket.byFd(): wsi existing, but not tracked");
       }
 
       break;
