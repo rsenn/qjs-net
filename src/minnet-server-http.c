@@ -155,30 +155,44 @@ vhost_options_free(JSContext* ctx, MinnetVhostOptions* vo) {
 }
 */
 MinnetHttpMount*
-mount_create(JSContext* ctx, const char* mountpoint, const char* origin, const char* def, const char* pro, enum lws_mount_protocols origin_proto) {
+mount_new(JSContext* ctx, const char* mnt, const char* org, const char* def, const char* pro) {
   MinnetHttpMount* m;
+  enum lws_mount_protocols origin_proto = LWSMPRO_CALLBACK;
+
+  if(org) {
+    origin_proto = LWSMPRO_FILE;
+
+    size_t pos, len = strlen(org);
+    if((pos = scan_noncharsetnskip(org, ":/", len)) + 3 < len) {
+      if(byte_equal(&org[pos], 3, "://")) {
+        if((pos >= 4 && pos <= 5 && byte_equal(org, pos, "https")))
+          origin_proto = LWSMPRO_HTTP + (pos - 4);
+      }
+    }
+  }
 
   if((m = js_mallocz(ctx, sizeof(MinnetHttpMount)))) {
     DBG("mountpoint=%s origin=%s default=%s protocol=%-10s origin_protocol=%s",
-        mountpoint,
-        origin,
+        mnt,
+        org,
         def,
         pro,
         ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK"})[origin_proto]);
 
-    m->lws.mountpoint = js_strdup(ctx, mountpoint);
-    m->lws.origin = origin ? js_strdup(ctx, origin) : 0;
-    m->lws.def = def ? js_strdup(ctx, def) : 0;
-    m->lws.protocol = pro ? pro : js_strdup(ctx, /*origin_proto == LWSMPRO_CALLBACK ? "http" :*/ "defprot");
+    m->mnt = js_strdup(ctx, mnt);
+    m->org = org ? js_strdup(ctx, org) : 0;
+    m->def = def ? js_strdup(ctx, def) : 0;
+    m->pro = pro ? pro : js_strdup(ctx, /*origin_proto == LWSMPRO_CALLBACK ? "http" :*/ "defprot");
+
     m->lws.origin_protocol = origin_proto;
-    m->lws.mountpoint_len = strlen(mountpoint);
+    m->lws.mountpoint_len = strlen(mnt);
   }
 
   return m;
 }
 
 MinnetHttpMount*
-mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
+mount_fromobj(JSContext* ctx, JSValueConst obj, const char* key) {
   MinnetHttpMount* ret;
   JSValue mnt = JS_UNDEFINED, org = JS_UNDEFINED, def = JS_UNDEFINED, pro = JS_UNDEFINED;
   const char* path;
@@ -217,24 +231,20 @@ mount_new(JSContext* ctx, JSValueConst obj, const char* key) {
   DBG("key=%s path='%s'", key, path);
 
   if(JS_IsFunction(ctx, org)) {
-    ret = mount_create(ctx, path, 0, 0, 0, LWSMPRO_CALLBACK);
+    ret = mount_new(ctx, path, 0, 0, 0);
 
     GETCBTHIS(org, ret->callback, JS_UNDEFINED);
 
   } else {
-    const char* dest = JS_ToCString(ctx, org);
-    char* protocol = js_is_nullish(pro) ? 0 : js_tostring(ctx, pro);
-    const char* dotslashslash = strstr(dest, "://");
-    size_t plen = dotslashslash ? dotslashslash - dest : 0;
-    const char* origin = &dest[plen ? plen + 3 : 0];
+    const char* origin = JS_ToCString(ctx, org);
     const char* index = js_is_nullish(def) ? 0 : JS_ToCString(ctx, def);
-    enum lws_mount_protocols proto = plen == 0 ? LWSMPRO_FILE : (plen == 5 && !strncmp(dest, "https", plen)) ? LWSMPRO_HTTPS : LWSMPRO_HTTP;
+    char* protocol = js_is_nullish(pro) ? 0 : js_tostring(ctx, pro);
 
-    ret = mount_create(ctx, path, origin, index, protocol, proto);
+    ret = mount_new(ctx, path, origin, index, protocol);
 
     if(index)
       JS_FreeCString(ctx, index);
-    JS_FreeCString(ctx, dest);
+    JS_FreeCString(ctx, origin);
   }
 
   JS_FreeCString(ctx, path);
@@ -252,7 +262,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
   int protocol = n == 0 ? LWSMPRO_CALLBACK : LWSMPRO_HTTP;
   size_t l = 0;
 
-  DBG("x='%.*s'", (int)n, x);
+  // DBG("'%.*s'", (int)n, x);
 
   if(n == 0)
     n = strlen(x);
@@ -281,9 +291,11 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
       }
     }
   }
-  if(m) {
-    DBG("org=%s mnt=%s cb.ctx=%p", ((MinnetHttpMount*)m)->org, ((MinnetHttpMount*)m)->mnt, ((MinnetHttpMount*)m)->callback.ctx);
-  }
+
+  DBG("'%.*s' = %s", (int)n, x, m ? m->mountpoint : "0");
+  /* if(m) {
+     DBG("org=%s mnt=%s cb.ctx=%p", ((MinnetHttpMount*)m)->org, ((MinnetHttpMount*)m)->mnt, ((MinnetHttpMount*)m)->callback.ctx);
+   }*/
   return (MinnetHttpMount*)m;
 }
 
@@ -892,6 +904,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if((fp = opaque->form_parser)) {
         lws_spa_finalize(fp->spa);
+
         if(fp->cb.finalize.ctx) {
           JSValue ret = server_exception(server, callback_emit(&fp->cb.finalize, 0, 0));
           JS_FreeValue(fp->cb.finalize.ctx, ret);
@@ -901,12 +914,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       cb = session->mount ? &session->mount->callback : 0;
 
       if(cb && cb->ctx) {
-        assert(!JS_IsObject(session->generator));
+        // assert(!JS_IsObject(session->generator));
         ret = serve_callback(cb, session, wsi);
-        /*    JSValue ret = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, session->args));
 
-            assert(js_is_iterator(ctx, ret));
-            session->generator = ret;*/
+        /*JSValue ret = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, ssession->args));
+
+        assert(js_is_iterator(ctx, ret));
+        session->generator = ret;*/
       }
 
       if(gen) {
@@ -915,6 +929,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         if(js_async_pending(&session->async)) {
           BOOL done = FALSE;
           JSValue value = generator_dequeue(gen, &done);
+          printf("value=%s\n", JS_ToCString(ctx, value));
 
           js_async_resolve(ctx, &session->async, value);
           JS_FreeValue(ctx, value);
@@ -934,13 +949,14 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       } else {
       }
+
       if(serve_response(wsi, &b, opaque->resp, ctx, session)) {
         JS_FreeValue(ctx, session->ws_obj);
         session->ws_obj = JS_NULL;
         // return 1;
       }
 
-      session_want_write(session, wsi);
+      // session_want_write(session, wsi);
       break;
     }
 
@@ -993,9 +1009,10 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           assert(!strcmp(req->url.path + mlen, path));
 
           LOGCB("HTTP(2)",
-                "mount: mnt='%s', org='%s', pro='%s', origin_protocol='%s'\n",
+                "mount: mnt='%s', org='%s', def='%s', pro='%s', origin_protocol='%s'\n",
                 mount->mnt,
                 mount->org,
+                mount->def,
                 mount->pro,
                 ((const char*[]){
                     "HTTP",

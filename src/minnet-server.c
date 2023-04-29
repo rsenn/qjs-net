@@ -272,7 +272,7 @@ server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
       JSValue mountval = JS_GetPropertyUint32(ctx, opt_mounts, i);
       if(JS_IsUndefined(mountval))
         break;
-      mount = mount_new(ctx, mountval, 0);
+      mount = mount_fromobj(ctx, mountval, 0);
       mount->extra_mimetypes = server->mimetypes;
       mount->pro = "http";
       ADD(m, mount, next);
@@ -287,7 +287,7 @@ server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
       JSAtom prop = tmp_tab[i].atom;
       const char* name = JS_AtomToCString(ctx, prop);
       JSValue mountval = JS_GetProperty(ctx, opt_mounts, prop);
-      mount = mount_new(ctx, mountval, name);
+      mount = mount_fromobj(ctx, mountval, name);
       mount->extra_mimetypes = server->mimetypes;
       mount->pro = "http";
       ADD(m, mount, next);
@@ -391,6 +391,7 @@ enum {
   SERVER_GET,
   SERVER_POST,
   SERVER_USE,
+  SERVER_MOUNT,
 };
 
 JSValue
@@ -444,6 +445,50 @@ minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 
       if(path)
         JS_FreeCString(ctx, path);
+      break;
+    }
+    case SERVER_MOUNT: {
+      MinnetHttpMount **m = (MinnetHttpMount**)&server->context.info.mounts, *mount;
+      const char* path = 0;
+
+      while(*m) SKIP(m, next);
+
+      if(JS_IsString(argv[0])) {
+        path = JS_ToCString(ctx, argv[0]);
+        ++argc, --argv;
+      }
+
+      if(argc == 0 || !JS_IsObject(argv[0])) {
+        ret = JS_ThrowInternalError(ctx, "argument 2 must be string or an Array/Object");
+        break;
+      }
+
+      if(JS_IsObject(argv[0])) {
+        mount = mount_fromobj(ctx, argv[0], path);
+      } else {
+        const char *org = 0, *def = 0;
+        char* pro = 0;
+
+        org = JS_ToCString(ctx, argv[1]);
+
+        if(argc > 2)
+          def = JS_ToCString(ctx, argv[2]);
+
+        if(argc > 3)
+          pro = js_tostring(ctx, argv[3]);
+
+        mount = mount_new(ctx, path, org, def, pro);
+
+        JS_FreeCString(ctx, org);
+        if(def)
+          JS_FreeCString(ctx, def);
+      }
+
+      ADD(m, mount, next);
+
+      if(path)
+        JS_FreeCString(ctx, path);
+
       break;
     }
   }
@@ -774,6 +819,7 @@ static const JSCFunctionListEntry minnet_server_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("get", 2, minnet_server_method, SERVER_GET),
     JS_CFUNC_MAGIC_DEF("post", 2, minnet_server_method, SERVER_POST),
     JS_CFUNC_MAGIC_DEF("use", 2, minnet_server_method, SERVER_USE),
+    JS_CFUNC_MAGIC_DEF("mount", 1, minnet_server_method, SERVER_MOUNT),
     JS_CGETSET_MAGIC_DEF("onrequest", minnet_server_get, minnet_server_set, SERVER_ONREQUEST),
     JS_CGETSET_MAGIC_FLAGS_DEF("listening", minnet_server_get, 0, SERVER_LISTENING, JS_PROP_ENUMERABLE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetServer", JS_PROP_CONFIGURABLE),

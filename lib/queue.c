@@ -4,8 +4,8 @@
 void
 queue_zero(Queue* q) {
   init_list_head(&q->items);
-  q->continuous = FALSE;
   q->size = 0;
+  q->continuous = FALSE;
 }
 
 void
@@ -117,7 +117,6 @@ queue_add(Queue* q, ByteBlock chunk) {
   if((i = malloc(sizeof(QueueItem)))) {
     i->block = chunk;
     i->done = FALSE;
-    i->unref = 0;
     i->unref = 0;
 
     list_add_tail(&i->link, &q->items);

@@ -41,6 +41,8 @@ typedef union {
     (ptr) = &(*(ptr))->member; \
   } while(0);
 
+#define SKIP(ptr, member) (ptr) = &(*(ptr))->member;
+
 #define ROR(v, n) ((((v) << (8 - n)) | ((v) >> n)) & 0xff)
 #define LOGCB(name, fmt, args...) LOG((name), FG("%d") "%-33s" NC " wsi#%" PRId64 " " fmt "", 22 + (ROR(reason, 4) ^ 0), lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, args)
 
