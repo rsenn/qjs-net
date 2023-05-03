@@ -1189,7 +1189,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
          *session->wait_resolve_ptr = 0;
          session->wait_resolve_ptr = 0;
        }*/
-      session_clear(session, JS_GetRuntime(ctx));
+      if(session)
+        session_clear(session, JS_GetRuntime(ctx));
 
       // lws_close_free_wsi(wsi, LWS_CLOSE_STATUS_NOSTATUS, __func__);
       ret = -1;
