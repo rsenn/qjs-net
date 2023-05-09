@@ -777,14 +777,17 @@ js_error_print(JSContext* ctx, JSValueConst error) {
     lwsl_err("Exception %s: %s", type, exception);
     printf("Exception %s: %s\n", type, exception);
   }
+
   if(stack) {
     size_t pos = 0, i = 0, len, end = strlen(stack);
     lwsl_err("Stack:");
+     printf("Stack:\n");
 
     while(i < end) {
       len = byte_chrs(&stack[i], end - i, "\r\n", 2);
 
       lwsl_err("%zu: %.*s", pos++, (int)len, &stack[i]);
+      printf("%zu: %.*s\n", pos++, (int)len, &stack[i]);
       i += len;
 
       i += scan_charsetnskip(&stack[i], "\r\n", end - i);

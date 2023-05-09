@@ -73,22 +73,21 @@ session_object(struct session_data* session, JSContext* ctx) {
   return ret;
 }
 
-int
+void
 session_want_write(struct session_data* session, struct lws* wsi) {
-  assert(!session->want_write);
-
-  lws_callback_on_writable(wsi);
-  session->want_write = TRUE;
-
-  // printf("%s\n", __func__);
+  if(!session->want_write) {
+    lws_callback_on_writable(wsi);
+    session->want_write = TRUE;
+  }
 }
 
 int
 session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
-
   int ret = 0;
   size_t size;
   struct socket* ws = minnet_ws_data(session->ws_obj);
+
+  session->want_write = FALSE;
 
   if((size = queue_size(&session->sendq)) > 0) {
     ByteBlock chunk;
