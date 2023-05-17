@@ -62,7 +62,7 @@ js_console_log(JSContext* ctx, JSValue* console, JSValue* console_log) {
 JSValue
 js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue* func_data) {
   int i, j = 0, k = 0, l, count = magic & JS_BOUND_MASK;
-  JSValue args[argc + count], n, return_val, ret = JS_UNDEFINED;
+  JSValue args[argc + count], return_val, ret = JS_UNDEFINED;
 
   l = JS_NUM_FUNCTIONS(magic);
   i = l;
@@ -143,7 +143,6 @@ js_function_bind_return(JSContext* ctx, JSValueConst func, int argument) {
 JSValue
 js_function_name_value(JSContext* ctx, JSValueConst value) {
   JSValue str, name, args[2], idx;
-  const char* s = 0;
   int32_t i = -1;
   str = js_invoke(ctx, value, "toString", 0, 0);
   args[0] = JS_NewString(ctx, "function");

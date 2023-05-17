@@ -573,7 +573,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
 
 void
 minnet_debug(const char* format, ...) {
-  int n;
+  size_t n;
   va_list ap;
   char buf[1024];
   va_start(ap, format);
@@ -585,7 +585,7 @@ minnet_debug(const char* format, ...) {
       buf[n++] = '\n';
   }
 
-  for(int i = 0; i < n; i++) {
+  for(size_t i = 0; i < n; i++) {
     if(i + 1 != n) {
       if(buf[i] == '\n') {
         fputs("\\n", stdout);

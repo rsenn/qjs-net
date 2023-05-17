@@ -119,7 +119,7 @@ request_free(Request* req, JSRuntime* rt) {
 Request*
 request_from(int argc, JSValueConst argv[], JSContext* ctx) {
   Request* req = 0;
-  URL url = {0, 0, 0, 0};
+  URL url = URL_INIT();
 
   if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0]))) {
     req = request_dup(req);
@@ -149,7 +149,7 @@ request_match(Request* req, const char* path, enum http_method method) {
     if(strcmp(req->url.path, path))
       return FALSE;
 
-  if(method != -1)
+  if((int)method != -1)
     if(method != req->method)
       return FALSE;
 

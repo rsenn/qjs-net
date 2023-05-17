@@ -214,6 +214,7 @@ uint_pow(unsigned base, unsigned degree) {
 size_t
 list_size(struct list_head* list) {
   size_t count = 0;
+
   if(list->next && list->prev) {
     struct list_head* el;
     list_for_each(el, list)++ count;
@@ -224,19 +225,12 @@ list_size(struct list_head* list) {
 struct list_head*
 list_at(struct list_head* list, int64_t i) {
   struct list_head* el;
-  int64_t pos = 0;
-  if(!list_empty(list)) {
 
+  if(!list_empty(list)) {
     if(i >= 0) {
-      list_for_each(el, list) {
-        if(i-- == 0)
-          return el;
-      }
+      list_for_each(el, list) if(i-- == 0) return el;
     } else {
-      list_for_each_prev(el, list) {
-        if(++i == 0)
-          return el;
-      }
+      list_for_each_prev(el, list) if(++i == 0) return el;
     }
   }
   return 0;

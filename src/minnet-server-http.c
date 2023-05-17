@@ -479,10 +479,6 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
 
 static int
 serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, BOOL* done_p) {
-  MinnetResponse* resp = minnet_response_data(session->resp_obj);
-
-  /* if(!resp->body)
-     response_generator(resp, ctx);*/
 
   DBG("callback=%" PRIu32 " run=%" PRIu32 " done=%s wait_resolve=%s closed=%s complete=%s",
       session->callback_count,
@@ -547,7 +543,6 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
 
 static int
 serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
-  JSValue body;
   enum { SYNC = 1, ASYNC = 2 } type;
 
   type = session_callback(session, cb, wsi_context(wsi));
@@ -618,7 +613,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
 
     if((loc = headers_getlen(&resp->headers, &len, "location", "\r\n", ":")))
 
-      if(lws_http_redirect(wsi, resp->status, loc, len, &buf->write, buf->end))
+      if(lws_http_redirect(wsi, resp->status, (const void*)loc, len, &buf->write, buf->end))
         return 1;
 
     // headers_unset(&resp->headers, "location");
@@ -635,7 +630,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
     len = headers_length(x, end, "\r\n");
     n = headers_namelen(x, end);
 
-    if(n == 8 && !strncasecmp(x, "location", n))
+    if(n == 8 && !strncasecmp((const char*)x, "location", n))
       continue;
 
     if(len > n) {

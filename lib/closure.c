@@ -24,9 +24,12 @@ closure_object(JSContext* ctx, JSValueConst val) {
   union closure* ret;
   JS_DupValue(ctx, val);
 
-  ret = closure_new(ctx);
-  ret->pointer = obj;
-  ret->free_func = &closure_free_object;
+  if((ret = closure_new(ctx))) {
+    ret->pointer = obj;
+    ret->free_func = &closure_free_object;
+  }
+
+  return ret;
 }
 
 union closure*

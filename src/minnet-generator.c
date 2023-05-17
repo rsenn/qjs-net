@@ -7,16 +7,6 @@
 THREAD_LOCAL JSClassID minnet_generator_class_id;
 THREAD_LOCAL JSValue minnet_generator_proto, minnet_generator_ctor;
 
-JSClassDef minnet_generator_class = {
-    "MinnetGenerator",
-    //.finalizer = minnet_generator_finalizer,
-};
-
-static const JSCFunctionListEntry minnet_generator_funcs[] = {
-    JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, (JSCFunction*)&JS_DupValue),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetGenerator", JS_PROP_CONFIGURABLE),
-};
-
 static JSValue
 minnet_generator_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
@@ -82,6 +72,11 @@ minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, 
   return minnet_generator_iterator(ctx, gen);
 }
 
+static const JSCFunctionListEntry minnet_generator_funcs[] = {
+    JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, (JSCFunction*)&JS_DupValue),
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetGenerator", JS_PROP_CONFIGURABLE),
+};
+
 JSValue
 minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
   JSValue ret = JS_NewObject(ctx);
@@ -101,3 +96,17 @@ minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
 
   return minnet_generator_iterator(ctx, *gen_p);
 }
+
+static void
+minnet_generator_finalizer(JSRuntime* rt, JSValue val) {
+  MinnetGenerator* g;
+
+  if((g = JS_GetOpaque(val, minnet_generator_class_id))) {
+    generator_free(g);
+  }
+}
+
+JSClassDef minnet_generator_class = {
+    "MinnetGenerator",
+    .finalizer = minnet_generator_finalizer,
+};

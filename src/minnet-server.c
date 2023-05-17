@@ -24,31 +24,27 @@ int ws_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, siz
 
 static JSValue minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr);
 
-static struct lws_protocols protocols[] = {
-    {"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-    {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-    /* {"defprot", lws_callback_http_dummy, sizeof(struct session_data), 1024, 0, NULL, 0},
-     {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
-       {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
-     {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},*/
-    MINNET_PLUGIN_BROKER(broker),
-    LWS_PLUGIN_PROTOCOL_DEADDROP,
-    // LWS_PLUGIN_PROTOCOL_RAW_PROXY,
-    LWS_PLUGIN_PROTOCOL_MIRROR,
-    {0},
-};
+static struct lws_protocols protocols[] = {{"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+                                           {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+                                           /* {"defprot", lws_callback_http_dummy, sizeof(struct session_data), 1024, 0, NULL, 0},
+                                            {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
+                                              {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
+                                            {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},*/
+                                           MINNET_PLUGIN_BROKER(broker),
+                                           LWS_PLUGIN_PROTOCOL_DEADDROP,
+                                           // LWS_PLUGIN_PROTOCOL_RAW_PROXY,
+                                           LWS_PLUGIN_PROTOCOL_MIRROR,
+                                           LWS_PROTOCOL_LIST_TERM};
 
-static struct lws_protocols protocols2[] = {
-    {"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-    {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-    /* {"defprot", defprot_callback, sizeof(struct session_data), 0},
-     {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
-      {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
-   {"proxy-ws", proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0}, MINNET_PLUGIN_BROKER(broker),
-        LWS_PLUGIN_PROTOCOL_RAW_PROXY,*/
-    LWS_PLUGIN_PROTOCOL_MIRROR,
-    {0, 0},
-};
+static struct lws_protocols protocols2[] = {{"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+                                            {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+                                            /* {"defprot", defprot_callback, sizeof(struct session_data), 0},
+                                             {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
+                                              {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
+                                           {"proxy-ws", proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0}, MINNET_PLUGIN_BROKER(broker),
+                                                LWS_PLUGIN_PROTOCOL_RAW_PROXY,*/
+                                            LWS_PLUGIN_PROTOCOL_MIRROR,
+                                            LWS_PROTOCOL_LIST_TERM};
 
 static const struct lws_http_mount mount = {
     /* .mount_next */ NULL,  /* linked-list "next" */
@@ -157,13 +153,15 @@ struct ServerMatchClosure {
 
 static BOOL
 server_match_all(struct ServerMatchClosure* closure) {
-  return closure->path == 0 && closure->method == -1;
+  return closure->path == 0 && (int)closure->method == -1;
 }
+
 static struct ServerMatchClosure*
 server_match_dup(struct ServerMatchClosure* closure) {
   ++closure->ref_count;
   return closure;
 }
+
 static void
 server_match_free(void* ptr) {
   struct ServerMatchClosure* closure = ptr;
@@ -240,13 +238,21 @@ server_match(MinnetServer* server, const char* path, enum http_method method, JS
   if(!(closure = js_mallocz(ctx, sizeof(struct ServerMatchClosure))))
     return JS_EXCEPTION;
 
-  *closure = (struct ServerMatchClosure){1, ctx, path, method, callback, prev_callback};
+  *closure = (struct ServerMatchClosure){
+      1,
+      ctx,
+      path,
+      method,
+      callback,
+      prev_callback,
+      FALSE,
+  };
 
   JSValue ret = js_function_cclosure(ctx, minnet_server_match, 0, 0, closure, server_match_free);
 
   JS_DefinePropertyValueStr(ctx, ret, "name", JS_NewString(ctx, path != 0 ? path : "*"), 0);
 
-  if(method != -1)
+  if((int)method != -1)
     JS_SetPropertyStr(ctx, ret, "method", JS_NewString(ctx, method_name(method)));
 
   if(JS_IsFunction(ctx, prev_callback)) {
@@ -571,9 +577,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsObject(options))
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
- /* JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
-  JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
-  JSValue opt_protocol = JS_GetPropertyStr(ctx, options, "protocol");*/
+  /* JSValue opt_port = JS_GetPropertyStr(ctx, options, "port");
+   JSValue opt_host = JS_GetPropertyStr(ctx, options, "host");
+   JSValue opt_protocol = JS_GetPropertyStr(ctx, options, "protocol");*/
   JSValue opt_tls = JS_GetPropertyStr(ctx, options, "tls");
   JSValue opt_on_pong = JS_GetPropertyStr(ctx, options, "onPong");
   JSValue opt_on_close = JS_GetPropertyStr(ctx, options, "onClose");
@@ -603,7 +609,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     url.port = port;
   }
 
-  if(!JS_IsUndefined(opt_host)) 
+  if(!JS_IsUndefined(opt_host))
     js_replace_string(ctx, opt_host, &url.host);
 
   if(JS_IsString(opt_protocol)) {
@@ -627,7 +633,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCB(opt_on_read, server->on.read)
   GETCB(opt_on_post, server->on.post)
 
-  for(int i = 0; i < countof(protocols); i++) protocols[i].user = ctx;
+  for(size_t i = 0; i < countof(protocols); i++) protocols[i].user = ctx;
 
   info->protocols = protocols2;
 
@@ -746,7 +752,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
   if(info->server_ssl_ca_mem)
-  js_clear(ctx, &info->server_ssl_ca_mem);
+    js_clear(ctx, &info->server_ssl_ca_mem);
   if(info->server_ssl_cert_mem)
     js_clear(ctx, &info->server_ssl_cert_mem);
   if(info->server_ssl_private_key_mem)

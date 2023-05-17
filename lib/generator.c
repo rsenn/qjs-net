@@ -107,7 +107,7 @@ generator_next(Generator* gen, JSValueConst arg) {
   else
     generator_callback(gen, JS_UNDEFINED);
 
-  size_t upd = generator_update(gen);
+  generator_update(gen);
 
   // printf("%-22s gen: %p reads: %zu updated: %zu read: %i\n", __func__, gen, list_size(&gen->iterator.reads), rds1 - list_size(&gen->iterator.reads), id);
 

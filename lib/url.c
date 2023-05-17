@@ -60,7 +60,7 @@ const char*
 protocol_string(enum protocol p) {
   int i = (unsigned int)p;
   assert(i >= 0);
-  assert(i < countof(protocol_names));
+  assert(i < (int)countof(protocol_names));
   return protocol_names[i];
 }
 
@@ -208,7 +208,7 @@ url_format(const URL url, JSContext* ctx) {
       pos += 3;
     }
     if((host = url.host ? url.host : (pos > 0 || url.port >= 0) ? "0.0.0.0" : 0)) {
-      if(proto != -1 && (url.port == protocol_default_port(proto) || url.port < 0)) {
+      if((int)proto != -1 && (url.port == protocol_default_port(proto) || url.port < 0)) {
         strcpy(&str[pos], host);
         pos += strlen(&str[pos]);
       } else {
@@ -400,7 +400,6 @@ url_hash(const URL url) {
 
 void
 url_fromobj(URL* url, JSValueConst obj, JSContext* ctx) {
-  JSValue value;
   const char *protocol, *host, *path;
   int32_t port = -1;
 
@@ -455,7 +454,7 @@ url_fromwsi(URL* url, struct lws* wsi, JSContext* ctx) {
       &wsi_vhost_and_port,
   };
 
-  for(i = 0; i < countof(fns); i++) {
+  for(i = 0; i < (int)countof(fns); i++) {
     if((p = fns[i](wsi, &port))) {
       if(p[0]) {
         if(url->host)

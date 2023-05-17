@@ -24,7 +24,7 @@
   } while(0);
 
 #define CALLBACK(ctx, func_obj, this_obj) \
-  (JSCallback) { (func_obj), (this_obj), (ctx) }
+  (JSCallback) { (func_obj), (this_obj), (ctx), 0 }
 
 typedef struct js_callback {
   JSValue func_obj, this_obj;
