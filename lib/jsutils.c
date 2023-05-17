@@ -146,18 +146,23 @@ js_function_name_value(JSContext* ctx, JSValueConst value) {
   const char* s = 0;
   int32_t i = -1;
   str = js_invoke(ctx, value, "toString", 0, 0);
-  args[0] = JS_NewString(ctx, "function ");
+  args[0] = JS_NewString(ctx, "function");
   idx = js_invoke(ctx, str, "indexOf", 1, args);
   JS_FreeValue(ctx, args[0]);
   JS_ToInt32(ctx, &i, idx);
-  if(i != 0) {
+  if(i != 0 && i != 6) {
     JS_FreeValue(ctx, str);
     return JS_UNDEFINED;
   }
+  args[0] = JS_NewString(ctx, " ");
+  args[1] = JS_NewUint32(ctx, i + 1);
+  idx = js_invoke(ctx, str, "indexOf", 2, args);
+  JS_ToInt32(ctx, &i, idx);
+
   args[0] = JS_NewString(ctx, "(");
   idx = js_invoke(ctx, str, "indexOf", 1, args);
   JS_FreeValue(ctx, args[0]);
-  args[0] = JS_NewUint32(ctx, 9);
+  args[0] = JS_NewUint32(ctx, i + 1);
   args[1] = idx;
   name = js_invoke(ctx, str, "substring", 2, args);
   JS_FreeValue(ctx, args[0]);
@@ -781,7 +786,7 @@ js_error_print(JSContext* ctx, JSValueConst error) {
   if(stack) {
     size_t pos = 0, i = 0, len, end = strlen(stack);
     lwsl_err("Stack:");
-     printf("Stack:\n");
+    printf("Stack:\n");
 
     while(i < end) {
       len = byte_chrs(&stack[i], end - i, "\r\n", 2);
