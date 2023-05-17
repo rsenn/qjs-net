@@ -347,6 +347,7 @@ function YieldAll(g, thisObj) {
   if('next' in g) g = [...g];
   return g;
 }
+
 function YieldJoin(g, s = '') {
   if(typeof g == 'function')
     return function(...args) {
