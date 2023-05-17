@@ -21,8 +21,8 @@ typedef struct server_context {
     };
     struct context context;
   };
-   struct lws* wsi;
- CallbackList on;
+  struct lws* wsi;
+  CallbackList on;
   MinnetVhostOptions* mimetypes;
   BOOL listening;
 } MinnetServer;

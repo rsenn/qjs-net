@@ -120,13 +120,12 @@ static JSValue
 minnet_headers_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   ByteBuffer* headers;
   JSValue ret = JS_UNDEFINED;
-  size_t len;
-  const char* str;
 
   if(!(headers = minnet_headers_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
   switch(magic) {}
+
   return ret;
 }
 
@@ -183,9 +182,11 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
 
     case HEADERS_SET: {
-      size_t valuelen;
-      const char* name = JS_ToCString(ctx, argv[0]);
-      const char* value = JS_ToCString(ctx, argv[1]);
+      const char *name, *value;
+
+      name = JS_ToCString(ctx, argv[0]);
+      value = JS_ToCString(ctx, argv[1]);
+
       ret = JS_NewInt64(ctx, headers_set(headers, name, value, ptr->separator.item));
 
       break;
@@ -213,13 +214,13 @@ minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValue
 
     if(magic == HEADERS_KEYS || magic == HEADERS_ENTRIES) {
       len = headers_namelen(x, end);
-      name = JS_NewStringLen(ctx, x, len);
+      name = JS_NewStringLen(ctx, (const char*)x, len);
     }
 
     if(magic == HEADERS_VALUES || magic == HEADERS_ENTRIES) {
       x += headers_value(x, end, ":");
       len = headers_length(x, end, ptr->separator.item);
-      value = JS_NewStringLen(ctx, x, len);
+      value = JS_NewStringLen(ctx, (const char*)x, len);
     }
 
     if(magic == HEADERS_ENTRIES) {
@@ -308,7 +309,7 @@ minnet_headers_get_own_property_names(JSContext* ctx, JSPropertyEnum** ptab, uin
 
   for(x = headers->start; i < size && x != end; x += headers_next(x, end, ptr->separator.item)) {
     size_t len = headers_namelen(x, end);
-    JSAtom prop = JS_NewAtomLen(ctx, x, len);
+    JSAtom prop = JS_NewAtomLen(ctx, (const char*)x, len);
 
     props[i].is_enumerable = TRUE;
     props[i].atom = prop;
@@ -334,15 +335,6 @@ minnet_headers_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
 
   JS_FreeCString(ctx, propstr);
   return ret;
-}
-
-static JSValue
-minnet_headers_get_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueConst receiver) {
-  ByteBuffer* headers = minnet_headers_data2(ctx, obj);
-  JSValue value = JS_UNDEFINED;
-  const char* propstr = JS_AtomToCString(ctx, prop);
-
-  return value;
 }
 
 static int

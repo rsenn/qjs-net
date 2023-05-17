@@ -17,18 +17,6 @@ asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
   return 0;
 }
 
-static BOOL
-asynciterator_check_closing(AsyncIterator* it, JSContext* ctx) {
-  if(it->closing) {
-    asynciterator_stop(it, ctx);
-    it->closing = FALSE;
-    it->closed = TRUE;
-    return TRUE;
-  }
-
-  return FALSE;
-}
-
 void
 asynciterator_zero(AsyncIterator* it) {
   it->ref_count = 1;

@@ -78,7 +78,7 @@ deferred_call_x(Deferred* def, ...) {
 
   va_start(a, def);
 
-  while(argc < countof(def->argv) && (arg = va_arg(a, size_t))) {
+  while(argc < (int)countof(def->argv) && (arg = va_arg(a, size_t))) {
     if(arg == DEFERRED_SENTINEL)
       break;
     def->argv[argc++] = (ptr_t)arg;

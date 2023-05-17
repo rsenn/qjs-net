@@ -39,8 +39,8 @@ static inline size_t
 headers_value(const void* start, const void* end, const char* itemdelim) {
   size_t pos = headers_namelen(start, end), len = (uint8_t*)end - (uint8_t*)start;
 
-  pos += scan_charsetnskip(start + pos, itemdelim, end - (start + pos));
-  pos += scan_whitenskip(start + pos, end - (start + pos));
+  pos += scan_charsetnskip(start + pos, itemdelim, len - pos);
+  pos += scan_whitenskip(start + pos, len - pos);
 
   return pos;
 }

@@ -72,11 +72,11 @@ hash_tostring(MinnetHash* h, int bits_per_char) {
   for(bitpos = 0; bitpos < bitsize; bitpos += base) {
     uint8_t byte = h->digest[bitpos >> 3];
     unsigned shift_right = bitpos & 0x7;
-    unsigned remain = 8 - shift_right;
+    int remain = 8 - shift_right;
     uint8_t value = byte >> shift_right;
-    if(remain < bits_per_char) {
+
+    if(remain < bits_per_char)
       value |= h->digest[(bitpos >> 3) + 1] << remain;
-    }
 
     dbuf_putc(&dbuf, hash_hexdigits[value & mask]);
   }
@@ -278,9 +278,7 @@ minnet_hash_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSValu
   int64_t index;
 
   if(js_atom_is_index(ctx, &index, prop)) {
-
-    if(h->finalized && index >= 0 && index < hash_size(h)) {
-
+    if(h->finalized && index >= 0 && (size_t)index < hash_size(h)) {
       pdesc->flags = JS_PROP_ENUMERABLE;
       pdesc->value = JS_NewUint32(ctx, h->digest[index]);
       pdesc->getter = JS_UNDEFINED;
@@ -324,12 +322,11 @@ minnet_hash_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
   MinnetHash* h = minnet_hash_data2(ctx, obj);
   int64_t index;
 
-  if(js_atom_is_index(ctx, &index, prop)) {
+  if(js_atom_is_index(ctx, &index, prop))
+    return h->finalized && index >= 0 && (size_t)index < hash_size(h);
 
-    return h->finalized && index >= 0 && index < hash_size(h);
-  } else if(js_atom_is_length(ctx, prop)) {
+  if(js_atom_is_length(ctx, prop))
     return TRUE;
-  }
 
   return FALSE;
 }
@@ -341,10 +338,8 @@ minnet_hash_get_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueC
   int64_t index;
 
   if(js_atom_is_index(ctx, &index, prop)) {
-    if(h->finalized && index >= 0 && index < hash_size(h)) {
-
+    if(h->finalized && index >= 0 && (size_t)index < hash_size(h))
       value = JS_NewUint32(ctx, h->digest[index]);
-    }
   } else if(js_atom_is_length(ctx, prop)) {
     value = JS_NewUint32(ctx, h->finalized ? hash_size(h) : 0);
   } else {

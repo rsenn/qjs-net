@@ -24,12 +24,10 @@ static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, vo
 
 static THREAD_LOCAL struct list_head minnet_clients = {0, 0};
 
-static const struct lws_protocols client_protocols[] = {
-    {"raw", client_callback, 0, 0, 0, 0, 0},
-    {"http", http_client_callback, 0, 0, 0, 0, 0},
-    {"ws", client_callback, 0, 0, 0, 0, 0},
-    {0},
-};
+static const struct lws_protocols client_protocols[] = {{"raw", client_callback, 0, 0, 0, 0, 0},
+                                                        {"http", http_client_callback, 0, 0, 0, 0, 0},
+                                                        {"ws", client_callback, 0, 0, 0, 0, 0},
+                                                        LWS_PROTOCOL_LIST_TERM};
 
 static JSValue
 close_status(JSContext* ctx, const char* in, size_t len) {
@@ -608,7 +606,7 @@ minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int
 
 JSValue
 minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  int argind = 0, status = -1;
+  int argind = 0;
   JSValue value, ret = JS_NULL;
   MinnetClient* client = 0;
   JSValue options = argv[0];
