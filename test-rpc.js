@@ -4,7 +4,7 @@ import { Console } from 'console';
 import REPL from 'repl';
 import inspect from 'inspect';
 import { types, define, filter, split, getOpt, toUnixTime } from 'util';
-import { setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, server, URL } from 'net';
+import { setLog, LLL_USER, LLL_NOTICE, LLL_WARN, client, createServer, URL } from 'net';
 import * as rpc from './js/rpc.js';
 import { Connection, DeserializeSymbols, DeserializeValue, GetKeys, GetProperties, LogWrap, MakeListCommand, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue, callHandler, getPropertyDescriptors, getPrototypeName, hasHandler, isThenable, objectCommand, parseURL, setHandlersFunction, statusResponse, weakDefine } from './js/rpc.js';
 
@@ -58,13 +58,13 @@ function main(...args) {
   console.log('params', params);
   console.log('setLog', setLog);
   const {
-    '@': [url = 'ws://127.0.0.1:8993/ws'],
+    '@': [url = 'ws://127.0.0.1:8998/ws'],
     'ssl-cert': sslCert = 'localhost.crt',
     'ssl-private-key': sslPrivateKey = 'localhost.key'
   } = params;
 
-  const listen = params.connect && !params.listen ? false : true;
-  const serve = !params.client || params.server;
+  const listen = params.listen; //params.connect && !params.listen ? false : true;
+  const serve = params.server; /* && !params.client*/
   console.log('listen', listen);
   console.log('serve', serve);
 
@@ -106,7 +106,6 @@ function main(...args) {
 
   let connections = new Set();
   function createWS(url, callbacks, listen) {
-    console.log('createWS', { url, callbacks, listen });
     const { protocol, hostname, port, path } = url;
     console.log('createWS', { protocol, hostname, port, path });
     setLog((params.debug ? LLL_USER : 0) | (((params.debug ? LLL_NOTICE : LLL_WARN) << 1) - 1), (level, message) => {
@@ -114,7 +113,7 @@ function main(...args) {
       //if(params.debug) console.log((['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][Math.log2(level)] ?? level + '').padEnd(8), ...args);
     });
 
-    return [client, server][+listen](url, {
+    return [client, createServer][+listen](url, {
       tls: params.tls,
       sslCert,
       sslPrivateKey,
@@ -167,7 +166,13 @@ function main(...args) {
 
           resp.type = 'application/json';
 
-          let { dir = 'tmp', filter = '.(brd|sch|G[A-Z][A-Z])$', verbose = false, objects = false, key = 'mtime' } = data;
+          let {
+            dir = 'tmp',
+            filter = '.(brd|sch|G[A-Z][A-Z])$',
+            verbose = false,
+            objects = false,
+            key = 'mtime'
+          } = data;
           let absdir = path.realpath(dir);
           let components = absdir.split(path.sep);
 
@@ -227,7 +232,7 @@ function main(...args) {
       onConnect(ws, req) {
         console.log('test-rpc', { ws, req });
         connections.add(ws);
-
+        globalThis.ws = ws;
         return callbacks.onConnect(ws, req);
       },
       onClose(ws, status, reason, error) {
@@ -333,7 +338,7 @@ function main(...args) {
     repl.cleanup(why);
   }
 
-  repl.runSync();
+  repl.run();
 }
 
 try {

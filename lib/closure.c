@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "closure.h"
 #include "context.h"
 
@@ -7,7 +8,7 @@ closure_new(JSContext* ctx) {
 
   if((closure = js_mallocz(ctx, sizeof(union closure)))) {
     closure->ref_count = 1;
-    closure->ctx = ctx;
+    closure->rt = JS_GetRuntime(ctx);
   }
 
   return closure;
@@ -20,12 +21,13 @@ closure_free_object(void* ptr, JSRuntime* rt) {
 
 union closure*
 closure_object(JSContext* ctx, JSValueConst val) {
-  JSObject* obj = JS_VALUE_GET_OBJ(val);
   union closure* ret;
+
+  assert(JS_IsObject(val));
   JS_DupValue(ctx, val);
 
   if((ret = closure_new(ctx))) {
-    ret->pointer = obj;
+    ret->pointer = JS_VALUE_GET_OBJ(val);
     ret->free_func = &closure_free_object;
   }
 
@@ -43,14 +45,13 @@ closure_free(void* ptr) {
   union closure* closure = ptr;
 
   if(--closure->ref_count == 0) {
-    JSContext* ctx = closure->ctx;
     // printf("%s() pointer=%p\n", __func__, closure->pointer);
 
     if(closure->free_func) {
-      closure->free_func(closure->pointer, JS_GetRuntime(ctx));
+      closure->free_func(closure->pointer, closure->rt);
       closure->pointer = NULL;
     }
 
-    js_free(ctx, closure);
+    js_free_rt(closure->rt, closure);
   }
 }

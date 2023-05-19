@@ -9,9 +9,9 @@ typedef void closure_free_t(void*, JSRuntime*);
 union closure {
   struct {
     void* pointer;
-    void (*free_func)(void*, JSRuntime*);
+    JSRuntime* rt;
+    closure_free_t* free_func;
     int ref_count;
-    JSContext* ctx;
   };
   struct allocated allocated;
 };
