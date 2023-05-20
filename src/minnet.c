@@ -536,12 +536,12 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   minnet_headers_init(ctx, m);
   minnet_server_init(ctx, m);
 
-  {
+ /* {
     JSValue minnet_default = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, minnet_default, minnet_funcs, countof(minnet_funcs));
     JS_SetPropertyStr(ctx, minnet_default, "URL", minnet_url_ctor);
     JS_SetModuleExport(ctx, m, "default", minnet_default);
-  }
+  }*/
 
   return 0;
 }
@@ -561,7 +561,7 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Hash");
   JS_AddModuleExport(ctx, m, "AsyncIterator");
   JS_AddModuleExport(ctx, m, "URL");
-  JS_AddModuleExport(ctx, m, "default");
+  /*JS_AddModuleExport(ctx, m, "default");*/
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
   minnet_log_ctx = ctx;
