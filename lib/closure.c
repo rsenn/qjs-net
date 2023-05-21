@@ -13,7 +13,7 @@ closure_new(JSContext* ctx) {
 
   return closure;
 }
- 
+
 union closure*
 closure_dup(union closure* c) {
   ++c->ref_count;

@@ -5,9 +5,7 @@
 #include "asynciterator.h"
 #include "utils.h"
 
-JSValue minnet_asynciterator_wrap(JSContext*, AsyncIterator*);
 void minnet_asynciterator_decorate(JSContext*, JSValueConst, JSValueConst);
-JSValue minnet_asynciterator_iterable(JSContext*, JSValueConst);
 JSValue minnet_asynciterator_constructor(JSContext*, JSValueConst, int, JSValueConst[]);
 int minnet_asynciterator_init(JSContext*, JSModuleDef*);
 
@@ -23,4 +21,5 @@ static inline AsyncIterator*
 minnet_asynciterator_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_asynciterator_class_id);
 }
+
 #endif /* MINNET_ASYNCITERATOR_H */

@@ -22,7 +22,7 @@ enum {
   HEADERS_BUFFER,
 
 };
-typedef void HeadersFreeFunc(void* opaque, JSRuntime* rt);
+
 struct MinnetHeadersOpaque {
   ByteBuffer* headers;
   void* opaque;
@@ -115,20 +115,7 @@ minnet_headers_get(JSContext* ctx, JSValueConst this_val, int magic) {
 
   return ret;
 }
-
-static JSValue
-minnet_headers_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
-  ByteBuffer* headers;
-  JSValue ret = JS_UNDEFINED;
-
-  if(!(headers = minnet_headers_data2(ctx, this_val)))
-    return JS_EXCEPTION;
-
-  switch(magic) {}
-
-  return ret;
-}
-
+ 
 enum {
   HEADERS_TO_STRING,
   HEADERS_TO_OBJECT,
@@ -237,24 +224,7 @@ minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValue
 
   return ret;
 }
-
-static JSValue
-minnet_headers_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  ByteBuffer* headers;
-  JSValue ret = JS_NULL;
-
-  if(!(headers = js_mallocz(ctx, sizeof(ByteBuffer))))
-    return JS_EXCEPTION;
-
-  /* headers_fromvalue(headers, argv[0], ctx);
-
-   if(!headers_valid(*headers))
-     return JS_ThrowTypeError(ctx, "Not a valid Headers");
-
-   return minnet_headers_wrap(ctx, headers);*/
-  return ret;
-}
-
+ 
 static JSValue
 minnet_headers_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret = JS_NULL;

@@ -5,11 +5,6 @@
 #include <libwebsockets.h>
 #include <pthread.h>
 
-/*void
-ringbuffer_dump(struct ringbuffer const* rb) {
-  [object Object]
-}
-*/
 void
 ringbuffer_destroy_element(void* element) {}
 

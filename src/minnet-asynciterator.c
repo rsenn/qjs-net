@@ -39,18 +39,6 @@ minnet_asynciterator_method(JSContext* ctx, JSValueConst this_val, int argc, JSV
   return ret;
 }
 
-JSValue
-minnet_asynciterator_wrap(JSContext* ctx, AsyncIterator* iter) {
-  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_asynciterator_proto, minnet_asynciterator_class_id);
-
-  if(JS_IsException(ret))
-    return JS_EXCEPTION;
-
-  JS_SetOpaque(ret, asynciterator_dup(iter));
-
-  return ret;
-}
-
 static JSValue
 minnet_asynciterator_asynciterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   return JS_DupValue(ctx, this_val);
@@ -64,15 +52,6 @@ minnet_asynciterator_decorate(JSContext* ctx, JSValueConst this_val, JSValueCons
   JS_SetProperty(ctx, ret, atom, js_function_bind_this(ctx, fn, this_val));
   JS_FreeAtom(ctx, atom);
   JS_FreeValue(ctx, fn);
-}
-
-JSValue
-minnet_asynciterator_iterable(JSContext* ctx, JSValueConst this_val) {
-  JSValue ret = JS_NewObject(ctx);
-
-  minnet_asynciterator_decorate(ctx, this_val, ret);
-
-  return ret;
 }
 
 JSValue
