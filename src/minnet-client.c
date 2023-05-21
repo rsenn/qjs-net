@@ -277,7 +277,8 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
           JS_ToInt32(ctx, &result, ret);
         JS_FreeValue(ctx, ret);
 
-        while(--argc >= 0) JS_FreeValue(ctx, cb_argv[argc]);
+        while(--argc >= 0)
+          JS_FreeValue(ctx, cb_argv[argc]);
       }
       ret = result;
       break;

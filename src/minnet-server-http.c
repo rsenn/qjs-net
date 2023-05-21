@@ -462,7 +462,7 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
     JSValue reject = js_function_cclosure(ctx, serve_rejected, 1, 0, p, serve_resolved_free);
     JSValue catched = js_async_then2(ctx, value, resolve, reject);
 
-    DBG("catched=%s",  JS_ToCString(ctx, catched));
+    DBG("catched=%s", JS_ToCString(ctx, catched));
 
     JS_FreeValue(ctx, resolve);
     JS_FreeValue(ctx, reject);
@@ -914,14 +914,14 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(gen) {
         DBG("gen=%p", gen);
 
-       /* if(js_async_pending(&session->async)) {
-          BOOL done = FALSE;
-          JSValue value = generator_dequeue(gen, &done);
-          printf("value=%s\n", JS_ToCString(ctx, value));
+        /* if(js_async_pending(&session->async)) {
+           BOOL done = FALSE;
+           JSValue value = generator_dequeue(gen, &done);
+           printf("value=%s\n", JS_ToCString(ctx, value));
 
-          js_async_resolve(ctx, &session->async, value);
-          JS_FreeValue(ctx, value);
-        }*/
+           js_async_resolve(ctx, &session->async, value);
+           JS_FreeValue(ctx, value);
+         }*/
 
         generator_stop(req->body, JS_UNDEFINED);
       }

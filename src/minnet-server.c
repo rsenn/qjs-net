@@ -459,7 +459,8 @@ minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
       MinnetHttpMount **m = (MinnetHttpMount**)&server->context.info.mounts, *mount;
       const char* path = 0;
 
-      while(*m) SKIP(m, next);
+      while(*m)
+        SKIP(m, next);
 
       if(JS_IsString(argv[0])) {
         path = JS_ToCString(ctx, argv[0]);
@@ -635,7 +636,8 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCB(opt_on_read, server->on.read)
   GETCB(opt_on_post, server->on.post)
 
-  for(size_t i = 0; i < countof(protocols); i++) protocols[i].user = ctx;
+  for(size_t i = 0; i < countof(protocols); i++)
+    protocols[i].user = ctx;
 
   info->protocols = protocols2;
 

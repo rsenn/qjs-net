@@ -64,12 +64,14 @@ typedef struct callbacks {
 
 static inline void
 callbacks_zero(CallbackList* cbs) {
-  for(int i = 0; i < NUM_CALLBACKS; i++) callback_zero(&cbs->cb[i]);
+  for(int i = 0; i < NUM_CALLBACKS; i++)
+    callback_zero(&cbs->cb[i]);
 }
 
 static inline void
 callbacks_clear(CallbackList* cbs) {
-  for(int i = 0; i < NUM_CALLBACKS; i++) callback_clear(&cbs->cb[i]);
+  for(int i = 0; i < NUM_CALLBACKS; i++)
+    callback_clear(&cbs->cb[i]);
 }
 
 static inline int

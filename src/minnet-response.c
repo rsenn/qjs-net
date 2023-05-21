@@ -388,7 +388,6 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),
 };
 
-
 int
 minnet_response_init(JSContext* ctx, JSModuleDef* m) {
   // Add class Response

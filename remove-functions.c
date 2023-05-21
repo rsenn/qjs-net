@@ -570,7 +570,8 @@ js_is_generator(JSContext* ctx, JSValueConst value) {
     if(!strncmp(s, "function", 8)) {
       s += 8;
 
-      while(*s == ' ') ++s;
+      while(*s == ' ')
+        ++s;
 
       if(*s == '*')
         ret = TRUE;
@@ -892,7 +893,8 @@ JSValue
 vector2array(JSContext* ctx, int argc, JSValueConst argv[]) {
   int i;
   JSValue ret = JS_NewArray(ctx);
-  for(i = 0; i < argc; i++) JS_SetPropertyUint32(ctx, ret, i, argv[i]);
+  for(i = 0; i < argc; i++)
+    JS_SetPropertyUint32(ctx, ret, i, argv[i]);
   return ret;
 }
 
@@ -903,7 +905,9 @@ js_function_bind_v(JSContext* ctx, JSValueConst func, ...) {
   JSValueConst arg;
   dbuf_init2(&b, ctx, (DynBufReallocFunc*)js_realloc);
   va_start(args, func);
-  while((arg = va_arg(args, JSValueConst))) { dbuf_put(&b, &arg, sizeof(JSValueConst)); }
+  while((arg = va_arg(args, JSValueConst))) {
+    dbuf_put(&b, &arg, sizeof(JSValueConst));
+  }
   va_end(args);
   return js_function_bind(ctx, func, b.size / sizeof(JSValueConst), (JSValueConst*)b.buf);
 }

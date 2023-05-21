@@ -391,8 +391,6 @@ const JSCFunctionListEntry minnet_hash_static_funcs[] = {
     JS_PROP_INT32_DEF("TYPE_SHA512", LWS_GENHASH_TYPE_SHA512, JS_PROP_ENUMERABLE),
 };
 
-
-
 int
 minnet_hash_init(JSContext* ctx, JSModuleDef* m) {
   // Add class Hash

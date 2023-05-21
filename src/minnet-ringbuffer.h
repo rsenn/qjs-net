@@ -7,7 +7,7 @@
 typedef struct ringbuffer MinnetRingbuffer;
 
 JSValue minnet_ringbuffer_constructor(JSContext*, JSValueConst, int, JSValueConst[]);
-int     minnet_ringbuffer_init(JSContext*, JSModuleDef*);
+int minnet_ringbuffer_init(JSContext*, JSModuleDef*);
 
 extern JSClassDef minnet_ringbuffer_class;
 extern THREAD_LOCAL JSValue minnet_ringbuffer_proto, minnet_ringbuffer_ctor;

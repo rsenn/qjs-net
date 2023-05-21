@@ -125,11 +125,9 @@ const JSCFunctionListEntry minnet_asynciterator_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "AsyncIterator", JS_PROP_CONFIGURABLE),
 };
 
-
-
 int
 minnet_asynciterator_init(JSContext* ctx, JSModuleDef* m) {
-   // Add class AsyncIterator
+  // Add class AsyncIterator
   JS_NewClassID(&minnet_asynciterator_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_asynciterator_class_id, &minnet_asynciterator_class);
 
@@ -144,6 +142,6 @@ minnet_asynciterator_init(JSContext* ctx, JSModuleDef* m) {
 
   if(m)
     JS_SetModuleExport(ctx, m, "AsyncIterator", minnet_asynciterator_ctor);
- 
- return 0;
+
+  return 0;
 }

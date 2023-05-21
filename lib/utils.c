@@ -26,7 +26,7 @@ str_chrs(const char* in, const char needles[], size_t nn) {
 
     ++t;
   }
-  
+
   return (size_t)(t - in);
 }
 
@@ -85,7 +85,7 @@ size_t
 byte_findb(const void* haystack, size_t hlen, const void* what, size_t wlen) {
   size_t i, last;
   const char* s = (const char*)haystack;
- 
+
   if(hlen < wlen)
     return hlen;
 
@@ -104,7 +104,8 @@ size_t
 scan_whitenskip(const void* s, size_t limit) {
   const char *t = s, *u = t + limit;
 
-  while(t < u && isspace(*t)) ++t;
+  while(t < u && isspace(*t))
+    ++t;
 
   return t - (const char*)s;
 }
@@ -113,7 +114,8 @@ size_t
 scan_nonwhitenskip(const void* s, size_t limit) {
   const char *t = s, *u = t + limit;
 
-  while(t < u && !isspace(*t)) ++t;
+  while(t < u && !isspace(*t))
+    ++t;
 
   return t - (const char*)s;
 }
@@ -123,7 +125,8 @@ scan_eol(const void* s, size_t limit) {
   const char* t = s;
   size_t i = byte_chr(s, limit, '\n');
 
-  while(i > 0 && t[i - 1] == '\r') i--;
+  while(i > 0 && t[i - 1] == '\r')
+    i--;
 
   return i;
 }
@@ -176,12 +179,14 @@ skip_brackets(const char* line, size_t len) {
     if((n = byte_chr(line, len, ']')) < len)
       n++;
 
-    while(n < len && isspace(line[n])) n++;
+    while(n < len && isspace(line[n]))
+      n++;
 
     if(n + 1 < len && line[n + 1] == ':')
       n += 2;
 
-    while(n < len && (isspace(line[n]) || line[n] == '-')) n++;
+    while(n < len && (isspace(line[n]) || line[n] == '-'))
+      n++;
   }
 
   return n;
@@ -204,7 +209,8 @@ size_t
 strip_trailing_newline(const char* line, size_t* len_p) {
   size_t len = *len_p;
 
-  while(len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) len--;
+  while(len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
+    len--;
 
   return *len_p = len;
 }

@@ -8,7 +8,9 @@ deferred_clear(Deferred* def) {
   def->only_once = FALSE;
   def->func = 0;
 
-  for(int i = 0; i < 8; i++) { def->argv[i] = 0; }
+  for(int i = 0; i < 8; i++) {
+    def->argv[i] = 0;
+  }
 }
 
 void
@@ -60,7 +62,9 @@ deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
   def->ref_count = 0;
   def->func = fn;
 
-  for(i = 0; i < 8; i++) { def->argv[i] = i < argc ? argv[i] : 0; }
+  for(i = 0; i < 8; i++) {
+    def->argv[i] = i < argc ? argv[i] : 0;
+  }
 
   def->argc = argc;
   def->num_calls = 0;

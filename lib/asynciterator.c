@@ -1,7 +1,7 @@
 #include "asynciterator.h"
 #include "utils.h"
 #include <assert.h>
- 
+
 static AsyncRead*
 asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
   if(!list_empty(&it->reads)) {

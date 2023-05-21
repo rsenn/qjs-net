@@ -77,9 +77,11 @@ js_function_bound(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
   if(magic & JS_BIND_THIS)
     this_val = func_data[i++];
 
-  for(j = 0; j < count; j++) args[k++] = func_data[i + j];
+  for(j = 0; j < count; j++)
+    args[k++] = func_data[i + j];
 
-  for(j = 0; j < argc; j++) args[k++] = argv[j];
+  for(j = 0; j < argc; j++)
+    args[k++] = argv[j];
 
   for(i = 0; i < l; i++) {
     JS_FreeValue(ctx, ret);
@@ -100,7 +102,8 @@ js_function_bind_argv(JSContext* ctx, JSValueConst func, int flags, JSValueConst
   JSValue data[argc + 1];
 
   data[0] = JS_DupValue(ctx, func);
-  for(i = 0; i < argc; i++) data[i + 1] = JS_DupValue(ctx, argv[i]);
+  for(i = 0; i < argc; i++)
+    data[i + 1] = JS_DupValue(ctx, argv[i]);
 
   return JS_NewCFunctionData(ctx, js_function_bound, 0, flags, argc + 1, data);
 }
@@ -113,7 +116,9 @@ js_function_bind_functions(JSContext* ctx, int num, ...) {
 
   va_start(list, num);
 
-  for(i = 0; i < num; i++) { data[i] = JS_DupValue(ctx, va_arg(list, JSValueConst)); }
+  for(i = 0; i < num; i++) {
+    data[i] = JS_DupValue(ctx, va_arg(list, JSValueConst));
+  }
 
   va_end(list);
   return JS_NewCFunctionData(ctx, js_function_bound, 0, JS_BIND_MAGIC(num, 0), i, data);
@@ -390,7 +395,8 @@ js_function_is_generator(JSContext* ctx, JSValueConst obj, BOOL* async_ptr) {
 
   if(!strncmp(x, "function", 8)) {
     x += 8;
-    while(isspace(*x)) ++x;
+    while(isspace(*x))
+      ++x;
   }
 
   if(*x == '*')
@@ -906,7 +912,8 @@ js_argv_to_array(JSContext* ctx, const char* const* argv) {
   JSValue ret = JS_NewArray(ctx);
   if(argv) {
     size_t i;
-    for(i = 0; argv[i]; i++) JS_SetPropertyUint32(ctx, ret, i, JS_NewString(ctx, argv[i]));
+    for(i = 0; argv[i]; i++)
+      JS_SetPropertyUint32(ctx, ret, i, JS_NewString(ctx, argv[i]));
   }
   return ret;
 }
@@ -1147,8 +1154,10 @@ js_cclosure_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, i
   /* XXX: could add the function on the stack for debug */
   if(unlikely(argc < ccr->length)) {
     arg_buf = alloca(sizeof(arg_buf[0]) * ccr->length);
-    for(i = 0; i < argc; i++) arg_buf[i] = argv[i];
-    for(i = argc; i < ccr->length; i++) arg_buf[i] = JS_UNDEFINED;
+    for(i = 0; i < argc; i++)
+      arg_buf[i] = argv[i];
+    for(i = argc; i < ccr->length; i++)
+      arg_buf[i] = JS_UNDEFINED;
   } else {
     arg_buf = argv;
   }

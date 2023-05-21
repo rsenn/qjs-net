@@ -452,7 +452,6 @@ const JSCFunctionListEntry minnet_ringbuffer_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRingbuffer", JS_PROP_CONFIGURABLE),
 };
 
-
 int
 minnet_ringbuffer_init(JSContext* ctx, JSModuleDef* m) {
   // Add class Ringbuffer

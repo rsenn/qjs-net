@@ -376,9 +376,6 @@ const JSCFunctionListEntry minnet_form_parser_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetFormParser", JS_PROP_CONFIGURABLE),
 };
 
-
-
-
 int
 minnet_form_parser_init(JSContext* ctx, JSModuleDef* m) {
   // Add class FormParser
@@ -395,5 +392,5 @@ minnet_form_parser_init(JSContext* ctx, JSModuleDef* m) {
   if(m)
     JS_SetModuleExport(ctx, m, "FormParser", minnet_form_parser_ctor);
 
-return 0;
+  return 0;
 }
