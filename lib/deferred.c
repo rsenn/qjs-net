@@ -1,6 +1,6 @@
 #include <assert.h>
 #include "deferred.h"
-#include "jsutils.h"
+#include "js-utils.h"
 
 void
 deferred_clear(Deferred* def) {

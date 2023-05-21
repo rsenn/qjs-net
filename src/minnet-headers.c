@@ -1,5 +1,5 @@
 #include "minnet-headers.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "utils.h"
 #include "query.h"
 #include <assert.h>
@@ -373,7 +373,7 @@ static JSClassExoticMethods minnet_headers_exotic_methods = {
     .set_property = minnet_headers_set_property,
 };
 
-static JSClassDef minnet_headers_class = {
+static const JSClassDef minnet_headers_class = {
     .class_name = "MinnetHeaders", .finalizer = minnet_headers_finalizer,
     ///  .exotic = &minnet_headers_exotic_methods,
 };

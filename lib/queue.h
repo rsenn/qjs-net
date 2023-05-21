@@ -2,7 +2,7 @@
 #define QJSNET_LIB_QUEUE_H
 
 #include "buffer.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "deferred.h"
 
 typedef struct queue {
@@ -19,9 +19,8 @@ typedef struct queue_item {
 } QueueItem;
 
 void queue_zero(Queue*);
-void queue_clear(Queue*, JSContext* ctx);
-void queue_clear_rt(Queue*, JSRuntime* rt);
-void queue_free(Queue*, JSContext* ctx);
+void queue_clear(Queue*, JSRuntime* rt);
+void queue_free(Queue*, JSRuntime* ctx);
 Queue* queue_new(JSContext*);
 QueueItem* queue_front(Queue*);
 QueueItem* queue_back(Queue*);

@@ -13,12 +13,7 @@ closure_new(JSContext* ctx) {
 
   return closure;
 }
-
-void
-closure_free_object(void* ptr, JSRuntime* rt) {
-  JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_OBJECT, ptr));
-}
-
+ 
 union closure*
 closure_dup(union closure* c) {
   ++c->ref_count;

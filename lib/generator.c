@@ -22,7 +22,7 @@ generator_free(Generator* gen) {
     asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
 
     if(gen->q)
-      queue_free(gen->q, gen->ctx);
+      queue_free(gen->q, JS_GetRuntime(gen->ctx));
 
     js_free(gen->ctx, gen);
   }

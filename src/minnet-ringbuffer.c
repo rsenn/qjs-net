@@ -1,5 +1,5 @@
 #include "minnet-ringbuffer.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "deferred.h"
 #include <quickjs.h>
 #include <assert.h>
@@ -424,12 +424,12 @@ minnet_ringbuffer_finalizer(JSRuntime* rt, JSValue val) {
   }
 }
 
-JSClassDef minnet_ringbuffer_class = {
+static const JSClassDef minnet_ringbuffer_class = {
     "MinnetRingbuffer",
     .finalizer = minnet_ringbuffer_finalizer,
 };
 
-const JSCFunctionListEntry minnet_ringbuffer_proto_funcs[] = {
+static const JSCFunctionListEntry minnet_ringbuffer_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("getWaitingElements", 0, minnet_ringbuffer_multitail, RINGBUFFER_WAITING_ELEMENTS),
     JS_CFUNC_MAGIC_DEF("getElement", 0, minnet_ringbuffer_multitail, RINGBUFFER_GET_ELEMENT),
     JS_CFUNC_MAGIC_DEF("consume", 1, minnet_ringbuffer_multitail, RINGBUFFER_CONSUME),

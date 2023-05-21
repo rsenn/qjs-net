@@ -3,7 +3,7 @@
 
 #include <quickjs.h>
 #include <cutils.h>
-#include "jsutils.h"
+#include "js-utils.h"
 
 JSValue query_object(const char* q, JSContext* ctx);
 JSValue query_object_len(const char* q, size_t n, JSContext* ctx);

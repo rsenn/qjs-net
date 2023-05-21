@@ -272,35 +272,7 @@ include_directories(
   lib ${CMAKE_CURRENT_BINARY_DIR} ${QUICKJS_INCLUDE_DIR}
   ${LIBWEBSOCKETS_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
 
-file(
-  GLOB
-  JS_BINDINGS_SOURCES
-  lib/allocated.*
-  lib/assure.*
-  lib/asynciterator.*
-  lib/buffer.*
-  lib/callback.*
-  lib/closure.*
-  lib/context.*
-  lib/form-parser.*
-  lib/deferred.*
-  lib/generator.*
-  lib/headers.*
-  lib/jsutils.*
-  lib/lws-utils.*
-  lib/opaque.*
-  #lib/poll.*
-  lib/query.*
-  lib/queue.*
-  #lib/ref.*
-  lib/request.*
-  lib/response.*
-  lib/ringbuffer.*
-  lib/session.*
-  lib/url.*
-  lib/utils.*
-  lib/ws.*
-  src/minnet*.[ch])
+file(GLOB JS_BINDINGS_SOURCES lib/*.[ch] src/minnet*.[ch])
 
 #list(APPEND JS_BINDINGS_SOURCES )
 

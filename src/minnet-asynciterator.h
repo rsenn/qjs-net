@@ -13,8 +13,6 @@ int minnet_asynciterator_init(JSContext*, JSModuleDef*);
 
 extern THREAD_LOCAL JSClassID minnet_asynciterator_class_id;
 extern THREAD_LOCAL JSValue minnet_asynciterator_proto, minnet_asynciterator_ctor;
-extern JSClassDef minnet_asynciterator_class;
-extern const JSCFunctionListEntry minnet_asynciterator_proto_funcs[];
 
 static inline AsyncIterator*
 minnet_asynciterator_data(JSValueConst obj) {

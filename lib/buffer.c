@@ -1,5 +1,5 @@
 #include "buffer.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include <assert.h>
 
 uint8_t*

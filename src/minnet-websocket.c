@@ -1,5 +1,5 @@
 #include "buffer.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 #include "minnet-server-http.h"
@@ -40,7 +40,7 @@ minnet_ws_data(JSValueConst obj) {
   return JS_GetOpaque(obj, minnet_ws_class_id);
 }
 
-JSValue
+/*JSValue
 minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
   JSValue ws_obj;
@@ -56,7 +56,7 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   JS_SetOpaque(ws_obj, ws);
 
   return ws_obj;
-}
+}*/
 
 JSValue
 minnet_ws_wrap(JSContext* ctx, MinnetWebsocket* ws) {
@@ -444,12 +444,12 @@ minnet_ws_finalizer(JSRuntime* rt, JSValue val) {
   }
 }
 
-JSClassDef minnet_ws_class = {
+static const JSClassDef minnet_ws_class = {
     "MinnetWebsocket",
     .finalizer = minnet_ws_finalizer,
 };
 
-const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
+static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("send", 1, minnet_ws_send),
     JS_CFUNC_MAGIC_DEF("respond", 1, minnet_ws_respond, RESPONSE_BODY),
     JS_CFUNC_MAGIC_DEF("redirect", 2, minnet_ws_respond, RESPONSE_REDIRECT),
@@ -477,7 +477,7 @@ const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_PROP_INT32_DEF("CLOSED", 3, JS_PROP_CONFIGURABLE),
 };
 
-const JSCFunctionListEntry minnet_ws_static_funcs[] = {
+static const JSCFunctionListEntry minnet_ws_static_funcs[] = {
     JS_CFUNC_MAGIC_DEF("byFd", 1, minnet_ws_static, 0),
     JS_PROP_INT32_DEF("CONNECTING", 0, JS_PROP_ENUMERABLE),
     JS_PROP_INT32_DEF("OPEN", 1, JS_PROP_ENUMERABLE),
@@ -485,7 +485,7 @@ const JSCFunctionListEntry minnet_ws_static_funcs[] = {
     JS_PROP_INT32_DEF("CLOSED", 3, JS_PROP_ENUMERABLE),
 };
 
-const JSCFunctionListEntry minnet_ws_proto_defs[] = {
+static const JSCFunctionListEntry minnet_ws_proto_defs[] = {
     JS_PROP_INT32_DEF("CLOSE_STATUS_NORMAL", LWS_CLOSE_STATUS_NORMAL, 0),
     JS_PROP_INT32_DEF("CLOSE_STATUS_GOINGAWAY", LWS_CLOSE_STATUS_GOINGAWAY, 0),
     JS_PROP_INT32_DEF("CLOSE_STATUS_PROTOCOL_ERR", LWS_CLOSE_STATUS_PROTOCOL_ERR, 0),

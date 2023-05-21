@@ -1,4 +1,4 @@
-#include "jsutils.h"
+#include "js-utils.h"
 #include "minnet-websocket.h"
 #include "minnet-server.h"
 #include "minnet-client.h"
@@ -848,7 +848,7 @@ minnet_server_finalizer(JSRuntime* rt, JSValue val) {
   }
 }
 
-static JSClassDef minnet_server_class = {
+static const JSClassDef minnet_server_class = {
     .class_name = "MinnetServer",
     .finalizer = minnet_server_finalizer,
 };
@@ -872,11 +872,9 @@ minnet_server_init(JSContext* ctx, JSModuleDef* m) {
   return 0;
 }
 
-int
+/*int
 defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-  MinnetServer* server = /*session ? session->server :*/ lws_context_user(lws_get_context(wsi));
-
-  // if(!lws_reason_poll(reason)) printf("defprot_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
+  MinnetServer* server = lws_context_user(lws_get_context(wsi));
 
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:
@@ -933,4 +931,4 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
   }
 
   return lws_callback_http_dummy(wsi, reason, user, in, len);
-}
+}*/

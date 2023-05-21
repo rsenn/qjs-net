@@ -1,6 +1,6 @@
 #include "ws.h"
 #include "buffer.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "opaque.h"
 #include "session.h"
 #include "ringbuffer.h"

@@ -4,7 +4,7 @@
 #include "minnet-headers.h"
 #include "minnet.h"
 #include "buffer.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "headers.h"
 #include <cutils.h>
 #include <assert.h>
@@ -360,11 +360,11 @@ minnet_response_finalizer(JSRuntime* rt, JSValue val) {
     response_free(res, rt);
 }
 
-JSClassDef minnet_response_class = {
+static const JSClassDef minnet_response_class = {
     "MinnetResponse",
     .finalizer = minnet_response_finalizer,
 };
-const JSCFunctionListEntry minnet_response_proto_funcs[] = {
+static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("append", 2, minnet_response_header, HEADERS_APPEND),
     JS_CFUNC_MAGIC_DEF("get", 1, minnet_response_header, HEADERS_GET),
     JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),

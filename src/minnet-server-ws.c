@@ -1,7 +1,7 @@
 #include "minnet-server.h"
 #include "minnet-websocket.h"
 #include "minnet-request.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "headers.h"
 #include "minnet-response.h"
 #include <alloca.h>
@@ -40,7 +40,9 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
     case LWS_CALLBACK_CHILD_CLOSING: {
       break;
     }
-    case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
+    case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
+      break;
+    }
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
       break;
     }
@@ -56,7 +58,6 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
-
       struct lws* parent;
 
       if((parent = lws_get_parent(wsi))) {
@@ -76,7 +77,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
         opaque = lws_opaque(wsi, ctx);
 
       if(opaque && session) {
-        session_zero(session);
+        session_init(session, wsi_context(wsi));
         opaque->sess = session;
       }
 
@@ -220,7 +221,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
       // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));
-      session_writable(session, opaque->binary, ctx);
+      session_writable(session, wsi, opaque->binary, ctx);
       break;
     }
 

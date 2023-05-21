@@ -39,10 +39,10 @@ JSValue minnet_server_method(JSContext*, JSValueConst, int, JSValueConst argv[],
 JSValue minnet_server_closure(JSContext*, JSValueConst, int, JSValueConst argv[], int magic, void* ptr);
 JSValue minnet_server(JSContext*, JSValueConst, int, JSValueConst argv[]);
 int minnet_server_init(JSContext*, JSModuleDef*);
-int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
+/*int defprot_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);*/
 
 extern THREAD_LOCAL JSClassID minnet_server_class_id;
-extern THREAD_LOCAL JSValue minnet_server_proto;
+extern THREAD_LOCAL JSValue minnet_server_proto, minnet_server_ctor;
 
 static inline struct server_context*
 lws_server(struct lws* wsi) {

@@ -7,7 +7,7 @@
 #include "callback.h"
 #include "context.h"
 #include <cutils.h>
-#include "jsutils.h"
+#include "js-utils.h"
 #include "session.h"
 #include "asynciterator.h"
 #include "generator.h"
@@ -54,8 +54,6 @@ int minnet_client_init(JSContext*, JSModuleDef*);
 
 extern THREAD_LOCAL JSClassID minnet_client_class_id;
 extern THREAD_LOCAL JSValue minnet_client_proto, minnet_client_ctor;
-extern JSClassDef minnet_client_class;
-extern const JSCFunctionListEntry minnet_client_proto_funcs[];
 
 static inline MinnetClient*
 minnet_client_data(JSValueConst obj) {

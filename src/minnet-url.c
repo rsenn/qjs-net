@@ -1,5 +1,5 @@
 #include "minnet-url.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "utils.h"
 #include "query.h"
 #include <assert.h>
@@ -341,7 +341,7 @@ minnet_url_finalizer(JSRuntime* rt, JSValue val) {
   }
 }
 
-static JSClassDef minnet_url_class = {
+static const JSClassDef minnet_url_class = {
     "MinnetURL",
     .finalizer = minnet_url_finalizer,
 };

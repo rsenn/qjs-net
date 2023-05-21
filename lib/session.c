@@ -3,19 +3,13 @@
 #include "response.h"
 #include "opaque.h"
 #include "ringbuffer.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "ws.h"
 #include "context.h"
 #include "lws-utils.h"
 #include <assert.h>
 
-struct socket* minnet_ws_data(JSValueConst);
-Request* minnet_request_data(JSValueConst);
-Response* minnet_response_data(JSValueConst);
-
-extern Response* minnet_response_data(JSValueConst);
-
-void
+static void
 session_zero(struct session_data* session) {
   session->ws_obj = JS_NULL;
   session->req_obj = JS_NULL;
@@ -30,7 +24,6 @@ session_zero(struct session_data* session) {
   session->wait_resolve = FALSE;
   session->generator_run = FALSE;
   session->callback_count = 0;
-  session->context = NULL;
   session->callback = NULL;
   session->wait_resolve_ptr = NULL;
 
@@ -38,11 +31,16 @@ session_zero(struct session_data* session) {
 }
 
 void
+session_init(struct session_data* session, struct context* context) {
+  session_zero(session);
+  session->context = context;
+}
+
+void
 session_clear(struct session_data* session, JSRuntime* rt) {
 
   JS_FreeValueRT(rt, session->ws_obj);
   session->ws_obj = JS_UNDEFINED;
-
   JS_FreeValueRT(rt, session->req_obj);
   session->req_obj = JS_UNDEFINED;
   JS_FreeValueRT(rt, session->resp_obj);
@@ -57,8 +55,7 @@ session_clear(struct session_data* session, JSRuntime* rt) {
     session->wait_resolve_ptr = 0;
   }
 
-  if(queue_size(&session->sendq))
-    queue_clear_rt(&session->sendq, rt);
+  queue_clear(&session->sendq, rt);
 }
 
 JSValue
@@ -82,10 +79,9 @@ session_want_write(struct session_data* session, struct lws* wsi) {
 }
 
 int
-session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
+session_writable(struct session_data* session, struct lws* wsi, BOOL binary, JSContext* ctx) {
   int ret = 0;
   size_t size;
-  struct socket* ws = minnet_ws_data(session->ws_obj);
 
   session->want_write = FALSE;
 
@@ -95,26 +91,26 @@ session_writable(struct session_data* session, BOOL binary, JSContext* ctx) {
 
     chunk = queue_next(&session->sendq, &done);
 
-    ret = lws_write(ws->lwsi, block_BEGIN(&chunk), block_SIZE(&chunk), binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
+    ret = lws_write(wsi, block_BEGIN(&chunk), block_SIZE(&chunk), binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
 
     block_free(&chunk);
   }
 
   if(queue_bytes(&session->sendq) > 0)
-    session_want_write(session, ws->lwsi);
+    session_want_write(session, wsi);
 
   return ret;
 }
 
 int
-session_callback(struct session_data* session, JSCallback* cb, struct context* context) {
+session_callback(struct session_data* session, JSCallback* cb) {
   int ret = 0;
   JSValue body, this = session->ws_obj;
 
-  body = context_exception(context, callback_emit_this(cb, session->ws_obj, 2, &session->req_obj));
+  body = context_exception(session->context, callback_emit_this(cb, session->ws_obj, JS_IsObject(session->resp_obj) ? 2 : 1, &session->req_obj));
 
   do {
-    ret = session_generator(session, body, this, context);
+    ret = session_generator(session, body, this);
     JS_FreeValue(cb->ctx, body);
     if(ret)
       break;
@@ -126,8 +122,8 @@ session_callback(struct session_data* session, JSCallback* cb, struct context* c
 }
 
 int
-session_generator(struct session_data* session, JSValue generator, JSValueConst this, struct context* context) {
-  JSContext* ctx = context->js;
+session_generator(struct session_data* session, JSValue generator, JSValueConst this) {
+  JSContext* ctx = session->context->js;
   JSAtom prop;
   BOOL async = FALSE;
 
@@ -144,7 +140,7 @@ session_generator(struct session_data* session, JSValue generator, JSValueConst 
     if(JS_IsFunction(ctx, generator)) {
       if(!async)
         async = js_function_is_async(ctx, generator);
-      context_exception(context, (generator = JS_Call(ctx, generator, this, 2, &session->req_obj)));
+      context_exception(session->context, (generator = JS_Call(ctx, generator, this, 2, &session->req_obj)));
     }
   }
 
@@ -155,23 +151,4 @@ session_generator(struct session_data* session, JSValue generator, JSValueConst 
   session->next = JS_NULL;
 
   return JS_IsObject(generator) ? (async ? 2 : 1) : 0;
-}
-
-struct wsi_opaque_user_data*
-session_opaque(struct session_data* sess) {
-  struct socket* ws;
-
-  if((ws = session_ws(sess))) {
-    assert(ws->lwsi);
-    return lws_get_opaque_user_data(ws->lwsi);
-  }
-
-  return 0;
-}
-
-Response*
-session_response(struct session_data* sess) {
-  if(JS_IsObject(sess->resp_obj))
-    return minnet_response_data(sess->resp_obj);
-  return 0;
 }

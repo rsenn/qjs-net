@@ -9,7 +9,7 @@
 #include "context.h"
 #include "closure.h"
 #include "minnet.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include <quickjs-libc.h>
 #include <strings.h>
 #include <errno.h>
@@ -139,7 +139,7 @@ client_zero(MinnetClient* client) {
   client->body = JS_NULL;
   client->next = JS_NULL;
 
-  session_zero(&client->session);
+  session_init(&client->session, 0);
   js_async_zero(&client->promise);
   callbacks_zero(&client->on);
 
@@ -202,7 +202,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     }
     case LWS_CALLBACK_WS_CLIENT_BIND_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_BIND_PROTOCOL: {
-      session_zero(&client->session);
+      session_init(&client->session, wsi_context(wsi));
       break;
     }
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
@@ -347,7 +347,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       buffer_reset(buf);*/
 
-      session_writable(&client->session, opaque->binary, ctx);
+      session_writable(&client->session, wsi, opaque->binary, ctx);
       break;
     }
 
@@ -636,8 +636,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     closure->free_func = (closure_free_t*)client_free;
   }
 
-  session_zero(&client->session);
-
   if(!(client->request = request_from(argc, argv, ctx))) {
     client_free(client, JS_GetRuntime(ctx));
     return JS_ThrowTypeError(ctx, "argument 1 must be a Request/URL object or an URL string");
@@ -855,12 +853,12 @@ minnet_client_finalizer(JSRuntime* rt, JSValue val) {
   }
 }
 
-JSClassDef minnet_client_class = {
+static const JSClassDef minnet_client_class = {
     "MinnetClient",
     .finalizer = minnet_client_finalizer,
 };
 
-const JSCFunctionListEntry minnet_client_proto_funcs[] = {
+static const JSCFunctionListEntry minnet_client_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("request", minnet_client_get, 0, CLIENT_REQUEST, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("response", minnet_client_get, 0, CLIENT_RESPONSE, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("socket", minnet_client_get, 0, CLIENT_SOCKET, 0),

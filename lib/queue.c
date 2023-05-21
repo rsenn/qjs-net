@@ -9,12 +9,7 @@ queue_zero(Queue* q) {
 }
 
 void
-queue_clear(Queue* q, JSContext* ctx) {
-  queue_clear_rt(q, JS_GetRuntime(ctx));
-}
-
-void
-queue_clear_rt(Queue* q, JSRuntime* rt) {
+queue_clear(Queue* q, JSRuntime* rt) {
   struct list_head *p, *p2;
 
   list_for_each_safe(p, p2, &q->items) {
@@ -31,9 +26,9 @@ queue_clear_rt(Queue* q, JSRuntime* rt) {
 }
 
 void
-queue_free(Queue* q, JSContext* ctx) {
-  queue_clear(q, ctx);
-  js_free(ctx, q);
+queue_free(Queue* q, JSRuntime* rt) {
+  queue_clear(q, rt);
+  js_free_rt(rt, q);
 }
 
 Queue*

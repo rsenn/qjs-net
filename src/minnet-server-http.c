@@ -11,8 +11,8 @@
 #include <sys/types.h>
 #include "context.h"
 #include "headers.h"
-#include "jsutils.h"
-#include "minnet-form-parser.h"
+#include "js-utils.h"
+#include "minnet-formparser.h"
 #include "minnet-generator.h"
 #include "minnet-request.h"
 #include "minnet-response.h"
@@ -445,16 +445,18 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
 static JSValue
 serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) {
-  struct wsi_opaque_user_data* opaque = session_opaque(session);
+  // struct wsi_opaque_user_data* opaque = session_opaque(session);
   HTTPAsyncResolveClosure* p;
   JSValue ret = JS_UNDEFINED;
+  MinnetResponse* resp = minnet_response_data(session->resp_obj);
+  MinnetWebsocket* ws = minnet_ws_data(session->ws_obj);
 
   ++session->wait_resolve;
 
   DBG("promise=%s", JS_ToCString(ctx, value));
 
   if((p = js_malloc(ctx, sizeof(HTTPAsyncResolveClosure)))) {
-    *p = (HTTPAsyncResolveClosure){2, ctx, session, opaque->resp ? response_dup(opaque->resp) : 0, session_wsi(session)};
+    *p = (HTTPAsyncResolveClosure){2, ctx, session, resp ? response_dup(resp) : 0, ws->lwsi};
 
     session->wait_resolve_ptr = &p->session;
 
@@ -543,7 +545,7 @@ static int
 serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
   enum { SYNC = 1, ASYNC = 2 } type;
 
-  type = session_callback(session, cb, wsi_context(wsi));
+  type = session_callback(session, cb);
 
   DBG("type=%s generator=%s", ((const char*[]){"NONE", "SYNC", "ASYNC"})[type], JS_ToCString(cb->ctx, session->generator));
 
@@ -813,10 +815,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       return lws_callback_http_dummy(wsi, reason, user, in, len);
 
   switch(reason) {
-    case LWS_CALLBACK_PROTOCOL_INIT: {
-      session_zero(session);
-      return 0;
-    }
+    case LWS_CALLBACK_PROTOCOL_INIT:
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS:
@@ -825,6 +824,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: break;
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+
       if((session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, in, len)))
         if(mount_is_proxy(session->mount))
           lws_hdr_simple_create(wsi, wsi_http2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST, "");
@@ -846,6 +846,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
+      session_init(session, wsi_context(wsi));
+
       opaque->status = OPEN;
       if(opaque->req)
         url_set_protocol(&opaque->req->url, wsi_tls(wsi) ? "https" : "http");
@@ -864,7 +866,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(len) {
         if(opaque->form_parser) {
-          form_parser_process(opaque->form_parser, in, len);
+          formparser_process(opaque->form_parser, in, len);
         } else {
           if(!req->body)
             req->body = generator_new(ctx);
@@ -936,11 +938,12 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       } else {
       }
 
-      if(serve_response(wsi, &b, opaque->resp, ctx, session)) {
-        JS_FreeValue(ctx, session->ws_obj);
-        session->ws_obj = JS_NULL;
-        // return 1;
-      }
+      /*if(opaque->resp) {
+        if(serve_response(wsi, &b, opaque->resp, ctx, session)) {
+          JS_FreeValue(ctx, session->ws_obj);
+          session->ws_obj = JS_NULL;
+        }
+      }*/
 
       // session_want_write(session, wsi);
       return 0;
@@ -958,9 +961,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       pathlen = req->url.path ? strlen(req->url.path) : 0;
 
-      /*if(opaque->uri)
-        mountpoint_len = (char*)in - opaque->uri;
-      else */
       if(req->url.path && in && len < pathlen)
         mountpoint_len = pathlen - len;
 
@@ -1017,19 +1017,21 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           if(opaque->ws)
             session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
 
-        if(!JS_IsObject(session->resp_obj))
-          session->resp_obj = minnet_response_new(ctx, req->url, 200, 0, TRUE, "text/html");
-
-        Response* resp = opaque->resp = minnet_response_data2(ctx, session->resp_obj);
         LOGCB("HTTP(3)", "req=%p, header=%zu mnt=%s org=%s", req, buffer_HEAD(&req->headers), mount->mnt, mount->org);
+
         request_dup(req);
         cb = &mount->callback;
         if(mount && !mount->callback.ctx)
           cb = 0;
 
         if(mount && mount->lws.origin_protocol == LWSMPRO_FILE) {
+          if(!JS_IsObject(session->resp_obj))
+            session->resp_obj = minnet_response_new(ctx, req->url, 200, 0, TRUE, "text/html");
+
+          opaque->resp = minnet_response_data2(ctx, session->resp_obj);
+
           if(*path == '\0' && mount->def) {
-            response_redirect(resp, HTTP_STATUS_MOVED_PERMANENTLY, mount->def);
+            response_redirect(opaque->resp, HTTP_STATUS_MOVED_PERMANENTLY, mount->def);
             session_want_write(session, wsi);
             lws_set_timeout(wsi, PENDING_TIMEOUT_USER_REASON_BASE, 30);
           } else {
@@ -1058,34 +1060,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         }*/
 
         if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
-          if(cb && cb->ctx) {
-            if(req->method == METHOD_GET) {
-              /*    resp = session_callback(resp, session, cb);
-                  JSValue gen = callback_emit_this(cb, session->ws_obj, 2, &args[1]);
-                  gen = server_exception(server, gen);
-
-                  LOGCB("HTTP(5)",
-                        "gen=%s next=%s is_iterator=%d is_async_generator=%d",
-                        JS_ToCString(ctx, gen),
-                        JS_ToCString(ctx, JS_GetPropertyStr(ctx, gen, "next")),
-                        js_is_iterator(ctx, gen),
-                        js_is_async_generator(ctx, gen));
-                  if(js_is_iterator(ctx, gen)) {
-                    assert(js_is_iterator(ctx, gen));
-                    session->generator = gen;
-                    session->next = JS_UNDEFINED;
-
-                    if(js_is_async_generator(ctx, gen)) {
-                      BOOL done = FALSE;
-                      ret = serve_generator(ctx, session,  wsi, &done);
-                    } else*/
-              /*session_want_write(session, wsi);
-          } else {
-            LOGCB("HTTP(6)", "gen=%s", JS_ToCString(ctx, gen));
-          }*/
+          if(cb && cb->ctx)
+            if(req->method == METHOD_GET)
               ret = serve_callback(cb, session, wsi);
-            }
-          }
         }
       }
 

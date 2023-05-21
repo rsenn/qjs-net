@@ -1,11 +1,9 @@
 #include "session.h"
 #include "response.h"
 #include "buffer.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "headers.h"
 #include <assert.h>
-
-Response* minnet_response_data(JSValueConst);
 
 void
 response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type) {

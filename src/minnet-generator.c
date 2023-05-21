@@ -1,5 +1,5 @@
 #include "minnet-generator.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include <quickjs.h>
 #include <assert.h>
 #include <libwebsockets.h>
@@ -138,7 +138,7 @@ minnet_generator_finalizer(JSRuntime* rt, JSValue val) {
   }
 }
 
-JSClassDef minnet_generator_class = {
+static const JSClassDef minnet_generator_class = {
     "MinnetGenerator",
     .finalizer = minnet_generator_finalizer,
 };

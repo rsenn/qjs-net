@@ -1,7 +1,7 @@
 #ifndef QJSNET_LIB_ASYNCITERATOR_H
 #define QJSNET_LIB_ASYNCITERATOR_H
 
-#include "jsutils.h"
+#include "js-utils.h"
 
 typedef struct async_read {
   struct list_head link;

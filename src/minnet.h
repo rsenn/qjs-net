@@ -5,7 +5,7 @@
 #include <libwebsockets.h>
 #include <quickjs.h>
 #include <stddef.h>
-#include "jsutils.h"
+#include "js-utils.h"
 #include "utils.h"
 #include "lws-utils.h"
 

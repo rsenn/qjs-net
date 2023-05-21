@@ -7,7 +7,7 @@
 #include "minnet-headers.h"
 #include "minnet.h"
 #include "headers.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include <ctype.h>
 #include <strings.h>
 #include <libwebsockets.h>
@@ -306,12 +306,12 @@ minnet_request_finalizer(JSRuntime* rt, JSValue val) {
     request_free(req, rt);
 }
 
-JSClassDef minnet_request_class = {
+static const JSClassDef minnet_request_class = {
     "MinnetRequest",
     .finalizer = minnet_request_finalizer,
 };
 
-const JSCFunctionListEntry minnet_request_proto_funcs[] = {
+static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("hostname", minnet_request_get, 0, REQUEST_HOSTNAME, JS_PROP_ENUMERABLE),

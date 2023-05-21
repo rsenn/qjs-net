@@ -4,7 +4,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
-#include "jsutils.h"
+#include "js-utils.h"
 #include "buffer.h"
 
 JSValue
@@ -224,13 +224,6 @@ js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done) {
   return ret;
 }
 
-void
-js_iterator_func(JSContext* ctx, JSValueConst generator, JSValue* next) {
-  if(js_is_nullish(*next)) {
-    *next = JS_GetPropertyStr(ctx, generator, "next");
-  }
-}
-
 JSValue
 js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
   JSValue fn, result, done, value;
@@ -429,6 +422,7 @@ js_is_generator(JSContext* ctx, JSValueConst obj) {
     ret = !!strstr(str, "Generator");
     JS_FreeCString(ctx, str);
   }
+
   return ret;
 }
 
@@ -789,7 +783,7 @@ js_error_print(JSContext* ctx, JSValueConst error) {
     /*printf("Exception %s: %s\n", type, exception);*/
   }
 
-  if(stack) {
+  if(stack && *stack) {
     size_t pos = 0, i = 0, len, end = strlen(stack);
     lwsl_err("Stack:");
     /*printf("Stack:\n");*/

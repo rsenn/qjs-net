@@ -1,5 +1,5 @@
 #include "minnet-asynciterator.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include <quickjs.h>
 #include <assert.h>
 #include <libwebsockets.h>
@@ -45,8 +45,6 @@ minnet_asynciterator_wrap(JSContext* ctx, AsyncIterator* iter) {
 
   if(JS_IsException(ret))
     return JS_EXCEPTION;
-
-  // printf("%s() iter=%p\n", __func__, iter);
 
   JS_SetOpaque(ret, asynciterator_dup(iter));
 
@@ -113,12 +111,12 @@ minnet_asynciterator_finalizer(JSRuntime* rt, JSValue val) {
     asynciterator_free(iter, rt);
 }
 
-JSClassDef minnet_asynciterator_class = {
+static const JSClassDef minnet_asynciterator_class = {
     "AsyncIterator",
     .finalizer = minnet_asynciterator_finalizer,
 };
 
-const JSCFunctionListEntry minnet_asynciterator_proto_funcs[] = {
+static const JSCFunctionListEntry minnet_asynciterator_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("next", 0, minnet_asynciterator_method, ASYNCITERATOR_NEXT),
     JS_CFUNC_MAGIC_DEF("push", 1, minnet_asynciterator_method, ASYNCITERATOR_PUSH),
     JS_CFUNC_MAGIC_DEF("stop", 0, minnet_asynciterator_method, ASYNCITERATOR_STOP),

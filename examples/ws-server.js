@@ -1,6 +1,10 @@
-import { server } from 'net';
+import { createServer, setLog, LLL_USER, LLL_ERR } from 'net';
 
-const socket = server({
+setLog((std.getenv('DEBUG') ? LLL_USER : 0) | LLL_ERR, (level, message) =>
+  console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n'))
+);
+
+const socket = createServer({
   port: 3000,
   onConnect(ws) {
     console.log('New Client Connected.');

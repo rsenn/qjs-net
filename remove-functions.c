@@ -994,7 +994,7 @@ JSValue
 minnet_request_from(JSContext* ctx, int argc, JSValueConst argv[]) {
   MinnetRequest* req;
 
-  [object Object] req = request_from(argc, argv, ctx);
+  req = request_from(argc, argv, ctx);
 
   return minnet_request_wrap(ctx, req);
 }

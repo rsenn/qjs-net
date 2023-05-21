@@ -12,7 +12,5 @@ int minnet_generator_init(JSContext*, JSModuleDef*);
 
 extern THREAD_LOCAL JSValue minnet_generator_proto, minnet_generator_ctor;
 extern THREAD_LOCAL JSClassID minnet_generator_class_id;
-extern JSClassDef minnet_generator_class;
-extern const JSCFunctionListEntry minnet_generator_proto_funcs[];
 
 #endif /* MINNET_GENERATOR_H */

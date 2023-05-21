@@ -1,5 +1,5 @@
-#ifndef QJSNET_LIB_JSUTILS_H
-#define QJSNET_LIB_JSUTILS_H
+#ifndef QJSNET_LIB_JS_UTILS_H
+#define QJSNET_LIB_JS_UTILS_H
 
 #include <quickjs.h>
 #include <cutils.h>
@@ -133,7 +133,6 @@ const char* js_function_name(JSContext*, JSValueConst value);
 JSValue js_function_prototype(JSContext*);
 JSAtom js_iterable_method(JSContext*, JSValueConst obj, BOOL* async_ptr);
 JSValue js_iterator_result(JSContext*, JSValueConst value, BOOL done);
-void js_iterator_func(JSContext*, JSValueConst obj, JSValue* next);
 JSValue js_iterator_next(JSContext*, JSValueConst obj, JSValueConst* next, BOOL* done_p, int argc, JSValueConst argv[]);
 int js_copy_properties(JSContext*, JSValueConst dst, JSValueConst src, int flags);
 void js_buffer_free_default(JSRuntime*, void* opaque, void* ptr);

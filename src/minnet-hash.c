@@ -358,14 +358,14 @@ static JSClassExoticMethods minnet_hash_exotic_methods = {
     .get_property = minnet_hash_get_property,
 };
 
-JSClassDef minnet_hash_class = {
+static const JSClassDef minnet_hash_class = {
     "MinnetHash",
     .finalizer = minnet_hash_finalizer,
     .call = &minnet_hash_call,
     .exotic = &minnet_hash_exotic_methods,
 };
 
-const JSCFunctionListEntry minnet_hash_proto_funcs[] = {
+static const JSCFunctionListEntry minnet_hash_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("valueOf", 0, minnet_hash_method, HASH_VALUEOF),
     JS_CFUNC_MAGIC_DEF("toString", 0, minnet_hash_method, HASH_TOSTRING),
     JS_CFUNC_MAGIC_DEF("update", 1, minnet_hash_method, HASH_UPDATE),
@@ -383,7 +383,7 @@ const JSCFunctionListEntry minnet_hash_proto_funcs[] = {
     JS_PROP_INT32_DEF("TYPE_SHA512", LWS_GENHASH_TYPE_SHA512, 0),
 };
 
-const JSCFunctionListEntry minnet_hash_static_funcs[] = {
+static const JSCFunctionListEntry minnet_hash_static_funcs[] = {
     JS_PROP_INT32_DEF("TYPE_MD5", LWS_GENHASH_TYPE_MD5, JS_PROP_ENUMERABLE),
     JS_PROP_INT32_DEF("TYPE_SHA1", LWS_GENHASH_TYPE_SHA1, JS_PROP_ENUMERABLE),
     JS_PROP_INT32_DEF("TYPE_SHA256", LWS_GENHASH_TYPE_SHA256, JS_PROP_ENUMERABLE),

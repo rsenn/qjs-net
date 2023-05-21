@@ -7,11 +7,11 @@
 #include "minnet-ringbuffer.h"
 #include "minnet-generator.h"
 #include "minnet-asynciterator.h"
-#include "minnet-form-parser.h"
+#include "minnet-formparser.h"
 #include "minnet-hash.h"
 #include "minnet-fetch.h"
 #include "minnet-headers.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "utils.h"
 #include "buffer.h"
 #include <libwebsockets.h>
@@ -399,7 +399,7 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   minnet_ringbuffer_init(ctx, m);
   minnet_generator_init(ctx, m);
   minnet_ws_init(ctx, m);
-  minnet_form_parser_init(ctx, m);
+  minnet_formparser_init(ctx, m);
   minnet_hash_init(ctx, m);
   minnet_asynciterator_init(ctx, m);
   minnet_url_init(ctx, m);

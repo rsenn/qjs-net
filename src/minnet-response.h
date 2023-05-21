@@ -15,8 +15,6 @@ int minnet_response_init(JSContext*, JSModuleDef*);
 
 extern THREAD_LOCAL JSClassID minnet_response_class_id;
 extern THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
-extern JSClassDef minnet_response_class;
-extern const JSCFunctionListEntry minnet_response_proto_funcs[];
 
 static inline MinnetResponse*
 minnet_response_data2(JSContext* ctx, JSValueConst obj) {

@@ -5,7 +5,7 @@
 #include <cutils.h>
 #include <list.h>
 #include <libwebsockets.h>
-#include "jsutils.h"
+#include "js-utils.h"
 
 struct context {
   int ref_count;

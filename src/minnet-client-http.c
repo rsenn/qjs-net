@@ -4,7 +4,7 @@
 #include "minnet-response.h"
 #include "minnet.h"
 #include "headers.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include <libwebsockets.h>
 
 typedef struct {
@@ -66,7 +66,6 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       break;
     }
     case LWS_CALLBACK_PROTOCOL_INIT: {
-      session_zero(session);
       return 0;
     }
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
@@ -79,6 +78,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL: {
+      session_init(session, wsi_context(wsi));
       session->req_obj = JS_NULL;
       session->resp_obj = JS_NULL;
       break;

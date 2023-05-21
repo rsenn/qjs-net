@@ -2,7 +2,7 @@
 #define MINNET_HASH_H
 
 #include "utils.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include <libwebsockets.h>
 
 typedef struct hash_hmac {
@@ -20,8 +20,6 @@ int minnet_hash_init(JSContext*, JSModuleDef*);
 
 extern THREAD_LOCAL JSValue minnet_hash_proto, minnet_hash_ctor;
 extern THREAD_LOCAL JSClassID minnet_hash_class_id;
-extern JSClassDef minnet_hash_class;
-extern const JSCFunctionListEntry minnet_hash_proto_funcs[], minnet_hash_static_funcs[];
 
 static inline MinnetHash*
 minnet_hash_data(JSValueConst obj) {

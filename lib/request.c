@@ -1,14 +1,9 @@
 #define _GNU_SOURCE
 #include "request.h"
-//#include "lws-utils.h"
-//#include "ringbuffer.h"
 #include "headers.h"
-//#include "jsutils.h"
 #include <ctype.h>
 #include <strings.h>
 #include <libwebsockets.h>
-
-Request* minnet_request_data(JSValueConst);
 
 static const char* const method_names[] = {
     "GET",
@@ -121,14 +116,10 @@ request_from(int argc, JSValueConst argv[], JSContext* ctx) {
   Request* req = 0;
   URL url = URL_INIT();
 
-  if(JS_IsObject(argv[0]) && (req = minnet_request_data(argv[0]))) {
-    req = request_dup(req);
-  } else {
-    url_fromvalue(&url, argv[0], ctx);
+  url_fromvalue(&url, argv[0], ctx);
 
-    if(url_valid(url))
-      req = request_new(url, METHOD_GET, ctx);
-  }
+  if(url_valid(url))
+    req = request_new(url, METHOD_GET, ctx);
 
   if(req)
     if(argc >= 2 && JS_IsObject(argv[1])) {

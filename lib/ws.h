@@ -3,7 +3,7 @@
 
 #include <libwebsockets.h>
 #include "opaque.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "queue.h"
 
 #if(defined(HAVE_WINSOCK2_H) || defined(WIN32) || defined(WIN64) || defined(__MINGW32__) || defined(__MINGW64__)) && !defined(__MSYS__)

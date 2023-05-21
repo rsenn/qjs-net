@@ -1,5 +1,5 @@
 #include "url.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "lws-utils.h"
 #include "utils.h"
 #include "query.h"
@@ -7,8 +7,6 @@
 #include <limits.h>
 #include <ctype.h>
 #include <strings.h>
-
-URL* minnet_url_data(JSValueConst);
 
 #ifndef HAVE_STRLCPY
 size_t
@@ -428,9 +426,7 @@ BOOL
 url_fromvalue(URL* url, JSValueConst value, JSContext* ctx) {
   URL* other;
 
-  if((other = minnet_url_data(value))) {
-    url_copy(url, *other, ctx);
-  } else if(JS_IsObject(value)) {
+  if(JS_IsObject(value)) {
     url_fromobj(url, value, ctx);
   } else if(JS_IsString(value)) {
     const char* str = JS_ToCString(ctx, value);

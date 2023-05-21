@@ -1,5 +1,5 @@
 #include "callback.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include "utils.h"
 #include "opaque.h"
 #include <assert.h>

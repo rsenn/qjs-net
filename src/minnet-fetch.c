@@ -5,7 +5,7 @@
 #include "minnet.h"
 #include "buffer.h"
 #include "closure.h"
-#include "jsutils.h"
+#include "js-utils.h"
 #include <strings.h>
 #include <quickjs.h>
 

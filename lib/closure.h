@@ -17,7 +17,6 @@ union closure {
 };
 
 union closure* closure_new(JSContext*);
-void closure_free_object(void*, JSRuntime* rt);
 union closure* closure_dup(union closure*);
 void closure_free(void*);
 

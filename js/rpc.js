@@ -9,6 +9,7 @@ export const LogWrap = (globalThis.LogWrap = function LogWrap(log) {
   } else if(!log) {
     log = (...args) => console.log(...args);
   }
+
   return (value, ...args) => (log(value, ...args), value);
 });
 
@@ -720,6 +721,7 @@ export function getPropertyDescriptors(obj, merge = true, pred = (proto, depth) 
     for(let desc of a) for (let prop of GetKeys(desc)) if(!(prop in result)) result[prop] = desc[prop];
     return result;
   }
+
   return a;
 }
 
@@ -918,6 +920,7 @@ export function SerializeValue(value, source = false) {
   } else if(typeof value != 'symbol') {
     desc.value = value;
   }
+
   return desc;
 }
 

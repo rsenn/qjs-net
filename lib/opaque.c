@@ -2,7 +2,7 @@
 #include "ws.h"
 #include "request.h"
 #include "response.h"
-#include "form-parser.h"
+#include "formparser.h"
 #include <assert.h>
 
 // static THREAD_LOCAL void* prev_ptr = 0;
@@ -27,7 +27,7 @@ opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
     response_free(resp, rt);
   }
   if(opaque->form_parser) {
-    form_parser_free_rt(opaque->form_parser, rt);
+    formparser_free_rt(opaque->form_parser, rt);
     opaque->form_parser = 0;
   }
 }
