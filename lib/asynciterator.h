@@ -23,7 +23,7 @@ void asynciterator_clear(AsyncIterator*, JSRuntime* rt);
 AsyncIterator* asynciterator_new(JSContext*);
 void asynciterator_free(AsyncIterator*, JSRuntime* rt);
 JSValue asynciterator_next(AsyncIterator*, JSValueConst argument, JSContext* ctx);
-BOOL asynciterator_stop(AsyncIterator*, JSContext* ctx);
+BOOL asynciterator_stop(AsyncIterator*, JSValueConst value, JSContext* ctx);
 int asynciterator_cancel(AsyncIterator*, JSValueConst error, JSContext* ctx);
 BOOL asynciterator_emplace(AsyncIterator*, JSValueConst value, BOOL done, JSContext* ctx);
 

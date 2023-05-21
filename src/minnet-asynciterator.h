@@ -5,16 +5,16 @@
 #include "asynciterator.h"
 #include "utils.h"
 
-JSValue minnet_asynciterator_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]);
-JSValue minnet_asynciterator_wrap(JSContext* ctx, AsyncIterator* iter);
-void minnet_asynciterator_decorate(JSContext* ctx, JSValueConst this_val, JSValueConst ret);
-JSValue minnet_asynciterator_iterable(JSContext* ctx, JSValueConst this_val);
+JSValue minnet_asynciterator_wrap(JSContext*, AsyncIterator*);
+void minnet_asynciterator_decorate(JSContext*, JSValueConst, JSValueConst);
+JSValue minnet_asynciterator_iterable(JSContext*, JSValueConst);
+JSValue minnet_asynciterator_constructor(JSContext*, JSValueConst, int, JSValueConst[]);
+int minnet_asynciterator_init(JSContext*, JSModuleDef*);
 
 extern THREAD_LOCAL JSClassID minnet_asynciterator_class_id;
 extern THREAD_LOCAL JSValue minnet_asynciterator_proto, minnet_asynciterator_ctor;
 extern JSClassDef minnet_asynciterator_class;
 extern const JSCFunctionListEntry minnet_asynciterator_proto_funcs[];
-extern const size_t minnet_asynciterator_proto_funcs_size;
 
 static inline AsyncIterator*
 minnet_asynciterator_data(JSValueConst obj) {

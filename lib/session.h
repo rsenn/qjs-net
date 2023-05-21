@@ -33,7 +33,7 @@ struct session_data {
   };*/
   Queue sendq;
   lws_callback_function* callback;
-  ResolveFunctions async;
+  /*ResolveFunctions async;*/
 };
 
 // extern THREAD_LOCAL struct list_head session_list;

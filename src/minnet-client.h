@@ -40,22 +40,22 @@ typedef struct client_context {
   BOOL block;
 } MinnetClient;
 
-void client_certificate(struct context*, JSValueConst options);
-MinnetClient* client_new(JSContext*);
-void client_free(MinnetClient*, JSRuntime* rt);
-void client_zero(MinnetClient*);
-MinnetClient* client_dup(MinnetClient*);
-Generator* client_generator(MinnetClient*, JSContext* ctx);
+void                   client_certificate(struct context*, JSValueConst);
+MinnetClient*          client_new(JSContext*);
+void                   client_free(MinnetClient*, JSRuntime*);
+void                   client_zero(MinnetClient*);
+MinnetClient*          client_dup(MinnetClient*);
+Generator*             client_generator(MinnetClient*, JSContext*);
 struct client_context* lws_client(struct lws*);
-JSValue minnet_client_closure(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr);
-JSValue minnet_client(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[]);
-JSValue minnet_client_wrap(JSContext*, MinnetClient* client);
+JSValue                minnet_client_closure(JSContext*, JSValueConst, int, JSValueConst[], int, void*);
+JSValue                minnet_client(JSContext*, JSValueConst, int, JSValueConst[]);
+JSValue                minnet_client_wrap(JSContext*, MinnetClient*);
+int                    minnet_client_init(JSContext*, JSModuleDef*);
 
 extern THREAD_LOCAL JSClassID minnet_client_class_id;
 extern THREAD_LOCAL JSValue minnet_client_proto, minnet_client_ctor;
 extern JSClassDef minnet_client_class;
 extern const JSCFunctionListEntry minnet_client_proto_funcs[];
-extern const size_t minnet_client_proto_funcs_size;
 
 static inline MinnetClient*
 minnet_client_data(JSValueConst obj) {

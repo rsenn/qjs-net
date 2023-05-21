@@ -111,7 +111,7 @@ session_callback(struct session_data* session, JSCallback* cb, struct context* c
   int ret = 0;
   JSValue body, this = session->ws_obj;
 
-  context_exception(context, (body = callback_emit_this(cb, session->ws_obj, 2, &session->req_obj)));
+  body = context_exception(context, callback_emit_this(cb, session->ws_obj, 2, &session->req_obj));
 
   do {
     ret = session_generator(session, body, this, context);

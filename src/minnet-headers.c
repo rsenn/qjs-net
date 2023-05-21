@@ -7,7 +7,7 @@
 #include <ctype.h>
 #include <strings.h>
 
-THREAD_LOCAL JSValue minnet_headers_proto;
+THREAD_LOCAL JSValue minnet_headers_proto, minnet_headers_ctor;
 THREAD_LOCAL JSClassID minnet_headers_class_id = 0;
 
 enum {
@@ -380,28 +380,19 @@ static JSClassDef minnet_headers_class = {
 
 int
 minnet_headers_init(JSContext* ctx, JSModuleDef* m) {
-  JSAtom inspect_atom;
-
   // Add class Headers
   JS_NewClassID(&minnet_headers_class_id);
+
   JS_NewClass(JS_GetRuntime(ctx), minnet_headers_class_id, &minnet_headers_class);
   minnet_headers_proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, minnet_headers_proto, minnet_headers_proto_funcs, countof(minnet_headers_proto_funcs));
+  JS_SetClassProto(ctx, minnet_headers_class_id, minnet_headers_proto);
 
-  /* inspect_atom = js_symbol_static_atom(ctx, "inspect");
+  minnet_headers_ctor = JS_NewObject(ctx);
+  JS_SetConstructor(ctx, minnet_headers_ctor, minnet_headers_proto);
 
-   if(!js_atom_is_symbol(ctx, inspect_atom)) {
-     JS_FreeAtom(ctx, inspect_atom);
-     inspect_atom = js_symbol_for_atom(ctx, "quickjs.inspect.custom");
-   }
+  if(m)
+    JS_SetModuleExport(ctx, m, "Headers", minnet_headers_ctor);
 
-   if(js_atom_is_symbol(ctx, inspect_atom))
-     JS_SetProperty(ctx, minnet_headers_proto, inspect_atom, JS_NewCFunction(ctx, minnet_headers_inspect, "inspect", 0));
-
-   JS_FreeAtom(ctx, inspect_atom);*/
-
-  /*  if(m)
-      JS_SetModuleExport(ctx, m, "Headers", minnet_headers_ctor);
-  */
   return 0;
 }

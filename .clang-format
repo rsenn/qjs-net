@@ -10,7 +10,6 @@ AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: true
 AlwaysBreakAfterDefinitionReturnType: TopLevelDefinitions
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: false
@@ -68,3 +67,4 @@ PenaltyReturnTypeOnItsOwnLine: 100
 SpacesBeforeTrailingComments: 1
 TabWidth: 2
 SpaceAfterTemplateKeyword: false
+AllowShortLoopsOnASingleLine: false

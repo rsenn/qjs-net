@@ -266,7 +266,7 @@ minnet_hash_finalizer(JSRuntime* rt, JSValue val) {
   }
 }
 
-JSValue
+static JSValue
 minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags) {
   /*MinnetHash* h = minnet_hash_data2(ctx, func_obj);*/
   return minnet_hash_method(ctx, func_obj, argc, argv, (argc < 1 || js_is_nullish(argv[0])) ? HASH_FINALIZE : HASH_UPDATE);
@@ -391,5 +391,24 @@ const JSCFunctionListEntry minnet_hash_static_funcs[] = {
     JS_PROP_INT32_DEF("TYPE_SHA512", LWS_GENHASH_TYPE_SHA512, JS_PROP_ENUMERABLE),
 };
 
-const size_t minnet_hash_proto_funcs_size = countof(minnet_hash_proto_funcs);
-const size_t minnet_hash_static_funcs_size = countof(minnet_hash_static_funcs);
+
+
+int
+minnet_hash_init(JSContext* ctx, JSModuleDef* m) {
+  // Add class Hash
+  JS_NewClassID(&minnet_hash_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_hash_class_id, &minnet_hash_class);
+  minnet_hash_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_hash_proto, minnet_hash_proto_funcs, countof(minnet_hash_proto_funcs));
+  JS_SetClassProto(ctx, minnet_hash_class_id, minnet_hash_proto);
+
+  minnet_hash_ctor = JS_NewCFunction2(ctx, minnet_hash_constructor, "MinnetHash", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_hash_ctor, minnet_hash_proto);
+  JS_SetPropertyFunctionList(ctx, minnet_hash_ctor, minnet_hash_static_funcs, countof(minnet_hash_static_funcs));
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Hash", minnet_hash_ctor);
+
+  return 0;
+}

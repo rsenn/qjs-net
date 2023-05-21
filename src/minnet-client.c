@@ -15,7 +15,7 @@
 #include <errno.h>
 #include <libwebsockets.h>
 
-THREAD_LOCAL JSValue minnet_client_proto;
+THREAD_LOCAL JSValue minnet_client_proto, minnet_client_ctor;
 THREAD_LOCAL JSClassID minnet_client_class_id;
 
 // static JSCallback client_cb_message, client_cb_connect, client_cb_close, client_cb_pong, client_cb_fd;
@@ -24,10 +24,12 @@ static int client_callback(struct lws* wsi, enum lws_callback_reasons reason, vo
 
 static THREAD_LOCAL struct list_head minnet_clients = {0, 0};
 
-static const struct lws_protocols client_protocols[] = {{"raw", client_callback, 0, 0, 0, 0, 0},
-                                                        {"http", http_client_callback, 0, 0, 0, 0, 0},
-                                                        {"ws", client_callback, 0, 0, 0, 0, 0},
-                                                        LWS_PROTOCOL_LIST_TERM};
+static const struct lws_protocols client_protocols[] = {
+    {"raw", client_callback, 0, 0, 0, 0, 0},
+    {"http", http_client_callback, 0, 0, 0, 0, 0},
+    {"ws", client_callback, 0, 0, 0, 0, 0},
+    LWS_PROTOCOL_LIST_TERM,
+};
 
 static JSValue
 close_status(JSContext* ctx, const char* in, size_t len) {
@@ -872,8 +874,6 @@ const JSCFunctionListEntry minnet_client_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetClient", JS_PROP_CONFIGURABLE),
 };
 
-const size_t minnet_client_proto_funcs_size = countof(minnet_client_proto_funcs);
-
 JSValue
 minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   union closure* closure;
@@ -928,4 +928,23 @@ minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
   /*JS_SetPropertyFunctionList(ctx, ret, client->block ? minnet_client_sync_funcs : minnet_client_async_funcs, 1);*/
 
   return ret;
+}
+
+int
+minnet_client_init(JSContext* ctx, JSModuleDef* m) {
+  // Add class Client
+  JS_NewClassID(&minnet_client_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_client_class_id, &minnet_client_class);
+  minnet_client_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_client_proto, minnet_client_proto_funcs, countof(minnet_client_proto_funcs));
+  JS_SetClassProto(ctx, minnet_client_class_id, minnet_client_proto);
+
+  minnet_client_ctor = JS_NewObject(ctx);
+  JS_SetConstructor(ctx, minnet_client_ctor, minnet_client_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Client", minnet_client_ctor);
+
+  return 0;
 }

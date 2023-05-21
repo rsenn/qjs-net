@@ -1,12 +1,7 @@
 #include "asynciterator.h"
 #include "utils.h"
 #include <assert.h>
-
-size_t
-asynciterator_num_reads(AsyncIterator* it) {
-  return list_size(&it->reads);
-}
-
+ 
 static AsyncRead*
 asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
   if(!list_empty(&it->reads)) {
@@ -87,10 +82,10 @@ asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
 }
 
 BOOL
-asynciterator_stop(AsyncIterator* it, JSContext* ctx) {
+asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
 
   if(!list_empty(&it->reads)) {
-    asynciterator_emplace(it, JS_UNDEFINED, TRUE, ctx);
+    asynciterator_emplace(it, value, TRUE, ctx);
     it->closed = TRUE;
 
     asynciterator_cancel(it, JS_NULL, ctx);

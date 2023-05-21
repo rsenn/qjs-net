@@ -319,7 +319,7 @@ minnet_form_parser_define_own_property(JSContext* ctx, JSValueConst this_obj, JS
   return JS_DefineProperty(ctx, this_obj, prop, val, getter, setter, flags | JS_PROP_NO_EXOTIC);
 }
 
-JSValue
+static JSValue
 minnet_form_parser_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags) {
   MinnetFormParser* fp = minnet_form_parser_data2(ctx, func_obj);
   JSValue ret = JS_UNDEFINED;
@@ -376,4 +376,24 @@ const JSCFunctionListEntry minnet_form_parser_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetFormParser", JS_PROP_CONFIGURABLE),
 };
 
-const size_t minnet_form_parser_proto_funcs_size = countof(minnet_form_parser_proto_funcs);
+
+
+
+int
+minnet_form_parser_init(JSContext* ctx, JSModuleDef* m) {
+  // Add class FormParser
+  JS_NewClassID(&minnet_form_parser_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_form_parser_class_id, &minnet_form_parser_class);
+  minnet_form_parser_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_form_parser_proto, minnet_form_parser_proto_funcs, countof(minnet_form_parser_proto_funcs));
+  JS_SetClassProto(ctx, minnet_form_parser_class_id, minnet_form_parser_proto);
+
+  minnet_form_parser_ctor = JS_NewCFunction2(ctx, minnet_form_parser_constructor, "MinnetFormParser", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_form_parser_ctor, minnet_form_parser_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "FormParser", minnet_form_parser_ctor);
+
+return 0;
+}

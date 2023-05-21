@@ -15,14 +15,18 @@ size_t
 str_chrs(const char* in, const char needles[], size_t nn) {
   const char* t = in;
   size_t i;
+
   for(;;) {
     if(!*t)
       break;
+
     for(i = 0; i < nn; i++)
       if(*t == needles[i])
         return (size_t)(t - in);
+
     ++t;
   }
+  
   return (size_t)(t - in);
 }
 
@@ -62,11 +66,13 @@ byte_rchr(const void* x, size_t len, char needle) {
 int
 byte_diff(const void* a, size_t len, const void* b) {
   size_t i;
+
   for(i = 0; i < len; ++i) {
     int r = ((unsigned char*)a)[i] - ((unsigned char*)b)[i];
     if(r)
       return r;
   }
+
   return 0;
 }
 
@@ -79,14 +85,18 @@ size_t
 byte_findb(const void* haystack, size_t hlen, const void* what, size_t wlen) {
   size_t i, last;
   const char* s = (const char*)haystack;
+ 
   if(hlen < wlen)
     return hlen;
+
   last = hlen - wlen;
+
   for(i = 0; i <= last; i++) {
     if(byte_equal(s, wlen, what))
       return i;
     s++;
   }
+
   return hlen;
 }
 
@@ -139,6 +149,7 @@ scan_charsetnskip(const void* s, const char* charset, size_t limit) {
     if(*i != *t)
       break;
   }
+
   return t - (const char*)s;
 }
 
@@ -202,12 +213,14 @@ unsigned
 uint_pow(unsigned base, unsigned degree) {
   unsigned result = 1;
   unsigned term = base;
+
   while(degree) {
     if(degree & 1)
       result *= term;
     term *= term;
     degree = degree >> 1;
   }
+
   return result;
 }
 
@@ -219,6 +232,7 @@ list_size(struct list_head* list) {
     struct list_head* el;
     list_for_each(el, list)++ count;
   }
+
   return count;
 }
 
@@ -233,5 +247,6 @@ list_at(struct list_head* list, int64_t i) {
       list_for_each_prev(el, list) if(++i == 0) return el;
     }
   }
+
   return 0;
 }

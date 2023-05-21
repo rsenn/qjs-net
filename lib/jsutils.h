@@ -159,7 +159,7 @@ JSValue js_os_get(JSContext*, const char* prop);
 JSValue js_timer_start(JSContext*, JSValueConst fn, uint32_t ms);
 void js_timer_cancel(JSContext*, JSValueConst timer);
 void js_timer_free(void*);
-JSValue js_timer_callback(JSContext*, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque);
+JSValue js_timer_callback(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque);
 struct TimerClosure* js_timer_interval(JSContext*, JSValueConst fn, uint32_t ms);
 void js_timer_restart(struct TimerClosure*);
 char* js_tostringlen(JSContext*, size_t* lenp, JSValueConst value);
@@ -202,6 +202,8 @@ BOOL js_is_typedarray(JSContext*, JSValueConst value);
 JSValue js_typedarray_constructor(JSContext*, int bits, BOOL floating, BOOL sign);
 JSValue js_typedarray_new(JSContext*, int bits, BOOL floating, BOOL sign, JSValueConst buffer, uint32_t byte_offset, uint32_t length);
 JSValue js_function_cclosure(JSContext*, CClosureFunc* func, int length, int magic, void* opaque, void (*opaque_finalize)(void*));
+JSValue js_generator_prototype(JSContext*);
+JSValue js_asyncgenerator_prototype(JSContext*);
 
 static inline BOOL
 js_atom_is_int32(JSAtom atom) {

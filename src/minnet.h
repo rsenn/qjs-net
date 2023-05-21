@@ -55,21 +55,11 @@ typedef union {
   JS_FreeValue(ctx, name);
 
 typedef enum socket_state MinnetStatus;
-
-void minnet_io_handlers(JSContext*, struct lws* wsi, struct lws_pollargs args, JSValueConst out[2]);
-void minnet_log_callback(int, const char* line);
-int minnet_lws_unhandled(const char*, int reason);
-void minnet_debug(const char*, ...);
-
 struct js_callback;
 
-int wsi_handle_poll(struct lws*, enum lws_callback_reasons, struct js_callback*, struct lws_pollargs* args);
-JSValue minnet_get_sessions(JSContext*, JSValueConst this_val, int argc, JSValueConst argv[]);
-JSModuleDef* JS_INIT_MODULE(JSContext*, const char* module_name);
-
-int minnet_protocol_count(MinnetProtocols**);
-int minnet_protocol_add(MinnetProtocols** plist, struct lws_protocols protocol);
-
-JSValue minnet_default_fd_callback(JSContext* ctx);
+void minnet_io_handlers(JSContext*, struct lws*, struct lws_pollargs, JSValueConst[2]);
+JSValue minnet_default_fd_callback(JSContext*);
+int wsi_handle_poll(struct lws*, enum lws_callback_reasons, struct js_callback*, struct lws_pollargs*);
+int minnet_lws_unhandled(const char*, int);
 
 #endif /* MINNET_H */

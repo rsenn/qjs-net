@@ -20,7 +20,7 @@ struct context {
   struct lws_context_creation_info info;
 };
 
-JSValue context_exception(struct context*, JSValueConst retval);
+JSValue context_exception(struct context*, JSValue retval);
 void context_clear(struct context*);
 void context_add(struct context*);
 void context_delete(struct context*);

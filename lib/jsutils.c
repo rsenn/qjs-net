@@ -552,7 +552,7 @@ js_timer_free(void* ptr) {
 }
 
 JSValue
-js_timer_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {
+js_timer_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   struct TimerClosure* closure = opaque;
   JSValue ret;
   JSValueConst args[] = {closure->id, closure->handler, closure->callback, JS_NewUint32(ctx, closure->interval)};
@@ -778,20 +778,21 @@ js_error_print(JSContext* ctx, JSValueConst error) {
     if(!strncmp(exception, type, typelen) && exception[typelen] == ':') {
       exception += typelen + 2;
     }
+
     lwsl_err("Exception %s: %s", type, exception);
-    printf("Exception %s: %s\n", type, exception);
+    /*printf("Exception %s: %s\n", type, exception);*/
   }
 
   if(stack) {
     size_t pos = 0, i = 0, len, end = strlen(stack);
     lwsl_err("Stack:");
-    printf("Stack:\n");
+    /*printf("Stack:\n");*/
 
     while(i < end) {
       len = byte_chrs(&stack[i], end - i, "\r\n", 2);
 
       lwsl_err("%zu: %.*s", pos++, (int)len, &stack[i]);
-      printf("%zu: %.*s\n", pos++, (int)len, &stack[i]);
+      /*printf("%zu: %.*s\n", pos++, (int)len, &stack[i]);*/
       i += len;
 
       i += scan_charsetnskip(&stack[i], "\r\n", end - i);
@@ -1206,4 +1207,22 @@ js_function_cclosure(JSContext* ctx, CClosureFunc* func, int length, int magic, 
   // JS_DefinePropertyValueStr(ctx, func_obj, "length", JS_NewUint32(ctx, length), JS_PROP_CONFIGURABLE);
 
   return func_obj;
+}
+
+JSValue
+js_generator_prototype(JSContext* ctx) {
+  const char* code = "(function *gen() {})()";
+  JSValue ret, gen = JS_Eval(ctx, code, strlen(code), "<internal>", 0);
+  ret = JS_GetPrototype(ctx, gen);
+  JS_FreeValue(ctx, gen);
+  return ret;
+}
+
+JSValue
+js_asyncgenerator_prototype(JSContext* ctx) {
+  const char* code = "(async function *gen() {})()";
+  JSValue ret, gen = JS_Eval(ctx, code, strlen(code), "<internal>", 0);
+  ret = JS_GetPrototype(ctx, gen);
+  JS_FreeValue(ctx, gen);
+  return ret;
 }

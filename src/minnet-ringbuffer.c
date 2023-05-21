@@ -452,4 +452,22 @@ const JSCFunctionListEntry minnet_ringbuffer_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRingbuffer", JS_PROP_CONFIGURABLE),
 };
 
-const size_t minnet_ringbuffer_proto_funcs_size = countof(minnet_ringbuffer_proto_funcs);
+
+int
+minnet_ringbuffer_init(JSContext* ctx, JSModuleDef* m) {
+  // Add class Ringbuffer
+  JS_NewClassID(&minnet_ringbuffer_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_ringbuffer_class_id, &minnet_ringbuffer_class);
+  minnet_ringbuffer_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_ringbuffer_proto, minnet_ringbuffer_proto_funcs, countof(minnet_ringbuffer_proto_funcs));
+  JS_SetClassProto(ctx, minnet_ringbuffer_class_id, minnet_ringbuffer_proto);
+
+  minnet_ringbuffer_ctor = JS_NewCFunction2(ctx, minnet_ringbuffer_constructor, "MinnetRingbuffer", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_ringbuffer_ctor, minnet_ringbuffer_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Ringbuffer", minnet_ringbuffer_ctor);
+
+  return 0;
+}

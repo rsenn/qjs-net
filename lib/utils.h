@@ -12,9 +12,15 @@
 #if defined(_WIN32) || defined(__MINGW32__)
 #define VISIBLE __declspec(dllexport)
 #define HIDDEN
+#define UNUSED
+#elif defined(__CLANG__)
+#define VISIBLE [[visibility(default)]]
+#define HIDDEN [[visibility(hidden)]]
+#define UNUSED [[unused]]
 #else
 #define VISIBLE __attribute__((visibility("default")))
 #define HIDDEN __attribute__((visibility("hidden")))
+#define UNUSED __attribute__((unused))
 #endif
 
 #ifdef _Thread_local

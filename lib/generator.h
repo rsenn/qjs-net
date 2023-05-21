@@ -22,7 +22,6 @@ typedef struct generator {
   JSValue (*block_fn)(ByteBlock*, JSContext*);
 } Generator;
 
-void generator_zero(Generator*);
 void generator_free(Generator*);
 Generator* generator_new(JSContext*);
 JSValue generator_dequeue(Generator*, BOOL* done_p);

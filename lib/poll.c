@@ -195,6 +195,7 @@ windows_compute_revents(HANDLE h, int* p_sought) {
            (fpli.OutboundQuota < PIPE_BUF && fpli.WriteQuotaAvailable == fpli.OutboundQuota))
           happened |= *p_sought & (POLLOUT | POLLWRNORM | POLLWRBAND);
       }
+
       return happened;
 
     case FILE_TYPE_CHAR:

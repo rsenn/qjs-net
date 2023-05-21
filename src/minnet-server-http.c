@@ -459,15 +459,13 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
     session->wait_resolve_ptr = &p->session;
 
     JSValue resolve = js_function_cclosure(ctx, serve_resolved, 1, 0, p, serve_resolved_free);
-    JSValue thened = js_async_then(ctx, value, resolve);
     JSValue reject = js_function_cclosure(ctx, serve_rejected, 1, 0, p, serve_resolved_free);
-    JSValue catched = js_async_catch(ctx, thened, reject);
+    JSValue catched = js_async_then2(ctx, value, resolve, reject);
 
-    DBG("thened=%s catched=%s", JS_ToCString(ctx, thened), JS_ToCString(ctx, catched));
+    DBG("catched=%s",  JS_ToCString(ctx, catched));
 
     JS_FreeValue(ctx, resolve);
     JS_FreeValue(ctx, reject);
-    JS_FreeValue(ctx, thened);
     ret = catched;
 
   } else {
@@ -910,32 +908,23 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       cb = session->mount ? &session->mount->callback : 0;
 
-      if(cb && cb->ctx) {
-        // assert(!JS_IsObject(session->generator));
+      if(cb && cb->ctx)
         ret = serve_callback(cb, session, wsi);
-
-        /*JSValue ret = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, ssession->args));
-
-        assert(js_is_iterator(ctx, ret));
-        session->generator = ret;*/
-      }
 
       if(gen) {
         DBG("gen=%p", gen);
 
-        if(js_async_pending(&session->async)) {
+       /* if(js_async_pending(&session->async)) {
           BOOL done = FALSE;
           JSValue value = generator_dequeue(gen, &done);
           printf("value=%s\n", JS_ToCString(ctx, value));
 
           js_async_resolve(ctx, &session->async, value);
           JS_FreeValue(ctx, value);
-        }
+        }*/
 
         generator_stop(req->body, JS_UNDEFINED);
       }
-
-      // js_async_resolve(ctx, &session->async,
 
       if(server->on.post.ctx) {
         JSValue args[] = {
@@ -954,7 +943,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       // session_want_write(session, wsi);
-      break;
+      return 0;
     }
 
     case LWS_CALLBACK_HTTP: {
@@ -1099,9 +1088,6 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           }
         }
       }
-      //_O_ if(req->method == METHOD_POST)
-
-      request_promise(req, &session->async, ctx);
 
       if(callback_valid(&server->on.http)) {
         cb = &server->on.http;

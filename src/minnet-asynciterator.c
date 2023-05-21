@@ -7,37 +7,36 @@
 THREAD_LOCAL JSClassID minnet_asynciterator_class_id;
 THREAD_LOCAL JSValue minnet_asynciterator_proto, minnet_asynciterator_ctor;
 
+enum {
+  ASYNCITERATOR_NEXT,
+  ASYNCITERATOR_PUSH,
+  ASYNCITERATOR_STOP,
+};
+
 static JSValue
-minnet_asynciterator_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+minnet_asynciterator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  JSValue ret = JS_UNDEFINED;
   AsyncIterator* iter;
 
   if(!(iter = minnet_asynciterator_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  return asynciterator_next(iter, argc > 0 ? argv[0] : JS_UNDEFINED, ctx);
-}
+  switch(magic) {
+    case ASYNCITERATOR_NEXT: {
+      ret = asynciterator_next(iter, argc > 0 ? argv[0] : JS_UNDEFINED, ctx);
+      break;
+    }
+    case ASYNCITERATOR_PUSH: {
+      ret = JS_NewBool(ctx, asynciterator_yield(iter, argv[0], ctx));
+      break;
+    }
+    case ASYNCITERATOR_STOP: {
+      ret = JS_NewBool(ctx, asynciterator_stop(iter, argc > 0 ? argv[0] : JS_UNDEFINED, ctx));
+      break;
+    }
+  }
 
-static JSValue
-minnet_asynciterator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[] /*, int magic*/) {
-  AsyncIterator* iter;
-
-  if(!(iter = minnet_asynciterator_data2(ctx, this_val)))
-    return JS_EXCEPTION;
-
-  if(argc < 1)
-    return JS_ThrowInternalError(ctx, "argument required");
-
-  return JS_NewBool(ctx, asynciterator_yield(iter, argv[0], ctx));
-}
-
-static JSValue
-minnet_asynciterator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[] /*, int magic*/) {
-  AsyncIterator* iter;
-
-  if(!(iter = minnet_asynciterator_data2(ctx, this_val)))
-    return JS_EXCEPTION;
-
-  return JS_NewBool(ctx, asynciterator_stop(iter, ctx));
+  return ret;
 }
 
 JSValue
@@ -120,10 +119,31 @@ JSClassDef minnet_asynciterator_class = {
 };
 
 const JSCFunctionListEntry minnet_asynciterator_proto_funcs[] = {
-    JS_CFUNC_DEF("next", 0, minnet_asynciterator_next),
-    JS_CFUNC_DEF("push", 0, minnet_asynciterator_push),
-    JS_CFUNC_DEF("stop", 0, minnet_asynciterator_stop),
+    JS_CFUNC_MAGIC_DEF("next", 0, minnet_asynciterator_method, ASYNCITERATOR_NEXT),
+    JS_CFUNC_MAGIC_DEF("push", 1, minnet_asynciterator_method, ASYNCITERATOR_PUSH),
+    JS_CFUNC_MAGIC_DEF("stop", 0, minnet_asynciterator_method, ASYNCITERATOR_STOP),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "AsyncIterator", JS_PROP_CONFIGURABLE),
 };
 
-const size_t minnet_asynciterator_proto_funcs_size = countof(minnet_asynciterator_proto_funcs);
+
+
+int
+minnet_asynciterator_init(JSContext* ctx, JSModuleDef* m) {
+   // Add class AsyncIterator
+  JS_NewClassID(&minnet_asynciterator_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_asynciterator_class_id, &minnet_asynciterator_class);
+
+  JSValue asynciterator_proto = js_asyncgenerator_prototype(ctx);
+  minnet_asynciterator_proto = JS_NewObjectProto(ctx, asynciterator_proto);
+  JS_FreeValue(ctx, asynciterator_proto);
+  JS_SetPropertyFunctionList(ctx, minnet_asynciterator_proto, minnet_asynciterator_proto_funcs, countof(minnet_asynciterator_proto_funcs));
+  JS_SetClassProto(ctx, minnet_asynciterator_class_id, minnet_asynciterator_proto);
+
+  minnet_asynciterator_ctor = JS_NewCFunction2(ctx, minnet_asynciterator_constructor, "MinnetAsyncIterator", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_asynciterator_ctor, minnet_asynciterator_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "AsyncIterator", minnet_asynciterator_ctor);
+ 
+ return 0;
+}

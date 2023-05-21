@@ -16,7 +16,7 @@
 #include "../libwebsockets/plugins/protocol_lws_mirror.c"
 #include "minnet-plugin-broker.c"
 
-THREAD_LOCAL JSValue minnet_server_proto;
+THREAD_LOCAL JSValue minnet_server_proto, minnet_server_ctor;
 THREAD_LOCAL JSClassID minnet_server_class_id = 0;
 
 int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
@@ -24,17 +24,19 @@ int ws_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, siz
 
 static JSValue minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr);
 
-static struct lws_protocols protocols[] = {{"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-                                           {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-                                           /* {"defprot", lws_callback_http_dummy, sizeof(struct session_data), 1024, 0, NULL, 0},
-                                            {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
-                                              {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
-                                            {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},*/
-                                           MINNET_PLUGIN_BROKER(broker),
-                                           LWS_PLUGIN_PROTOCOL_DEADDROP,
-                                           // LWS_PLUGIN_PROTOCOL_RAW_PROXY,
-                                           LWS_PLUGIN_PROTOCOL_MIRROR,
-                                           LWS_PROTOCOL_LIST_TERM};
+static struct lws_protocols protocols[] = {
+    {"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    /* {"defprot", lws_callback_http_dummy, sizeof(struct session_data), 1024, 0, NULL, 0},
+     {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
+       {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
+     {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},*/
+    MINNET_PLUGIN_BROKER(broker),
+    LWS_PLUGIN_PROTOCOL_DEADDROP,
+    // LWS_PLUGIN_PROTOCOL_RAW_PROXY,
+    LWS_PLUGIN_PROTOCOL_MIRROR,
+    LWS_PROTOCOL_LIST_TERM,
+};
 
 static struct lws_protocols protocols2[] = {{"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
                                             {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
@@ -851,13 +853,19 @@ static JSClassDef minnet_server_class = {
 
 int
 minnet_server_init(JSContext* ctx, JSModuleDef* m) {
-  JSAtom inspect_atom;
-
-  // Add class Headers
+  // Add class Server
   JS_NewClassID(&minnet_server_class_id);
+
   JS_NewClass(JS_GetRuntime(ctx), minnet_server_class_id, &minnet_server_class);
   minnet_server_proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, minnet_server_proto, minnet_server_proto_funcs, countof(minnet_server_proto_funcs));
+  JS_SetClassProto(ctx, minnet_server_class_id, minnet_server_proto);
+
+  minnet_server_ctor = JS_NewObject(ctx);
+  JS_SetConstructor(ctx, minnet_server_ctor, minnet_server_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Server", minnet_server_ctor);
 
   return 0;
 }

@@ -126,7 +126,7 @@ minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JS
 
   JS_FreeValue(ctx, func);
 }
-
+/*
 static JSValue
 minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue data[]) {
   JSValueConst args[] = {argv[0], JS_NULL};
@@ -138,7 +138,7 @@ minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
   JS_Call(ctx, data[1], JS_UNDEFINED, 2, args);
 
   return JS_UNDEFINED;
-}
+}*/
 
 struct FDCallbackClosure {
   JSContext* ctx;
@@ -214,7 +214,7 @@ minnet_default_fd_callback(JSContext* ctx) {
   return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
 }
 
-void
+static void
 minnet_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
     size_t n = 0, len = strlen(line);
@@ -324,7 +324,7 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return ret;
 }
 
-JSValue
+static JSValue
 minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct list_head* el;
   JSValue ret;
@@ -361,14 +361,6 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("createServer", 1, minnet_server),
     JS_CFUNC_DEF("client", 1, minnet_client),
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
-    // JS_CFUNC_SPECIAL_DEF("formParser", 0, constructor, minnet_form_parser_constructor),
-    // JS_CFUNC_SPECIAL_DEF("generator", 0, constructor, minnet_generator_constructor),
-    // JS_CFUNC_SPECIAL_DEF("hash", 0, constructor, minnet_hash_constructor),
-    // JS_CFUNC_SPECIAL_DEF("request", 0, constructor, minnet_request_constructor),
-    // JS_CFUNC_SPECIAL_DEF("response", 0, constructor, minnet_response_constructor),
-    // JS_CFUNC_SPECIAL_DEF("ringbuffer", 0, constructor, minnet_ringbuffer_constructor),
-    // JS_CFUNC_SPECIAL_DEF("URL", 0, constructor, minnet_url_constructor),
-    // JS_CFUNC_SPECIAL_DEF("socket", 0, constructor, minnet_ws_constructor),
     JS_CFUNC_DEF("getSessions", 0, minnet_get_sessions),
     JS_CFUNC_DEF("setLog", 1, minnet_set_log),
     JS_PROP_INT32_DEF("METHOD_GET", METHOD_GET, 0),
@@ -402,156 +394,29 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
 
   JS_SetModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
-  // Add class Response
-  JS_NewClassID(&minnet_response_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
-
-  minnet_response_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_response_proto, minnet_response_proto_funcs, minnet_response_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_response_class_id, minnet_response_proto);
-
-  minnet_response_ctor = JS_NewCFunction2(ctx, minnet_response_constructor, "MinnetResponse", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_response_ctor, minnet_response_proto);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "Response", minnet_response_ctor);
-
-  // Add class Request
-  JS_NewClassID(&minnet_request_class_id);
-
-  JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);
-  minnet_request_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_request_proto, minnet_request_proto_funcs, minnet_request_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_request_class_id, minnet_request_proto);
-
-  minnet_request_ctor = JS_NewCFunction2(ctx, minnet_request_constructor, "MinnetRequest", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_request_ctor, minnet_request_proto);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "Request", minnet_request_ctor);
-
-  // Add class Ringbuffer
-  JS_NewClassID(&minnet_ringbuffer_class_id);
-
-  JS_NewClass(JS_GetRuntime(ctx), minnet_ringbuffer_class_id, &minnet_ringbuffer_class);
-  minnet_ringbuffer_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_ringbuffer_proto, minnet_ringbuffer_proto_funcs, minnet_ringbuffer_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_ringbuffer_class_id, minnet_ringbuffer_proto);
-
-  minnet_ringbuffer_ctor = JS_NewCFunction2(ctx, minnet_ringbuffer_constructor, "MinnetRingbuffer", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_ringbuffer_ctor, minnet_ringbuffer_proto);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "Ringbuffer", minnet_ringbuffer_ctor);
-
-  // Add class Generator
-  JS_NewClassID(&minnet_generator_class_id);
-
-  JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
-  minnet_generator_proto = JS_NewObject(ctx);
-  // JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, minnet_generator_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
-
-  minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_generator_ctor, minnet_generator_proto);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
-
-  // Add class WebSocket
-  JS_NewClassID(&minnet_ws_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
-  minnet_ws_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_funcs, minnet_ws_proto_funcs_size);
-  JS_SetPropertyFunctionList(ctx, minnet_ws_proto, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
-
-  minnet_ws_ctor = JS_NewCFunction2(ctx, minnet_ws_constructor, "MinnetWebsocket", 0, JS_CFUNC_constructor, 0);
-  JS_SetPropertyFunctionList(ctx, minnet_ws_ctor, minnet_ws_static_funcs, minnet_ws_static_funcs_size);
-
-  JS_SetConstructor(ctx, minnet_ws_ctor, minnet_ws_proto);
-
-  JS_SetPropertyFunctionList(ctx, minnet_ws_ctor, minnet_ws_proto_defs, minnet_ws_proto_defs_size);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "Socket", minnet_ws_ctor);
-
-  // Add class FormParser
-  JS_NewClassID(&minnet_form_parser_class_id);
-
-  JS_NewClass(JS_GetRuntime(ctx), minnet_form_parser_class_id, &minnet_form_parser_class);
-  minnet_form_parser_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_form_parser_proto, minnet_form_parser_proto_funcs, minnet_form_parser_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_form_parser_class_id, minnet_form_parser_proto);
-
-  minnet_form_parser_ctor = JS_NewCFunction2(ctx, minnet_form_parser_constructor, "MinnetFormParser", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_form_parser_ctor, minnet_form_parser_proto);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "FormParser", minnet_form_parser_ctor);
-
-  // Add class Hash
-  JS_NewClassID(&minnet_hash_class_id);
-
-  JS_NewClass(JS_GetRuntime(ctx), minnet_hash_class_id, &minnet_hash_class);
-  minnet_hash_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_hash_proto, minnet_hash_proto_funcs, minnet_hash_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_hash_class_id, minnet_hash_proto);
-
-  minnet_hash_ctor = JS_NewCFunction2(ctx, minnet_hash_constructor, "MinnetHash", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_hash_ctor, minnet_hash_proto);
-  JS_SetPropertyFunctionList(ctx, minnet_hash_ctor, minnet_hash_static_funcs, minnet_hash_static_funcs_size);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "Hash", minnet_hash_ctor);
-
-  // Add class AsyncIterator
-  JS_NewClassID(&minnet_asynciterator_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_asynciterator_class_id, &minnet_asynciterator_class);
-
-  minnet_asynciterator_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_asynciterator_proto, minnet_asynciterator_proto_funcs, minnet_asynciterator_proto_funcs_size);
-  JS_SetClassProto(ctx, minnet_asynciterator_class_id, minnet_asynciterator_proto);
-
-  minnet_asynciterator_ctor = JS_NewCFunction2(ctx, minnet_asynciterator_constructor, "MinnetAsyncIterator", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, minnet_asynciterator_ctor, minnet_asynciterator_proto);
-
-  if(m)
-    JS_SetModuleExport(ctx, m, "AsyncIterator", minnet_asynciterator_ctor);
-
-  // Add class Client
-  JS_NewClassID(&minnet_client_class_id);
-  JS_NewClass(JS_GetRuntime(ctx), minnet_client_class_id, &minnet_client_class);
-  minnet_client_proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, minnet_client_proto, minnet_client_proto_funcs, minnet_client_proto_funcs_size);
-
-  // minnet_client_ctor = JS_NewCFunction2(ctx, minnet_client_constructor, "MinnetClient", 0, JS_CFUNC_constructor, 0);
-
-  //  JS_SetConstructor(ctx, minnet_client_ctor, minnet_client_proto);
-  /*
-    if(m)
-      JS_SetModuleExport(ctx, m, "Client", minnet_client_ctor);*/
-
-  // Add class URL
+  minnet_response_init(ctx, m);
+  minnet_request_init(ctx, m);
+  minnet_ringbuffer_init(ctx, m);
+  minnet_generator_init(ctx, m);
+  minnet_ws_init(ctx, m);
+  minnet_form_parser_init(ctx, m);
+  minnet_hash_init(ctx, m);
+  minnet_asynciterator_init(ctx, m);
   minnet_url_init(ctx, m);
   minnet_headers_init(ctx, m);
+  minnet_client_init(ctx, m);
   minnet_server_init(ctx, m);
-
- /* {
-    JSValue minnet_default = JS_NewObject(ctx);
-    JS_SetPropertyFunctionList(ctx, minnet_default, minnet_funcs, countof(minnet_funcs));
-    JS_SetPropertyStr(ctx, minnet_default, "URL", minnet_url_ctor);
-    JS_SetModuleExport(ctx, m, "default", minnet_default);
-  }*/
 
   return 0;
 }
 
-__attribute__((visibility("default"))) JSModuleDef*
+UNUSED VISIBLE JSModuleDef*
 JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JSModuleDef* m;
-  m = JS_NewCModule(ctx, module_name, js_minnet_init);
-  if(!m)
+
+  if(!(m = JS_NewCModule(ctx, module_name, js_minnet_init)))
     return NULL;
+
   JS_AddModuleExport(ctx, m, "Response");
   JS_AddModuleExport(ctx, m, "Request");
   JS_AddModuleExport(ctx, m, "Ringbuffer");
@@ -561,7 +426,10 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JS_AddModuleExport(ctx, m, "Hash");
   JS_AddModuleExport(ctx, m, "AsyncIterator");
   JS_AddModuleExport(ctx, m, "URL");
-  /*JS_AddModuleExport(ctx, m, "default");*/
+  JS_AddModuleExport(ctx, m, "Headers");
+  JS_AddModuleExport(ctx, m, "Client");
+  JS_AddModuleExport(ctx, m, "Server");
+
   JS_AddModuleExportList(ctx, m, minnet_funcs, countof(minnet_funcs));
 
   minnet_log_ctx = ctx;
@@ -570,33 +438,4 @@ JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
 
   return m;
 }
-
-void
-minnet_debug(const char* format, ...) {
-  size_t n;
-  va_list ap;
-  char buf[1024];
-  va_start(ap, format);
-  n = vsnprintf(buf, sizeof(buf), format, ap);
-  va_end(ap);
-
-  if(n < sizeof(buf)) {
-    if(buf[n - 1] != '\n')
-      buf[n++] = '\n';
-  }
-
-  for(size_t i = 0; i < n; i++) {
-    if(i + 1 != n) {
-      if(buf[i] == '\n') {
-        fputs("\\n", stdout);
-        continue;
-      }
-      if(buf[i] == '\r') {
-        fputs("\\r", stdout);
-        continue;
-      }
-    }
-    fputc(buf[i], stdout);
-  }
-  fflush(stdout);
-}
+ 

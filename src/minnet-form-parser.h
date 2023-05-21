@@ -7,16 +7,13 @@
 
 typedef struct form_parser MinnetFormParser;
 
-JSValue minnet_form_parser_constructor(JSContext*, JSValueConst new_target, int argc, JSValueConst argv[]);
-JSValue minnet_form_parser_new(JSContext*, MinnetWebsocket* ws, int nparams, const char* const* param_names, size_t chunk_size);
-JSValue minnet_form_parser_wrap(JSContext*, MinnetFormParser* fp);
-JSValue minnet_form_parser_call(JSContext*, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags);
+JSValue minnet_form_parser_constructor(JSContext*, JSValueConst, int, JSValueConst[]);
+int     minnet_form_parser_init(JSContext*, JSModuleDef*);
 
 extern THREAD_LOCAL JSValue minnet_form_parser_proto, minnet_form_parser_ctor;
 extern THREAD_LOCAL JSClassID minnet_form_parser_class_id;
 extern JSClassDef minnet_form_parser_class;
 extern const JSCFunctionListEntry minnet_form_parser_proto_funcs[];
-extern const size_t minnet_form_parser_proto_funcs_size;
 
 static inline MinnetFormParser*
 minnet_form_parser_data(JSValueConst obj) {

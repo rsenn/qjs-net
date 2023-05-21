@@ -118,7 +118,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       opaque->status = CLOSED;
 
       if(client->iter)
-        asynciterator_stop(client->iter, ctx);
+        asynciterator_stop(client->iter, JS_UNDEFINED, ctx);
 
       if(client->on.close.ctx) {
         JSValueConst cb_argv[] = {

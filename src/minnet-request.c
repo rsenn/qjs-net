@@ -332,4 +332,22 @@ const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 
-const size_t minnet_request_proto_funcs_size = countof(minnet_request_proto_funcs);
+
+int
+minnet_request_init(JSContext* ctx, JSModuleDef* m) {
+  // Add class Request
+  JS_NewClassID(&minnet_request_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);
+  minnet_request_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_request_proto, minnet_request_proto_funcs, countof(minnet_request_proto_funcs));
+  JS_SetClassProto(ctx, minnet_request_class_id, minnet_request_proto);
+
+  minnet_request_ctor = JS_NewCFunction2(ctx, minnet_request_constructor, "MinnetRequest", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_request_ctor, minnet_request_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Request", minnet_request_ctor);
+
+  return 0;
+}

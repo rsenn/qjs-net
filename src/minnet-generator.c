@@ -7,20 +7,43 @@
 THREAD_LOCAL JSClassID minnet_generator_class_id;
 THREAD_LOCAL JSValue minnet_generator_proto, minnet_generator_ctor;
 
+enum {
+  GENERATOR_NEXT = 0,
+  GENERATOR_RETURN,
+  GENERATOR_THROW,
+};
+
 static JSValue
-minnet_generator_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {
+minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
-  JSValue ret, arg = argc > 0 ? argv[0] : JS_UNDEFINED;
+  JSValue ret = JS_UNDEFINED;
 
-  ret = generator_next(gen, arg);
-
-  // js_async_then(ctx, ret, js_function_bind_return(ctx, ))
+  switch(magic) {
+    case GENERATOR_NEXT: {
+      ret = generator_next(gen, argc > 0 ? argv[0] : JS_UNDEFINED);
+      break;
+    }
+    case GENERATOR_RETURN: {
+      ResolveFunctions async = {JS_NULL, JS_NULL};
+      ret = js_async_create(ctx, &async);
+      asynciterator_stop(&gen->iterator, argc > 0 ? argv[0] : JS_UNDEFINED, ctx);
+      js_async_resolve(ctx, &async, argc > 0 ? argv[0] : JS_UNDEFINED);
+      break;
+    }
+    case GENERATOR_THROW: {
+      ResolveFunctions async = {JS_NULL, JS_NULL};
+      ret = js_async_create(ctx, &async);
+      asynciterator_cancel(&gen->iterator, argv[0], ctx);
+      js_async_reject(ctx, &async, argv[0]);
+      break;
+    }
+  }
 
   return ret;
 }
 
 static JSValue
-minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {
+minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
   JSValue ret = JS_UNDEFINED;
 
@@ -35,7 +58,7 @@ minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 }
 
 static JSValue
-minnet_generator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int magic, void* opaque) {
+minnet_generator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
   JSValue ret = JS_UNDEFINED;
 
@@ -79,9 +102,18 @@ static const JSCFunctionListEntry minnet_generator_funcs[] = {
 
 JSValue
 minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
-  JSValue ret = JS_NewObject(ctx);
+  JSValue proto, ret;
+  static const char* method_names[] = {"next", "return", "throw"};
 
-  JS_SetPropertyStr(ctx, ret, "next", js_function_cclosure(ctx, minnet_generator_next, 0, 0, generator_dup(gen), (void*)&generator_free));
+  proto = js_asyncgenerator_prototype(ctx);
+  ret = JS_NewObjectProto(ctx, proto);
+  JS_FreeValue(ctx, proto);
+
+  for(size_t i = 0; i < countof(method_names); i++) {
+    JSValue func = js_function_cclosure(ctx, minnet_generator_method, 0, i, generator_dup(gen), (void*)&generator_free);
+    JS_DefinePropertyValueStr(ctx, ret, method_names[i], func, JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
+  }
+
   JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
 
   return ret;
@@ -110,3 +142,23 @@ JSClassDef minnet_generator_class = {
     "MinnetGenerator",
     .finalizer = minnet_generator_finalizer,
 };
+
+int
+minnet_generator_init(JSContext* ctx, JSModuleDef* m) {
+
+  // Add class Generator
+  JS_NewClassID(&minnet_generator_class_id);
+
+  JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
+  minnet_generator_proto = JS_NewObject(ctx);
+  // JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, countof(minnet_generator_proto_funcs));
+  JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
+
+  minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_generator_ctor, minnet_generator_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Generator", minnet_generator_ctor);
+
+  return 0;
+}

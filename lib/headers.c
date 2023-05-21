@@ -2,8 +2,8 @@
 #include "headers.h"
 #include <libwebsockets.h>
 #include <strings.h>
-/*
-JSValue
+
+/*JSValue
 headers_object(JSContext* ctx, const void* start, const void* e) {
   JSValue ret = JS_NewObject(ctx);
   size_t len, namelen, n;
@@ -23,6 +23,7 @@ headers_object(JSContext* ctx, const void* start, const void* e) {
       }
     }
   }
+
   return ret;
 }*/
 
@@ -37,7 +38,8 @@ headers_write(ByteBuffer* buffer, struct lws* wsi, uint8_t** in, uint8_t* end) {
     uint8_t* name = p;
 
     m = namelen + 1;
-    while(p[m] && p[m] == ' ') ++m;
+    while(p[m] && p[m] == ' ')
+      ++m;
     p += m;
     next -= m;
 
@@ -127,6 +129,7 @@ headers_at(ByteBuffer* b, size_t* lenptr, size_t index, const char* itemdelim) {
     x += c;
     ++i;
   }
+
   return 0;
 }
 
@@ -188,11 +191,14 @@ headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
         if(!headers->alloc)
           buffer_alloc(headers, 1024);
 
-        while(!buffer_printf(headers, "%.*s: %s\n", namelen, name, hdr)) { buffer_grow(headers, 1024); }
+        while(!buffer_printf(headers, "%.*s: %s\n", namelen, name, hdr)) {
+          buffer_grow(headers, 1024);
+        }
         ++count;
       }
     }
   }
+
   return count;
 }
 
@@ -266,6 +272,8 @@ headers_size(ByteBuffer* headers, const char* itemdelim) {
   uint8_t *ptr, *end = headers->write;
   size_t i = 0;
 
-  for(ptr = headers->start; ptr != end; ptr += headers_next(ptr, end, itemdelim)) { ++i; }
+  for(ptr = headers->start; ptr != end; ptr += headers_next(ptr, end, itemdelim))
+    ++i;
+
   return i;
 }

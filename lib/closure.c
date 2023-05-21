@@ -20,21 +20,6 @@ closure_free_object(void* ptr, JSRuntime* rt) {
 }
 
 union closure*
-closure_object(JSContext* ctx, JSValueConst val) {
-  union closure* ret;
-
-  assert(JS_IsObject(val));
-  JS_DupValue(ctx, val);
-
-  if((ret = closure_new(ctx))) {
-    ret->pointer = JS_VALUE_GET_OBJ(val);
-    ret->free_func = &closure_free_object;
-  }
-
-  return ret;
-}
-
-union closure*
 closure_dup(union closure* c) {
   ++c->ref_count;
   return c;

@@ -388,4 +388,22 @@ const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetResponse", JS_PROP_CONFIGURABLE),
 };
 
-const size_t minnet_response_proto_funcs_size = countof(minnet_response_proto_funcs);
+
+int
+minnet_response_init(JSContext* ctx, JSModuleDef* m) {
+  // Add class Response
+  JS_NewClassID(&minnet_response_class_id);
+  JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
+
+  minnet_response_proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, minnet_response_proto, minnet_response_proto_funcs, countof(minnet_response_proto_funcs));
+  JS_SetClassProto(ctx, minnet_response_class_id, minnet_response_proto);
+
+  minnet_response_ctor = JS_NewCFunction2(ctx, minnet_response_constructor, "MinnetResponse", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, minnet_response_ctor, minnet_response_proto);
+
+  if(m)
+    JS_SetModuleExport(ctx, m, "Response", minnet_response_ctor);
+
+  return 0;
+}

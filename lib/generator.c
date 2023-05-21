@@ -4,7 +4,7 @@
 static ssize_t enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback);
 static ssize_t enqueue_value(Generator* gen, JSValueConst value, JSValueConst callback);
 
-void
+static void
 generator_zero(Generator* gen) {
   memset(gen, 0, sizeof(Generator));
   asynciterator_zero(&gen->iterator);
@@ -40,6 +40,7 @@ generator_new(JSContext* ctx) {
     gen->block_fn = &block_toarraybuffer;
     gen->callback = JS_UNDEFINED;
   }
+
   return gen;
 }
 
@@ -85,7 +86,7 @@ generator_update(Generator* gen) {
     JSValue chunk = generator_dequeue(gen, &done);
     // printf("%-22s i: %i reads: %zu q->items: %zu done: %i\n", __func__, i, list_size(&gen->iterator.reads), gen->q ? list_size(&gen->q->items) : 0, done);
 
-    done ? asynciterator_stop(&gen->iterator, gen->ctx) : asynciterator_yield(&gen->iterator, chunk, gen->ctx);
+    done ? asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx) : asynciterator_yield(&gen->iterator, chunk, gen->ctx);
     JS_FreeValue(gen->ctx, chunk);
 
     ++i;
@@ -130,7 +131,6 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
     JS_FreeValue(gen->ctx, chunk);
   } else {
     ret = enqueue_block(gen, blk, callback);
-    // printf("%-22s reads: %zu continuous: %i queued: %zu\n", __func__, list_size(&gen->iterator.reads), gen->q && gen->q->continuous, gen->q ? queue_size(gen->q) : 0);
   }
 
   if(ret >= 0) {
@@ -148,26 +148,14 @@ generator_push(Generator* gen, JSValueConst value) {
 
   printf("%-22s reads: %zu value: %.*s closing: %i closed: %i\n", __func__, list_size(&gen->iterator.reads), 10, JS_ToCString(gen->ctx, value), gen->closing, gen->closed);
 
-  /* AsyncRead* read;
-   JSValueConst callback = JS_UNDEFINED, nextarg = JS_UNDEFINED;
-
-   if((read = asynciterator_front(&gen->iterator))) {
-     nextarg = JS_DupValue(gen->ctx, read->argument);
-   } else {
-     callback = JS_DupValue(gen->ctx, funcs.resolve);
-   }*/
-
   if(!(gen->closing || gen->closed) && generator_yield(gen, value, JS_UNDEFINED)) {
     JS_FreeValue(gen->ctx, gen->callback);
     gen->callback = funcs.resolve;
     funcs.resolve = JS_UNDEFINED;
-    // js_async_resolve(gen->ctx, &funcs, nextarg);
   } else {
     js_async_reject(gen->ctx, &funcs, JS_UNDEFINED);
   }
 
-  /* JS_FreeValue(gen->ctx, nextarg);
-   JS_FreeValue(gen->ctx, callback);*/
   js_async_free(gen->ctx, &funcs);
   return ret;
 }
@@ -180,20 +168,9 @@ generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
     JSBuffer buf = js_input_chars(gen->ctx, value);
     ret = buf.size;
     js_buffer_free(&buf, gen->ctx);
-
-    /* generator_callback(gen);
-     gen->callback = JS_DupValue(gen->ctx, callback);*/
-    /*if(JS_IsFunction(gen->ctx, callback))
-      JS_FreeValue(gen->ctx, JS_Call(gen->ctx, callback, JS_UNDEFINED, 0, 0));*/
-
   } else {
     if((ret = enqueue_value(gen, value, callback)) < 0)
       return FALSE;
-
-    /* if(!gen->q || !queue_continuous(gen->q)) {
-       JS_FreeValue(gen->ctx, gen->callback);
-       gen->callback = JS_DupValue(gen->ctx, callback);
-     }*/
   }
 
   if(ret >= 0) {
@@ -232,7 +209,7 @@ generator_stop(Generator* gen, JSValueConst arg) {
     }
   }
 
-  ret = asynciterator_stop(&gen->iterator, gen->ctx);
+  ret = asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx);
 
   // generator_callback(gen);
 
@@ -259,6 +236,7 @@ generator_continuous(Generator* gen, JSValueConst callback) {
 
     return item != NULL;
   }
+
   return q != NULL;
 }
 
@@ -268,6 +246,7 @@ generator_queue(Generator* gen) {
     printf("Creating Queue... %s\n", JS_ToCString(gen->ctx, gen->callback));
     gen->q = queue_new(gen->ctx);
   }
+
   return gen->q;
 }
 
@@ -281,6 +260,7 @@ generator_finish(Generator* gen) {
     JS_FreeValue(gen->ctx, ret);
     return TRUE;
   }
+
   return FALSE;
 }
 
@@ -303,9 +283,10 @@ enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
 
 static ssize_t
 enqueue_value(Generator* gen, JSValueConst value, JSValueConst callback) {
+  ssize_t ret;
   JSBuffer buf = js_input_chars(gen->ctx, value);
   ByteBlock blk = block_copy(buf.data, buf.size);
-  ssize_t ret;
+
   js_buffer_free(&buf, gen->ctx);
 
   if((ret = enqueue_block(gen, blk, callback)) == -1)
