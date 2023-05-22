@@ -157,6 +157,7 @@ JSValue js_global_get(JSContext*, const char* prop);
 JSValue js_global_os(JSContext*);
 JSValue js_global_prototype(JSContext*, const char* class_name);
 JSValue js_global_prototype_func(JSContext*, const char* class_name, const char* func_name);
+JSValue js_global_static_func(JSContext* ctx, const char* class_name, const char* func_name);
 JSValue js_os_get(JSContext*, const char* prop);
 JSValue js_timer_start(JSContext*, JSValueConst fn, uint32_t ms);
 void js_timer_cancel(JSContext*, JSValueConst timer);
@@ -206,6 +207,16 @@ BOOL js_async_pending(ResolveFunctions const*);
 JSValue js_async_then(JSContext*, JSValueConst promise, JSValueConst handler);
 JSValue js_async_then2(JSContext* ctx, JSValueConst promise, JSValueConst, JSValueConst);
 JSValue js_async_catch(JSContext*, JSValueConst promise, JSValueConst handler);
+JSValue js_arraybuffer_tostring(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]);
+
+typedef struct {
+  JSValue promise;
+  BOOL thened, catched;
+} JSWrappedPromiseRecord;
+
+JSWrappedPromiseRecord* js_wrappedpromise_data(JSValueConst);
+JSWrappedPromiseRecord* js_wrappedpromise_data2(JSContext*, JSValueConst);
+JSValue js_promise_wrap(JSContext*, JSValueConst);
 
 static inline BOOL
 js_atom_is_int32(JSAtom atom) {

@@ -516,6 +516,15 @@ js_global_prototype_func(JSContext* ctx, const char* class_name, const char* fun
 }
 
 JSValue
+js_global_static_func(JSContext* ctx, const char* class_name, const char* func_name) {
+  JSValue ctor, func;
+  ctor = js_global_get(ctx, class_name);
+  func = JS_GetPropertyStr(ctx, ctor, func_name);
+  JS_FreeValue(ctx, ctor);
+  return func;
+}
+
+JSValue
 js_os_get(JSContext* ctx, const char* prop) {
   JSValue os_obj = js_global_os(ctx);
   JSValue ret = JS_GetPropertyStr(ctx, os_obj, prop);
@@ -1222,4 +1231,133 @@ js_async_then2(JSContext* ctx, JSValueConst promise, JSValueConst onresolved, JS
 JSValue
 js_async_catch(JSContext* ctx, JSValueConst promise, JSValueConst handler) {
   return js_invoke(ctx, promise, "catch", 1, &handler);
+}
+
+static THREAD_LOCAL JSClassID js_wrappedpromise_class_id;
+
+JSWrappedPromiseRecord*
+js_wrappedpromise_data(JSValueConst value) {
+  return JS_GetOpaque(value, js_wrappedpromise_class_id);
+}
+
+JSWrappedPromiseRecord*
+js_wrappedpromise_data2(JSContext* ctx, JSValueConst value) {
+  return JS_GetOpaque2(ctx, value, js_wrappedpromise_class_id);
+}
+
+enum { METHOD_THEN = 1, METHOD_CATCH = 2 };
+
+static JSValue
+js_wrappedpromise_methods(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  JSValue ret = JS_UNDEFINED;
+  JSWrappedPromiseRecord* wpr;
+
+  if(!(wpr = js_wrappedpromise_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case METHOD_THEN: {
+      ret = js_invoke(ctx, wpr->promise, "then", argc, argv);
+      if(argc > 1)
+        wpr->catched = TRUE;
+      wpr->thened = TRUE;
+      break;
+    }
+    case METHOD_CATCH: {
+      ret = js_invoke(ctx, wpr->promise, "catch", argc, argv);
+      wpr->catched = TRUE;
+      break;
+    }
+  }
+
+  return ret;
+}
+
+static JSValue
+js_wrappedpromise_state(JSContext* ctx, JSValueConst this_val) {
+  JSValue ret = JS_UNDEFINED;
+  JSWrappedPromiseRecord* wpr;
+
+  if(!(wpr = js_wrappedpromise_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  return JS_NewUint32(ctx, (wpr->thened ? METHOD_THEN : 0) | (wpr->catched ? METHOD_CATCH : 0));
+}
+
+static void
+js_wrappedpromise_finalizer(JSRuntime* rt, JSValue val) {
+  JSWrappedPromiseRecord* wpr;
+
+  if((wpr = js_wrappedpromise_data(val))) {
+    JS_FreeValueRT(rt, wpr->promise);
+    js_free_rt(rt, wpr);
+  }
+}
+
+static JSClassDef js_wrappedpromise_class = {
+    .class_name = "JSWrappedPromise",
+    .finalizer = js_wrappedpromise_finalizer,
+};
+
+static JSValue wrappedpromise_proto;
+
+static const JSCFunctionListEntry js_wrappedpromise_functions[] = {
+    JS_CFUNC_MAGIC_DEF("then", 1, js_wrappedpromise_methods, METHOD_THEN),
+    JS_CFUNC_MAGIC_DEF("catch", 1, js_wrappedpromise_methods, METHOD_CATCH),
+    JS_CGETSET_DEF("state", js_wrappedpromise_state, 0),
+};
+
+JSValue
+js_promise_prototype(JSContext* ctx) {
+  JSValue ret, promise, resolve_funcs[2];
+  promise = JS_NewPromiseCapability(ctx, resolve_funcs);
+  ret = JS_GetPrototype(ctx, promise);
+  JS_FreeValue(ctx, promise);
+  JS_FreeValue(ctx, resolve_funcs[0]);
+  JS_FreeValue(ctx, resolve_funcs[1]);
+  return ret;
+}
+
+JSValue
+js_promise_wrap(JSContext* ctx, JSValueConst promise) {
+  JSWrappedPromiseRecord* wpr;
+  JSValue proto, obj;
+
+  if(js_wrappedpromise_class_id == 0) {
+    JS_NewClassID(&js_wrappedpromise_class_id);
+    JS_NewClass(JS_GetRuntime(ctx), js_wrappedpromise_class_id, &js_wrappedpromise_class);
+    JSValue promise_proto = js_promise_prototype(ctx);
+    wrappedpromise_proto = JS_NewObjectProto(ctx, promise_proto);
+    JS_FreeValue(ctx, promise_proto);
+    JS_SetPropertyFunctionList(ctx, wrappedpromise_proto, js_wrappedpromise_functions, countof(js_wrappedpromise_functions));
+  }
+
+  obj = JS_NewObjectProtoClass(ctx, wrappedpromise_proto, js_wrappedpromise_class_id);
+
+  if(JS_IsException(obj))
+    return obj;
+
+  if(!(wpr = js_malloc(ctx, sizeof(JSWrappedPromiseRecord)))) {
+    JS_FreeValue(ctx, obj);
+    return JS_EXCEPTION;
+  }
+
+  wpr->promise = JS_DupValue(ctx, promise);
+  wpr->thened = FALSE;
+  wpr->catched = FALSE;
+
+  JS_SetOpaque(obj, wpr);
+
+  return obj;
+}
+
+JSValue
+js_arraybuffer_tostring(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  size_t size;
+  uint8_t* ptr;
+
+  if((ptr = JS_GetArrayBuffer(ctx, &size, argv[0])))
+    return JS_NewStringLen(ctx, (const char*)ptr, size);
+
+  return JS_ThrowTypeError(ctx, "ArrayBuffer expected");
 }

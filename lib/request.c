@@ -45,7 +45,7 @@ request_init(Request* req, URL url, enum http_method method) {
   req->body = 0;
   req->read_only = FALSE;
   req->secure = url_is_tls(url);
-  req->promise = JS_UNDEFINED;
+  /*req->promise = JS_UNDEFINED;*/
 }
 
 Request*

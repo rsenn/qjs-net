@@ -86,7 +86,6 @@ asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
 
 BOOL
 asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
-
   if(!list_empty(&it->reads)) {
     asynciterator_emplace(it, value, TRUE, ctx);
     it->closed = TRUE;

@@ -87,7 +87,7 @@ tests({
       eq((await gen.next()).value, undefined);
     }
   },
-  async 'throw()+stop()'() {
+  async 'throw()+catch/stop()'() {
     const gen = new Generator(async (push, stop) => {
       try {
         for(let i = 0; i < 10; i++) await push(i);
@@ -102,7 +102,6 @@ tests({
     try {
       let pr = gen.throw(new Error('value#3'));
       console.log('pr', pr);
-
       pr = await pr;
       console.log('pr', pr);
     } catch(err) {

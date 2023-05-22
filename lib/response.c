@@ -40,6 +40,12 @@ void
 response_clear(Response* resp, JSRuntime* rt) {
   url_free_rt(&resp->url, rt);
   buffer_free(&resp->headers);
+
+  if(resp->status_text) {
+    js_free_rt(rt, resp->status_text);
+    resp->status_text = 0;
+  }
+
   if(resp->body) {
     generator_free(resp->body);
     resp->body = 0;

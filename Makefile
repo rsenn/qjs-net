@@ -2,12 +2,13 @@
 #  genmakefile --create-bins --create-module --create-objs -o Makefile -m make -Ilib -d build -R obj *.c *.c -I/opt/libwebsockets/include -I/usr/local/include/quickjs -L/opt/libwebsockets/lib -lwebsockets -L/opt/libressl-3.5.1/lib -lssl -lcrypto -lbrotlidec -lbrotlienc -lbrotlicommon -lz -lquickjs -n net -DJS_SHARED_LIBRARY
 QUICKJS_DIR = ../quickjs
 LIBWEBSOCKETS_DIR = ../libwebsockets
+OPENSSL_DIR = /opt/libressl-3.5.1
 
 CC = gcc
 DEFS = -DJS_SHARED_LIBRARY
-CPPFLAGS = -Ilib -I$(LIBWEBSOCKETS_DIR)/include -I$(QUICKJS_DIR)
-LDFLAGS = -shared
-LIBS = -L$(LIBWEBSOCKETS_DIR)/lib -L$(QUICKJS_DIR) -lwebsockets -lssl -lcrypto -lbrotlienc -lbrotlidec -lbrotlicommon -lz
+CPPFLAGS = -Ilib -I$(OPENSSL_DIR)/include -I$(LIBWEBSOCKETS_DIR)/include -I$(QUICKJS_DIR)
+LDFLAGS = -shared -Wl,-rpath=$(OPENSSL_DIR)/lib 
+LIBS = -L$(OPENSSL_DIR)/lib -L$(LIBWEBSOCKETS_DIR)/lib -L$(QUICKJS_DIR) -lwebsockets -lssl -lcrypto -lbrotlienc -lbrotlidec -lbrotlicommon -lz
 
 ifdef DEBUG
 CFLAGS = -g3 -ggdb -O0 -fPIC
@@ -28,7 +29,7 @@ build/:
 build/%.o: %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(DEFS) -c -o $@ $<
 
-net.so: build/asynciterator.o build/buffer.o build/callback.o build/closure.o build/context.o build/deferred.o build/form-parser.o build/generator.o build/headers.o build/jsutils.o build/lws-utils.o build/opaque.o build/poll.o build/query.o build/queue.o build/ref.o build/request.o build/response.o build/ringbuffer.o build/session.o build/url.o build/utils.o build/ws.o build/minnet-asynciterator.o build/minnet.o build/minnet-client.o build/minnet-client-http.o build/minnet-fetch.o build/minnet-form-parser.o build/minnet-generator.o build/minnet-hash.o build/minnet-headers.o build/minnet-plugin-broker.o build/minnet-request.o build/minnet-response.o build/minnet-ringbuffer.o build/minnet-server.o build/minnet-server-http.o build/minnet-server-proxy.o build/minnet-server-ws.o build/minnet-url.o build/minnet-websocket.o
+net.so: build/asynciterator.o build/buffer.o build/callback.o build/closure.o build/context.o build/deferred.o build/formparser.o build/generator.o build/headers.o build/js-utils.o build/lws-utils.o build/opaque.o build/poll.o build/query.o build/queue.o build/request.o build/response.o build/ringbuffer.o build/session.o build/url.o build/utils.o build/ws.o build/minnet-asynciterator.o build/minnet.o build/minnet-client.o build/minnet-client-http.o build/minnet-fetch.o build/minnet-formparser.o build/minnet-generator.o build/minnet-hash.o build/minnet-headers.o build/minnet-plugin-broker.o build/minnet-request.o build/minnet-response.o build/minnet-ringbuffer.o build/minnet-server.o build/minnet-server-http.o build/minnet-server-proxy.o build/minnet-server-ws.o build/minnet-url.o build/minnet-websocket.o
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 clean:

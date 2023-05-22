@@ -7,7 +7,7 @@
 typedef struct http_response MinnetResponse;
 
 MinnetResponse* minnet_response_data(JSValueConst);
-JSValue minnet_response_new(JSContext*, MinnetURL, int, char*, BOOL, const char*);
+JSValue minnet_response_new(JSContext*, MinnetURL, int, const char*, BOOL, const char*);
 JSValue minnet_response_wrap(JSContext*, MinnetResponse*);
 JSValue minnet_response_constructor(JSContext*, JSValueConst, int, JSValueConst[]);
 void minnet_response_finalizer(JSRuntime*, JSValueConst);

@@ -33,11 +33,11 @@ minnet_response_data(JSValueConst obj) {
 }
 
 JSValue
-minnet_response_new(JSContext* ctx, MinnetURL url, int status, char* status_text, BOOL headers_sent, const char* type) {
+minnet_response_new(JSContext* ctx, MinnetURL url, int status, const char* status_text, BOOL headers_sent, const char* type) {
   MinnetResponse* resp;
 
   if((resp = response_new(ctx))) {
-    response_init(resp, url, status, status_text, headers_sent, type ? js_strdup(ctx, type) : 0);
+    response_init(resp, url, status, status_text ? js_strdup(ctx, status_text) : 0, headers_sent, type ? js_strdup(ctx, type) : 0);
 
     return minnet_response_wrap(ctx, resp);
   }
@@ -205,18 +205,11 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       char* type;
       size_t len;
 
-      /*   if((type = resp->type))
-           len = strlen(type);
-         else*/
       type = headers_getlen(&resp->headers, &len, "content-type", "\r\n", ":");
 
       ret = type ? JS_NewStringLen(ctx, type, len) : JS_NULL;
       break;
     }
-      /* case RESPONSE_OFFSET: {
-         ret = JS_NewInt64(ctx, buffer_HEAD(resp->body));
-         break;
-       }*/
     case RESPONSE_HEADERS: {
       ret = minnet_headers_wrap(ctx, &resp->headers, response_dup(resp), (HeadersFreeFunc*)&response_free);
       break;
@@ -241,6 +234,7 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
   JSValue ret = JS_UNDEFINED;
   const char* str;
   size_t len;
+
   if(!(resp = minnet_response_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
@@ -256,6 +250,13 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
         resp->status = s;
       break;
     }
+    case RESPONSE_STATUSTEXT: {
+      if(resp->status_text)
+        js_free(ctx, resp->status_text);
+
+      resp->status_text = js_tostring(ctx, value);
+      break;
+    }
     case RESPONSE_HEADERS_SENT: {
       resp->headers_sent = JS_ToBool(ctx, value);
       break;
@@ -268,6 +269,11 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
     case RESPONSE_TYPE: {
       headers_set(&resp->headers, "content-type", str, "\r\n");
       //  resp->type = js_strdup(ctx, str);
+      break;
+    }
+    case RESPONSE_HEADERS: {
+      buffer_reset(&resp->headers);
+      headers_fromobj(&resp->headers, value, "\n", ": ", ctx);
       break;
     }
     case RESPONSE_BODYUSED: {
@@ -314,6 +320,8 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
   if(JS_IsException(obj))
     goto fail;
 
+  JS_SetOpaque(obj, resp);
+
   if(argc > 0) {
     Generator* generator = response_generator(resp, ctx);
 
@@ -322,32 +330,9 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
     generator_enqueue(generator, argv[0]);
     queue_close(generator->q);
 
-    if(argc > 1) {
-      js_copy_properties(ctx, argv[1], argv[i], JS_GPN_STRING_MASK);
-    }
+    if(argc > 1)
+      js_copy_properties(ctx, obj, argv[1], JS_GPN_STRING_MASK);
   }
-
-  /*for(i = 0; i < argc; i++) {
-    if(JS_IsObject(argv[i]) && !JS_IsNull(argv[i])) {
-      js_copy_properties(ctx, obj, argv[i], JS_GPN_STRING_MASK);
-      argc--;
-      argv++;
-    } else if(JS_IsString(argv[i])) {
-      const char* str = JS_ToCString(ctx, argv[i]);
-      if(!resp->url.path)
-        url_parse(&resp->url, str, ctx);
-      JS_FreeCString(ctx, str);
-
-    } else if(JS_IsBool(argv[i])) {
-      resp->headers_sent = JS_ToBool(ctx, argv[i]);
-    } else if(JS_IsNumber(argv[i])) {
-      int32_t s;
-      if(!JS_ToInt32(ctx, &s, argv[i]))
-        resp->status = s;
-    }
-  }*/
-
-  JS_SetOpaque(obj, resp);
 
   return obj;
 
@@ -369,6 +354,7 @@ static const JSClassDef minnet_response_class = {
     "MinnetResponse",
     .finalizer = minnet_response_finalizer,
 };
+
 static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("append", 2, minnet_response_header, HEADERS_APPEND),
     JS_CFUNC_MAGIC_DEF("get", 1, minnet_response_header, HEADERS_GET),
@@ -382,7 +368,7 @@ static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
 
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_response_get, minnet_response_set, RESPONSE_BODY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("bodyUsed", minnet_response_get, 0, RESPONSE_BODYUSED, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, 0, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, minnet_response_set, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_DEF("headersSent", minnet_response_get, 0, RESPONSE_HEADERS_SENT),
     JS_CGETSET_MAGIC_DEF("ok", minnet_response_get, 0, RESPONSE_OK),
     JS_CGETSET_MAGIC_DEF("redirected", minnet_response_get, minnet_response_set, RESPONSE_REDIRECTED),

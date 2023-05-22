@@ -376,27 +376,39 @@ serve_resolved_free(void* ptr) {
 static JSValue
 serve_rejected(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   HTTPAsyncResolveClosure* closure = ptr;
-  struct session_data* session;
+  struct session_data* session = closure->session;
 
-  if((session = closure->session)) {
+  assert(session);
 
-    const char* message = JS_ToCString(ctx, argv[0]);
+  const char* message = JS_ToCString(ctx, argv[0]);
 
-    assert(session->wait_resolve > 0);
-    --session->wait_resolve;
+  assert(session->wait_resolve > 0);
+  --session->wait_resolve;
 
-    DBG("wait_resolve=%i error=%s", session->wait_resolve, message);
+  DBG("wait_resolve=%i error=%s", session->wait_resolve, message);
 
-    MinnetServer* server;
+  MinnetServer* server;
 
-    if((server = lws_context_user(lws_get_context(closure->wsi))))
-      server_exception(server, JS_Throw(ctx, argv[0]));
+  if((server = lws_context_user(lws_get_context(closure->wsi))))
+    server_exception(server, JS_Throw(ctx, argv[0]));
 
-    queue_write(&session->sendq, message, strlen(message), ctx);
-    queue_close(&session->sendq);
+  queue_write(&session->sendq, message, strlen(message), ctx);
+  queue_close(&session->sendq);
 
-    JS_FreeCString(ctx, message);
+  JS_FreeCString(ctx, message);
+
+  {
+    MinnetWebsocket* ws = minnet_ws_data2(ctx, session->ws_obj);
+
+    struct wsi_opaque_user_data* opaque = ws_opaque(ws);
+
+    JS_FreeValue(ctx, session->resp_obj);
+    opaque->resp = response_new(ctx);
+    session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
   }
+
+  session_want_write(session, closure->wsi);
+
   return JS_UNDEFINED;
 }
 
@@ -559,9 +571,9 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
 
 static int
 serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
-  CallbackType type = session_callback(session, cb);
+  FunctionType type = session_callback(session, cb);
 
-  DBG("type=%s generator=%s", ((const char*[]){"NONE", "SYNC", "ASYNC"})[type], JS_ToCString(cb->ctx, session->generator));
+  DBG("type=%s generator=%s", ((const char*[]){"SYNC", "ASYNC", "GENERATOR", "ASYNC_GENERATOR"})[type], JS_ToCString(cb->ctx, session->generator));
 
   switch(type) {
     case ASYNC_GENERATOR:
@@ -614,15 +626,8 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
   if(session->response_sent)
     return 0;
 
-  /*  if(!resp->body)
-      response_generator(resp, ctx);*/
-
   DBG("status=%d generator=%d", resp->status, resp->body != NULL);
 
-  /*if(!wsi_http2(wsi)) {
-    BOOL done = FALSE;
-    serve_generator(ctx, session, wsi, &done);
-  }*/
   if(queue_complete(&session->sendq))
     content_len = queue_bytes(&session->sendq);
 
@@ -1116,13 +1121,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             queue_bytes(&session->sendq),
             session->wait_resolve);
 
-      assert(opaque->resp);
-      if(!(resp = opaque->resp)) {
-        resp = opaque->resp = response_new(ctx);
-        session->resp_obj = minnet_response_wrap(ctx, resp);
-      }
-
       if(!session->response_sent) {
+        // assert(opaque->resp);
+        if(!(resp = opaque->resp)) {
+          session->resp_obj = minnet_response_new(ctx, opaque->req->url, 200, "OK", FALSE, 0);
+          resp = opaque->resp = minnet_response_data(session->resp_obj);
+        }
+
         ByteBuffer b = BUFFER(buf);
         session->response_sent = !serve_response(wsi, &b, opaque->resp, ctx, session);
       }

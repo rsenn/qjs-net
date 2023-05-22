@@ -251,6 +251,60 @@ enum {
 
 static JSValue
 minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  JSValue ret = JS_UNDEFINED;
+  ResolveFunctions funcs;
+  MinnetRequest* req;
+  Generator* gen;
+
+  if(!(req = minnet_request_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  if((gen = req->body)) {
+    ret = js_async_create(ctx, &funcs);
+
+    switch(magic) {
+      case REQUEST_ARRAYBUFFER: {
+        generator_continuous(gen, funcs.resolve);
+        break;
+      }
+      case REQUEST_TEXT: {
+        JSValue tmp, fn = JS_NewCFunction(ctx, js_arraybuffer_tostring, "", 1);
+
+        tmp = js_invoke(ctx, ret, "then", 1, &fn);
+        JS_FreeValue(ctx, fn);
+        JS_FreeValue(ctx, ret);
+        ret = tmp;
+
+        generator_continuous(gen, funcs.resolve);
+        break;
+      }
+      case REQUEST_JSON: {
+        JSValue tmp, fn = JS_NewCFunction(ctx, js_arraybuffer_tostring, "", 1);
+
+        tmp = js_invoke(ctx, ret, "then", 1, &fn);
+        JS_FreeValue(ctx, fn);
+        JS_FreeValue(ctx, ret);
+        ret = tmp;
+
+        fn = js_global_static_func(ctx, "JSON", "parse");
+
+        tmp = js_invoke(ctx, ret, "then", 1, &fn);
+        JS_FreeValue(ctx, fn);
+        JS_FreeValue(ctx, ret);
+        ret = tmp;
+
+        generator_continuous(gen, funcs.resolve);
+        break;
+      }
+    }
+
+    js_async_free(ctx, &funcs);
+  }
+
+  return ret;
+}
+/*static JSValue
+minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetRequest* req;
   JSValue ret = JS_UNDEFINED;
 
@@ -278,7 +332,7 @@ minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
   return ret;
 }
-
+*/
 static JSValue
 minnet_request_getheader(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetRequest* req;
@@ -323,6 +377,7 @@ static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("referer", minnet_request_get, 0, REQUEST_REFERER, 0),
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_request_method, REQUEST_ARRAYBUFFER),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_request_method, REQUEST_TEXT),
+    JS_CFUNC_MAGIC_DEF("json", 0, minnet_request_method, REQUEST_JSON),
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_request_get, 0, REQUEST_BODY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("secure", minnet_request_get, 0, REQUEST_SECURE, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("h2", minnet_request_get, 0, REQUEST_H2, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE),

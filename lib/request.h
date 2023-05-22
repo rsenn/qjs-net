@@ -19,7 +19,7 @@ typedef struct http_request {
   URL url;
   ByteBuffer headers;
   Generator* body;
-  JSValue promise;
+  /* JSValue promise;*/
 } Request;
 
 const char* method_string(enum http_method);
@@ -34,13 +34,12 @@ void request_free(Request*, JSRuntime* rt);
 Request* request_from(int, JSValueConst argv[], JSContext* ctx);
 BOOL request_match(Request*, const char* path, enum http_method method);
 
-static inline JSValue
+/*static inline JSValue
 request_promise(Request* req, ResolveFunctions* fns, JSContext* ctx) {
   JSValue pr = js_async_create(ctx, fns);
   req->promise = pr;
   return pr;
-}
-
+}*/
 static inline const char*
 method_name(int m) {
   if(m < 0)
