@@ -380,22 +380,31 @@ serve_rejected(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   assert(session);
 
-  const char* message = JS_ToCString(ctx, argv[0]);
+  char* error = js_error_string(ctx, argv[0]);
 
   assert(session->wait_resolve > 0);
   --session->wait_resolve;
 
-  DBG("wait_resolve=%i error=%s", session->wait_resolve, message);
+  DBG("wait_resolve=%i error=%s", session->wait_resolve, error);
 
   MinnetServer* server;
 
   if((server = lws_context_user(lws_get_context(closure->wsi))))
     server_exception(server, JS_Throw(ctx, argv[0]));
 
-  queue_write(&session->sendq, message, strlen(message), ctx);
-  queue_close(&session->sendq);
+  queue_write(&session->sendq, error, strlen(error), ctx);
 
-  JS_FreeCString(ctx, message);
+  js_free(ctx, error);
+  /*if(js_has_propertystr(ctx, argv[0], "stack")) {
+    const char* stack = js_get_propertystr_cstring(ctx, argv[0], "stack");
+
+    queue_write(&session->sendq, "\n", 1, ctx);
+    queue_write(&session->sendq, stack, strlen(stack), ctx);
+
+    JS_FreeCString(ctx, stack);
+  }*/
+
+  queue_close(&session->sendq);
 
   {
     MinnetWebsocket* ws = minnet_ws_data2(ctx, session->ws_obj);
@@ -403,8 +412,8 @@ serve_rejected(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     struct wsi_opaque_user_data* opaque = ws_opaque(ws);
 
     JS_FreeValue(ctx, session->resp_obj);
-    opaque->resp = response_new(ctx);
-    session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
+    session->resp_obj = minnet_response_new(ctx, opaque->req->url, 500, "Internal Server Error", FALSE, "text/plain");
+    opaque->resp = minnet_response_data(session->resp_obj);
   }
 
   session_want_write(session, closure->wsi);
@@ -418,7 +427,6 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   struct session_data* session = closure->session;
   JSValue value = JS_UNDEFINED;
   BOOL done = FALSE;
-  MinnetWebsocket* ws = minnet_ws_data2(ctx, session->ws_obj);
 
   assert(session);
   assert(session->wait_resolve > 0);
@@ -431,6 +439,7 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
     if((resp = minnet_response_data(argv[0]))) {
       JSValue body = JS_GetPropertyStr(ctx, argv[0], "body");
+      MinnetWebsocket* ws = minnet_ws_data2(ctx, session->ws_obj);
       struct wsi_opaque_user_data* opaque = ws_opaque(ws);
 
       JS_FreeValue(ctx, session->resp_obj);

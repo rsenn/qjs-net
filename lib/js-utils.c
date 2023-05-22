@@ -709,6 +709,44 @@ js_error_print(JSContext* ctx, JSValueConst error) {
     JS_FreeCString(ctx, str);
 }
 
+char*
+js_error_string(JSContext* ctx, JSValueConst error) {
+  DynBuf buf;
+  const char *str = 0, *stack = 0;
+
+  dbuf_init2(&buf, ctx, (DynBufReallocFunc*)js_realloc);
+
+  if(JS_IsObject(error)) {
+    JSValue st = JS_GetPropertyStr(ctx, error, "stack");
+
+    if(!JS_IsUndefined(st))
+      stack = JS_ToCString(ctx, st);
+
+    JS_FreeValue(ctx, st);
+  }
+
+  if(!JS_IsNull(error) && (str = JS_ToCString(ctx, error))) {
+    const char* type = js_object_classname(ctx, error);
+    const char* exception = str;
+    size_t typelen = strlen(type);
+
+    if(!strncmp(exception, type, typelen) && exception[typelen] == ':') {
+      exception += typelen + 2;
+    }
+
+    dbuf_printf(&buf, "Exception %s: %s", type, exception);
+  }
+
+  if(stack && *stack) {
+    size_t pos = 0, i = 0, len, end = strlen(stack);
+    dbuf_printf(&buf, "\nStack:\n%s", stack);
+  }
+
+  dbuf_put(&buf, "\0", 1);
+
+  return buf.buf;
+}
+
 uint8_t*
 js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value) {
   size_t n = 0;

@@ -19,7 +19,6 @@ typedef struct http_request {
   URL url;
   ByteBuffer headers;
   Generator* body;
-  /* JSValue promise;*/
 } Request;
 
 const char* method_string(enum http_method);

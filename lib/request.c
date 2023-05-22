@@ -64,7 +64,7 @@ request_new(URL url, HTTPMethod method, JSContext* ctx) {
   if((req = request_alloc(ctx)))
     request_init(req, url, method);
 
-  req->body = generator_new(ctx);
+  req->body = method == METHOD_POST ? generator_new(ctx) : 0;
 
   return req;
 }

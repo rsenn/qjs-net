@@ -1,5 +1,5 @@
 import { popen, getenv } from 'std';
-import { LLL_USER, logLevels, createServer, setLog, Generator } from 'net';
+import { LLL_USER, LLL_ERR, logLevels, createServer, setLog, Generator } from 'net';
 
 import('console').then(({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 0 } })));
 
@@ -64,7 +64,7 @@ createServer({
       yield `</html>\n`;
     },
     async *stream(req, resp) {
-      resp.type = 'audio/mpeg';
+      //resp.type = 'audio/mpeg';
 
       const [source] = [...PulseAudio.getSources()];
 
@@ -73,6 +73,6 @@ createServer({
   },
   onRequest(req, resp) {
     console.log('onRequest', req, resp);
-    resp.headers.set('server', `qjs-net pulseaudio streamer`);
+    //resp.headers.set('server', `qjs-net pulseaudio streamer`);
   }
 });

@@ -171,6 +171,7 @@ JSValue js_invoke(JSContext*, JSValueConst this_obj, const char* method, int arg
 BOOL js_is_promise(JSContext*, JSValueConst value);
 JSValue js_error_new(JSContext*, const char* fmt, ...);
 void js_error_print(JSContext*, JSValueConst error);
+char* js_error_string(JSContext* ctx, JSValueConst error);
 uint8_t* js_toptrsize(JSContext*, unsigned int* plen, JSValueConst value);
 uint32_t js_get_propertystr_uint32(JSContext*, JSValueConst obj, const char* str);
 const char* js_get_propertystr_cstring(JSContext* ctx, JSValueConst obj, const char* prop);

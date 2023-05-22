@@ -25,9 +25,9 @@ let srv = createServer({
       console.log('/api', { req });
 
       let body = await req.json();
-      console.log('body', { body });
+      console.log('body', body);
 
-      return new Response('Hello, World!', {
+      return new Response('Hello, World!\n' + JSON.stringify(body, null, 2) + '\n', {
         status: 200,
         headers: { 'content-type': 'text/plain' }
       });

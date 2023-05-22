@@ -24,7 +24,7 @@ minnet_request_data(JSValueConst obj) {
 JSValue
 minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
-  MinnetRequest* req;
+  MinnetRequest *req, *other;
   BOOL got_url = FALSE;
 
   if(!(req = request_alloc(ctx)))
@@ -42,18 +42,19 @@ minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JS
 
   JS_SetOpaque(obj, req);
 
-  while(argc > 0) {
+  if((other = minnet_request_data(argv[0]))) {
+    req->secure = other->secure;
+    req->h2 = other->h2;
+    req->method = other->method;
+    req->url = url_clone(other->url, ctx);
+    buffer_clone(&req->headers, &other->headers);
 
-    if(!got_url) {
-      got_url = url_fromvalue(&req->url, argv[0], ctx);
-    }
-    if(JS_IsObject(argv[0])) {
-      js_copy_properties(ctx, obj, argv[0], JS_GPN_STRING_MASK);
-    }
-
-    argc--;
-    argv++;
+  } else {
+    url_fromvalue(&req->url, argv[0], ctx);
   }
+
+  if(argc > 1 && JS_IsObject(argv[1]))
+    js_copy_properties(ctx, obj, argv[1], JS_GPN_STRING_MASK);
 
   req->read_only = TRUE;
   return obj;
@@ -396,7 +397,7 @@ minnet_request_init(JSContext* ctx, JSModuleDef* m) {
   JS_SetPropertyFunctionList(ctx, minnet_request_proto, minnet_request_proto_funcs, countof(minnet_request_proto_funcs));
   JS_SetClassProto(ctx, minnet_request_class_id, minnet_request_proto);
 
-  minnet_request_ctor = JS_NewCFunction2(ctx, minnet_request_constructor, "MinnetRequest", 0, JS_CFUNC_constructor, 0);
+  minnet_request_ctor = JS_NewCFunction2(ctx, minnet_request_constructor, "MinnetRequest", 1, JS_CFUNC_constructor, 0);
   JS_SetConstructor(ctx, minnet_request_ctor, minnet_request_proto);
 
   if(m)
