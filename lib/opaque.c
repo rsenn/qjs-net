@@ -1,3 +1,6 @@
+/**
+ * @file opaque.c
+ */
 #include "opaque.h"
 #include "ws.h"
 #include "request.h"

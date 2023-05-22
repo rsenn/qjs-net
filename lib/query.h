@@ -1,3 +1,6 @@
+/**
+ * @file query.h
+ */
 #ifndef QJSNET_LIB_QUERY_H
 #define QJSNET_LIB_QUERY_H
 

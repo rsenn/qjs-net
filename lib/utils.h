@@ -1,3 +1,6 @@
+/**
+ * @file utils.h
+ */
 #ifndef QJSNET_LIB_UTILS_H
 #define QJSNET_LIB_UTILS_H
 
@@ -64,7 +67,7 @@ size_t byte_findb(const void*, size_t hlen, const void* what, size_t wlen);
 
 static inline char*
 str_ndup(const char* s, size_t n) {
-  char* r = malloc(n + 1);
+  char* r = (char*)malloc(n + 1);
   if(r == NULL)
     return NULL;
   memcpy(r, s, n);

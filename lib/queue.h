@@ -1,3 +1,6 @@
+/**
+ * @file queue.h
+ */
 #ifndef QJSNET_LIB_QUEUE_H
 #define QJSNET_LIB_QUEUE_H
 

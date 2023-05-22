@@ -1,3 +1,6 @@
+/**
+ * @file opaque.h
+ */
 #ifndef QJSNET_LIB_OPAQUE_H
 #define QJSNET_LIB_OPAQUE_H
 

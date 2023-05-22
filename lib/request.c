@@ -1,3 +1,6 @@
+/**
+ * @file request.c
+ */
 #define _GNU_SOURCE
 #include "request.h"
 #include "headers.h"
@@ -40,7 +43,6 @@ request_init(Request* req, URL url, enum http_method method) {
   req->url = url;
   req->method = method;
   req->body = 0;
-  req->ip = 0;
   req->read_only = FALSE;
   req->secure = url_is_tls(url);
   req->promise = JS_UNDEFINED;
@@ -83,7 +85,6 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
 
   ret = request_new(url, method, ctx);
 
-  ret->ip = wsi_ipaddr(wsi);
   ret->secure = wsi_tls(wsi);
   ret->h2 = wsi_http2(wsi);
 
@@ -94,15 +95,13 @@ void
 request_clear(Request* req, JSRuntime* rt) {
   url_free_rt(&req->url, rt);
   buffer_free(&req->headers);
-  if(req->ip) {
-    js_free_rt(rt, req->ip);
-    req->ip = 0;
-  }
+
   if(req->body) {
     generator_free(req->body);
     req->body = 0;
   }
 }
+
 void
 request_free(Request* req, JSRuntime* rt) {
   if(--req->ref_count == 0) {

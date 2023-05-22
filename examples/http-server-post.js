@@ -1,7 +1,7 @@
 import { popen, getenv } from 'std';
-import { LLL_USER, LLL_ERR, logLevels, createServer, setLog } from 'net';
+import { LLL_USER, LLL_ERR, logLevels, createServer, setLog, Response } from 'net';
 
-import('console').then(({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 0 } })));
+import('console').then( ({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 0 } })) );
 
 setLog((std.getenv('DEBUG') ? LLL_USER : 0) | LLL_ERR, (level, message) =>
   console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n'))
@@ -17,6 +17,10 @@ let srv = createServer({
     },
     async '/api'(req, resp) {
       console.log('/api', { req, resp });
+
+      for await(let chunk of req.body) console.log('req.body', chunk);
+
+      return new Response('Hello, World!');
     }
   },
   onRequest(req, resp) {

@@ -1,9 +1,22 @@
+/**
+ * @file response.c
+ */
 #include "session.h"
 #include "response.h"
 #include "buffer.h"
 #include "js-utils.h"
 #include "headers.h"
 #include <assert.h>
+
+void
+response_zero(Response* resp) {
+  memset(resp, 0, sizeof(Response));
+  resp->ref_count = 1;
+  resp->read_only = FALSE;
+  resp->headers_sent = FALSE;
+  resp->compress = FALSE;
+  resp->status = 200;
+}
 
 void
 response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type) {

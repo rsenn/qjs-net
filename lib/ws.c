@@ -1,3 +1,6 @@
+/**
+ * @file ws.c
+ */
 #include "ws.h"
 #include "buffer.h"
 #include "js-utils.h"

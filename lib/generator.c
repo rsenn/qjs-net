@@ -1,6 +1,15 @@
+/**
+ * @file generator.c
+ */
 #include "generator.h"
 #include <assert.h>
 
+/**
+ * \defgroup generator generator
+ * 
+ * Async generator object
+ * @{
+ */
 static ssize_t enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback);
 static ssize_t enqueue_value(Generator* gen, JSValueConst value, JSValueConst callback);
 
@@ -14,18 +23,8 @@ generator_zero(Generator* gen) {
   gen->chunks_written = 0;
   gen->chunks_read = 0;
   gen->ref_count = 0;
-}
-
-void
-generator_free(Generator* gen) {
-  if(--gen->ref_count == 0) {
-    asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
-
-    if(gen->q)
-      queue_free(gen->q, JS_GetRuntime(gen->ctx));
-
-    js_free(gen->ctx, gen);
-  }
+  gen->executor = JS_UNDEFINED;
+  gen->promise = (ResolveFunctions){JS_UNDEFINED, JS_UNDEFINED};
 }
 
 Generator*
@@ -38,10 +37,21 @@ generator_new(JSContext* ctx) {
     gen->ref_count = 1;
     gen->q = 0; // queue_new(ctx);
     gen->block_fn = &block_toarraybuffer;
-    gen->callback = JS_UNDEFINED;
   }
 
   return gen;
+}
+
+void
+generator_free(Generator* gen) {
+  if(--gen->ref_count == 0) {
+    asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
+
+    if(gen->q)
+      queue_free(gen->q, JS_GetRuntime(gen->ctx));
+
+    js_free(gen->ctx, gen);
+  }
 }
 
 JSValue
@@ -57,14 +67,24 @@ generator_dequeue(Generator* gen, BOOL* done_p) {
   return ret;
 }
 
-static void
+static BOOL
 generator_start(Generator* gen) {
-  if(JS_IsObject(gen->executor)) {
-    JSValue cb = gen->executor;
+  if(JS_IsFunction(gen->ctx, gen->executor)) {
+    JSValue tmp, cb = gen->executor;
     gen->executor = JS_UNDEFINED;
-    JS_FreeValue(gen->ctx, JS_Call(gen->ctx, cb, JS_UNDEFINED, 0, 0));
+
+    tmp = JS_Call(gen->ctx, cb, JS_UNDEFINED, 0, 0);
     JS_FreeValue(gen->ctx, cb);
+
+    if(js_is_promise(gen->ctx, tmp))
+      gen->executor = tmp;
+    else
+      JS_FreeValue(gen->ctx, tmp);
+
+    return TRUE;
   }
+
+  return FALSE;
 }
 
 static void
@@ -81,7 +101,7 @@ static int
 generator_update(Generator* gen) {
   int i = 0;
 
-  while(!list_empty(&gen->iterator.reads) && gen->q && !queue_closed(gen->q)) {
+  while(!list_empty(&gen->iterator.reads) && gen->q && !queue_empty(gen->q)) {
     BOOL done = FALSE;
     JSValue chunk = generator_dequeue(gen, &done);
     // printf("%-22s i: %i reads: %zu q->items: %zu done: %i\n", __func__, i, list_size(&gen->iterator.reads), gen->q ? list_size(&gen->q->items) : 0, done);
@@ -103,10 +123,8 @@ generator_next(Generator* gen, JSValueConst arg) {
   /*uint32_t id = list_empty(&gen->iterator.reads) ? 0 : ((AsyncRead*)gen->iterator.reads.next)->id;
   size_t rds1 = list_size(&gen->iterator.reads);
 */
-  if(!JS_IsUndefined(gen->executor))
-    generator_start(gen);
-  else
-    generator_callback(gen, JS_UNDEFINED);
+  if(!generator_start(gen))
+    generator_callback(gen, arg);
 
   generator_update(gen);
 
@@ -146,17 +164,54 @@ generator_push(Generator* gen, JSValueConst value) {
   ResolveFunctions funcs = {JS_NULL, JS_NULL};
   JSValue ret = js_async_create(gen->ctx, &funcs);
 
+#ifdef DEBUG_OUTPUT
   printf("%-22s reads: %zu value: %.*s closing: %i closed: %i\n", __func__, list_size(&gen->iterator.reads), 10, JS_ToCString(gen->ctx, value), gen->closing, gen->closed);
+#endif
 
   if(!(gen->closing || gen->closed) && generator_yield(gen, value, JS_UNDEFINED)) {
-    JS_FreeValue(gen->ctx, gen->callback);
-    gen->callback = funcs.resolve;
+    js_async_free(gen->ctx, &gen->promise);
+    gen->promise = funcs;
     funcs.resolve = JS_UNDEFINED;
+    funcs.reject = JS_UNDEFINED;
   } else {
     js_async_reject(gen->ctx, &funcs, JS_UNDEFINED);
   }
 
   js_async_free(gen->ctx, &funcs);
+  return ret;
+}
+
+/**
+ * Causes the previous push call to reject with the given error.
+ * If the executor fails to handle the error, the throw method rethrows the error
+ * and finishs the generator. A throw method call is detected as unhandled in the
+ * following situations:
+ *
+ * - The generator has not started (Repeater.prototype.next has never been called).
+ * - The generator has stopped.
+ * - The generator has a non-empty queue.
+ * - The promise returned from the previous push call has not been awaited and its
+ *   then/catch methods have not been called.
+ *
+ * @param gen    The generator
+ * @param error  The error to send to the generator.
+ *
+ * @returns  A promise which fulfills to the next iteration result if the
+ *           generator handles the error, and otherwise rejects with the given error.
+ */
+JSValue
+generator_throw(Generator* gen, JSValueConst error) {
+  JSValue ret = JS_UNDEFINED;
+
+  if(js_is_promise(gen->ctx, gen->executor)) {
+    ret = JS_DupValue(gen->ctx, gen->executor);
+  } else {
+    ResolveFunctions async = {JS_NULL, JS_NULL};
+    ret = js_async_create(gen->ctx, &async);
+    js_async_reject(gen->ctx, &async, error);
+  }
+  asynciterator_cancel(&gen->iterator, error, gen->ctx);
+
   return ret;
 }
 
@@ -187,7 +242,9 @@ generator_stop(Generator* gen, JSValueConst arg) {
   Queue* q;
   QueueItem* item = 0;
 
+#ifdef DEBUG_OUTPUT
   printf("generator_stop(%s)\n", JS_ToCString(gen->ctx, gen->callback));
+#endif
 
   if((q = gen->q)) {
     if(!queue_complete(q)) {
@@ -243,7 +300,9 @@ generator_continuous(Generator* gen, JSValueConst callback) {
 Queue*
 generator_queue(Generator* gen) {
   if(!gen->q) {
+#ifdef DEBUG_OUTPUT
     printf("Creating Queue... %s\n", JS_ToCString(gen->ctx, gen->callback));
+#endif
     gen->q = queue_new(gen->ctx);
   }
 
@@ -294,3 +353,13 @@ enqueue_value(Generator* gen, JSValueConst value, JSValueConst callback) {
 
   return ret;
 }
+
+ssize_t
+generator_enqueue(Generator* gen, JSValueConst value) {
+  generator_queue(gen);
+  return enqueue_value(gen, value, JS_UNDEFINED);
+}
+
+/**
+ * @}
+ */

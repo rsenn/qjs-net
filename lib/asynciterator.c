@@ -1,3 +1,6 @@
+/**
+ * @file asynciterator.c
+ */
 #include "asynciterator.h"
 #include "utils.h"
 #include <assert.h>
@@ -56,12 +59,12 @@ asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
   JSValue ret = JS_UNDEFINED;
   ResolveFunctions async;
 
-  if(it->closed)
-    return JS_ThrowInternalError(ctx, "%s: iterator closed", __func__);
+  /*if(it->closed)
+    return JS_ThrowInternalError(ctx, "%s: iterator closed", __func__);*/
 
   ret = js_async_create(ctx, &async);
 
-  if(it->closing) {
+  if(it->closing || it->closed) {
     assert(list_empty(&it->reads));
     js_async_resolve(ctx, &async, js_iterator_result(ctx, JS_UNDEFINED, TRUE));
     js_async_free(ctx, &async);

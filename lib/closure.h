@@ -1,3 +1,6 @@
+/**
+ * @file closure.h
+ */
 #ifndef QJSNET_LIB_CLOSURE_H
 #define QJSNET_LIB_CLOSURE_H
 

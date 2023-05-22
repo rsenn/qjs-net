@@ -305,8 +305,6 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       }
 
       if(client->on.connect.ctx) {
-        client->request->ip = wsi_ipaddr(wsi);
-
         if(reason != LWS_CALLBACK_RAW_CONNECTED)
           client->session.req_obj = minnet_request_wrap(ctx, client->request);
 

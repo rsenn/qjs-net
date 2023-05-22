@@ -225,11 +225,11 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_NewBool(ctx, resp->body != NULL);
       break;
     }
-      /* case RESPONSE_BODY: {
-         if(resp->body)
-           ret = minnet_generator_iterator(ctx, generator_dup(resp->body));
-         break;
-       }*/
+    case RESPONSE_BODY: {
+      if(resp->body)
+        ret = minnet_generator_iterator(ctx, generator_dup(resp->body));
+      break;
+    }
   }
 
   return ret;
@@ -299,8 +299,10 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
   MinnetResponse* resp;
   int i;
 
-  if(!(resp = js_mallocz(ctx, sizeof(MinnetResponse))))
+  if(!(resp = js_malloc(ctx, sizeof(MinnetResponse))))
     return JS_EXCEPTION;
+
+  response_zero(resp);
 
   /* using new_target to get the prototype is necessary when the class is extended. */
   proto = JS_GetPropertyStr(ctx, new_target, "prototype");
@@ -312,17 +314,20 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
   if(JS_IsException(obj))
     goto fail;
 
-  if(argc >= 1 && argc < 3) {
+  if(argc > 0) {
+    Generator* generator = response_generator(resp, ctx);
 
-    if(!js_is_nullish(argv[0])) {
-      // XXXX buffer_fromvalue(resp->body, argv[0], ctx);
+    assert(generator);
+
+    generator_enqueue(generator, argv[0]);
+    queue_close(generator->q);
+
+    if(argc > 1) {
+      js_copy_properties(ctx, argv[1], argv[i], JS_GPN_STRING_MASK);
     }
-
-    argc--;
-    argv++;
   }
 
-  for(i = 0; i < argc; i++) {
+  /*for(i = 0; i < argc; i++) {
     if(JS_IsObject(argv[i]) && !JS_IsNull(argv[i])) {
       js_copy_properties(ctx, obj, argv[i], JS_GPN_STRING_MASK);
       argc--;
@@ -340,7 +345,7 @@ minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, J
       if(!JS_ToInt32(ctx, &s, argv[i]))
         resp->status = s;
     }
-  }
+  }*/
 
   JS_SetOpaque(obj, resp);
 
@@ -375,7 +380,7 @@ static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_DEF("clone", 0, minnet_response_clone),
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_response_iterator),
 
-    // JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_response_get, minnet_response_set, RESPONSE_BODY, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_response_get, minnet_response_set, RESPONSE_BODY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("bodyUsed", minnet_response_get, 0, RESPONSE_BODYUSED, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, 0, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_DEF("headersSent", minnet_response_get, 0, RESPONSE_HEADERS_SENT),

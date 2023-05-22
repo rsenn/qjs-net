@@ -1,3 +1,6 @@
+/**
+ * @file buffer.c
+ */
 #include "buffer.h"
 #include "js-utils.h"
 #include <assert.h>

@@ -1,3 +1,6 @@
+/**
+ * @file buffer.h
+ */
 #ifndef QJSNET_LIB_BUFFER_H
 #define QJSNET_LIB_BUFFER_H
 

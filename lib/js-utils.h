@@ -1,3 +1,6 @@
+/**
+ * @file js-utils.h
+ */
 #ifndef QJSNET_LIB_JS_UTILS_H
 #define QJSNET_LIB_JS_UTILS_H
 
@@ -165,23 +168,12 @@ char* js_tostringlen(JSContext*, size_t* lenp, JSValueConst value);
 char* js_tostring(JSContext*, JSValueConst value);
 JSValue js_invoke(JSContext*, JSValueConst this_obj, const char* method, int argc, JSValueConst argv[]);
 BOOL js_is_promise(JSContext*, JSValueConst value);
-JSValue js_promise_resolve(JSContext* ctx, JSValueConst value);
-JSValue js_promise_new(JSContext*, JSValueConst* resolve, JSValueConst* reject);
-JSValue js_async_create(JSContext*, ResolveFunctions* funcs);
-void js_async_free(JSContext*, ResolveFunctions* funcs);
-void js_async_free_rt(JSRuntime*, ResolveFunctions* funcs);
-JSValue js_async_resolve(JSContext*, ResolveFunctions* funcs, JSValueConst value);
-JSValue js_async_reject(JSContext*, ResolveFunctions* funcs, JSValueConst value);
-void js_async_zero(ResolveFunctions*);
-BOOL js_async_pending(ResolveFunctions const*);
-JSValue js_async_then(JSContext*, JSValueConst promise, JSValueConst handler);
-JSValue js_async_then2(JSContext* ctx, JSValueConst promise, JSValueConst, JSValueConst);
-JSValue js_async_catch(JSContext*, JSValueConst promise, JSValueConst handler);
 JSValue js_error_new(JSContext*, const char* fmt, ...);
 void js_error_print(JSContext*, JSValueConst error);
 uint8_t* js_toptrsize(JSContext*, unsigned int* plen, JSValueConst value);
 uint32_t js_get_propertystr_uint32(JSContext*, JSValueConst obj, const char* str);
 const char* js_get_propertystr_cstring(JSContext* ctx, JSValueConst obj, const char* prop);
+BOOL js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str);
 BOOL js_has_propertystr(JSContext*, JSValueConst obj, const char* str);
 int64_t js_array_length(JSContext*, JSValueConst array);
 char** js_array_to_argv(JSContext*, int* argcp, JSValueConst array);
@@ -203,6 +195,17 @@ JSValue js_typedarray_new(JSContext*, int bits, BOOL floating, BOOL sign, JSValu
 JSValue js_function_cclosure(JSContext*, CClosureFunc* func, int length, int magic, void* opaque, void (*opaque_finalize)(void*));
 JSValue js_generator_prototype(JSContext*);
 JSValue js_asyncgenerator_prototype(JSContext*);
+
+JSValue js_async_create(JSContext*, ResolveFunctions* funcs);
+void js_async_free(JSContext*, ResolveFunctions* funcs);
+void js_async_free_rt(JSRuntime*, ResolveFunctions* funcs);
+BOOL js_async_resolve(JSContext*, ResolveFunctions* funcs, JSValueConst value);
+BOOL js_async_reject(JSContext*, ResolveFunctions* funcs, JSValueConst value);
+void js_async_zero(ResolveFunctions*);
+BOOL js_async_pending(ResolveFunctions const*);
+JSValue js_async_then(JSContext*, JSValueConst promise, JSValueConst handler);
+JSValue js_async_then2(JSContext* ctx, JSValueConst promise, JSValueConst, JSValueConst);
+JSValue js_async_catch(JSContext*, JSValueConst promise, JSValueConst handler);
 
 static inline BOOL
 js_atom_is_int32(JSAtom atom) {

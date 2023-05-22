@@ -1,3 +1,6 @@
+/**
+ * @file asynciterator.h
+ */
 #ifndef QJSNET_LIB_ASYNCITERATOR_H
 #define QJSNET_LIB_ASYNCITERATOR_H
 

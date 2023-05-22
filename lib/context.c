@@ -1,3 +1,6 @@
+/**
+ * @file context.c
+ */
 #include <assert.h>
 #include <libwebsockets.h>
 #include "context.h"

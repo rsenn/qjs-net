@@ -1,3 +1,6 @@
+/**
+ * @file response.h
+ */
 #ifndef QJSNET_LIB_RESPONSE_H
 #define QJSNET_LIB_RESPONSE_H
 
@@ -20,6 +23,7 @@ typedef struct http_response {
   Generator* body;
 } Response;
 
+void response_zero(Response*);
 void response_init(Response*, URL, int32_t, char* status_text, BOOL headers_sent, char* type);
 Response* response_dup(Response*);
 void response_clear(Response*, JSRuntime*);

@@ -27,14 +27,17 @@ minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValue
       ResolveFunctions async = {JS_NULL, JS_NULL};
       ret = js_async_create(ctx, &async);
       asynciterator_stop(&gen->iterator, argc > 0 ? argv[0] : JS_UNDEFINED, ctx);
-      js_async_resolve(ctx, &async, argc > 0 ? argv[0] : JS_UNDEFINED);
+      JSValue result = js_iterator_result(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, TRUE);
+      js_async_resolve(ctx, &async, result);
+      JS_FreeValue(ctx, result);
       break;
     }
     case GENERATOR_THROW: {
-      ResolveFunctions async = {JS_NULL, JS_NULL};
-      ret = js_async_create(ctx, &async);
-      asynciterator_cancel(&gen->iterator, argv[0], ctx);
-      js_async_reject(ctx, &async, argv[0]);
+      /*  ResolveFunctions async = {JS_NULL, JS_NULL};
+        ret = js_async_create(ctx, &async);
+        asynciterator_cancel(&gen->iterator, argv[0], ctx);
+        js_async_reject(ctx, &async, argv[0]);*/
+      ret = generator_throw(gen, argv[0]);
       break;
     }
   }

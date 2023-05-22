@@ -1,3 +1,6 @@
+/**
+ * @file poll.h
+ */
 #ifndef QJSNET_LIB_LIB_POLL_H
 #define QJSNET_LIB_LIB_POLL_H
 

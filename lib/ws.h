@@ -1,3 +1,6 @@
+/**
+ * @file ws.h
+ */
 #ifndef QJSNET_LIB_WS_H
 #define QJSNET_LIB_WS_H
 

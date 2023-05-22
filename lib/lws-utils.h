@@ -1,3 +1,6 @@
+/**
+ * @file lws-utils.h
+ */
 #ifndef QJSNET_LIB_LWS_UTILS_H
 #define QJSNET_LIB_LWS_UTILS_H
 

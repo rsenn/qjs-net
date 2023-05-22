@@ -1,3 +1,6 @@
+/**
+ * @file request.h
+ */
 #ifndef QJSNET_LIB_REQUEST_H
 #define QJSNET_LIB_REQUEST_H
 
@@ -16,7 +19,6 @@ typedef struct http_request {
   URL url;
   ByteBuffer headers;
   Generator* body;
-  char* ip;
   JSValue promise;
 } Request;
 

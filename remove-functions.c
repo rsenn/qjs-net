@@ -465,24 +465,6 @@ generator_cancel(Generator* gen) {
   return ret;
 }
 
-JSValue
-generator_stop(Generator* gen) {
-  ResolveFunctions funcs = {JS_NULL, JS_NULL};
-  JSValue ret = js_promise_create(gen->ctx, &funcs);
-
-  if(!generator_close(gen, funcs.resolve)) {
-    JS_FreeValue(gen->ctx, JS_Call(gen->ctx, funcs.reject, JS_UNDEFINED, 0, 0));
-  }
-
-  js_promise_free(gen->ctx, &funcs);
-  return ret;
-}
-
-BOOL
-js_promise_done(ResolveFunctions const* funcs) {
-  return js_resolve_functions_is_null(funcs);
-}
-
 BOOL
 js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str) {
   BOOL ret = FALSE;
@@ -1117,23 +1099,6 @@ client_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
   JS_FreeCString(ctx, val);
 
   return JS_UNDEFINED;
-}
-
-static JSValue
-client_promise(JSContext* ctx, struct session_data* session, MinnetResponse* resp, struct lws* wsi, JSValueConst value) {
-  HTTPAsyncResolveClosure* p;
-  JSValue ret = JS_UNDEFINED;
-
-  if((p = js_malloc(ctx, sizeof(HTTPAsyncResolveClosure)))) {
-    *p = (HTTPAsyncResolveClosure){1, ctx, session, response_dup(resp), wsi};
-    JSValue fn = js_function_cclosure(ctx, client_resolved, 1, 0, p, client_resolved_free);
-    JSValue tmp = js_promise_then(ctx, value, fn);
-    JS_FreeValue(ctx, fn);
-    ret = tmp;
-  } else {
-    ret = JS_ThrowOutOfMemory(ctx);
-  }
-  return ret;
 }
 
 char*

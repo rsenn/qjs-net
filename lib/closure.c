@@ -1,3 +1,6 @@
+/**
+ * @file closure.c
+ */
 #include <assert.h>
 #include "closure.h"
 #include "context.h"

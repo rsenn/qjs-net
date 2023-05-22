@@ -11,24 +11,10 @@
 #include <ctype.h>
 #include <strings.h>
 #include <libwebsockets.h>
+#include <assert.h>
 
 THREAD_LOCAL JSClassID minnet_request_class_id;
 THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;
-
-enum {
-  REQUEST_BODY,
-  REQUEST_H2,
-  REQUEST_HEADERS,
-  REQUEST_HOSTNAME,
-  REQUEST_IP,
-  REQUEST_METHOD,
-  REQUEST_PATH,
-  REQUEST_PROTOCOL,
-  REQUEST_REFERER,
-  REQUEST_SECURE,
-  REQUEST_TYPE,
-  REQUEST_URI,
-};
 
 MinnetRequest*
 minnet_request_data(JSValueConst obj) {
@@ -103,6 +89,20 @@ minnet_request_wrap(JSContext* ctx, MinnetRequest* req) {
   return ret;
 }
 
+enum {
+  REQUEST_BODY,
+  REQUEST_H2,
+  REQUEST_HEADERS,
+  REQUEST_IP,
+  REQUEST_METHOD,
+  REQUEST_PATH,
+  REQUEST_PROTOCOL,
+  REQUEST_REFERER,
+  REQUEST_SECURE,
+  REQUEST_TYPE,
+  REQUEST_URI,
+};
+
 static JSValue
 minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetRequest* req;
@@ -156,18 +156,20 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
         case METHOD_PATCH:
         case METHOD_PUT:
         case METHOD_DELETE:
-        case METHOD_HEAD:
-          if(!req->body)
-            break;
+        case METHOD_HEAD: {
+          assert(!req->body);
+          ret = JS_NULL;
+          break;
+        }
 
-        case METHOD_POST: ret = minnet_generator_create(ctx, &req->body); break;
+        case METHOD_POST: {
+          ret = minnet_generator_create(ctx, &req->body);
+          break;
+        }
       }
       break;
     }
-    case REQUEST_IP: {
-      ret = req->ip ? JS_NewString(ctx, req->ip) : JS_NULL;
-      break;
-    }
+
     case REQUEST_PROTOCOL: {
       ret = JS_NewString(ctx, req->url.protocol);
       break;
@@ -314,13 +316,10 @@ static const JSClassDef minnet_request_class = {
 static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("type", minnet_request_get, minnet_request_set, REQUEST_TYPE, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("url", minnet_request_get, minnet_request_set, REQUEST_URI, JS_PROP_ENUMERABLE),
-    JS_CGETSET_MAGIC_FLAGS_DEF("hostname", minnet_request_get, 0, REQUEST_HOSTNAME, JS_PROP_ENUMERABLE),
-    JS_ALIAS_DEF("host", "hostname"),
-    JS_CGETSET_MAGIC_FLAGS_DEF("ip", minnet_request_get, 0, REQUEST_IP, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_request_get, 0, REQUEST_PROTOCOL, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, 0, REQUEST_HEADERS, JS_PROP_ENUMERABLE),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, 0, REQUEST_HEADERS, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("referer", minnet_request_get, 0, REQUEST_REFERER, 0),
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_request_method, REQUEST_ARRAYBUFFER),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_request_method, REQUEST_TEXT),

@@ -1,3 +1,6 @@
+/**
+ * @file deferred.h
+ */
 #ifndef QJSNET_LIB_DEFERRED_H
 #define QJSNET_LIB_DEFERRED_H
 

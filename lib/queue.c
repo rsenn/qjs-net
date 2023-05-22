@@ -1,3 +1,6 @@
+/**
+ * @file queue.c
+ */
 #include "queue.h"
 #include <assert.h>
 

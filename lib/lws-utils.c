@@ -1,3 +1,6 @@
+/**
+ * @file lws-utils.c
+ */
 #include "lws-utils.h"
 #include "utils.h"
 

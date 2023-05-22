@@ -20,7 +20,6 @@ enum {
   HEADERS_KEYS,
   HEADERS_SET,
   HEADERS_BUFFER,
-
 };
 
 struct MinnetHeadersOpaque {
@@ -115,7 +114,7 @@ minnet_headers_get(JSContext* ctx, JSValueConst this_val, int magic) {
 
   return ret;
 }
- 
+
 enum {
   HEADERS_TO_STRING,
   HEADERS_TO_OBJECT,
@@ -224,7 +223,7 @@ minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValue
 
   return ret;
 }
- 
+
 static JSValue
 minnet_headers_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret = JS_NULL;

@@ -1,3 +1,6 @@
+/**
+ * @file deferred.c
+ */
 #include <assert.h>
 #include "deferred.h"
 #include "js-utils.h"

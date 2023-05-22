@@ -403,41 +403,58 @@ serve_rejected(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 static JSValue
 serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   HTTPAsyncResolveClosure* closure = ptr;
-  struct session_data* session;
+  struct session_data* session = closure->session;
+  JSValue value = JS_UNDEFINED;
+  BOOL done = FALSE;
+  MinnetWebsocket* ws = minnet_ws_data2(ctx, session->ws_obj);
 
-  if((session = closure->session)) {
-    assert(session->wait_resolve > 0);
-    --session->wait_resolve;
+  assert(session);
+  assert(session->wait_resolve > 0);
+  --session->wait_resolve;
 
-    if(JS_IsObject(argv[0])) {
-      JSValue value = JS_GetPropertyStr(ctx, argv[0], "value");
-      JSValue done_prop = JS_GetPropertyStr(ctx, argv[0], "done");
-      BOOL done = JS_ToBool(ctx, done_prop);
-      JSBuffer out = js_buffer_new(ctx, value);
-      JS_FreeValue(ctx, done_prop);
+  DBG("wait_resolve=%i argv[0]=%s", session->wait_resolve, JS_ToCString(ctx, argv[0]));
 
-      DBG("wait_resolve=%i value=%s done=%i out={ size: %zu, data: '%.*s' }", session->wait_resolve, JS_ToCString(ctx, value), done, out.size, out.size > 50 ? 50 : (int)out.size, out.data);
+  if(JS_IsObject(argv[0])) {
+    MinnetResponse* resp;
 
-      if(out.data) {
-        queue_write(&session->sendq, out.data, out.size, ctx);
+    if((resp = minnet_response_data(argv[0]))) {
+      JSValue body = JS_GetPropertyStr(ctx, argv[0], "body");
+      struct wsi_opaque_user_data* opaque = ws_opaque(ws);
 
-        session_want_write(session, closure->wsi);
-      }
+      JS_FreeValue(ctx, session->resp_obj);
+      session->resp_obj = JS_DupValue(ctx, argv[0]);
+      opaque->resp = minnet_response_data(session->resp_obj);
 
-      js_buffer_free(&out, ctx);
+      session->generator = body;
+      serve_generator(ctx, session, ws->lwsi, &done);
+      return JS_UNDEFINED;
 
-      JS_FreeValue(ctx, value);
-
-      if(done) {
-        queue_close(&session->sendq);
-      } /* else {
-         int ret = serve_generator(ctx, session, closure->wsi, &done);
-
-      DBG("done=%i ret=%i wait_resolve=%i", done, ret, session->wait_resolve);
-
-         assert(session->wait_resolve);
-       }*/
+    } else if(js_has_propertystr(ctx, argv[0], "value") && js_has_propertystr(ctx, argv[0], "done")) {
+      value = JS_GetPropertyStr(ctx, argv[0], "value");
+      done = js_get_propertystr_bool(ctx, argv[0], "done");
     }
+  }
+
+  if(!JS_IsUndefined(value)) {
+    JSBuffer out = js_buffer_new(ctx, value);
+
+    DBG("wait_resolve=%i value=%s done=%i out={ size: %zu, data: '%.*s' }", session->wait_resolve, JS_ToCString(ctx, value), done, out.size, out.size > 50 ? 50 : (int)out.size, out.data);
+
+    if(out.data) {
+      queue_write(&session->sendq, out.data, out.size, ctx);
+
+      session_want_write(session, closure->wsi);
+    }
+
+    js_buffer_free(&out, ctx);
+
+    JS_FreeValue(ctx, value);
+  }
+
+  if(done) {
+    queue_close(&session->sendq);
+
+    session_want_write(session, closure->wsi);
   }
 
   return JS_UNDEFINED;
@@ -445,7 +462,6 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
 static JSValue
 serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) {
-  // struct wsi_opaque_user_data* opaque = session_opaque(session);
   HTTPAsyncResolveClosure* p;
   JSValue ret = JS_UNDEFINED;
   MinnetResponse* resp = minnet_response_data(session->resp_obj);
@@ -480,11 +496,11 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
 static int
 serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, BOOL* done_p) {
 
-  DBG("callback=%" PRIu32 " run=%" PRIu32 " done=%s wait_resolve=%s closed=%s complete=%s",
+  DBG("callback=%" PRIu32 " run=%" PRIu32 " done=%s wait_resolve=%i closed=%s complete=%s",
       session->callback_count,
       ++session->generator_run,
       *done_p ? "TRUE" : "FALSE",
-      session->wait_resolve ? "TRUE" : "FALSE",
+      session->wait_resolve,
       queue_closed(&session->sendq) ? "TRUE" : "FALSE",
       queue_complete(&session->sendq) ? "TRUE" : "FALSE");
 
@@ -500,14 +516,14 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
     while(!*done_p && !session->wait_resolve) {
       JSValue ret = js_iterator_next(ctx, session->generator, &session->next, done_p, 0, 0);
 
-      DBG("done=%s wait_resolve=%s ret=%s", *done_p ? "TRUE" : "FALSE", session->wait_resolve ? "TRUE" : "FALSE", JS_ToCString(ctx, ret));
+      DBG("done=%s wait_resolve=%d ret=%s", *done_p ? "TRUE" : "FALSE", session->wait_resolve, JS_ToCString(ctx, ret));
 
       if(js_is_promise(ctx, ret)) {
         JSValue promise = serve_promise(ctx, session, ret);
         const char* prstr;
         DBG("pr=%s", prstr = JS_ToCString(ctx, promise));
         JS_FreeCString(ctx, prstr);
-        JS_FreeValue(ctx, promise);
+        // JS_FreeValue(ctx, promise);
       } else if(JS_IsException(ret)) {
         JSValue exception = JS_GetException(ctx);
         js_error_print(ctx, exception);
@@ -532,7 +548,7 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
 
   DBG("wait_resolve=%d sendq=%zu done=%s", session->wait_resolve, queue_bytes(&session->sendq), *done_p ? "TRUE" : "FALSE");
 
-  if(/*!queue_complete(&session->sendq) ||*/ queue_bytes(&session->sendq))
+  if(!session->wait_resolve && queue_bytes(&session->sendq))
     session_want_write(session, wsi);
 
   if(session->wait_resolve)
@@ -543,14 +559,13 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
 
 static int
 serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
-  enum { SYNC = 1, ASYNC = 2 } type;
-
-  type = session_callback(session, cb);
+  CallbackType type = session_callback(session, cb);
 
   DBG("type=%s generator=%s", ((const char*[]){"NONE", "SYNC", "ASYNC"})[type], JS_ToCString(cb->ctx, session->generator));
 
   switch(type) {
-    case ASYNC: {
+    case ASYNC_GENERATOR:
+    case GENERATOR: {
       BOOL done = FALSE;
       if(serve_generator(cb->ctx, session, wsi, &done))
         return 1;
@@ -558,6 +573,10 @@ serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
     }
     case SYNC: {
       session_want_write(session, wsi);
+      break;
+    }
+    case ASYNC: {
+      serve_promise(cb->ctx, session, session->generator);
       break;
     }
     default: {
@@ -651,7 +670,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
 
   int ret = lws_finalize_write_http_header(wsi, buf->start, &buf->write, buf->end);
 
-  DBG("headers='%.*s'", (int)buffer_HEAD(buf), buf->start);
+  // DBG("headers='%.*s'", (int)buffer_HEAD(buf), buf->start);
 
   if(ret)
     return 2;
@@ -798,7 +817,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     ++session->callback_count;
   }
 
-  if(reason != LWS_CALLBACK_HTTP_WRITEABLE)
+  if(reason != LWS_CALLBACK_HTTP_WRITEABLE && reason != LWS_CALLBACK_VHOST_CERT_AGING && reason != LWS_CALLBACK_EVENT_WAIT_CANCELLED)
     LOGCB("HTTP(1)",
           "callback=%" PRId32 " %s%sfd=%d len=%d in='%.*s' url=%s",
           session ? session->callback_count : -1,
@@ -1097,6 +1116,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             queue_bytes(&session->sendq),
             session->wait_resolve);
 
+      assert(opaque->resp);
       if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
         session->resp_obj = minnet_response_wrap(ctx, resp);
@@ -1178,7 +1198,8 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
   }
   // int ret = 0;
-  if(/*reason != LWS_CALLBACK_HTTP_WRITEABLE && reason != LWS_CALLBACK_CLOSED_HTTP &&*/ (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
+  if(/*reason != LWS_CALLBACK_HTTP_WRITEABLE && reason != LWS_CALLBACK_CLOSED_HTTP &&*/ reason != LWS_CALLBACK_VHOST_CERT_AGING && reason != LWS_CALLBACK_EVENT_WAIT_CANCELLED &&
+     (reason < LWS_CALLBACK_HTTP_BIND_PROTOCOL || reason > LWS_CALLBACK_CHECK_ACCESS_RIGHTS)) {
     LOGCB("SERVER-HTTP(/)",
           "%s%sfd=%i ret=%d want_write=%d\n",
           wsi_http2(wsi) ? "h2, " : "http/1.1, ",

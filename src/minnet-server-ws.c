@@ -25,7 +25,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
   if(lws_reason_http(reason))
     return http_server_callback(wsi, reason, user, in, len);
 
-  if(reason != LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS)
+  if(reason != LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS && reason != LWS_CALLBACK_VHOST_CERT_AGING && reason != LWS_CALLBACK_EVENT_WAIT_CANCELLED)
     LOGCB("WS", "fd=%d, %s%slen=%zu in='%.*s'", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", len, (int)len, (char*)in);
 
   switch(reason) {
@@ -134,7 +134,6 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
 
       if(!opaque->req) {
         opaque->req = request_new(url, METHOD_GET, ctx);
-        opaque->req->ip = wsi_ipaddr(wsi);
         opaque->req->secure = wsi_tls(wsi);
         headers_tobuffer(ctx, &opaque->req->headers, wsi);
       } else {
@@ -150,10 +149,8 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       MinnetHttpMount* mount = 0;
       MinnetURL* url;
 
-      if(!opaque->req) {
+      if(!opaque->req)
         opaque->req = request_fromwsi(wsi, ctx);
-        opaque->req->ip = wsi_ipaddr(wsi);
-      }
 
       if(opaque->req) {
         url = &opaque->req->url;

@@ -1,3 +1,6 @@
+/**
+ * @file query.c
+ */
 #include "query.h"
 
 JSValue

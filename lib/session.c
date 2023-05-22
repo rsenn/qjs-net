@@ -1,3 +1,6 @@
+/**
+ * @file session.c
+ */
 #include "session.h"
 #include "request.h"
 #include "response.h"
@@ -102,26 +105,34 @@ session_writable(struct session_data* session, struct lws* wsi, BOOL binary, JSC
   return ret;
 }
 
-int
+FunctionType
 session_callback(struct session_data* session, JSCallback* cb) {
   int ret = 0;
   JSValue body, this = session->ws_obj;
+  BOOL async = FALSE, is_generator = js_function_is_generator(cb->ctx, cb->func_obj, &async);
 
   body = context_exception(session->context, callback_emit_this(cb, session->ws_obj, JS_IsObject(session->resp_obj) ? 2 : 1, &session->req_obj));
 
-  do {
+  if(is_generator) {
     ret = session_generator(session, body, this);
     JS_FreeValue(cb->ctx, body);
-    if(ret)
-      break;
+  } else {
+    session->generator = body;
+    ret = js_is_promise(cb->ctx, body) ? ASYNC : SYNC;
+  }
+
+  if(!ret) {
     body = JS_GetPropertyStr(cb->ctx, session->resp_obj, "body");
     this = session->resp_obj;
-  } while(!js_is_nullish(body));
+
+    ret = session_generator(session, body, this);
+    JS_FreeValue(cb->ctx, body);
+  }
 
   return ret;
 }
 
-int
+FunctionType
 session_generator(struct session_data* session, JSValue generator, JSValueConst this) {
   JSContext* ctx = session->context->js;
   JSAtom prop;
@@ -150,5 +161,5 @@ session_generator(struct session_data* session, JSValue generator, JSValueConst 
   session->generator = JS_DupValue(ctx, generator);
   session->next = JS_NULL;
 
-  return JS_IsObject(generator) ? (async ? 2 : 1) : 0;
+  return JS_IsObject(generator) ? (async ? ASYNC_GENERATOR : GENERATOR) : 0;
 }

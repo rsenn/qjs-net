@@ -1,3 +1,6 @@
+/**
+ * @file headers.h
+ */
 #ifndef QJSNET_LIB_HEADERS_H
 #define QJSNET_LIB_HEADERS_H
 

@@ -1,3 +1,6 @@
+/**
+ * @file headers.c
+ */
 #include "utils.h"
 #include "headers.h"
 #include <libwebsockets.h>

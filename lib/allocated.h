@@ -1,3 +1,6 @@
+/**
+ * @file allocated.h
+ */
 #ifndef QJSNET_LIB_ALLOCATED_H
 #define QJSNET_LIB_ALLOCATED_H
 
