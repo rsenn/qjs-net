@@ -80,9 +80,7 @@ macro(build_libwebsockets)
     )
   endif(OPENSSL_EXECUTABLE)
 
-  set(LIBWEBSOCKETS_LIBRARIES
-      "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets_static.a;${LIBWEBSOCKETS_LIBRARIES}"
-  )
+  set(LIBWEBSOCKETS_LIBRARIES "websockets_static;${LIBWEBSOCKETS_LIBRARIES}")
 
   if(WIN32)
     set(LIBWEBSOCKETS_LIBRARIES "${LIBWEBSOCKETS_LIBRARIES};crypt32")
