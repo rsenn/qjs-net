@@ -10,6 +10,7 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
+#ifndef _WINSOCK2API_
 enum {
   POLLIN = 0x0001,
 #define POLLIN POLLIN
@@ -43,15 +44,23 @@ enum {
 #define POLLWRNORM 0x0100
 #endif
 
+#ifndef struct_pollfd_defined
+#define struct_pollfd_defined 1
 struct pollfd {
   int fd;
   short events;
   short revents;
 };
-
+#endif
+#endif /* defined _WINSOCK2API_ */
+  
 typedef unsigned int nfds_t;
 
 extern int poll(struct pollfd* ufds, nfds_t nfds, int timeout);
+
+#if defined(_WIN32) && !defined(CYGWIN)
+typedef int sigset_t[32];
+#endif
 
 #ifdef _GNU_SOURCE
 #include <signal.h>

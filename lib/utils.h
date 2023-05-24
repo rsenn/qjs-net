@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <ctype.h>
 #include <libwebsockets.h>
-#include <arpa/inet.h>
+/*#include <arpa/inet.h>*/
 #include <quickjs.h>
 #include <cutils.h>
 #include <list.h>
@@ -16,6 +16,7 @@
 #define VISIBLE __declspec(dllexport)
 #define HIDDEN
 #define UNUSED
+#define socket_type SOCKET
 #elif defined(__CLANG__)
 #define VISIBLE [[visibility(default)]]
 #define HIDDEN [[visibility(hidden)]]
@@ -24,6 +25,10 @@
 #define VISIBLE __attribute__((visibility("default")))
 #define HIDDEN __attribute__((visibility("hidden")))
 #define UNUSED __attribute__((unused))
+#endif
+
+#ifndef socket_type
+#define socket_type int
 #endif
 
 #ifdef _Thread_local
@@ -104,8 +109,11 @@ size_t strip_trailing_newline(const char*, size_t* len_p);
 
 unsigned uint_pow(unsigned, unsigned degree);
 
-int socket_geterror(int);
-char* socket_address(int, int (*fn)(int, struct sockaddr*, socklen_t*));
+int socket_geterror(socket_type);
+
+typedef int (__attribute__((stdcall))  getaddrfunc)(socket_type,  struct sockaddr *, int *);
+
+char* socket_address(int, getaddrfunc*);
 
 static inline BOOL
 has_query(const char* str) {
@@ -117,13 +125,13 @@ has_query_b(const char* str, size_t len) {
   return byte_chr(str, len, '?') < len;
 }
 
-static inline char*
-socket_remote(int fd) {
+  static inline char*
+socket_remote(socket_type fd) {
   return socket_address(fd, &getpeername);
 }
 
 static inline char*
-socket_local(int fd) {
+socket_local(socket_type fd) {
   return socket_address(fd, &getsockname);
 }
 

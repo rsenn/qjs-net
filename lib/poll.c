@@ -28,12 +28,9 @@
 #pragma GCC diagnostic ignored "-Wtype-limits"
 #endif
 
-#include <alloca.h>
+/*#include <alloca.h>*/
 
 #include <sys/types.h>
-
-/* Specification.  */
-#include "poll.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -68,6 +65,13 @@
 #endif
 
 #include <time.h>
+
+/* Specification.  */
+/*#ifdef _WINSOCK2API_
+#define struct_pollfd_defined 1
+#endif
+#include "poll.h"*/
+typedef unsigned int nfds_t;
 
 #include "assure.h"
 
@@ -216,7 +220,7 @@ windows_compute_revents(HANDLE h, int* p_sought) {
         if(!*p_sought)
           return 0;
 
-        irbuffer = (INPUT_RECORD*)alloca(nbuffer * sizeof(INPUT_RECORD));
+        INPUT_RECORD irbuffer[nbuffer];
         bRet = PeekConsoleInput(h, irbuffer, nbuffer, &avail);
         if(!bRet || avail == 0)
           return POLLHUP;

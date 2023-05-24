@@ -4,7 +4,6 @@
 #include "js-utils.h"
 #include "headers.h"
 #include "minnet-response.h"
-#include <alloca.h>
 #include <assert.h>
 #include <libwebsockets.h>
 

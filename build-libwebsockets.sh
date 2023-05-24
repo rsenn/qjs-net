@@ -37,26 +37,26 @@ configure_libwebsockets() {
 	: ${SHARED:=OFF}
 	: ${CFLAGS:="-w"}
 
-	if [ -n "$OPENSSL_PREFIX" -a -d "$OPENSSL_PREFIX" ]; then
-	  if [ -z "$OPENSSL_LIBDIR" ]; then
-	  	OPENSSL_LIBDIR="$OPENSSL_PREFIX/lib"
-	  fi
-	  if [ -z "$OPENSSL_INCLUDEDIR" ]; then
-	  	OPENSSL_INCLUDEDIR="$OPENSSL_PREFIX/include"
-	  fi
-	else
-		archlibdir=/usr/lib/$(${CC-gcc} -dumpmachine)
-		if [ -n "$archlibdir" -a -d "$archlibdir" ]; then
-			if [ -e "$archlibdir/libssl.so" ]; then
-		   OPENSSL_LIBDIR="$archlibdir"
-		   OPENSSL_INCLUDEDIR=/usr/include
-			fi
-		fi
-	fi
+  #if [ -n "$OPENSSL_PREFIX" -a -d "$OPENSSL_PREFIX" ]; then
+  #  if [ -z "$OPENSSL_LIBDIR" ]; then
+  #  	OPENSSL_LIBDIR="$OPENSSL_PREFIX/lib"
+  #  fi
+  #  if [ -z "$OPENSSL_INCLUDEDIR" ]; then
+  #  	OPENSSL_INCLUDEDIR="$OPENSSL_PREFIX/include"
+  #  fi
+  #else
+  #	archlibdir=/usr/lib/$(${CC-gcc} -dumpmachine)
+  #	if [ -n "$archlibdir" -a -d "$archlibdir" ]; then
+  #		if [ -e "$archlibdir/libssl.so" ]; then
+  #	   OPENSSL_LIBDIR="$archlibdir"
+  #	   OPENSSL_INCLUDEDIR=/usr/include
+  #		fi
+  #	fi
+  #fi
 
-	if [ -d "$OPENSSL_LIBDIR" ]; then
-		LINK_FLAGS="${LINK_FLAGS:+$LINK_FLAGS }-Wl,-rpath=$OPENSSL_LIBDIR"
-	fi
+  #if [ -d "$OPENSSL_LIBDIR" ]; then
+  #	LINK_FLAGS="${LINK_FLAGS:+$LINK_FLAGS }-Wl,-rpath=$OPENSSL_LIBDIR"
+  #fi
 
   mkdir -p $builddir
   set --  $relsrcdir ${TOOLCHAIN+"-DCMAKE_TOOLCHAIN_FILE:FILEPATH=$TOOLCHAIN"} \
@@ -110,8 +110,8 @@ configure_libwebsockets() {
 	-DLWS_HAVE_RSA_SET0_KEY:BOOL=ON \
   -DLWS_HAVE_ECDSA_SIG_set0:BOOL=ON \
   -DLWS_HAVE_BN_bn2binpad:BOOL=ON \
-	-DLWS_OPENSSL_INCLUDE_DIRS:PATH="${OPENSSL_INCLUDEDIR}" \
-  -DLWS_OPENSSL_LIBRARIES:PATH="${OPENSSL_LIBDIR}/libcrypto.so;${OPENSSL_LIBDIR}/libssl.so" \
+	${OPENSSL_INCLUDEDIR:+-DLWS_OPENSSL_INCLUDE_DIRS:PATH="${OPENSSL_INCLUDEDIR}"} \
+  ${OPENSSL_LIBDIR:+-DLWS_OPENSSL_LIBRARIES:PATH="${OPENSSL_LIBDIR}/libcrypto.so;${OPENSSL_LIBDIR}/libssl.so"} \
   "$@"
   (echo -e "Command: cd $builddir && cmake $@" | sed 's,\s\+-, \n\t-,g') >&2
 CFLAGS="-I$PWD/libwebsockets/lib/plat/unix${CFLAGS:+ $CFLAGS}" cmake_run "$@" 2>&1 | tee cmake.log

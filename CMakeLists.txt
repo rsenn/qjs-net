@@ -162,11 +162,27 @@ if(BUILD_LIBWEBSOCKETS)
       list(APPEND CMAKE_PREFIX_PATH "${OPENSSL_ROOT_DIR}")
     endif(OPENSSL_ROOT_DIR)
 
-    if(NOT OPENSSL_LIBRARIES)
+    if(NOT OPENSSL_ROOT_DIR)
+      set(OPENSSL_ROOT_DIR "${CMAKE_INSTALL_PREFIX}"
+          CACHE FILEPATH "OpenSSL root directory")
+    endif(NOT OPENSSL_ROOT_DIR)
+    if(NOT OPENSSL_LIBRARY_DIR)
+      set(OPENSSL_LIBRARY_DIR "${OPENSSL_ROOT_DIR}/lib"
+          CACHE FILEPATH "OpenSSL library directory")
+    endif(NOT OPENSSL_LIBRARY_DIR)
+    if(NOT OPENSSL_INCLUDE_DIR)
+      set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include"
+          CACHE FILEPATH "OpenSSL include directory")
+    endif(NOT OPENSSL_INCLUDE_DIR)
+    #list(FILTER OPENSSL_LIBRARIES EXCLUDE REGEX "^$")
 
-      find_package(OpenSSL REQUIRED)
-      # include(FindOpenSSL)
-      #[[if(NOT PKG_CONFIG_FOUND)
+    #string(REGEX REPLACE "^;$" "" OPENSSL_LIBRARIES "${OPENSSL_LIBRARIES}")
+    if(NOT OPENSSL_LIBRARIES)
+      set(OPENSSL_LIBRARIES "ssl;crypto" CACHE STRING "OpenSSL libraries")
+    endif(NOT OPENSSL_LIBRARIES)
+    #find_package(OpenSSL REQUIRED)
+    # include(FindOpenSSL)
+    #[[if(NOT PKG_CONFIG_FOUND)
         include(FindPkgConfig)
       endif(NOT PKG_CONFIG_FOUND)
       pkg_check_modules(OPENSSL openssl)
@@ -174,7 +190,6 @@ if(BUILD_LIBWEBSOCKETS)
       #pkg_search_module(OPENSSL openssl)
 ]]
 
-    endif(NOT OPENSSL_LIBRARIES)
   endif(WITH_SSL AND NOT WITH_MBEDTLS)
 
   if(WITH_BROTLI)
@@ -326,8 +341,12 @@ endif(BUILD_LIBWEBSOCKETS)
 
 #set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=${CMAKE_INSTALL_RPATH}:${CURL_LIBRARY_DIR}")
 
-set(OPENSSL_LIBRARIES "${OPENSSL_SSL_LIBRARY};${OPENSSL_CRYPTO_LIBRARY}"
-    CACHE STRING "OpenSSL libraries")
+if(OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY)
+  if(NOT OPENSSL_LIBRARIES)
+    set(OPENSSL_LIBRARIES "${OPENSSL_SSL_LIBRARY};${OPENSSL_CRYPTO_LIBRARY}"
+        CACHE STRING "OpenSSL libraries")
+  endif(NOT OPENSSL_LIBRARIES)
+endif(OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY)
 
 if(USE_CURL)
   target_include_directories(qjs-net PRIVATE ${CURL_INCLUDE_DIR})

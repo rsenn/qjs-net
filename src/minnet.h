@@ -9,6 +9,8 @@
 #include "utils.h"
 #include "lws-utils.h"
 
+#include "../lib/poll.h"
+
 #undef DEBUG
 
 #ifdef DEBUG_OUTPUT
