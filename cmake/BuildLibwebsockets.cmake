@@ -80,7 +80,11 @@ macro(build_libwebsockets)
     )
   endif(OPENSSL_EXECUTABLE)
 
-  set(LIBWEBSOCKETS_LIBRARIES "websockets_static;${LIBWEBSOCKETS_LIBRARIES}")
+  if(WIN32)
+    set(LIBWEBSOCKETS_LIBRARIES "websockets_static;${LIBWEBSOCKETS_LIBRARIES}")
+  else(WIN32)
+    set(LIBWEBSOCKETS_LIBRARIES "websockets;${LIBWEBSOCKETS_LIBRARIES}")
+  endif(WIN32)
 
   if(WIN32)
     set(LIBWEBSOCKETS_LIBRARIES "${LIBWEBSOCKETS_LIBRARIES};crypt32")
