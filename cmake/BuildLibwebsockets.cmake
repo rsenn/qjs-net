@@ -1,3 +1,5 @@
+include(CheckLibraryExists)
+
 macro(build_libwebsockets)
   message("-- Building LIBWEBSOCKETS from source")
 
@@ -23,7 +25,12 @@ macro(build_libwebsockets)
       ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
       ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets")
-  set(LIBWEBSOCKETS_LIBRARIES "brotlienc;brotlidec;cap")
+  check_library_exists(cap cap_init "" LIBCAP)
+  if(LIBCAP)
+    set(LIBCAP_LIBRARY cap)
+  endif(LIBCAP)
+
+  set(LIBWEBSOCKETS_LIBRARIES "brotlienc;brotlidec;${LIBCAP_LIBRARY}")
   if(OPENSSL_LIBRARIES)
     set(LIBWEBSOCKETS_LIBRARIES
         "${OPENSSL_LIBRARIES};${LIBWEBSOCKETS_LIBRARIES}")
