@@ -18,12 +18,22 @@ macro(build_libwebsockets)
   set(LWS_HAVE_LIBCAP FALSE CACHE BOOL "have libcap")
 
   # include: libwebsockets find_package(libwebsockets)
-  unset(LIBWEBSOCKETS_INCLUDE_DIR)
-  unset(LIBWEBSOCKETS_INCLUDE_DIR CACHE)
+  #unset(LIBWEBSOCKETS_INCLUDE_DIR)
+  if(NOT "${LIBWEBSOCKETS_INCLUDE_DIR}")
+    unset(LIBWEBSOCKETS_INCLUDE_DIR CACHE)
+  endif(NOT "${LIBWEBSOCKETS_INCLUDE_DIR}")
+  
+  if(NOT EXISTS "${LIBWEBSOCKETS_INCLUDE_DIR}")
   set(LIBWEBSOCKETS_INCLUDE_DIR
-      ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include
+      #${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include
       ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
-      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
+      #${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include
+  )
+  endif(NOT EXISTS "${LIBWEBSOCKETS_INCLUDE_DIR}")
+
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
+
+
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets")
   check_library_exists(cap cap_init "" LIBCAP)
   if(LIBCAP)
