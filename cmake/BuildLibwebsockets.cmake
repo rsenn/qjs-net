@@ -353,4 +353,6 @@ macro(build_libwebsockets)
     ExternalProject_Add_StepDependencies(libwebsockets build ${ARGN})
   endif(ARGN)
 
+  set_target_properties(  websockets  PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+
 endmacro(build_libwebsockets)
