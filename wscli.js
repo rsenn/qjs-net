@@ -1,7 +1,7 @@
 #!/usr/bin/env qjsm
 import * as std from 'std';
 import * as os from 'os';
-import net, { URL, Request } from 'net.so';
+import { URL, Request, client, LLL_INFO, LLL_NOTICE, LLL_USER, createServer, setLog } from 'net.so';
 
 const connections = new Set();
 
@@ -199,7 +199,7 @@ async function main(...args) {
     let is_dns,
       urlObj = new URL(url);
 
-    net.setLog(net.LLL_USER | (((debug ? net.LLL_INFO : net.LLL_NOTICE) << 1) - 1), (level, msg) => {
+    setLog(LLL_USER | (((debug ? LLL_INFO : LLL_NOTICE) << 1) - 1), (level, msg) => {
       let p =
         ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][
           level && Math.log2(level)
@@ -213,7 +213,7 @@ async function main(...args) {
 
     globalThis.PrintMessage = PrintMessage;
 
-    const fn = [net.client, net.server][+listen];
+    const fn = [client, createServer][+listen];
 
     return fn(url, {
       sslCert,
