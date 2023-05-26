@@ -53,7 +53,7 @@ struct pollfd {
 };
 #endif
 #endif /* defined _WINSOCK2API_ */
-  
+
 typedef unsigned int nfds_t;
 
 extern int poll(struct pollfd* ufds, nfds_t nfds, int timeout);

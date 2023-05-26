@@ -111,7 +111,7 @@ unsigned uint_pow(unsigned, unsigned degree);
 
 int socket_geterror(socket_type);
 
-typedef int (__attribute__((stdcall))  getaddrfunc)(socket_type,  struct sockaddr *, int *);
+typedef int(__attribute__((stdcall)) getaddrfunc)(socket_type, struct sockaddr*, int*);
 
 char* socket_address(int, getaddrfunc*);
 
@@ -125,7 +125,7 @@ has_query_b(const char* str, size_t len) {
   return byte_chr(str, len, '?') < len;
 }
 
-  static inline char*
+static inline char*
 socket_remote(socket_type fd) {
   return socket_address(fd, &getpeername);
 }

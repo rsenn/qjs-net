@@ -925,42 +925,27 @@ js_atom_is_symbol(JSContext* ctx, JSAtom atom) {
 
 JSBuffer
 js_input_buffer(JSContext* ctx, JSValueConst value) {
-  JSBuffer ret = {0, 0, 0, &js_buffer_free_default, JS_UNDEFINED, {0, 0}};
-  int64_t offset = 0, length = INT64_MAX;
+  JSBuffer ret = JS_BUFFER_VALUE(0, 0, JS_UNDEFINED);
 
-  ol_init(&ret.range);
+  if(js_is_typedarray(ctx, value)) {
+    size_t offset, length;
 
-  if(js_is_typedarray(ctx, value) || js_is_dataview(ctx, value)) {
-    JSValue arraybuf, byteoffs, bytelen;
-    arraybuf = JS_GetPropertyStr(ctx, value, "buffer");
-    bytelen = JS_GetPropertyStr(ctx, value, "byteLength");
-    if(JS_IsNumber(bytelen))
-      JS_ToInt64(ctx, &length, bytelen);
-    JS_FreeValue(ctx, bytelen);
-    byteoffs = JS_GetPropertyStr(ctx, value, "byteOffset");
-    if(JS_IsNumber(byteoffs))
-      JS_ToInt64(ctx, &offset, byteoffs);
-    JS_FreeValue(ctx, byteoffs);
-    value = arraybuf;
+    ret.value = JS_GetTypedArrayBuffer(ctx, value, &offset, &length, NULL);
+
+    if(!JS_IsException(ret.value)) {
+      ret.range.offset = offset;
+      ret.range.length = length;
+    }
+  } else if(js_is_arraybuffer(ctx, value)/* || js_is_sharedarraybuffer(ctx, value)*/) {
+    ret.value = JS_DupValue(ctx, value);
   }
 
-  if(js_is_arraybuffer(ctx, value)) {
-    ret.value = JS_DupValue(ctx, value);
+  if(!JS_IsUndefined(ret.value)) {
     ret.data = JS_GetArrayBuffer(ctx, &ret.size, ret.value);
   } else {
-    ret.value = JS_EXCEPTION;
-    // JS_ThrowTypeError(ctx, "Invalid type for input buffer");
+    JS_FreeValue(ctx, ret.value);
+    ret.value = JS_ThrowTypeError(ctx, "Invalid type for input buffer");
   }
-
-  if(offset < 0)
-    ret.range.offset = ret.size + offset % ret.size;
-  else if((size_t)offset > ret.size)
-    ret.range.offset = ret.size;
-  else
-    ret.range.offset = offset;
-
-  if(length >= 0 && (size_t)length < ret.size)
-    ret.range.length = length;
 
   return ret;
 }
