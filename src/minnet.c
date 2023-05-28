@@ -55,6 +55,33 @@ typedef struct {
 
 typedef enum { READ_HANDLER = 0, WRITE_HANDLER } JSIOHandler;
 
+#ifdef _WIN32
+static THREAD_LOCAL intptr_t* osfhandle_map;
+static THREAD_LOCAL size_t osfhandle_count;
+
+static int
+make_osf_handle(intptr_t handle) {
+  int ret;
+
+  if(osfhandle_map) {
+    size_t i;
+    for(i = 0; i < osfhandle_count; i++)
+      if(osfhandle_map[i] == handle)
+        return i;
+  }
+
+  ret = _open_osfhandle(handle, 0);
+
+  if(ret >= osfhandle_count) {
+    osfhandle_count = ret + 1;
+    osfhandle_map = realloc(osfhandle_map, sizeof(intptr_t) * osfhandle_count);
+  }
+  osfhandle_map[ret] = handle;
+
+  return ret;
+};
+#endif
+
 static void
 lws_iohandler_free(void* ptr) {
   LWSIOHandler* closure = ptr;
@@ -126,8 +153,8 @@ minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JS
 
   JS_FreeValue(ctx, func);
 }
-/*
-static JSValue
+
+/*static JSValue
 minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue data[]) {
   JSValueConst args[] = {argv[0], JS_NULL};
 
