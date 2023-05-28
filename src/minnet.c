@@ -292,7 +292,7 @@ minnet_log_callback(int level, const char* line) {
 static int
 wsi_iohandler(struct lws* wsi, struct js_callback* cb, struct lws_pollargs args) {
   JSValue argv[3] = {
-      JS_NewInt32(cb->ctx, args.fd),
+      JS_NewInt32(cb->ctx, get_osf_handle(args.fd)),
       JS_NULL,
       JS_NULL,
   };
