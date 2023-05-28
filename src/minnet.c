@@ -61,16 +61,7 @@ static THREAD_LOCAL size_t osfhandle_count;
 
 static int
 make_osf_handle(intptr_t handle) {
-  int ret;
-
-  if(osfhandle_map) {
-    size_t i;
-    for(i = 0; i < osfhandle_count; i++)
-      if(osfhandle_map[i] == handle)
-        return i;
-  }
-
-  ret = _open_osfhandle(handle, 0);
+  int  ret = _open_osfhandle(handle, 0);
 
   if(ret >= osfhandle_count) {
     osfhandle_count = ret + 1;
@@ -80,6 +71,38 @@ make_osf_handle(intptr_t handle) {
 
   return ret;
 };
+
+
+static int 
+get_osf_handle(intptr_t handle) {
+
+  if(osfhandle_map) {
+    size_t i;
+    for(i = 0; i < osfhandle_count; i++)
+      if(osfhandle_map[i] == handle)
+        return i;
+  }
+  
+  return make_osf_handle(handle);
+}
+
+static void
+close_osf_handle(int fd) {
+  int ret;
+  intptr_t handle = _get_osfhandle(fd);
+
+  assert(fd + 1 <= osfhandle_count);
+  assert(osfhandle_map);
+  assert(handle != INVALID_HANDLE_VALUE);
+  assert(handle == osfhandle_map[fd]);
+
+  close(fd);
+
+  if(osfhandle_count == fd + 1) {
+    --osfhandle_count;
+    osfhandle_map = realloc(osfhandle_map, sizeof(intptr_t) * osfhandle_count);
+  }
+}
 #endif
 
 static void
@@ -146,7 +169,7 @@ minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JS
   int events = args.events & (POLLIN | POLLOUT);
 
   if(events)
-    func = minnet_io_handler(ctx, args.fd, events, wsi);
+    func = minnet_io_handler(ctx, get_osf_handle(args.fd), events, wsi);
 
   out[0] = (events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
   out[1] = (events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
