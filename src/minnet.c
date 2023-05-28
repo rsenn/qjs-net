@@ -140,6 +140,10 @@ lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   if(p->revents & PIO) {
     struct lws_pollfd x = {p->fd, magic, p->revents & PIO};
 
+#ifdef _WIN32
+    x.fd= (SOCKET)_get_osfhandle(p->fd);
+#endif
+
     if(p->revents & (POLLERR | POLLHUP)) {
       closure->opaque->poll = *p;
       // closure->opaque->error = errno;
