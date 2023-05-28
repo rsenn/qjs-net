@@ -61,19 +61,21 @@ static THREAD_LOCAL size_t osfhandle_count;
 
 static int
 make_osf_handle(intptr_t handle) {
-  int  ret = _open_osfhandle(handle, 0);
+  int ret = _open_osfhandle(handle, 0);
 
   if(ret >= osfhandle_count) {
+    size_t oldsize = osfhandle_count;
     osfhandle_count = ret + 1;
     osfhandle_map = realloc(osfhandle_map, sizeof(intptr_t) * osfhandle_count);
+    assert(osfhandle_map);
+    memset(&osfhandle_map[oldsize],  0, (osfhandle_count- oldsize) * sizeof(intptr);
   }
   osfhandle_map[ret] = handle;
 
   return ret;
 };
 
-
-static int 
+static int
 get_osf_handle(intptr_t handle) {
 
   if(osfhandle_map) {
@@ -82,7 +84,7 @@ get_osf_handle(intptr_t handle) {
       if(osfhandle_map[i] == handle)
         return i;
   }
-  
+
   return make_osf_handle(handle);
 }
 
