@@ -109,6 +109,8 @@ close_osf_handle(int fd) {
     osfhandle_map = realloc(osfhandle_map, sizeof(intptr_t) * osfhandle_count);
   }
 }
+#else
+#define get_osf_handle(fd) (fd)
 #endif
 
 static void

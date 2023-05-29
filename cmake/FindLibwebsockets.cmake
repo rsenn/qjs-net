@@ -21,8 +21,8 @@ macro(find_libwebsockets)
                           INTERFACE_LINK_LIBRARIES)
       get_target_property(LIBWEBSOCKETS_INCLUDE_DIR websockets
                           INTERFACE_INCLUDE_DIRECTORIES)
-  
-   #set_target_properties(  websockets  PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+
+      #set_target_properties(  websockets  PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
 
       string(REGEX REPLACE "/include.*" "/lib" LIBWEBSOCKETS_LIBRARY_DIR
                            "${LIBWEBSOCKETS_INCLUDE_DIR}")

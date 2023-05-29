@@ -22,17 +22,19 @@ macro(build_libwebsockets)
   if(NOT "${LIBWEBSOCKETS_INCLUDE_DIR}")
     unset(LIBWEBSOCKETS_INCLUDE_DIR CACHE)
   endif(NOT "${LIBWEBSOCKETS_INCLUDE_DIR}")
-  
+
   if(NOT EXISTS "${LIBWEBSOCKETS_INCLUDE_DIR}")
-  set(LIBWEBSOCKETS_INCLUDE_DIR
-      #${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include
-      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
-      #${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include
-  )
+    set(LIBWEBSOCKETS_INCLUDE_DIR
+        #${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include
+        ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
+        #${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include
+    )
   endif(NOT EXISTS "${LIBWEBSOCKETS_INCLUDE_DIR}")
 
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
-
+  include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include
+    ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
+    ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
 
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets")
   check_library_exists(cap cap_init "" LIBCAP)
@@ -362,6 +364,5 @@ macro(build_libwebsockets)
   if(ARGN)
     ExternalProject_Add_StepDependencies(libwebsockets build ${ARGN})
   endif(ARGN)
-
 
 endmacro(build_libwebsockets)
