@@ -71,7 +71,7 @@ make_osf_handle(intptr_t handle) {
     osfhandle_count = ret + 1;
     osfhandle_map = realloc(osfhandle_map, sizeof(intptr_t) * osfhandle_count);
     assert(osfhandle_map);
-    memset(&osfhandle_map[oldsize],  0, (osfhandle_count- oldsize) * sizeof(intptr);
+    memset(&osfhandle_map[oldsize],  0, (osfhandle_count - oldsize) * sizeof(intptr_t));
   }
   osfhandle_map[ret] = handle;
 
