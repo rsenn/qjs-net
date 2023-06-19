@@ -166,7 +166,13 @@ function main(...args) {
 
           resp.type = 'application/json';
 
-          let { dir = 'tmp', filter = '.(brd|sch|G[A-Z][A-Z])$', verbose = false, objects = false, key = 'mtime' } = data;
+          let {
+            dir = 'tmp',
+            filter = '.(brd|sch|G[A-Z][A-Z])$',
+            verbose = false,
+            objects = false,
+            key = 'mtime'
+          } = data;
           let absdir = path.realpath(dir);
           let components = absdir.split(path.sep);
 

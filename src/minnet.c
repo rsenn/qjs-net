@@ -71,7 +71,7 @@ make_osf_handle(intptr_t handle) {
     osfhandle_count = ret + 1;
     osfhandle_map = realloc(osfhandle_map, sizeof(intptr_t) * osfhandle_count);
     assert(osfhandle_map);
-    memset(&osfhandle_map[oldsize],  0, (osfhandle_count - oldsize) * sizeof(intptr_t));
+    memset(&osfhandle_map[oldsize], 0, (osfhandle_count - oldsize) * sizeof(intptr_t));
   }
   osfhandle_map[ret] = handle;
 
@@ -143,7 +143,7 @@ lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
     struct lws_pollfd x = {p->fd, magic, p->revents & PIO};
 
 #ifdef _WIN32
-    x.fd= (SOCKET)_get_osfhandle(p->fd);
+    x.fd = (SOCKET)_get_osfhandle(p->fd);
 #endif
 
     if(p->revents & (POLLERR | POLLHUP)) {

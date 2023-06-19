@@ -936,7 +936,7 @@ js_input_buffer(JSContext* ctx, JSValueConst value) {
       ret.range.offset = offset;
       ret.range.length = length;
     }
-  } else if(js_is_arraybuffer(ctx, value)/* || js_is_sharedarraybuffer(ctx, value)*/) {
+  } else if(js_is_arraybuffer(ctx, value) /* || js_is_sharedarraybuffer(ctx, value)*/) {
     ret.value = JS_DupValue(ctx, value);
   }
 

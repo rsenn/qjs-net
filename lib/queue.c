@@ -15,6 +15,9 @@ void
 queue_clear(Queue* q, JSRuntime* rt) {
   struct list_head *p, *p2;
 
+  if(q->items.prev == 0 && q->items.next == 0)
+    init_list_head(&q->items);
+
   list_for_each_safe(p, p2, &q->items) {
     QueueItem* i = list_entry(p, QueueItem, link);
 
@@ -31,6 +34,7 @@ queue_clear(Queue* q, JSRuntime* rt) {
 void
 queue_free(Queue* q, JSRuntime* rt) {
   queue_clear(q, rt);
+
   js_free_rt(rt, q);
 }
 
