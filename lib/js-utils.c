@@ -742,9 +742,8 @@ js_error_string(JSContext* ctx, JSValueConst error) {
     dbuf_printf(&buf, "\nStack:\n%s", stack);
   }
 
-  dbuf_put(&buf, "\0", 1);
-
-  return buf.buf;
+  dbuf_putc(&buf, '\0');
+  return (char*)buf.buf;
 }
 
 uint8_t*
