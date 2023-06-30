@@ -63,7 +63,7 @@ context_delete(struct context* context) {
     list_del(&context->link);
 }
 
-struct context*
+/*struct context*
 context_for_fd(int fd, struct lws** p_wsi) {
   struct list_head* el;
 
@@ -82,4 +82,4 @@ context_for_fd(int fd, struct lws** p_wsi) {
   }
 
   return 0;
-}
+}*/
