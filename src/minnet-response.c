@@ -382,10 +382,8 @@ static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("location", 1, minnet_response_header, HEADERS_LOCATION),
     JS_CFUNC_MAGIC_DEF("set", 2, minnet_response_header, HEADERS_SET),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
-
     JS_CFUNC_DEF("clone", 0, minnet_response_clone),
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_response_iterator),
-
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_response_get, minnet_response_set, RESPONSE_BODY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("bodyUsed", minnet_response_get, 0, RESPONSE_BODYUSED, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_response_get, minnet_response_set, RESPONSE_HEADERS, JS_PROP_ENUMERABLE),
