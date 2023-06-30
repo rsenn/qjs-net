@@ -409,8 +409,9 @@ enum {
 static JSValue
 minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   JSValue ret = JS_UNDEFINED;
+
   switch(magic) {
-    case WEBSOCKET_FROMFD: {
+   /* case WEBSOCKET_FROMFD: {
       struct lws* wsi;
       struct context* context;
       int32_t fd = -1;
@@ -431,8 +432,9 @@ minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
       }
 
       break;
-    }
+    }*/
   }
+  
   return ret;
 }
 
