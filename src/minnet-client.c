@@ -323,7 +323,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
         if(JS_IsBool(ret)) {
           if(JS_ToBool(ctx, ret) == FALSE) {
-            client->on.writeable = CALLBACK(0, JS_NULL, JS_NULL);
+            client->on.writeable = CALLBACK_INIT(0, JS_NULL, JS_NULL);
           }
         }
         opaque->callback = -1;
@@ -597,7 +597,7 @@ minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int
     case CLIENT_ONWRITEABLE: {
       BOOL disabled = JS_IsNull(value);
 
-      client->on.cb[magic - CLIENT_ONMESSAGE] = CALLBACK(disabled ? 0 : ctx, JS_DupValue(ctx, value), JS_NULL);
+      client->on.cb[magic - CLIENT_ONMESSAGE] = CALLBACK_INIT(disabled ? 0 : ctx, JS_DupValue(ctx, value), JS_NULL);
 
       if(magic == CLIENT_ONWRITEABLE)
         if(!disabled)
@@ -694,7 +694,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onWriteable", client->on.writeable)
 
   if(!JS_IsFunction(ctx, client->on.fd.func_obj)) {
-    client->on.fd = CALLBACK(ctx, minnet_default_fd_callback(ctx), JS_NULL);
+    client->on.fd = CALLBACK_INIT(ctx, minnet_default_fd_callback(ctx), JS_NULL);
   }
 
   value = JS_GetPropertyStr(ctx, options, "binary");
@@ -778,9 +778,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     ret = js_async_create(ctx, &client->promise);
 
     if(JS_IsNull(client->on.connect.func_obj))
-      client->on.connect = CALLBACK(ctx, JS_DupValue(ctx, client->promise.resolve), JS_NULL);
+      client->on.connect = CALLBACK_INIT(ctx, JS_DupValue(ctx, client->promise.resolve), JS_NULL);
     if(JS_IsNull(client->on.close.func_obj))
-      client->on.close = CALLBACK(ctx, JS_DupValue(ctx, client->promise.reject), JS_NULL);
+      client->on.close = CALLBACK_INIT(ctx, JS_DupValue(ctx, client->promise.reject), JS_NULL);
   }
 
   errno = 0;

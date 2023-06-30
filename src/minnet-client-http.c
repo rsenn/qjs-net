@@ -215,7 +215,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         if(JS_IsBool(ret)) {
           if(JS_ToBool(ctx, ret) == FALSE) {
-            client->on.writeable = CALLBACK(0, JS_NULL, JS_NULL);
+            client->on.writeable = CALLBACK_INIT(0, JS_NULL, JS_NULL);
           }
         }
         opaque->callback = -1;

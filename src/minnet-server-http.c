@@ -177,7 +177,7 @@ mount_new(JSContext* ctx, const char* mnt, const char* org, const char* def, con
         org,
         def,
         pro,
-        ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK"})[origin_proto]);
+        ((const char*[]){"HTTP", "HTTPS", "FILE", "CGI", "REDIR_HTTP", "REDIR_HTTPS", "CALLBACK_INIT"})[origin_proto]);
 
     m->mnt = js_strdup(ctx, mnt);
     m->org = org ? js_strdup(ctx, org) : 0;
@@ -1040,7 +1040,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
                     "CGI",
                     "REDIR_HTTP",
                     "REDIR_HTTPS",
-                    "CALLBACK",
+                    "CALLBACK_INIT",
                 })[(uintptr_t)mount->lws.origin_protocol]);
         }
 
