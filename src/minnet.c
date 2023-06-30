@@ -63,7 +63,7 @@ static int
 make_osf_handle(intptr_t handle) {
   int ret;
 
-  assert((SOCKET)handle != INVALID_HANDLE_VALUE);
+  assert((HANDLE)handle != INVALID_HANDLE_VALUE);
   ret = _open_osfhandle((SOCKET)handle, 0);
 
   if(ret >= osfhandle_count) {
@@ -80,7 +80,7 @@ make_osf_handle(intptr_t handle) {
 
 static int
 get_osf_handle(intptr_t handle) {
-  assert((SOCKET)handle != INVALID_HANDLE_VALUE);
+  assert((HANDLE)handle != INVALID_HANDLE_VALUE);
 
   if(osfhandle_map) {
     size_t i;
@@ -99,7 +99,7 @@ close_osf_handle(int fd) {
 
   assert(fd + 1 <= osfhandle_count);
   assert(osfhandle_map);
-  assert((SOCKET)handle != INVALID_HANDLE_VALUE);
+  assert((HANDLE)handle != INVALID_HANDLE_VALUE);
   assert(handle == osfhandle_map[fd]);
 
   close(fd);

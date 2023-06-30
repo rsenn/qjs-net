@@ -411,30 +411,30 @@ minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   JSValue ret = JS_UNDEFINED;
 
   switch(magic) {
-   /* case WEBSOCKET_FROMFD: {
-      struct lws* wsi;
-      struct context* context;
-      int32_t fd = -1;
+    /* case WEBSOCKET_FROMFD: {
+       struct lws* wsi;
+       struct context* context;
+       int32_t fd = -1;
 
-      if(argc > 0)
-        JS_ToInt32(ctx, &fd, argv[0]);
+       if(argc > 0)
+         JS_ToInt32(ctx, &fd, argv[0]);
 
-      if((context = context_for_fd(fd, &wsi))) {
-        struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-        struct session_data* sess;
+       if((context = context_for_fd(fd, &wsi))) {
+         struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+         struct session_data* sess;
 
-        if(opaque && opaque->sess && JS_IsObject(opaque->sess->ws_obj))
-          ret = JS_DupValue(ctx, opaque->sess->ws_obj);
-        else if(opaque && opaque->ws)
-          ret = minnet_ws_wrap(ctx, opaque->ws);
-        else
-          ret = JS_ThrowInternalError(ctx, "Socket.byFd(): wsi existing (wsi=%p, context=%p), but not tracked", wsi, context);
-      }
+         if(opaque && opaque->sess && JS_IsObject(opaque->sess->ws_obj))
+           ret = JS_DupValue(ctx, opaque->sess->ws_obj);
+         else if(opaque && opaque->ws)
+           ret = minnet_ws_wrap(ctx, opaque->ws);
+         else
+           ret = JS_ThrowInternalError(ctx, "Socket.byFd(): wsi existing (wsi=%p, context=%p), but not tracked", wsi, context);
+       }
 
-      break;
-    }*/
+       break;
+     }*/
   }
-  
+
   return ret;
 }
 

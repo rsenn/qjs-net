@@ -182,7 +182,7 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
       if(buf.data) {
         size_t elem_len = ringbuffer_element_len(rb);
         if((buf.size % elem_len) != 0) {
-          ret = JS_ThrowRangeError(ctx, "buffer size not a multiple of element length (%zu)", elem_len);
+          ret = JS_ThrowRangeError(ctx, "buffer size not a multiple of element length (%lu)", (unsigned long int)elem_len);
           break;
         }
         count = buf.size / elem_len;
@@ -260,7 +260,7 @@ minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValu
       size_t elem_len = ringbuffer_element_len(rb);
 
       if((buf.size % elem_len) != 0) {
-        ret = JS_ThrowRangeError(ctx, "input argument size not a multiple of element length (%zu)", elem_len);
+        ret = JS_ThrowRangeError(ctx, "input argument size not a multiple of element length (%lu)", (unsigned long int)elem_len);
         break;
       }
       ret = JS_NewUint32(ctx, ringbuffer_insert(rb, buf.data, buf.size / elem_len));
