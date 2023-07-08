@@ -1,12 +1,11 @@
-import { exit, puts } from 'std';
-import { URL, LLL_INFO, LLL_USER, setLog } from 'net.so';
+import { LLL_INFO } from 'net.so';
+import { LLL_USER } from 'net.so';
+import { close } from 'os';
+import { sleep } from 'os';
 import Client from './client.js';
-import { close, exec, open, O_RDWR, setReadHandler, setWriteHandler, Worker, ttySetRaw, sleep } from 'os';
-import { in as stdin, out as stdout, err as stderr } from 'std';
-import { assert, getpid, exists, randStr, abbreviate, escape } from './common.js';
-import { spawn } from './spawn.js';
 import { log } from './log.js';
-
+import { spawn } from './spawn.js';
+import { exit } from 'std';
 function main(...args) {
   const debug = args.indexOf('-x') != -1;
   args = args.filter(arg => !/^-[x]/.test(arg));

@@ -1,5 +1,4 @@
 import { EventEmitter } from './event-emitter.js';
-
 let sockId;
 
 export const LogWrap = (globalThis.LogWrap = function LogWrap(log) {
@@ -65,7 +64,6 @@ const codecs = {
     };
   }
 };
-
 import('inspect') .then(m => (globalThis.inspect = m)) .catch(() => {});
 
 if(globalThis.inspect) {
@@ -881,6 +879,7 @@ export function MakeSendFunction(sendFn, returnFn) {
 }
 
 const TypedArrayPrototype = Object.getPrototypeOf(Uint32Array.prototype);
+
 const TypedArrayConstructor = TypedArrayPrototype.constructor;
 
 function isTypedArray(value) {
@@ -945,6 +944,7 @@ export const RPCConnect =
   (url, verbosity = 1) =>
   (new_ws = MakeWebSocket) =>
     new RPCSocket(url, RPCClient, verbosity).connect(new_ws);
+
 export const RPCListen =
   (url, verbosity = 1) =>
   (new_ws = MakeWebSocket) =>

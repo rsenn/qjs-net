@@ -1,9 +1,11 @@
-import * as std from 'std';
 import * as os from 'os';
+import { decorate } from 'util';
+import { define } from 'util';
+import { getset } from 'util';
+import { lazyProperties } from 'util';
+import { memoize } from 'util';
 import { Console } from 'console';
-import * as deep from 'deep';
-import { decorate, getset, define, memoize, histogram, lazyProperties } from 'util';
-
+import * as std from 'std';
 let src2obj = {};
 let files = (globalThis.files = {}),
   all = (globalThis.all = new Set());

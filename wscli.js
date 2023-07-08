@@ -1,8 +1,14 @@
-#!/usr/bin/env qjsm
-import * as std from 'std';
+import { client } from 'net.so';
+import { createServer } from 'net.so';
+import { LLL_INFO } from 'net.so';
+import { LLL_NOTICE } from 'net.so';
+import { LLL_USER } from 'net.so';
+import { Request } from 'net.so';
+import { setLog } from 'net.so';
+import { URL } from 'net.so';
 import * as os from 'os';
-import { URL, Request, client, LLL_INFO, LLL_NOTICE, LLL_USER, createServer, setLog } from 'net.so';
-
+import * as std from 'std';
+#!/usr/bin/env qjsm
 const connections = new Set();
 
 let debug = 0,

@@ -1,12 +1,25 @@
-import { exit, puts, open } from 'std';
-import { URL, LLL_ALL, LLL_INFO, LLL_USER, setLog } from 'net.so';
+import { LLL_ALL } from 'net.so';
+import { LLL_INFO } from 'net.so';
+import { LLL_USER } from 'net.so';
+import { setLog } from 'net.so';
+import { close } from 'os';
+import { kill } from 'os';
+import { setReadHandler } from 'os';
+import { SIGINT } from 'os';
+import { signal } from 'os';
+import { sleep } from 'os';
+import { ttySetRaw } from 'os';
 import Client from './client.js';
-import { close, exec, O_RDWR, setReadHandler, setWriteHandler, Worker, ttySetRaw, sleep, kill, signal, SIGINT } from 'os';
-import { in as stdin, out as stdout, err as stderr } from 'std';
-import { assert, getpid, exists, randStr, abbreviate, escape, save } from './common.js';
-import { spawn, wait4, WNOHANG } from './spawn.js';
+import { escape } from './common.js';
+import { save } from './common.js';
 import { log } from './log.js';
-
+import { spawn } from './spawn.js';
+import { wait4 } from './spawn.js';
+import { exit } from 'std';
+import { in as stdin } from 'std';
+import { open } from 'std';
+import { out as stdout } from 'std';
+import { puts } from 'std';
 function main(...args) {
   const debug = args.indexOf('-x') != -1;
   args = args.filter(arg => !/^-[x]/.test(arg));

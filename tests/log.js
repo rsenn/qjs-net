@@ -1,6 +1,17 @@
-import { setLog, URL, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD } from 'net.so';
+import { LLL_CLIENT } from 'net.so';
+import { LLL_DEBUG } from 'net.so';
+import { LLL_ERR } from 'net.so';
+import { LLL_EXT } from 'net.so';
+import { LLL_HEADER } from 'net.so';
+import { LLL_INFO } from 'net.so';
+import { LLL_LATENCY } from 'net.so';
+import { LLL_NOTICE } from 'net.so';
+import { LLL_PARSER } from 'net.so';
+import { LLL_THREAD } from 'net.so';
+import { LLL_USER } from 'net.so';
+import { LLL_WARN } from 'net.so';
+import { setLog } from 'net.so';
 import { err } from 'std';
-
 let logName;
 
 export const Levels = (() => {
@@ -26,6 +37,7 @@ export const Levels = (() => {
 })();
 
 export const isDebug = () => scriptArgs.some(a => /^-[dx]/.test(a));
+
 export const DebugCallback = fn => (isDebug() ? fn : () => {});
 
 export const DefaultLevels =

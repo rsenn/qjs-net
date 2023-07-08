@@ -1,7 +1,11 @@
-import { exit, puts, open } from 'std';
-import { fetch, Request, Response, setLog, logLevels, LLL_DEBUG, LLL_INFO, LLL_USER } from 'net.so';
+import { fetch } from 'net.so';
+import { logLevels } from 'net.so';
+import { Request } from 'net.so';
+import { setLog } from 'net.so';
 import { log } from './log.js';
-
+import { exit } from 'std';
+import { open } from 'std';
+import { puts } from 'std';
 function WriteFile(name, data) {
   try {
     let f = open(name, 'w+');

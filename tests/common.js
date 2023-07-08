@@ -1,5 +1,6 @@
+import { readlink } from 'os';
+import { stat } from 'os';
 import { open } from 'std';
-import { readlink, stat } from 'os';
 
 export function assert(actual, expected, message) {
   if(arguments.length == 1) expected = true;

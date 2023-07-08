@@ -1,4 +1,12 @@
-import { readlink, open, O_WRONLY, O_CREAT, O_TRUNC, exec, close, waitpid } from 'os';
+import { close } from 'os';
+import { exec } from 'os';
+import { O_CREAT } from 'os';
+import { O_TRUNC } from 'os';
+import { O_WRONLY } from 'os';
+import { open } from 'os';
+import { readlink } from 'os';
+import { waitpid } from 'os';
+
 export { WNOHANG } from 'os';
 
 export const getexe = () => readlink('/proc/self/exe')[0];
