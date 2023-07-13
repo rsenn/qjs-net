@@ -39,7 +39,9 @@
  */
 const TinyTest = {
   async run(tests) {
-    let failures = 0;
+    let count = 0,
+      failures = 0;
+
     for(let testName in tests) {
       let testAction = tests[testName];
       //console.log('Test:', testName, testAction);
@@ -51,7 +53,12 @@ const TinyTest = {
         console.error('Test:', testName, 'FAILED', e);
         console.error(e.stack);
       }
+      console.log('Test:', testName, 'OK');
+      count++;
     }
+
+    if(failures) console.log(`${failures} out of ${count} tests failed.`);
+    else console.log(`${count} tests succeeded.`);
   },
 
   fail(msg) {
