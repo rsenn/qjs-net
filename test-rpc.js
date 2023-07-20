@@ -120,23 +120,28 @@ function main(...args) {
   //console.log('main', { url, uri });
 
   let ctor = () =>
-    new RPCSocket(url, serve ? RPCServer : RPCClient, {
-      Directory,
-      List,
-      Location,
-      Lexer,
-      Location,
-      SockAddr,
-      Socket,
-      AsyncSocket,
-      StreamReader,
-      StreamWriter,
-      ReadableStream,
-      ReadableStreamDefaultController,
-      WritableStream,
-      WritableStreamDefaultController,
-      TransformStream
-    });
+    new RPCSocket(
+      url,
+      serve ? RPCServer : RPCClient,
+      {
+        Directory,
+        List,
+        Location,
+        Lexer,
+        Location,
+        SockAddr,
+        Socket,
+        AsyncSocket,
+        StreamReader,
+        StreamWriter,
+        ReadableStream,
+        ReadableStreamDefaultController,
+        WritableStream,
+        WritableStreamDefaultController,
+        TransformStream
+      },
+      params.verbose
+    );
 
   let socket = (globalThis.socket = ctor());
 

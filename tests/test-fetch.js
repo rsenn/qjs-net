@@ -23,14 +23,12 @@ async function FetchNext(array) {
   try {
     let response = await fetch(url, {
       headers: {
-        accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
         'accept-language': 'en-US,en;q=0.9',
         pragma: 'no-cache',
         'cache-control': 'no-cache',
         connection: 'keep-alive',
-        'user-agent':
-          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.27 Safari/537.36'
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.27 Safari/537.36'
       }
     });
 
@@ -57,11 +55,7 @@ function main(...args) {
         .split(',')
         .map(n => `http://hauptplatz.unipohl.de/Wissenschaft/${n}.htm`);
 
-  if(process.env.DEBUG)
-    setLog(
-      ((LLL_DEBUG - 1) | LLL_USER) & ~(LLL_INFO | LLL_NOTICE),
-      (level, msg) => !/\bPOLL\b/.test(msg) && console.log(logLevels[level].padEnd(10) + msg)
-    );
+  if(process.env.DEBUG) setLog(((LLL_DEBUG - 1) | LLL_USER) & ~(LLL_INFO | LLL_NOTICE), (level, msg) => !/\bPOLL\b/.test(msg) && console.log(logLevels[level].padEnd(10) + msg));
   /*else
     setLog(
       -1,
