@@ -143,8 +143,7 @@ BOOL js_buffer_from(JSContext*, JSBuffer* buf, JSValueConst value);
 JSBuffer js_buffer_new(JSContext*, JSValueConst value);
 JSBuffer js_buffer_fromblock(JSContext*, struct byte_block* blk);
 JSBuffer js_buffer_alloc(JSContext*, size_t size);
-void js_buffer_free_rt(JSBuffer*, JSRuntime* rt);
-void js_buffer_free(JSBuffer*, JSContext* ctx);
+void js_buffer_free(JSBuffer*, JSRuntime* rt);
 BOOL js_is_iterator(JSContext*, JSValueConst obj);
 BOOL js_is_generator(JSContext*, JSValueConst obj);
 BOOL js_is_async_generator(JSContext*, JSValueConst obj);
@@ -199,8 +198,7 @@ JSValue js_generator_prototype(JSContext*);
 JSValue js_asyncgenerator_prototype(JSContext*);
 
 JSValue js_async_create(JSContext*, ResolveFunctions* funcs);
-void js_async_free(JSContext*, ResolveFunctions* funcs);
-void js_async_free_rt(JSRuntime*, ResolveFunctions* funcs);
+void js_async_free(JSRuntime*, ResolveFunctions* funcs);
 BOOL js_async_resolve(JSContext*, ResolveFunctions* funcs, JSValueConst value);
 BOOL js_async_reject(JSContext*, ResolveFunctions* funcs, JSValueConst value);
 void js_async_zero(ResolveFunctions*);
@@ -238,16 +236,7 @@ js_entry_init(JSEntry* entry) {
 }
 
 static inline void
-js_entry_clear(JSContext* ctx, JSEntry* entry) {
-  if(entry->key >= 0)
-    JS_FreeAtom(ctx, entry->key);
-  entry->key = -1;
-  JS_FreeValue(ctx, entry->value);
-  entry->value = JS_UNDEFINED;
-}
-
-static inline void
-js_entry_clear_rt(JSRuntime* rt, JSEntry* entry) {
+js_entry_clear(JSRuntime* rt, JSEntry* entry) {
   if(entry->key >= 0)
     JS_FreeAtomRT(rt, entry->key);
   entry->key = -1;
@@ -257,7 +246,7 @@ js_entry_clear_rt(JSRuntime* rt, JSEntry* entry) {
 
 static inline void
 js_entry_reset(JSContext* ctx, JSEntry* entry, JSAtom key, JSValue value) {
-  js_entry_clear(ctx, entry);
+  js_entry_clear(ctx, JS_GetRuntime(entry));
   entry->key = key;
   entry->value = value;
 }

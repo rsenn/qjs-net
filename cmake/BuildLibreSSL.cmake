@@ -28,7 +28,8 @@ macro(build_libressl)
   if((NOT DEFINED LIBRESSL_PREINCLUDE_PREFIX) OR (NOT DEFINED LIBRESSL_PREINCLUDE_HEADER))
     message(STATUS "Building libreSSL without pre-included headers and global symbols prefixing.")
   else()
-    set(LIBRESSL_PREINCLUDE_C_FLAGS " -DLIB_PREFIX_NAME=${LIBRESSL_PREINCLUDE_PREFIX} -include ${LIBRESSL_PREINCLUDE_HEADER}")
+    set(LIBRESSL_PREINCLUDE_C_FLAGS
+        " -DLIB_PREFIX_NAME=${LIBRESSL_PREINCLUDE_PREFIX} -include ${LIBRESSL_PREINCLUDE_HEADER}")
     string(APPEND LIBRESSL_C_FLAGS " ${LIBRESSL_PREINCLUDE_C_FLAGS}")
   endif()
 
@@ -39,7 +40,10 @@ macro(build_libressl)
   endif()
 
   if(TARGET ${LIBRESSL_TARGET_NAME})
-    message(FATAL_ERROR "A target with name ${LIBRESSL_TARGET_NAME} is already defined. Please set LIBRESSL_TARGET_NAME to a unique value.")
+    message(
+      FATAL_ERROR
+        "A target with name ${LIBRESSL_TARGET_NAME} is already defined. Please set LIBRESSL_TARGET_NAME to a unique value."
+    )
   endif()
 
   include(ExternalProject)
@@ -53,7 +57,8 @@ macro(build_libressl)
     PREFIX libressl
     DOWNLOAD_NAME libressl-${LIBRESSL_VERSION}.tar.gz
     URL https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${LIBRESSL_VERSION}.tar.gz
-    CMAKE_ARGS "-DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" "-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}" "-DCMAKE_BUILD_TYPE=${LIBRESSL_BUILD_TYPE}"
+    CMAKE_ARGS "-DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" "-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}"
+               "-DCMAKE_BUILD_TYPE=${LIBRESSL_BUILD_TYPE}"
     CMAKE_CACHE_ARGS
       "-DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}"
       "-DCMAKE_C_COMPILER_ID:STRING=${CMAKE_C_COMPILER_ID}"
@@ -80,17 +85,20 @@ macro(build_libressl)
     ExternalProject_Add_StepDependencies(${LIBRESSL_TARGET_NAME} build ${ARGN})
   endif(ARGN)
 
-  ExternalProject_Add_Step(${LIBRESSL_TARGET_NAME} COMMAND ${CMAKE_COMMAND} --build . --target clean)
+  ExternalProject_Add_Step(${LIBRESSL_TARGET_NAME} COMMAND ${CMAKE_COMMAND} --build . --target
+                                                           clean)
 
-  add_custom_target(${LIBRESSL_TARGET_NAME}_clean COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target clean WORKING_DIRECTORY "${BINARY_DIR}" COMMENT "Cleaning libressl"
-                    VERBATIM)
+  add_custom_target(
+    ${LIBRESSL_TARGET_NAME}_clean COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target clean
+    WORKING_DIRECTORY "${BINARY_DIR}" COMMENT "Cleaning libressl" VERBATIM)
   #add_custom_target(${LIBRESSL_TARGET_NAME}_install COMMAND ${CMAKE_COMMAND} --build ${CMAKE_CURRENT_BINARY_DIR}/libressl -- install WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libressl COMMENT "Installing libressl to ${CMAKE_INSTALL_PREFIX}" VERBATIM)
   #add_dependencies(${LIBRESSL_TARGET_NAME}_install ${LIBRESSL_TARGET_NAME})
 
   set(LIBRESSL_CRYPTO_LIBRARY libcrypto CACHE STRING "LibreSSL crypto library" FORCE)
   add_library(${LIBRESSL_CRYPTO_LIBRARY} STATIC IMPORTED)
   add_dependencies(${LIBRESSL_CRYPTO_LIBRARY} ${LIBRESSL_TARGET_NAME})
-  set_property(TARGET ${LIBRESSL_CRYPTO_LIBRARY} PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/libcrypto.a)
+  set_property(TARGET ${LIBRESSL_CRYPTO_LIBRARY} PROPERTY IMPORTED_LOCATION
+                                                          ${BINARY_DIR}/libcrypto.a)
 
   set(LIBRESSL_SSL_LIBRARY libssl CACHE STRING "LibreSSL ssl library" FORCE)
   add_library(${LIBRESSL_SSL_LIBRARY} STATIC IMPORTED)
@@ -102,7 +110,9 @@ macro(build_libressl)
   add_dependencies(${LIBRESSL_TLS_LIBRARY} ${LIBRESSL_TARGET_NAME})
   set_property(TARGET ${LIBRESSL_TLS_LIBRARY} PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/libtls.a)
 
-  set(LIBRESSL_LIBRARIES "${LIBRESSL_TLS_LIBRARY};${LIBRESSL_SSL_LIBRARY};${LIBRESSL_CRYPTO_LIBRARY}" CACHE STRING "LibreSSL libraries" FORCE)
+  set(LIBRESSL_LIBRARIES
+      "${LIBRESSL_TLS_LIBRARY};${LIBRESSL_SSL_LIBRARY};${LIBRESSL_CRYPTO_LIBRARY}"
+      CACHE STRING "LibreSSL libraries" FORCE)
 
   set(LIBRESSL_LIBRARY_DIR "${BINARY_DIR}" CACHE PATH "LibreSSL library directory" FORCE)
   set(LIBRESSL_INCLUDE_DIR "${SOURCE_DIR}/include" CACHE PATH "LibreSSL include directory" FORCE)

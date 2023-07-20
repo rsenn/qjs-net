@@ -345,18 +345,13 @@ js_buffer_alloc(JSContext* ctx, size_t size) {
 }
 
 void
-js_buffer_free_rt(JSBuffer* in, JSRuntime* rt) {
+js_buffer_free(JSBuffer* in, JSRuntime* rt) {
   if(in->data) {
     in->free(rt, in, in->data);
     in->data = 0;
     in->size = 0;
     in->value = JS_UNDEFINED;
   }
-}
-
-void
-js_buffer_free(JSBuffer* in, JSContext* ctx) {
-  js_buffer_free_rt(in, JS_GetRuntime(ctx));
 }
 
 BOOL
@@ -1187,7 +1182,7 @@ js_resolve_functions_call(JSContext* ctx, ResolveFunctions* funcs, int index, JS
 
   assert(!JS_IsNull(func));
   ret = JS_Call(ctx, func, JS_UNDEFINED, 1, &arg);
-  js_async_free(ctx, funcs);
+  js_async_free(JS_GetRuntime(ctx), funcs);
   JS_FreeValue(ctx, ret);
 }
 
@@ -1200,14 +1195,7 @@ js_async_create(JSContext* ctx, ResolveFunctions* funcs) {
 }
 
 void
-js_async_free(JSContext* ctx, ResolveFunctions* funcs) {
-  JS_FreeValue(ctx, funcs->resolve);
-  JS_FreeValue(ctx, funcs->reject);
-  js_resolve_functions_zero(funcs);
-}
-
-void
-js_async_free_rt(JSRuntime* rt, ResolveFunctions* funcs) {
+js_async_free(JSRuntime* rt, ResolveFunctions* funcs) {
   JS_FreeValueRT(rt, funcs->resolve);
   JS_FreeValueRT(rt, funcs->reject);
   js_resolve_functions_zero(funcs);

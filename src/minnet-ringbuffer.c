@@ -96,8 +96,8 @@ static void
 tail_finalize(void* ptr) {
   struct ringbuffer_tail* tail = ptr;
 
-  ringbuffer_free(tail->rb, tail->ctx);
-  js_buffer_free(&tail->buf, tail->ctx);
+  ringbuffer_free(tail->rb, JS_GetRuntime(JS_GetRuntime(tail->ctx)));
+  js_buffer_free(&tail->buf, JS_GetRuntime(tail->ctx));
   js_free(tail->ctx, tail);
 }
 
@@ -128,7 +128,7 @@ tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], 
     ret = js_iterator_result(ctx, buf.value, FALSE);
   }
 
-  js_buffer_free(&buf, ctx);
+  js_buffer_free(&buf, JS_GetRuntime(ctx));
 
   return ret;
 }
@@ -148,7 +148,7 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
 
   if(tail_buf.data) {
     if(tail_buf.size < sizeof(uint32_t)) {
-      js_buffer_free(&tail_buf, ctx);
+      js_buffer_free(&tail_buf, JS_GetRuntime(ctx));
       ret = JS_ThrowRangeError(ctx, "invalid tail");
       goto fail;
     }
@@ -169,7 +169,7 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
 
     case RINGBUFFER_GET_ELEMENT: {
       ret =
-          JS_NewArrayBuffer(ctx, (uint8_t*)lws_ring_get_element(rb->ring, &new_tail), ringbuffer_element_len(rb), &deferred_finalizer, deferred_new(&ringbuffer_free, ringbuffer_dup(rb), ctx), FALSE);
+          JS_NewArrayBuffer(ctx, (uint8_t*)lws_ring_get_element(rb->ring, &new_tail), ringbuffer_element_len(rb), &deferred_finalizer, deferred_new(&ringbuffer_free, ringbuffer_dup(rb), JS_GetRuntime(ctx)), FALSE);
       break;
     }
 
@@ -191,7 +191,7 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
         break;
       }
       ret = JS_NewUint32(ctx, lws_ring_consume(rb->ring, tail_ptr, buf.data, count));
-      js_buffer_free(&buf, ctx);
+      js_buffer_free(&buf, JS_GetRuntime(ctx));
       break;
     }
 
@@ -222,7 +222,7 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
   }
 
 fail:
-  js_buffer_free(&tail_buf, ctx);
+  js_buffer_free(&tail_buf, JS_GetRuntime(ctx));
   return ret;
 }
 
@@ -265,7 +265,7 @@ minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValu
         break;
       }
       ret = JS_NewUint32(ctx, ringbuffer_insert(rb, buf.data, buf.size / elem_len));
-      js_buffer_free(&buf, ctx);
+      js_buffer_free(&buf, JS_GetRuntime(ctx));
       break;
     }
 
@@ -329,7 +329,7 @@ minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
         uint32_t buflen;
       }* r = (void*)rb->ring;
 
-      ret = JS_NewArrayBuffer(ctx, r->buf, r->buflen, &deferred_finalizer, deferred_new(ringbuffer_free, ctx, ringbuffer_dup(rb)), FALSE);
+      ret = JS_NewArrayBuffer(ctx, r->buf, r->buflen, &deferred_finalizer, deferred_new(ringbuffer_free, ringbuffer_dup(rb), JS_GetRuntime(ctx)), FALSE);
       break;
     }
 
@@ -361,11 +361,7 @@ minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = js_typedarray_new(ctx, 8, FALSE, FALSE, ab, r->head, (r->buflen - r->head) / r->element_len);
       JS_FreeValue(ctx, ab);
 
-      /*void* data = 0;
-      size_t size = 0;
-
-      if(!lws_ring_next_linear_insert_range(rb->ring, &data, &size))
-        ret = JS_NewArrayBuffer(ctx, data, size, js_closure_free_ab, js_closure_new(ctx, ringbuffer_dup(rb), (js_closure_finalizer_t*)ringbuffer_free), FALSE);*/
+     
       break;
     }
   }
@@ -421,7 +417,7 @@ minnet_ringbuffer_finalizer(JSRuntime* rt, JSValue val) {
 
   if((rb = JS_GetOpaque(val, minnet_ringbuffer_class_id))) {
 
-    ringbuffer_free_rt(rb, rt);
+    ringbuffer_free(rb, JS_GetRuntime(rt));
   }
 }
 

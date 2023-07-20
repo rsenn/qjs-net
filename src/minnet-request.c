@@ -222,7 +222,7 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
     }
 
     case REQUEST_URI: {
-      url_free(&req->url, ctx);
+      url_free(&req->url, JS_GetRuntime(ctx));
       url_parse(&req->url, str, ctx);
       break;
     }
@@ -307,7 +307,7 @@ minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       }
     }
 
-    js_async_free(ctx, &funcs);
+    js_async_free(JS_GetRuntime(ctx), &funcs);
   }
 
   return ret;

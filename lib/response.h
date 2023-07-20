@@ -4,8 +4,7 @@
 #ifndef QJSNET_LIB_RESPONSE_H
 #define QJSNET_LIB_RESPONSE_H
 
-#include <stdbool.h>
-#include <stdint.h>
+ #include <stdint.h>
 #include <sys/types.h>
 #include "url.h"
 #include "buffer.h"
@@ -15,7 +14,7 @@ struct session_data;
 
 typedef struct http_response {
   int ref_count;
-  bool read_only : 1, headers_sent : 1, compress : 1;
+  BOOL read_only : 1, headers_sent : 1, compress : 1, sync:1;
   URL url;
   int status;
   char* status_text;

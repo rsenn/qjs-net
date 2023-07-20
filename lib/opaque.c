@@ -13,11 +13,11 @@ THREAD_LOCAL int64_t serial = 0;
 THREAD_LOCAL struct list_head opaque_list = {0, 0};
 
 void
-opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
+opaque_clear(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
   if(opaque->ws) {
     struct socket* ws = opaque->ws;
     opaque->ws = 0;
-    ws_free_rt(ws, rt);
+    ws_free(ws, rt);
   }
   if(opaque->req) {
     Request* req = opaque->req;
@@ -30,14 +30,14 @@ opaque_clear_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
     response_free(resp, rt);
   }
   if(opaque->form_parser) {
-    formparser_free_rt(opaque->form_parser, rt);
+    formparser_free(opaque->form_parser, rt);
     opaque->form_parser = 0;
   }
 }
 
 void
-opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
-  opaque_clear_rt(opaque, rt);
+opaque_free(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
+  opaque_clear(opaque, rt);
 
   if(--opaque->ref_count == 0) {
     assert(opaque->link.next);
@@ -45,12 +45,7 @@ opaque_free_rt(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
     js_free_rt(rt, opaque);
   }
-}
-
-void
-opaque_free(struct wsi_opaque_user_data* opaque, JSContext* ctx) {
-  opaque_free_rt(opaque, JS_GetRuntime(ctx));
-}
+} 
 
 struct wsi_opaque_user_data*
 opaque_new(JSContext* ctx) {
@@ -60,7 +55,7 @@ opaque_new(JSContext* ctx) {
     opaque->serial = ++serial;
     opaque->status = CONNECTING;
     opaque->ref_count = 1;
-    opaque->callback = -1;
+    opaque->fd = -1;
 
     if(opaque_list.prev == NULL)
       init_list_head(&opaque_list);

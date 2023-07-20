@@ -72,6 +72,7 @@ JSValue
 minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret, handlers[4], args[2];
   union closure* cc;
+  BOOL block = TRUE;
   // MinnetFetch* fc;
 
   if(argc >= 2 && !JS_IsObject(argv[1]))
@@ -84,7 +85,10 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
     return JS_EXCEPTION;
 
   args[0] = argv[0];
-  args[1] = argc <= 1 ? JS_NewObject(ctx) : JS_DupValue(ctx, argv[1]);
+  args[1] = argc > 1 ? JS_DupValue(ctx, argv[1]) : JS_NewObject(ctx);
+
+  if(argc > 1 && js_has_propertystr(ctx, argv[1], "block"))
+    block = js_get_propertystr_bool(ctx, argv[1], "block");
 
   handlers[0] = js_function_cclosure(ctx, &fetch_handler, 2, ON_HTTP, closure_dup(cc), closure_free);
   handlers[1] = js_function_cclosure(ctx, &fetch_handler, 2, ON_ERROR, closure_dup(cc), closure_free);
@@ -95,7 +99,9 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);
   JS_SetPropertyStr(ctx, args[1], "onClose", handlers[2]);
   JS_SetPropertyStr(ctx, args[1], "onFd", handlers[3]);
-  JS_SetPropertyStr(ctx, args[1], "block", JS_FALSE);
+
+  if(!js_has_propertystr(ctx, args[1], "block"))
+    JS_SetPropertyStr(ctx, args[1], "block", JS_NewBool(ctx, block));
 
   ret = minnet_client_closure(ctx, this_val, 2, args, RETURN_RESPONSE, cc);
 

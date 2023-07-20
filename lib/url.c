@@ -256,20 +256,13 @@ url_length(const URL url) {
 }
 
 void
-url_free(URL* url, JSContext* ctx) {
-  if(url->host)
-    js_free(ctx, url->host);
-  if(url->path)
-    js_free(ctx, url->path);
-  memset(url, 0, sizeof(URL));
-}
-
-void
-url_free_rt(URL* url, JSRuntime* rt) {
+url_free(URL* url, JSRuntime* rt) {
   if(url->host)
     js_free_rt(rt, url->host);
+
   if(url->path)
     js_free_rt(rt, url->path);
+
   memset(url, 0, sizeof(URL));
 }
 

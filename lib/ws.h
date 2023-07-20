@@ -20,13 +20,12 @@ struct http_response;
 struct socket {
   int ref_count;
   struct lws* lwsi;
+  int fd;
 };
 
 struct socket* ws_new(struct lws*, JSContext* ctx);
-void ws_clear_rt(struct socket*, JSRuntime* rt);
-void ws_clear(struct socket*, JSContext* ctx);
-void ws_free_rt(struct socket*, JSRuntime* rt);
-void ws_free(struct socket*, JSContext* ctx);
+void ws_clear(struct socket*, JSRuntime* rt);
+void ws_free(struct socket*, JSRuntime* rt);
 struct socket* ws_dup(struct socket*);
 QueueItem* ws_enqueue(struct socket*, ByteBlock);
 QueueItem* ws_send(struct socket*, const void* data, size_t size, JSContext* ctx);
@@ -49,6 +48,11 @@ ws_opaque(struct socket* ws) {
 static inline struct session_data*
 ws_session(struct socket* ws) {
   return ws->lwsi ? lws_session(ws->lwsi) : 0;
+}
+
+static inline int
+ws_fd(struct socket* ws) {
+  return ws->lwsi ? lws_get_socket_fd(lws_get_network_wsi(ws->lwsi)) : 0;
 }
 
 static inline struct socket*

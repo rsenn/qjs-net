@@ -319,7 +319,7 @@ wsi_iohandler(struct lws* wsi, struct js_callback* cb, struct lws_pollargs args)
 int
 wsi_handle_poll(struct lws* wsi, enum lws_callback_reasons reason, struct js_callback* cb, struct lws_pollargs* args) {
 
-  if(reason != LWS_CALLBACK_LOCK_POLL && reason != LWS_CALLBACK_UNLOCK_POLL)
+  /*if(reason != LWS_CALLBACK_LOCK_POLL && reason != LWS_CALLBACK_UNLOCK_POLL)
     LOG("POLL",
         FG("%d") "%-33s" NC " fd=%d events=%s",
         22 + (ROR(reason, 4) ^ 0),
@@ -328,7 +328,7 @@ wsi_handle_poll(struct lws* wsi, enum lws_callback_reasons reason, struct js_cal
         args->events == (POLLIN | POLLOUT) ? "IN|OUT"
         : args->events == POLLIN           ? "IN"
         : args->events == POLLOUT          ? "OUT"
-                                           : "");
+                                           : "");*/
 
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:
@@ -346,8 +346,8 @@ wsi_handle_poll(struct lws* wsi, enum lws_callback_reasons reason, struct js_cal
 
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
       if(cb->ctx)
-        if(args->events != args->prev_events)
-          wsi_iohandler(wsi, cb, *args);
+        // if(args->events != args->prev_events)
+        wsi_iohandler(wsi, cb, *args);
 
       break;
     }

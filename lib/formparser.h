@@ -24,10 +24,10 @@ typedef struct form_parser {
 
 void formparser_init(FormParser*, struct socket* ws, int nparams, const char* const* param_names, size_t chunk_size);
 FormParser* formparser_alloc(JSContext*);
-void formparser_clear(FormParser*, JSContext* ctx);
-void formparser_clear_rt(FormParser*, JSRuntime* rt);
-void formparser_free(FormParser*, JSContext* ctx);
-void formparser_free_rt(FormParser*, JSRuntime* rt);
+// void formparser_clear(FormParser*, JSContext* ctx);
+void formparser_clear(FormParser*, JSRuntime* rt);
+// void formparser_free(FormParser*, JSContext* ctx);
+void formparser_free(FormParser*, JSRuntime* rt);
 const char* formparser_param_name(FormParser*, int index);
 bool formparser_param_valid(FormParser*, int index);
 size_t formparser_param_count(FormParser*);

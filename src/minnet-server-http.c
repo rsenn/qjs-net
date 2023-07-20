@@ -467,7 +467,7 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
       session_want_write(session, closure->wsi);
     }
 
-    js_buffer_free(&out, ctx);
+    js_buffer_free(&out, JS_GetRuntime(ctx));
 
     JS_FreeValue(ctx, value);
   }
@@ -555,7 +555,7 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
           DBG("out={ .data = '%.*s', .size = %zu }", (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data, out.size);
           queue_write(&session->sendq, out.data, out.size, ctx);
         }
-        js_buffer_free(&out, ctx);
+        js_buffer_free(&out, JS_GetRuntime(ctx));
       }
       JS_FreeValue(ctx, ret);
       if(*done_p)

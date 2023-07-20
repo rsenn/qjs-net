@@ -178,7 +178,7 @@ minnet_hash_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
         ret = JS_NewInt64(ctx, buf.size);
       }
 
-      js_buffer_free(&buf, ctx);
+      js_buffer_free(&buf, JS_GetRuntime(ctx));
       break;
     }
 

@@ -212,7 +212,7 @@ proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
 
 void
 request_clear(Request* req, JSContext* ctx) {
-  url_free(&req->url, ctx);
+  url_free_rt(&req->url, JS_GetRuntime(ctx));
   buffer_free(&req->headers);
   if(req->ip) {
     free(req->ip);
@@ -257,7 +257,7 @@ ws_want_write_free(void* ptr) {
   WSWantWrite* closure = ptr;
   JSContext* ctx = closure->ctx;
 
-  ws_free(closure->ws, ctx);
+  ws_free_rt(closure->ws, JS_GetRuntime(ctx));
   js_free(ctx, closure);
 };
 
@@ -834,19 +834,6 @@ socket_address(int fd, int (*fn)(int, struct sockaddr*, socklen_t*)) {
   return (char*)s;
 }
 
-int
-ws_writable(struct socket* ws, BOOL binary, JSContext* ctx) {
-  struct wsi_opaque_user_data* opaque;
-  int ret = 0;
-
-  if((opaque = lws_get_opaque_user_data(ws->lwsi))) {
-    struct session_data* session = opaque->sess;
-
-    ret = session_writable(session, binary, ctx);
-  }
-  return ret;
-}
-
 typedef struct {
   JSContext* ctx;
   struct socket* ws;
@@ -1069,7 +1056,7 @@ tail_consume(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   ret = JS_NewUint32(ctx, lws_ring_consume(r, tail->ptr, buf.data, wanted));
 
-  js_buffer_free(&buf, ctx);
+  js_buffer_free_rt(&buf, JS_GetRuntime(ctx));
 
   return ret;
 }
@@ -1130,7 +1117,7 @@ buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
     ret = 1;
   }
 
-  js_buffer_free(&input, ctx);
+  js_buffer_free_rt(&input, JS_GetRuntime(ctx));
   return ret;
 }
 
@@ -1298,7 +1285,7 @@ response_free(struct http_response* resp, JSContext* ctx) {
 
 void
 response_clear(struct http_response* resp, JSContext* ctx) {
-  url_free(&resp->url, ctx);
+  url_free_rt(&resp->url, JS_GetRuntime(ctx));
   if(resp->type) {
     js_free(ctx, (void*)resp->type);
     resp->type = 0;

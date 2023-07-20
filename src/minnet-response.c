@@ -64,38 +64,59 @@ enum {
 
 static JSValue
 minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
-  JSValue ret;
+  JSValue ret = JS_UNDEFINED;
   ResolveFunctions funcs;
   MinnetResponse* resp;
   Generator* gen;
+  JSValue (*block_fn)(ByteBlock*, JSContext*) = magic == RESPONSE_ARRAYBUFFER ? &block_toarraybuffer : &block_tostring;
 
   if(!(resp = minnet_response_data2(ctx, this_val)))
     return JS_EXCEPTION;
 
-  ret = js_async_create(ctx, &funcs);
+  if(!resp->sync)
+    ret = js_async_create(ctx, &funcs);
 
   gen = response_generator(resp, ctx);
+  gen->block_fn = block_fn;
 
   switch(magic) {
     case RESPONSE_ARRAYBUFFER: {
-      generator_continuous(gen, funcs.resolve);
-      gen->block_fn = block_toarraybuffer;
+
+      if(resp->sync) {
+        ByteBlock blk = queue_next(gen->q, NULL, NULL);
+        ret = block_fn(&blk, ctx);
+      } else {
+        generator_continuous(gen, funcs.resolve);
+      }
       break;
     }
 
     case RESPONSE_TEXT: {
-      generator_continuous(gen, funcs.resolve);
-      gen->block_fn = block_tostring;
+
+      if(resp->sync) {
+        ByteBlock blk = queue_next(gen->q, NULL, NULL);
+        ret = block_fn(&blk, ctx);
+      } else {
+        generator_continuous(gen, funcs.resolve);
+      }
+
       break;
     }
 
     case RESPONSE_JSON: {
-      generator_continuous(gen, funcs.resolve);
+      if(resp->sync) {
+        ByteBlock blk = queue_next(gen->q, NULL, NULL);
+        ret = block_fn(&blk, ctx);
+      } else {
+        generator_continuous(gen, funcs.resolve);
+      }
+
       break;
     }
   }
 
-  js_async_free(ctx, &funcs);
+  if(!resp->sync)
+    js_async_free(JS_GetRuntime(ctx), &funcs);
 
   return ret;
 }
@@ -305,7 +326,7 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
     }
 
     case RESPONSE_URL: {
-      url_free(&resp->url, ctx);
+      url_free(&resp->url, JS_GetRuntime(ctx));
       url_parse(&resp->url, str, ctx);
       break;
     }

@@ -93,7 +93,7 @@ request_fromwsi(struct lws* wsi, JSContext* ctx) {
 
 void
 request_clear(Request* req, JSRuntime* rt) {
-  url_free_rt(&req->url, rt);
+  url_free(&req->url, rt);
   buffer_free(&req->headers);
 
   if(req->body) {

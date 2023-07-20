@@ -38,7 +38,7 @@ response_dup(Response* resp) {
 
 void
 response_clear(Response* resp, JSRuntime* rt) {
-  url_free_rt(&resp->url, rt);
+  url_free(&resp->url, rt);
   buffer_free(&resp->headers);
 
   if(resp->status_text) {

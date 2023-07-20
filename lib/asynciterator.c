@@ -30,7 +30,7 @@ asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
   list_for_each_safe(el, next, &it->reads) {
     AsyncRead* rd = list_entry(el, AsyncRead, link);
     list_del(&rd->link);
-    js_async_free_rt(rt, &rd->promise);
+    js_async_free(rt, &rd->promise);
     js_free_rt(rt, rd);
   }
 }
@@ -67,7 +67,7 @@ asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
   if(it->closing || it->closed) {
     assert(list_empty(&it->reads));
     js_async_resolve(ctx, &async, js_iterator_result(ctx, JS_UNDEFINED, TRUE));
-    js_async_free(ctx, &async);
+    js_async_free(JS_GetRuntime(ctx), &async);
   } else {
 
     if(!(rd = js_malloc(ctx, sizeof(AsyncRead))))

@@ -192,7 +192,7 @@ minnet_formparser_finalizer(JSRuntime* rt, JSValue val) {
   MinnetFormParser* fp;
 
   if((fp = minnet_formparser_data(val)))
-    formparser_free_rt(fp, rt);
+    formparser_free(fp, rt);
 }
 
 static int
@@ -349,7 +349,7 @@ minnet_formparser_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_
 
     ret = JS_NewInt32(ctx, formparser_process(fp, buf.data, buf.size));
 
-    js_buffer_free(&buf, ctx);
+    js_buffer_free(&buf, JS_GetRuntime(ctx));
   }
   if(!JS_IsNull(fp->exception)) {
 

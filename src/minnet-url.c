@@ -337,7 +337,7 @@ static void
 minnet_url_finalizer(JSRuntime* rt, JSValue val) {
   MinnetURL* url = JS_GetOpaque(val, minnet_url_class_id);
   if(url) {
-    url_free_rt(url, rt);
+    url_free(url, rt);
     js_free_rt(rt, url);
   }
 }

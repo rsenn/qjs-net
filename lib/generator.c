@@ -52,7 +52,7 @@ enqueue_value(Generator* gen, JSValueConst value, JSValueConst callback) {
   JSBuffer buf = js_input_chars(gen->ctx, value);
   ByteBlock blk = block_copy(buf.data, buf.size);
 
-  js_buffer_free(&buf, gen->ctx);
+  js_buffer_free(&buf, JS_GetRuntime(gen->ctx));
 
   if((ret = enqueue_block(gen, blk, callback)) == -1)
     block_free(&blk);
@@ -317,7 +317,7 @@ generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
   if(asynciterator_yield(&gen->iterator, value, gen->ctx)) {
     JSBuffer buf = js_input_chars(gen->ctx, value);
     ret = buf.size;
-    js_buffer_free(&buf, gen->ctx);
+    js_buffer_free(&buf, JS_GetRuntime(gen->ctx));
   } else {
     if((ret = enqueue_value(gen, value, callback)) < 0)
       return FALSE;

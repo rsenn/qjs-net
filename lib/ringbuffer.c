@@ -98,14 +98,10 @@ ringbuffer_zero(struct ringbuffer* rb) {
   lws_ring_destroy(rb->ring);
   memset(rb, 0, sizeof(struct ringbuffer));
 }
+ 
 
 void
-ringbuffer_free(struct ringbuffer* rb, JSContext* ctx) {
-  ringbuffer_free_rt(rb, JS_GetRuntime(ctx));
-}
-
-void
-ringbuffer_free_rt(struct ringbuffer* rb, JSRuntime* rt) {
+ringbuffer_free(struct ringbuffer* rb, JSRuntime* rt) {
   if(--rb->ref_count == 0) {
     ringbuffer_zero(rb);
     js_free_rt(rt, rb);

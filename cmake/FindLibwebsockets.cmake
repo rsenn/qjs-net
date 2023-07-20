@@ -20,7 +20,8 @@ macro(find_libwebsockets)
 
       #set_target_properties(  websockets  PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
 
-      string(REGEX REPLACE "/include.*" "/lib" LIBWEBSOCKETS_LIBRARY_DIR "${LIBWEBSOCKETS_INCLUDE_DIR}")
+      string(REGEX REPLACE "/include.*" "/lib" LIBWEBSOCKETS_LIBRARY_DIR
+                           "${LIBWEBSOCKETS_INCLUDE_DIR}")
 
       #     string(REGEX REPLACE " *" "" pkgcfg_lib_LIBWEBSOCKETS_websockets "${pkgcfg_lib_LIBWEBSOCKETS_websockets}")
       set(LIBWEBSOCKETS_LIBRARIES ${LIBWEBSOCKETS_LIBRARIES} ${pkgcfg_lib_LIBWEBSOCKETS_websockets})
@@ -59,13 +60,15 @@ macro(find_libwebsockets)
 
     if(LIBWEBSOCKETS_LIBRARIES AND "${LIBWEBSOCKETS_LIBRARIES}" MATCHES ".*/.*")
       if(NOT LIBWEBSOCKETS_LIBRARY_DIR)
-        get_filename_component(LIBWEBSOCKETS_LIBRARY_DIR "${LIBWEBSOCKETS_LIBRARIES}" DIRECTORY CACHE)
+        get_filename_component(LIBWEBSOCKETS_LIBRARY_DIR "${LIBWEBSOCKETS_LIBRARIES}" DIRECTORY
+                               CACHE)
         #string(REGEX REPLACE "/lib.*/.*" "/lib" LIBWEBSOCKETS_LIBRARY_DIR "${LIBWEBSOCKETS_LIBRARIES}")
       endif(NOT LIBWEBSOCKETS_LIBRARY_DIR)
     endif(LIBWEBSOCKETS_LIBRARIES AND "${LIBWEBSOCKETS_LIBRARIES}" MATCHES ".*/.*")
     if(LIBWEBSOCKETS_LIBRARY_DIR)
       if(NOT LIBWEBSOCKETS_INCLUDE_DIR)
-        string(REGEX REPLACE "/lib[^/]*$" "/include" LIBWEBSOCKETS_INCLUDE_DIR "${LIBWEBSOCKETS_LIBRARY_DIR}")
+        string(REGEX REPLACE "/lib[^/]*$" "/include" LIBWEBSOCKETS_INCLUDE_DIR
+                             "${LIBWEBSOCKETS_LIBRARY_DIR}")
       endif(NOT LIBWEBSOCKETS_INCLUDE_DIR)
     endif(LIBWEBSOCKETS_LIBRARY_DIR)
 
@@ -74,9 +77,12 @@ macro(find_libwebsockets)
     endif(LIBWEBSOCKETS_LIBRARY_DIR)
 
     #set(LIBWEBSOCKETS_LIBRARY "${LIBWEBSOCKETS_LIBRARY}" CACHE FILEPATH "libwebsockets library")
-    set(LIBWEBSOCKETS_LIBRARIES "${LIBWEBSOCKETS_LIBRARIES}" CACHE FILEPATH "libwebsockets libraries")
-    set(LIBWEBSOCKETS_LIBRARY_DIR "${LIBWEBSOCKETS_LIBRARY_DIR}" CACHE PATH "libwebsockets library directory")
-    set(LIBWEBSOCKETS_INCLUDE_DIR "${LIBWEBSOCKETS_INCLUDE_DIR}" CACHE PATH "libwebsockets include directory")
+    set(LIBWEBSOCKETS_LIBRARIES "${LIBWEBSOCKETS_LIBRARIES}" CACHE FILEPATH
+                                                                   "libwebsockets libraries")
+    set(LIBWEBSOCKETS_LIBRARY_DIR "${LIBWEBSOCKETS_LIBRARY_DIR}"
+        CACHE PATH "libwebsockets library directory")
+    set(LIBWEBSOCKETS_INCLUDE_DIR "${LIBWEBSOCKETS_INCLUDE_DIR}"
+        CACHE PATH "libwebsockets include directory")
 
     set(LIBWEBSOCKETS_FOUND TRUE)
 

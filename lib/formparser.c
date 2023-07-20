@@ -109,29 +109,10 @@ formparser_alloc(JSContext* ctx) {
   ret = js_mallocz(ctx, sizeof(FormParser));
   ret->ref_count = 1;
   return ret;
-}
+} 
 
 void
-formparser_clear(FormParser* fp, JSContext* ctx) {
-
-  if(fp->spa) {
-    lws_spa_destroy(fp->spa);
-    fp->spa = 0;
-  }
-
-  if(fp->spa_create_info.param_names) {
-    js_free(ctx, (void*)fp->spa_create_info.param_names);
-  }
-  memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
-
-  FREECB(fp->cb.content);
-  FREECB(fp->cb.open);
-  FREECB(fp->cb.close);
-}
-
-void
-formparser_clear_rt(FormParser* fp, JSRuntime* rt) {
-
+formparser_clear(FormParser* fp, JSRuntime* rt) {
   if(fp->spa) {
     lws_spa_destroy(fp->spa);
     fp->spa = 0;
@@ -146,21 +127,13 @@ formparser_clear_rt(FormParser* fp, JSRuntime* rt) {
   FREECB_RT(fp->cb.open);
   FREECB_RT(fp->cb.close);
 }
+ 
 
 void
-formparser_free(FormParser* fp, JSContext* ctx) {
+formparser_free(FormParser* fp, JSRuntime* rt) {
   if(--fp->ref_count == 0) {
-    ws_free(fp->ws, ctx);
-    formparser_clear(fp, ctx);
-    js_free(ctx, fp);
-  }
-}
-
-void
-formparser_free_rt(FormParser* fp, JSRuntime* rt) {
-  if(--fp->ref_count == 0) {
-    ws_free_rt(fp->ws, rt);
-    formparser_clear_rt(fp, rt);
+    ws_free(fp->ws, rt);
+    formparser_clear(fp, rt);
     js_free_rt(rt, fp);
   }
 }

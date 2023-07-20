@@ -136,7 +136,7 @@ server_free(MinnetServer* server) {
   JSContext* ctx = server->context.js;
 
   if(--server->ref_count == 0) {
-    js_async_free(ctx, &server->promise);
+    js_async_free(JS_GetRuntime(ctx), &server->promise);
 
     context_clear(&server->context);
 
@@ -771,9 +771,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(info->ssl_private_key_filepath)
     js_clear(ctx, &info->ssl_private_key_filepath);
 
-  /*js_buffer_free(&server->context.key, ctx);
-  js_buffer_free(&server->context.crt, ctx);
-  js_buffer_free(&server->context.ca, ctx);*/
+  /*js_buffer_free(&server->context.key, JS_GetRuntime(ctx));
+  js_buffer_free(&server->context.crt, JS_GetRuntime(ctx));
+  js_buffer_free(&server->context.ca, JS_GetRuntime(ctx));*/
 
   /* if(info->ssl_cert_filepath)
      JS_FreeCString(ctx, info->ssl_cert_filepath);

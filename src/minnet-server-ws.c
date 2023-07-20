@@ -130,7 +130,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
         else
           ret = 1;
 
-        url_free(&url, ctx);
+        url_free(&url, JS_GetRuntime(ctx));
         js_free(ctx, dest);
         return ret;
       }
@@ -143,7 +143,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
         opaque->req->secure = wsi_tls(wsi);
         headers_tobuffer(ctx, &opaque->req->headers, wsi);
       } else {
-        url_free(&url, ctx);
+        url_free(&url, JS_GetRuntime(ctx));
       }
       return ret;
     }

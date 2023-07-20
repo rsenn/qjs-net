@@ -36,7 +36,15 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   // lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, wsi_tls(wsi), len, (int)MIN(len, 32), (char*)in);
   if(reason != LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ)
-    LOGCB("CLIENT-HTTP ", "fd=%d, h2=%i, tls=%i%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), (in && len) ? ", in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
+    LOGCB("CLIENT-HTTP ",
+          "fd=%d, h2=%i, tls=%i%s%.*s%s",
+          lws_get_socket_fd(lws_get_network_wsi(wsi)),
+          wsi_http2(wsi),
+          wsi_tls(wsi),
+          (in && len) ? ", in='" : "",
+          (int)len,
+          (char*)in,
+          (in && len) ? "'" : "");
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {
@@ -61,8 +69,18 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       return 0;
     }
 
+    case LWS_CALLBACK_VHOST_CERT_AGING:
+    case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
+      return 0;
+    }
+
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
-    case LWS_CALLBACK_WSI_CREATE:
+    case LWS_CALLBACK_WSI_CREATE: {
+      if(opaque)
+        opaque->fd = lws_get_socket_fd(lws_get_network_wsi(wsi));
+
+      break;
+    }
     case LWS_CALLBACK_CONNECTING: {
       break;
     }
@@ -77,10 +95,37 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         js_async_reject(ctx, &client->promise, err);
         JS_FreeValue(ctx, err);
       }
+
+      if(client->on.close.ctx) {
+        JSValueConst argv[] = {
+            opaque->ws ? JS_DupValue(ctx, session->ws_obj) : JS_NewInt32(ctx, opaque->fd),
+            js_error_new(ctx, "%s", (char*)in),
+        };
+
+        client_exception(client, callback_emit(&client->on.close, countof(argv), argv));
+
+        JS_FreeValue(ctx, argv[0]);
+        JS_FreeValue(ctx, argv[1]);
+      }
+
       return -1;
     }
 
     case LWS_CALLBACK_CLIENT_HTTP_BIND_PROTOCOL: {
+      if(opaque) {
+        if(opaque->fd != -1) {
+          if(client->on.close.ctx) {
+            JSValueConst argv[] = {
+                opaque->ws ? JS_DupValue(client->on.close.ctx, session->ws_obj) : JS_NewInt32(client->on.close.ctx, opaque->fd),
+                JS_NewInt32(client->on.close.ctx, 0),
+            };
+            client_exception(client, callback_emit(&client->on.close, countof(argv), argv));
+            JS_FreeValue(client->on.close.ctx, argv[0]);
+            JS_FreeValue(client->on.close.ctx, argv[1]);
+          }
+        }
+      }
+
       session_init(session, wsi_context(wsi));
       session->req_obj = JS_NULL;
       session->resp_obj = JS_NULL;
@@ -111,10 +156,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_WSI_DESTROY: {
-      if(client->wsi == wsi) {
+      if(client->wsi == wsi)
         if(js_async_pending(&client->promise))
           js_async_resolve(ctx, &client->promise, JS_UNDEFINED);
-      }
+
       return -1;
       break;
     }
@@ -202,39 +247,41 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP: {
 
-      opaque->ws->lwsi = NULL;
-      opaque->status = CLOSED;
-
-      if(opaque->resp->body) {
-        generator_finish(opaque->resp->body);
-      }
-
       if(client->iter)
         asynciterator_stop(client->iter, JS_UNDEFINED, ctx);
 
-      if(client->on.close.ctx) {
-        JSValueConst cb_argv[] = {
-            JS_DupValue(client->on.close.ctx, session->ws_obj),
-            JS_NewInt32(client->on.close.ctx, 0),
-        };
-        client_exception(client, callback_emit(&client->on.close, countof(cb_argv), cb_argv));
-        JS_FreeValue(client->on.close.ctx, cb_argv[0]);
-        JS_FreeValue(client->on.close.ctx, cb_argv[1]);
-      }
-
       if(opaque->resp) {
+        /*if(opaque->resp->body)
+          generator_finish(opaque->resp->body);*/
+
         /*      if(opaque->resp->body)
                 generator_stop(opaque->resp->body, JS_UNDEFINED);*/
       }
 
-      lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
+      if(client->on.close.ctx) {
+        JSValueConst argv[] = {
+            opaque->ws ? JS_DupValue(client->on.close.ctx, session->ws_obj) : JS_NewInt32(ctx, opaque->fd),
+            JS_NewInt32(client->on.close.ctx, 0),
+        };
+        client_exception(client, callback_emit(&client->on.close, countof(argv), argv));
+        JS_FreeValue(client->on.close.ctx, argv[0]);
+        JS_FreeValue(client->on.close.ctx, argv[1]);
+      }
+
+      if(opaque->ws) {
+        opaque->ws->lwsi = NULL;
+      }
+
+      opaque->status = CLOSED;
+
+      // lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
       return -1;
     }
 
     case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE: {
       if(client->on.writeable.ctx) {
         JSValue ret;
-        opaque->callback = WRITEABLE;
+        opaque->writable = TRUE;
         ret = client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
 
         if(JS_IsBool(ret)) {
@@ -242,7 +289,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             client->on.writeable = CALLBACK_INIT(0, JS_NULL, JS_NULL);
           }
         }
-        opaque->callback = -1;
+        opaque->writable = FALSE;
 
         if(client->on.writeable.ctx)
           lws_callback_on_writable(wsi);
@@ -277,7 +324,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               DEBUG("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
               buffer_append(&buf, input.data, input.size);
               DEBUG("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
-              js_buffer_free(&input, ctx);
+              js_buffer_free(&input, JS_GetRuntime(ctx));
             }
 
             break;
@@ -341,7 +388,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       LOGCB("CLIENT-HTTP(2)", "resp->body=%p resp->body->q=%p", resp->body, resp->body->q);
 
-      generator_finish(resp->body);
+      //
+      //  generator_finish(resp->body);
 
       if(client->on.http.ctx) {
         /*        MinnetRequest* req;
@@ -404,15 +452,20 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
             return result;*/
       }
-      if(client->lwsret)
-        lws_set_timeout_us(wsi, LWS_TO_KILL_ASYNC, 1);
 
       return client->lwsret;
+    }
+
+    case LWS_CALLBACK_CLIENT_HTTP_REDIRECT: {
+      // lws_wsi_close(wsi, LWS_TO_KILL_SYNC);
+      client->lwsret = 1;
+      return 0;
     }
 
     case LWS_CALLBACK_PROTOCOL_DESTROY: {
       break;
     }
+
     default: {
       minnet_lws_unhandled(__func__, reason);
       break;

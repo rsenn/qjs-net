@@ -108,7 +108,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   int argpos = js_buffer_fromargs(ctx, argc, argv, &jsbuf);
 
-  if((opaque = lws_get_opaque_user_data(ws->lwsi)) && opaque->callback == WRITEABLE) {
+  if((opaque = ws_opaque(ws)) && opaque->writable) {
     int result;
     int32_t protocol = JS_IsString(jsbuf.value) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY;
 
@@ -457,7 +457,7 @@ static void
 minnet_ws_finalizer(JSRuntime* rt, JSValue val) {
   MinnetWebsocket* ws;
   if((ws = minnet_ws_data(val))) {
-    ws_free_rt(ws, rt);
+    ws_free(ws, rt);
   }
 }
 

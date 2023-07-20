@@ -36,18 +36,15 @@ struct wsi_opaque_user_data {
   struct list_head link;
   struct form_parser* form_parser;
   struct lws* upstream;
-  /*BOOL binary;
-  struct lws_client_connect_info* connect_info;*/
-  int callback;
+  int fd;
+  BOOL writable;
 };
 
 extern THREAD_LOCAL int64_t serial;
 extern THREAD_LOCAL struct list_head opaque_list;
 
-void opaque_clear_rt(struct wsi_opaque_user_data*, JSRuntime* rt);
-void opaque_free_rt(struct wsi_opaque_user_data*, JSRuntime* rt);
-void opaque_clear(struct wsi_opaque_user_data*, JSContext* ctx);
-void opaque_free(struct wsi_opaque_user_data*, JSContext* ctx);
+void opaque_clear(struct wsi_opaque_user_data*, JSRuntime* rt);
+void opaque_free(struct wsi_opaque_user_data*, JSRuntime* rt);
 struct wsi_opaque_user_data* opaque_new(JSContext*);
 struct wsi_opaque_user_data* lws_opaque(struct lws*, JSContext* ctx);
 bool opaque_valid(struct wsi_opaque_user_data* opaque);

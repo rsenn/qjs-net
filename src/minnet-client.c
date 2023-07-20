@@ -14,6 +14,9 @@
 #include <string.h>
 #include <errno.h>
 #include <libwebsockets.h>
+#include "../libwebsockets/lib/core/private-lib-core.h"
+
+extern struct lws_event_loop_ops event_loop_ops_poll;
 
 THREAD_LOCAL JSValue minnet_client_proto, minnet_client_ctor;
 THREAD_LOCAL JSClassID minnet_client_class_id;
@@ -114,7 +117,7 @@ client_free(MinnetClient* client, JSRuntime* rt) {
       client->connect_info.method = 0;
     }
 
-    js_async_free_rt(rt, &client->promise);
+    js_async_free(rt, &client->promise);
 
     context_clear(&client->context);
     context_delete(&client->context);
@@ -190,6 +193,15 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   LOGCB("CLIENT      ", "fd=%d h2=%i tls=%i len=%zu%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), len, (in && len) ? " in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
 
   switch(reason) {
+    case LWS_CALLBACK_GET_THREAD_ID: {
+      return gettid();
+    }
+
+    case LWS_CALLBACK_VHOST_CERT_AGING:
+    case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
+      return 0;
+    }
+
     case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
       return 0;
     }
@@ -260,33 +272,34 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       }
 
       if(js_async_pending(&client->promise)) {
-
         js_async_reject(ctx, &client->promise, client->context.error);
+      }
 
-      } else if(client->on.close.ctx) {
+      if(client->on.close.ctx) {
         JSValue ret;
         int argc = 1;
-        JSValueConst cb_argv[4] = {client->session.ws_obj};
+        JSValueConst argv[4] = {client->session.ws_obj};
 
         if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR) {
-
-          cb_argv[argc++] = JS_UNDEFINED;
-          cb_argv[argc++] = JS_DupValue(ctx, client->context.error);
-
+          argv[argc++] = JS_UNDEFINED;
+          argv[argc++] = JS_DupValue(ctx, client->context.error);
         } else {
-          cb_argv[argc++] = close_status(ctx, in, len);
-          cb_argv[argc++] = close_reason(ctx, in, len);
+          argv[argc++] = close_status(ctx, in, len);
+          argv[argc++] = close_reason(ctx, in, len);
         }
-        cb_argv[argc++] = err != -1 ? JS_NewInt32(ctx, err) : JS_UNDEFINED;
+        argv[argc++] = err != -1 ? JS_NewInt32(ctx, err) : JS_UNDEFINED;
 
-        ret = client_exception(client, callback_emit(&client->on.close, argc, cb_argv));
+        ret = client_exception(client, callback_emit(&client->on.close, argc, argv));
+
         if(JS_IsNumber(ret))
           JS_ToInt32(ctx, &result, ret);
+
         JS_FreeValue(ctx, ret);
 
         while(--argc >= 0)
-          JS_FreeValue(ctx, cb_argv[argc]);
+          JS_FreeValue(ctx, argv[argc]);
       }
+
       ret = result;
       break;
     }
@@ -326,7 +339,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RAW_WRITEABLE: {
       if(client->on.writeable.ctx) {
         JSValue ret;
-        opaque->callback = WRITEABLE;
+        // opaque->callback = WRITEABLE;
         ret = client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
 
         if(JS_IsBool(ret)) {
@@ -334,7 +347,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
             client->on.writeable = CALLBACK_INIT(0, JS_NULL, JS_NULL);
           }
         }
-        opaque->callback = -1;
+        // opaque->callback = -1;
 
         if(client->on.writeable.ctx)
           lws_callback_on_writable(wsi);
@@ -422,6 +435,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         JS_FreeValue(client->context.js, client->context.error);
         client->context.error = JS_UNDEFINED;
       }
+
       break;
     }
 
@@ -637,13 +651,132 @@ minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int
 
 JSValue
 minnet_client_response(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue func_data[]) {
-  JS_DefinePropertyValueStr(ctx, argv[1], "ws", JS_DupValue(ctx, this_val), 0);
+  /*JS_DefinePropertyValueStr(ctx, argv[1], "ws", JS_DupValue(ctx, this_val), 0);
+
   if(!js_is_nullish(argv[0]))
-    JS_DefinePropertyValueStr(ctx, argv[1], "request", JS_DupValue(ctx, argv[0]), 0);
+    JS_DefinePropertyValueStr(ctx, argv[1], "request", JS_DupValue(ctx, argv[0]), 0);*/
+
   JSValue ret = JS_Call(ctx, func_data[0], JS_UNDEFINED, 1, &argv[1]);
 
   JS_FreeValue(ctx, ret);
   return JS_NewInt32(ctx, 1);
+}
+
+struct PollFdClosure {
+  size_t nfds;
+  struct pollfd* pfds;
+  int ref_count;
+  BOOL touched;
+};
+
+static struct PollFdClosure*
+pfc_dup(struct PollFdClosure* c) {
+  ++c->ref_count;
+  return c;
+}
+
+static void
+pfc_free(void* ptr) {
+  struct PollFdClosure* c = ptr;
+
+  if(--c->ref_count == 0)
+    free(c);
+}
+
+static ssize_t
+pfc_index(struct PollFdClosure* c, int fd) {
+  size_t i;
+
+  for(i = 0; i < c->nfds; i++)
+    if(c->pfds[i].fd == fd)
+      return i;
+
+  return -1;
+}
+
+static struct pollfd*
+pfc_get(struct PollFdClosure* c, int fd) {
+  ssize_t i;
+
+  if((i = pfc_index(c, fd)) == -1)
+    return 0;
+
+  return &c->pfds[i];
+}
+
+static void
+pfc_set(struct PollFdClosure* c, int fd, int events) {
+  struct pollfd* pfd;
+
+  if(!(pfd = pfc_get(c, fd))) {
+    c->pfds = realloc(c->pfds, (c->nfds + 1) * sizeof(struct pollfd));
+    assert(c->pfds);
+    c->pfds[c->nfds] = (struct pollfd){fd, 0, 0};
+    pfd = &c->pfds[c->nfds++];
+  }
+
+  if(pfd->events != events) {
+    pfd->events = events;
+    c->touched = TRUE;
+  }
+}
+
+static void
+pfc_delete(struct PollFdClosure* c, int fd) {
+  ssize_t i = pfc_index(c, fd);
+
+  assert(i != -1);
+
+  size_t n = (c->nfds - (i + 1));
+
+  if(n)
+    memcpy(&c->pfds[i], &c->pfds[i + 1], n * sizeof(struct pollfd));
+
+  --c->nfds;
+  c->touched = TRUE;
+}
+
+JSValue
+minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  struct PollFdClosure* c = ptr;
+  int32_t fd;
+  BOOL rd = JS_ToBool(ctx, argv[1]), wr = JS_ToBool(ctx, argv[2]);
+
+  JS_ToInt32(ctx, &fd, argv[0]);
+
+  if(!rd && !wr) {
+    pfc_delete(ptr, fd);
+  } else {
+    pfc_set(ptr, fd, (rd ? POLLIN : 0) | (wr ? POLLOUT : 0));
+  }
+
+#ifdef DEBUG_OUTPUT
+  printf("%s argc=%d fd=%d rd=%d wr=%d c->nfds=%zu\n", __func__, argc, fd, rd, wr, c->nfds);
+#endif
+
+  return JS_UNDEFINED;
+}
+
+JSValue
+minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+  struct PollFdClosure* c = ptr;
+  int32_t fd = -1;
+  MinnetWebsocket* ws;
+
+  if((ws = minnet_ws_data(argv[0])) && ws->fd != -1)
+    fd = ws->fd;
+  else
+    JS_ToInt32(ctx, &fd, argv[0]);
+
+  assert(fd != -1);
+
+  pfc_delete(c, fd);
+
+#if 1 // def DEBUG_OUTPUT
+  printf("%s fd=%d c->nfds=%zu\n", __func__, fd, c->nfds);
+#endif
+
+  return JS_UNDEFINED;
 }
 
 JSValue
@@ -736,7 +869,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   value = JS_GetPropertyStr(ctx, options, "block");
   if(!JS_IsUndefined(value))
-    client->block = JS_ToBool(ctx, value);
+    block = client->block = JS_ToBool(ctx, value);
   JS_FreeValue(ctx, value);
 
   value = JS_GetPropertyStr(ctx, options, "body");
@@ -856,12 +989,83 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       ret = minnet_client_wrap(ctx, client);
       break;
     }
-    case RETURN_RESPONSE: {
-      ResolveFunctions fns;
-      ret = js_async_create(ctx, &fns);
 
-      client->on.http = CALLBACK_INIT(ctx, JS_NewCFunctionData(ctx, minnet_client_response, 2, 0, 2, &fns.resolve), JS_UNDEFINED);
-      js_async_free(ctx, &fns);
+    case RETURN_RESPONSE: {
+      if(!block) {
+        ResolveFunctions fns;
+        ret = js_async_create(ctx, &fns);
+
+        client->on.http = CALLBACK_INIT(ctx, JS_NewCFunctionData(ctx, minnet_client_response, 2, 0, 2, &fns.resolve), JS_UNDEFINED);
+        js_async_free(JS_GetRuntime(ctx), &fns);
+      } else {
+        struct PollFdClosure* c;
+
+        if(!(c = malloc(sizeof(struct PollFdClosure))))
+          return JS_ThrowOutOfMemory(ctx);
+
+        c->ref_count = 1;
+        c->nfds = 0;
+        c->pfds = 0;
+        c->touched = FALSE;
+
+        pfc_set(c, lws_get_socket_fd(lws_get_network_wsi(client->wsi)), POLLIN | POLLOUT);
+
+        /*
+                pfd->fd = lws_get_socket_fd(client->wsi);
+                pfd->events = 0;
+                pfd->revents = 0;*/
+
+        client->on.fd = CALLBACK_INIT(ctx, js_function_cclosure(ctx, minnet_client_pollfd, 0, 0, c, pfc_free), JS_UNDEFINED);
+        client->on.close = CALLBACK_INIT(ctx, js_function_cclosure(ctx, minnet_client_onclose, 0, 0, pfc_dup(c), pfc_free), JS_UNDEFINED);
+
+        client->context.lws->event_loop_ops = &event_loop_ops_poll;
+
+        struct wsi_opaque_user_data* opaque = lws_opaque(client->wsi, ctx);
+        opaque->resp = client->response;
+        Generator* gen = response_generator(opaque->resp, ctx);
+     
+        assert(opaque->resp->body);
+        generator_continuous(gen, JS_NULL);
+
+opaque->resp->sync = TRUE;
+
+        while(1 /*!client->lwsret*/) {
+          /*if(c->nfds == 1 && c->pfds[0].events == 0)
+            lws_plat_service(client->context.lws, 100);*/
+
+#ifdef DEBUG_OUTPUT
+          printf("%s c->nfds=%zu\n", __func__, c->nfds);
+#endif
+          int r = poll(c->pfds, c->nfds, 1000);
+
+          c->touched = FALSE;
+
+          for(size_t i = 0; i < c->nfds; i++) {
+            struct pollfd* x = &c->pfds[i];
+
+#ifdef DEBUG_OUTPUT
+            printf("%s c->pfds[%zu] = { %d, %d, %d }\n", __func__, i, x->fd, x->events, x->revents);
+#endif
+
+            if(x->events) {
+              struct lws_pollfd lpfd = {x->fd, x->events, x->revents};
+              int result = lws_service_fd(client->context.lws, &lpfd);
+            }
+
+            if(c->touched)
+              break;
+          }
+
+          // printf("%s c->nfds=%zu\n", __func__, c->nfds);
+
+          if(c->nfds == 0)
+            break;
+        }
+
+
+        ret = JS_DupValue(ctx, client->session.resp_obj);
+      }
+
       break;
     }
   }
