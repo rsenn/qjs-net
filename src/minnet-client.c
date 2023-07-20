@@ -14,9 +14,6 @@
 #include <string.h>
 #include <errno.h>
 #include <libwebsockets.h>
-#include "../libwebsockets/lib/core/private-lib-core.h"
-
-extern struct lws_event_loop_ops event_loop_ops_poll;
 
 THREAD_LOCAL JSValue minnet_client_proto, minnet_client_ctor;
 THREAD_LOCAL JSClassID minnet_client_class_id;
@@ -976,8 +973,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     JS_DefinePropertyValueStr(ctx, client->on.fd.func_obj, "name", JS_NewString(ctx, "onFd"), 0);
 
     client->on.close = CALLBACK_INIT(ctx, js_function_cclosure(ctx, minnet_client_onclose, 0, 0, synchfetch_dup(c), synchfetch_free), JS_UNDEFINED);
-
-    client->context.lws->event_loop_ops = &event_loop_ops_poll;
   }
 
 #ifdef LWS_WITH_UDP
@@ -1039,11 +1034,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
         opaque->resp->sync = TRUE;
 
-        while(1 /*!client->lwsret*/) {
-          /*if(c->nfds == 1 && c->pfds[0].events == 0)
-            lws_plat_service(client->context.lws, 100);*/
+        for(;;) {
 
-#if 1 // def DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
           printf("%s c->nfds=%zu\n", __func__, c->nfds);
 #endif
           int r = poll(c->pfds, c->nfds, 1000);
