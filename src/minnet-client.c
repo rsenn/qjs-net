@@ -750,7 +750,7 @@ minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
     synchfetch_setevents(ptr, fd, (rd ? POLLIN : 0) | (wr ? POLLOUT : 0));
   }
 
-#if 1 // def DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
   printf("%s argc=%d fd=%d rd=%d wr=%d c->nfds=%zu\n", __func__, argc, fd, rd, wr, c->nfds);
 #endif
 
@@ -775,7 +775,7 @@ minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     synchfetch_removefd(c, fd);
 
   if(is_error) {
-    JS_Throw(ctx, argv[1]);
+    // JS_Throw(ctx, argv[1]);
     c->exception = JS_DupValue(ctx, argv[1]);
   }
 
@@ -985,9 +985,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     *client->connect_info.pwsi = wsi2;
   } else
 #endif
-  {
+
     wsi2 = lws_client_connect_via_info(&client->connect_info);
-  }
+
   DEBUG("client->wsi = %p, wsi2 = %p, h2 = %d, ssl = %d\n", client->wsi, wsi2, wsi_http2(client->wsi), wsi_tls(client->wsi));
 
   if(!client->wsi /*&& !wsi2*/) {
@@ -998,7 +998,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
         JS_FreeValue(ctx, err);
       }
     } else {
-      ret = JS_ThrowInternalError(ctx, "Connection failed: %s", strerror(errno));
+      // ret = JS_Throw(ctx, c->exception);
       goto fail;
     }
   }
@@ -1065,12 +1065,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
             break;
         }
 
-        if(!JS_IsNull(c->exception))
-          ret = JS_Throw(ctx, c->exception);
-        else
-          ret = JS_DupValue(ctx, client->session.resp_obj);
-
-        synchfetch_free(c);
+        ret = JS_DupValue(ctx, client->session.resp_obj);
       }
 
       break;
@@ -1095,8 +1090,19 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   // client_free(client);
 */
 fail:
+
+  if(c) {
+    if(!JS_IsNull(c->exception)) {
+      ret = JS_Throw(ctx, c->exception);
+      c->exception = JS_NULL;
+    }
+
+    synchfetch_free(c);
+  }
+
   return ret;
 }
+
 static void
 minnet_client_finalizer(JSRuntime* rt, JSValue val) {
   MinnetClient* client;
