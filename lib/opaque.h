@@ -33,11 +33,11 @@ struct wsi_opaque_user_data {
   int64_t serial;
   enum socket_state status;
   struct pollfd poll;
-  BOOL binary;
   struct list_head link;
   struct form_parser* form_parser;
   struct lws* upstream;
-  struct lws_client_connect_info* connect_info;
+  /*BOOL binary;
+  struct lws_client_connect_info* connect_info;*/
   int callback;
 };
 

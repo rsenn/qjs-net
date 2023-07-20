@@ -82,7 +82,7 @@ session_want_write(struct session_data* session, struct lws* wsi) {
 }
 
 int
-session_writable(struct session_data* session, struct lws* wsi, BOOL binary, JSContext* ctx) {
+session_writable(struct session_data* session, struct lws* wsi, JSContext* ctx) {
   int ret = 0;
   size_t size;
 
@@ -90,9 +90,9 @@ session_writable(struct session_data* session, struct lws* wsi, BOOL binary, JSC
 
   if((size = queue_size(&session->sendq)) > 0) {
     ByteBlock chunk;
-    BOOL done = FALSE;
+    BOOL done = FALSE, binary = FALSE;
 
-    chunk = queue_next(&session->sendq, &done);
+    chunk = queue_next(&session->sendq, &done, &binary);
 
     ret = lws_write(wsi, block_BEGIN(&chunk), block_SIZE(&chunk), binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
 

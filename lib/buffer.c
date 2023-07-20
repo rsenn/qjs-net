@@ -72,6 +72,7 @@ block_copy(const void* ptr, size_t size) {
 JSValue
 block_toarraybuffer(ByteBlock* blk, JSContext* ctx) {
   ByteBlock mem = block_move((ByteBlock*)blk);
+
   return JS_NewArrayBuffer(ctx, block_BEGIN(&mem), block_SIZE(&mem), block_finalizer, block_ALLOC(&mem), FALSE);
 }
 

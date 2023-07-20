@@ -143,6 +143,7 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       JS_FreeCString(ctx, value);
       break;
     }
+
     case HEADERS_DELETE: {
       size_t namelen;
       const char* name = JS_ToCStringLen(ctx, &namelen, argv[0]);
@@ -150,6 +151,7 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       ret = JS_NewInt64(ctx, headers_unsetb(headers, name, namelen, ptr->separator.item));
       break;
     }
+
     case HEADERS_GET: {
       size_t valuelen;
       const char* name = JS_ToCString(ctx, argv[0]);
@@ -159,6 +161,7 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
         ret = JS_NewStringLen(ctx, value, valuelen);
       break;
     }
+
     case HEADERS_HAS: {
       size_t namelen;
       const char* name = JS_ToCStringLen(ctx, &namelen, argv[0]);

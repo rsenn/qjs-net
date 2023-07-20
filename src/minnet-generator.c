@@ -23,6 +23,7 @@ minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValue
       ret = generator_next(gen, argc > 0 ? argv[0] : JS_UNDEFINED);
       break;
     }
+
     case GENERATOR_RETURN: {
       ResolveFunctions async = {JS_NULL, JS_NULL};
       ret = js_async_create(ctx, &async);
@@ -32,6 +33,7 @@ minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValue
       JS_FreeValue(ctx, result);
       break;
     }
+
     case GENERATOR_THROW: {
       /*  ResolveFunctions async = {JS_NULL, JS_NULL};
         ret = js_async_create(ctx, &async);

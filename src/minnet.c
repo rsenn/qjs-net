@@ -312,30 +312,51 @@ wsi_iohandler(struct lws* wsi, struct js_callback* cb, struct lws_pollargs args)
   minnet_io_handlers(cb->ctx, wsi, args, &argv[1]);
   callback_emit(cb, countof(argv), argv);
 
-  js_vector_free(cb->ctx, countof(argv), argv);
+  js_argv_free(cb->ctx, countof(argv), argv);
   return 0;
 }
 
 int
 wsi_handle_poll(struct lws* wsi, enum lws_callback_reasons reason, struct js_callback* cb, struct lws_pollargs* args) {
+
+  if(reason != LWS_CALLBACK_LOCK_POLL && reason != LWS_CALLBACK_UNLOCK_POLL)
+    LOG("POLL",
+        FG("%d") "%-33s" NC " fd=%d events=%s",
+        22 + (ROR(reason, 4) ^ 0),
+        lws_callback_name(reason) + 13,
+        lws_get_socket_fd(wsi),
+        args->events == (POLLIN | POLLOUT) ? "IN|OUT"
+        : args->events == POLLIN           ? "IN"
+        : args->events == POLLOUT          ? "OUT"
+                                           : "");
+
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL: break;
+    case LWS_CALLBACK_UNLOCK_POLL: {
+      break;
+    }
+
     case LWS_CALLBACK_ADD_POLL_FD:
+    case LWS_CALLBACK_DEL_POLL_FD: {
       if(cb->ctx)
         wsi_iohandler(wsi, cb, *args);
+
       break;
-    case LWS_CALLBACK_DEL_POLL_FD:
-      if(cb->ctx)
-        wsi_iohandler(wsi, cb, *args);
-      break;
-    case LWS_CALLBACK_CHANGE_MODE_POLL_FD:
+    }
+
+    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
       if(cb->ctx)
         if(args->events != args->prev_events)
           wsi_iohandler(wsi, cb, *args);
+
       break;
-    default: return -1;
+    }
+
+    default: {
+      return -1;
+    }
   }
+
   return 0;
 }
 

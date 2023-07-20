@@ -5,8 +5,8 @@
 #include <assert.h>
 
 static JSValue
-dequeue_value(Generator* gen, BOOL* done_p) {
-  ByteBlock blk = queue_next(gen->q, done_p);
+dequeue_value(Generator* gen, BOOL* done_p, BOOL* binary_p) {
+  ByteBlock blk = queue_next(gen->q, done_p, binary_p);
   JSValue ret = block_SIZE(&blk) ? gen->block_fn(&blk, gen->ctx) : JS_UNDEFINED;
 
   if(block_BEGIN(&blk)) {
@@ -95,8 +95,8 @@ generator_update(Generator* gen) {
   int i = 0;
 
   while(!list_empty(&gen->iterator.reads) && gen->q && !queue_empty(gen->q)) {
-    BOOL done = FALSE;
-    JSValue chunk = dequeue_value(gen, &done);
+    BOOL done = FALSE, binary = FALSE;
+    JSValue chunk = dequeue_value(gen, &done, &binary);
 
 #ifdef DEBUG_OUTPUT
     printf("%-22s i: %i reads: %zu q->items: %zu done: %i\n", __func__, i, list_size(&gen->iterator.reads), gen->q ? list_size(&gen->q->items) : 0, done);
@@ -358,12 +358,13 @@ generator_stop(Generator* gen, JSValueConst arg) {
     if(q->continuous) {
       if((item = queue_last_chunk(q))) {
         JSValue chunk = block_SIZE(&item->block) ? gen->block_fn(&item->block, gen->ctx) : JS_UNDEFINED;
-        if(item->unref) {
+
+        if(item->unref)
           deferred_call(item->unref, chunk);
-        }
-        if(JS_IsFunction(gen->ctx, gen->callback)) {
+
+        if(JS_IsFunction(gen->ctx, gen->callback))
           JS_Call(gen->ctx, gen->callback, JS_NULL, 1, &chunk);
-        }
+
         JS_FreeValue(gen->ctx, chunk);
       }
     }
@@ -399,10 +400,11 @@ generator_continuous(Generator* gen, JSValueConst callback) {
 
       if(JS_IsFunction(gen->ctx, callback)) {
         gen->callback = JS_DupValue(gen->ctx, callback);
-        item->unref = deferred_newjs(JS_DupValue(gen->ctx, callback), gen->ctx);
-        item->unref = deferred_new(&JS_Call, gen->ctx, JS_DupValue(gen->ctx, callback), JS_UNDEFINED);
+        /*     item->unref = deferred_newjs(JS_DupValue(gen->ctx, callback), gen->ctx);
+             item->unref = deferred_new(&JS_Call, gen->ctx, JS_DupValue(gen->ctx, callback), JS_UNDEFINED);*/
       }
-      // q->continuous = TRUE;
+
+      q->continuous = TRUE;
     }
 
     return item != NULL;
@@ -423,8 +425,8 @@ generator_continuous(Generator* gen, JSValueConst callback) {
 BOOL
 generator_finish(Generator* gen) {
   if((gen->q && gen->q->continuous) && !JS_IsNull(gen->callback)) {
-    BOOL done = FALSE;
-    JSValue ret = dequeue_value(gen, &done);
+    BOOL done = FALSE, binary = FALSE;
+    JSValue ret = dequeue_value(gen, &done, &binary);
 
     JS_Call(gen->ctx, gen->callback, JS_UNDEFINED, 1, &ret);
     JS_FreeValue(gen->ctx, ret);

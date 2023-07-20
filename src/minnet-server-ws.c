@@ -31,23 +31,29 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
     case LWS_CALLBACK_CONNECTING: {
       break;
     }
+
     case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
       X509_STORE_CTX_set_error(user, X509_V_OK);
       return 0;
     }
+
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
     case LWS_CALLBACK_CHILD_CLOSING: {
       break;
     }
+
     case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
       break;
     }
+
     case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION: {
       break;
     }
+
     case LWS_CALLBACK_PROTOCOL_INIT: {
       break;
     }
+
     case LWS_CALLBACK_PROTOCOL_DESTROY: {
       break;
     }
@@ -56,6 +62,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: {
       return lws_callback_http_dummy(wsi, reason, user, in, len);
     }
+
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
       struct lws* parent;
 
@@ -216,8 +223,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
     }
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
-      // fprintf(stderr, "\x1b[1;33mwritable\x1b[0m %s fd=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi));
-      session_writable(session, wsi, opaque->binary, ctx);
+      session_writable(session, wsi, ctx);
       break;
     }
 
@@ -239,6 +245,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       }
       return 0;
     }
+
     case LWS_CALLBACK_RECEIVE_PONG: {
       if(server->on.pong.ctx) {
         // ws_obj = minnet_ws_fromwsi(server->on.pong.ctx, wsi);
@@ -253,17 +260,20 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       }
       return 0;
     }
+
     case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL: {
       if(opaque)
         opaque->sess = 0;
 
       return 0;
     }
+
     case LWS_CALLBACK_VHOST_CERT_AGING:
     case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
     case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;
     }
+
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: break;
     case LWS_CALLBACK_CONFIRM_EXTENSION_OKAY: {

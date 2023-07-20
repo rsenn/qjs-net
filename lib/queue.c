@@ -73,7 +73,7 @@ queue_last_chunk(Queue* q) {
 }
 
 ByteBlock
-queue_next(Queue* q, BOOL* done_p) {
+queue_next(Queue* q, BOOL* done_p, BOOL* binary_p) {
   ByteBlock ret = {0, 0};
   QueueItem* i;
   BOOL done = FALSE;
@@ -81,6 +81,9 @@ queue_next(Queue* q, BOOL* done_p) {
   if((i = queue_front(q))) {
     ret = i->block;
     done = i->done;
+
+    if(binary_p)
+      *binary_p = i->binary;
 
     if(i->unref) {
       JSContext* ctx = deferred_getctx(i->unref);
@@ -160,6 +163,19 @@ queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
     i = queue_add(q, chunk);
   }
 
+  return i;
+}
+
+QueueItem*
+queue_append(Queue* q, const void* data, size_t size, JSContext* ctx) {
+  QueueItem* i;
+
+  if((i = queue_last_chunk(q))) {
+    if(block_append(&i->block, data, size) == -1)
+      return 0;
+  } else {
+    i = queue_write(q, data, size, ctx);
+  }
   return i;
 }
 

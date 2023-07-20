@@ -79,12 +79,16 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   switch(magic) {
     case RESPONSE_ARRAYBUFFER: {
       generator_continuous(gen, funcs.resolve);
+      gen->block_fn = block_toarraybuffer;
       break;
     }
+
     case RESPONSE_TEXT: {
       generator_continuous(gen, funcs.resolve);
+      gen->block_fn = block_tostring;
       break;
     }
+
     case RESPONSE_JSON: {
       generator_continuous(gen, funcs.resolve);
       break;
@@ -115,6 +119,7 @@ minnet_response_function(JSContext* ctx, JSValueConst this_val, int argc, JSValu
       ret = minnet_response_new(ctx, url, status, 0, FALSE, 0);
       break;
     }
+
     case RESPONSE_ERROR: {
       MinnetURL url = URL_INIT();
       ret = minnet_response_new(ctx, url, 0, 0, FALSE, 0);
@@ -154,6 +159,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
       break;
     }
+
     case HEADERS_SET: {
       const char* v;
 
@@ -162,6 +168,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
       break;
     }
+
     case HEADERS_APPEND: {
       const char* v;
       size_t vlen;
@@ -171,6 +178,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
       break;
     }
+
     case HEADERS_LOCATION: {
       ret = JS_NewInt32(ctx, headers_set(&resp->headers, "Location", key, "\r\n"));
       break;
@@ -214,34 +222,42 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_NewInt32(ctx, resp->status);
       break;
     }
+
     case RESPONSE_OK: {
       ret = JS_NewBool(ctx, resp->status >= 200 && resp->status <= 299);
       break;
     }
+
     case RESPONSE_STATUSTEXT: {
       ret = resp->status_text ? JS_NewString(ctx, resp->status_text) : JS_NULL;
       break;
     }
+
     case RESPONSE_HEADERS_SENT: {
       ret = JS_NewBool(ctx, resp->headers_sent);
       break;
     }
+
     case RESPONSE_URL: {
       ret = minnet_url_new(ctx, resp->url);
       break;
     }
+
     case RESPONSE_TYPE: {
       ret = JS_NewString(ctx, resp->status == 0 ? "error" : "default");
       break;
     }
+
     case RESPONSE_HEADERS: {
       ret = minnet_headers_wrap(ctx, &resp->headers, response_dup(resp), (HeadersFreeFunc*)&response_free);
       break;
     }
+
     case RESPONSE_BODYUSED: {
       ret = JS_NewBool(ctx, resp->body != NULL);
       break;
     }
+
     case RESPONSE_BODY: {
       if(resp->body)
         ret = minnet_generator_iterator(ctx, generator_dup(resp->body));
@@ -274,6 +290,7 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
         resp->status = s;
       break;
     }
+
     case RESPONSE_STATUSTEXT: {
       if(resp->status_text)
         js_free(ctx, resp->status_text);
@@ -281,10 +298,12 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       resp->status_text = js_tostring(ctx, value);
       break;
     }
+
     case RESPONSE_HEADERS_SENT: {
       resp->headers_sent = JS_ToBool(ctx, value);
       break;
     }
+
     case RESPONSE_URL: {
       url_free(&resp->url, ctx);
       url_parse(&resp->url, str, ctx);
@@ -296,6 +315,7 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
       headers_fromobj(&resp->headers, value, "\n", ": ", ctx);
       break;
     }
+
     case RESPONSE_BODYUSED: {
       break;
     }
@@ -382,6 +402,7 @@ static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("location", 1, minnet_response_header, HEADERS_LOCATION),
     JS_CFUNC_MAGIC_DEF("set", 2, minnet_response_header, HEADERS_SET),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
+    JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_response_method, RESPONSE_ARRAYBUFFER),
     JS_CFUNC_DEF("clone", 0, minnet_response_clone),
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_response_iterator),
     JS_CGETSET_MAGIC_FLAGS_DEF("body", minnet_response_get, minnet_response_set, RESPONSE_BODY, 0),

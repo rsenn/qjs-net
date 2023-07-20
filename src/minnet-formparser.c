@@ -103,26 +103,32 @@ minnet_formparser_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = js_argv_to_array(ctx, fp->spa_create_info.param_names);
       break;
     }
+
     case FORM_PARSER_SOCKET: {
       ret = minnet_ws_wrap(ctx, fp->ws);
       break;
     }
+
     case FORM_PARSER_READ: {
       ret = JS_NewUint32(ctx, fp->read);
       break;
     }
+
     case FORM_PARSER_ON_OPEN: {
       ret = JS_DupValue(ctx, fp->cb.open.func_obj);
       break;
     }
+
     case FORM_PARSER_ON_CONTENT: {
       ret = JS_DupValue(ctx, fp->cb.content.func_obj);
       break;
     }
+
     case FORM_PARSER_ON_CLOSE: {
       ret = JS_DupValue(ctx, fp->cb.close.func_obj);
       break;
     }
+
     case FORM_PARSER_ON_FINALIZE: {
       ret = JS_DupValue(ctx, fp->cb.finalize.func_obj);
       break;
@@ -149,6 +155,7 @@ minnet_formparser_set(JSContext* ctx, JSValueConst this_val, JSValueConst value,
       fp->cb.open.this_obj = JS_DupValue(ctx, this_val);
       break;
     }
+
     case FORM_PARSER_ON_CONTENT: {
       JS_FreeValue(ctx, fp->cb.content.func_obj);
       JS_FreeValue(ctx, fp->cb.content.this_obj);
@@ -157,6 +164,7 @@ minnet_formparser_set(JSContext* ctx, JSValueConst this_val, JSValueConst value,
       fp->cb.content.this_obj = JS_DupValue(ctx, this_val);
       break;
     }
+
     case FORM_PARSER_ON_CLOSE: {
       JS_FreeValue(ctx, fp->cb.close.func_obj);
       JS_FreeValue(ctx, fp->cb.close.this_obj);
@@ -165,6 +173,7 @@ minnet_formparser_set(JSContext* ctx, JSValueConst this_val, JSValueConst value,
       fp->cb.close.this_obj = JS_DupValue(ctx, this_val);
       break;
     }
+
     case FORM_PARSER_ON_FINALIZE: {
       JS_FreeValue(ctx, fp->cb.finalize.func_obj);
       JS_FreeValue(ctx, fp->cb.finalize.this_obj);

@@ -246,6 +246,7 @@ minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
       }
       break;
     }
+
     case URL_TO_OBJECT: {
       ret = url_object(*url, ctx);
       break;

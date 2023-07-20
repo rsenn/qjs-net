@@ -592,10 +592,12 @@ serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
         return 1;
       break;
     }
+
     case SYNC: {
       session_want_write(session, wsi);
       break;
     }
+
     case ASYNC: {
       serve_promise(cb->ctx, session, session->generator);
       break;
@@ -770,8 +772,9 @@ http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) 
   if(qsize) {
     ByteBlock buf;
     size_t pos = 0;
+    BOOL binary = FALSE;
 
-    buf = queue_next(&session->sendq, &done);
+    buf = queue_next(&session->sendq, &done, &binary);
 
     while((remain = block_SIZE(&buf) - pos) > 0) {
 
@@ -1188,6 +1191,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       ret = -1;
       break;
     }
+
     case LWS_CALLBACK_VHOST_CERT_AGING:
     case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
     case LWS_CALLBACK_GET_THREAD_ID: {
@@ -1199,6 +1203,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       opaque2->upstream = wsi;
     }
+
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP:
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ:

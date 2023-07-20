@@ -1285,6 +1285,7 @@ js_wrappedpromise_methods(JSContext* ctx, JSValueConst this_val, int argc, JSVal
       wpr->thened = TRUE;
       break;
     }
+
     case METHOD_CATCH: {
       ret = js_invoke(ctx, wpr->promise, "catch", argc, argv);
       wpr->catched = TRUE;

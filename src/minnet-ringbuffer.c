@@ -203,6 +203,7 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
 
       break;
     }
+
     case RINGBUFFER_SKIP: {
       uint32_t n;
 

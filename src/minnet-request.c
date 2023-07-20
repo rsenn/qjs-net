@@ -117,6 +117,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_NewString(ctx, method_name(req->method));
       break;
     }
+
     case REQUEST_TYPE: {
       char* type;
 
@@ -126,19 +127,23 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       }
       break;
     }
+
     case REQUEST_URI: {
       ret = minnet_url_new(ctx, req->url);
       break;
     }
+
     case REQUEST_PATH: {
       ret = JS_NewString(ctx, req->url.path ? req->url.path : "");
       break;
     }
+
     case REQUEST_HEADERS: {
       ret = minnet_headers_wrap(ctx, &req->headers, request_dup(req), (HeadersFreeFunc*)&request_free);
       // minnet_headers_value(ctx,  this_val);
       break;
     }
+
     case REQUEST_REFERER: {
       char* ref;
 
@@ -175,10 +180,12 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_NewString(ctx, req->url.protocol);
       break;
     }
+
     case REQUEST_SECURE: {
       ret = JS_NewBool(ctx, req->secure);
       break;
     }
+
     case REQUEST_H2: {
       ret = JS_NewBool(ctx, req->h2);
       break;
@@ -213,11 +220,13 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
         req->method = m;
       break;
     }
+
     case REQUEST_URI: {
       url_free(&req->url, ctx);
       url_parse(&req->url, str, ctx);
       break;
     }
+
     case REQUEST_PATH: {
       if(req->url.path) {
         js_free(ctx, req->url.path);
@@ -226,17 +235,16 @@ minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, in
       req->url.path = js_strdup(ctx, str);
       break;
     }
-      /*  case REQUEST_HEADERS: {
 
-          if(JS_IsObject(value)) {
-            headers_fromobj(&req->headers, value, ctx);
-          } else {
-            const char* str = JS_ToCString(ctx, value);
-            ret = JS_ThrowReferenceError(ctx, "Cannot set headers to '%s'", str);
-            JS_FreeCString(ctx, str);
-          }
-          break;
-        }*/
+    case REQUEST_HEADERS: {
+
+      if(JS_IsObject(value))
+        headers_fromobj(&req->headers, value, "\n", ": ", ctx);
+      else
+        ret = JS_ThrowReferenceError(ctx, "headers must be an object");
+
+      break;
+    }
   }
 
   JS_FreeCString(ctx, str);
@@ -322,10 +330,12 @@ minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       req->body->block_fn = &block_toarraybuffer;
       break;
     }
+
     case REQUEST_TEXT: {
       req->body->block_fn = &block_tostring;
       break;
     }
+
     case REQUEST_JSON: {
       req->body->block_fn = &block_tojson;
       break;
@@ -374,7 +384,7 @@ static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("method", minnet_request_get, minnet_request_set, REQUEST_METHOD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("path", minnet_request_get, minnet_request_set, REQUEST_PATH, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_request_get, 0, REQUEST_PROTOCOL, 0),
-    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, 0, REQUEST_HEADERS, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("headers", minnet_request_get, minnet_request_set, REQUEST_HEADERS, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("referer", minnet_request_get, 0, REQUEST_REFERER, 0),
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_request_method, REQUEST_ARRAYBUFFER),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_request_method, REQUEST_TEXT),

@@ -22,6 +22,7 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
       }
       break;
     }
+
     case LWS_UFS_OPEN: {
       cb = &fp->cb.open;
       if(cb->ctx) {
@@ -49,6 +50,7 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
       }
       break;
     }
+
     case LWS_UFS_CLOSE: {
       cb = &fp->cb.close;
       if(cb->ctx) {

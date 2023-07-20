@@ -42,7 +42,7 @@ void session_init(struct session_data* session, struct context* context);
 void session_clear(struct session_data*, JSRuntime*);
 JSValue session_object(struct session_data*, JSContext*);
 void session_want_write(struct session_data*, struct lws*);
-int session_writable(struct session_data*, struct lws*, BOOL, JSContext*);
+int session_writable(struct session_data*, struct lws*, JSContext*);
 FunctionType session_callback(struct session_data*, JSCallback*);
 FunctionType session_generator(struct session_data* session, JSValueConst, JSValueConst);
 

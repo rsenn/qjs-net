@@ -50,6 +50,7 @@ proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* u
 
       break;
     }
+
     case LWS_CALLBACK_CLOSED: {
       lws_dll2_foreach_safe(&pc->pending_msg_to_ws, NULL, proxy_ws_raw_msg_destroy);
       pc->wsi_ws = NULL;
@@ -65,6 +66,7 @@ proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* u
       lws_wsi_close(pc->wsi_raw, LWS_TO_KILL_ASYNC);
       break;
     }
+
     case LWS_CALLBACK_SERVER_WRITEABLE: {
       proxy_msg_t* msg;
       uint8_t* data;
@@ -90,6 +92,7 @@ proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* u
         lws_callback_on_writable(wsi);
       break;
     }
+
     case LWS_CALLBACK_RECEIVE: {
       proxy_msg_t* msg;
       uint8_t* data;

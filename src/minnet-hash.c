@@ -181,6 +181,7 @@ minnet_hash_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
       js_buffer_free(&buf, ctx);
       break;
     }
+
     case HASH_FINALIZE: {
 
       if(!hash_finalize(h))
@@ -189,10 +190,12 @@ minnet_hash_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
       ret = JS_NewArrayBufferCopy(ctx, h->digest, hash_size(h));
       break;
     }
+
     case HASH_VALUEOF: {
       ret = JS_NewArrayBufferCopy(ctx, h->digest, hash_size(h));
       break;
     }
+
     case HASH_TOSTRING: {
       uint32_t bits_per_char = 4;
       if(argc >= 1)
@@ -235,18 +238,22 @@ minnet_hash_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_NewInt32(ctx, h->type);
       break;
     }
+
     case HASH_BYTELENGTH: {
       ret = JS_NewUint32(ctx, hash_size(h));
       break;
     }
+
     case HASH_BITLENGTH: {
       ret = JS_NewUint32(ctx, hash_size(h) * 8);
       break;
     }
+
     case HASH_HMAC: {
       ret = JS_NewBool(ctx, h->hmac);
       break;
     }
+
     case HASH_FINALIZED: {
       ret = JS_NewUint32(ctx, h->finalized);
       break;

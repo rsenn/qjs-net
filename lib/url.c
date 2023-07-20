@@ -9,7 +9,10 @@
 #include <assert.h>
 #include <limits.h>
 #include <ctype.h>
-#include <strings.h>
+#include <string.h>
+#include <stdlib.h>
+
+char* strdup(const char*);
 
 #ifndef HAVE_STRLCPY
 size_t
@@ -72,6 +75,7 @@ protocol_default_port(enum protocol p) {
     case PROTOCOL_HTTP: {
       return 80;
     }
+
     case PROTOCOL_WSS:
     case PROTOCOL_HTTPS: {
       return 443;
@@ -340,6 +344,7 @@ url_info(const URL url, struct lws_client_connect_info* info) {
       info->protocol = strdup("http");
       break;
     }
+
     case PROTOCOL_WS:
     case PROTOCOL_WSS: {
       info->protocol = strdup("ws");

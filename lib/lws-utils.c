@@ -3,6 +3,7 @@
  */
 #include "lws-utils.h"
 #include "utils.h"
+#include <string.h>
 
 int lws_wsi_is_h2(struct lws* wsi);
 int lws_is_ssl(struct lws* wsi);

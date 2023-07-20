@@ -108,7 +108,7 @@ struct TimerClosure {
 #define JS_BIND_MAGIC(num_functions, flags) ((((num_functions)-1) << JS_NUM_SHIFT) | (flags))
 
 static inline void
-js_vector_free(JSContext* ctx, int argc, JSValue argv[]) {
+js_argv_free(JSContext* ctx, int argc, JSValue argv[]) {
   for(int i = 0; i < argc; i++) {
     JS_FreeValue(ctx, argv[i]);
     argv[i] = JS_UNDEFINED;

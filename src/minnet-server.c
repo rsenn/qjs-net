@@ -367,6 +367,7 @@ minnet_server_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_DupValue(ctx, server->on.http.func_obj);
       break;
     }
+
     case SERVER_LISTENING: {
       ret = JS_NewBool(ctx, server->context.lws != 0);
       break;
@@ -424,6 +425,7 @@ minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 
       break;
     }
+
     case SERVER_GET:
     case SERVER_POST:
     case SERVER_USE: {
@@ -455,6 +457,7 @@ minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
         JS_FreeCString(ctx, path);
       break;
     }
+
     case SERVER_MOUNT: {
       MinnetHttpMount **m = (MinnetHttpMount**)&server->context.info.mounts, *mount;
       const char* path = 0;
@@ -881,6 +884,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
     case LWS_CALLBACK_UNLOCK_POLL: {
       return 0;
     }
+
     case LWS_CALLBACK_ADD_POLL_FD: {
       struct lws_pollargs* args = in;
       if(server->on.fd.ctx) {
@@ -893,6 +897,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
       }
       return 0;
     }
+
     case LWS_CALLBACK_DEL_POLL_FD: {
       struct lws_pollargs* args = in;
       if(server->on.fd.ctx) {
@@ -907,6 +912,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
       }
       return 0;
     }
+
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
       struct lws_pollargs* args = in;
       if(server->on.fd.ctx) {
@@ -921,6 +927,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
       }
       return 0;
     }
+
     case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
     case LWS_CALLBACK_GET_THREAD_ID: {
       return 0;

@@ -38,7 +38,13 @@ typedef struct client_context {
   };
   Queue* recvq;
   BOOL block;
+  int lwsret;
 } MinnetClient;
+
+enum {
+  RETURN_CLIENT = 0,
+  RETURN_RESPONSE,
+};
 
 void client_certificate(struct context*, JSValueConst);
 MinnetClient* client_new(JSContext*);

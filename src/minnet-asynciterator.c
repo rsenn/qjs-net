@@ -26,10 +26,12 @@ minnet_asynciterator_method(JSContext* ctx, JSValueConst this_val, int argc, JSV
       ret = asynciterator_next(iter, argc > 0 ? argv[0] : JS_UNDEFINED, ctx);
       break;
     }
+
     case ASYNCITERATOR_PUSH: {
       ret = JS_NewBool(ctx, asynciterator_yield(iter, argv[0], ctx));
       break;
     }
+
     case ASYNCITERATOR_STOP: {
       ret = JS_NewBool(ctx, asynciterator_stop(iter, argc > 0 ? argv[0] : JS_UNDEFINED, ctx));
       break;
