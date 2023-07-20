@@ -662,29 +662,32 @@ minnet_client_response(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   return JS_NewInt32(ctx, 1);
 }
 
-struct PollFdClosure {
+typedef struct {
   size_t nfds;
   struct pollfd* pfds;
   int ref_count;
   BOOL touched;
-};
+  JSValue exception;
+} SyncFetch;
 
-static struct PollFdClosure*
-pfc_dup(struct PollFdClosure* c) {
+static SyncFetch*
+synchfetch_dup(SyncFetch* c) {
   ++c->ref_count;
   return c;
 }
 
 static void
-pfc_free(void* ptr) {
-  struct PollFdClosure* c = ptr;
+synchfetch_free(void* ptr) {
+  SyncFetch* c = ptr;
 
-  if(--c->ref_count == 0)
+  if(--c->ref_count == 0) {
+    memset(c, 0, sizeof(SyncFetch));
     free(c);
+  }
 }
 
 static ssize_t
-pfc_index(struct PollFdClosure* c, int fd) {
+synchfetch_indexpollfd(SyncFetch* c, int fd) {
   size_t i;
 
   for(i = 0; i < c->nfds; i++)
@@ -695,20 +698,20 @@ pfc_index(struct PollFdClosure* c, int fd) {
 }
 
 static struct pollfd*
-pfc_get(struct PollFdClosure* c, int fd) {
+synchfetch_getpollfd(SyncFetch* c, int fd) {
   ssize_t i;
 
-  if((i = pfc_index(c, fd)) == -1)
+  if((i = synchfetch_indexpollfd(c, fd)) == -1)
     return 0;
 
   return &c->pfds[i];
 }
 
 static void
-pfc_set(struct PollFdClosure* c, int fd, int events) {
+synchfetch_setevents(SyncFetch* c, int fd, int events) {
   struct pollfd* pfd;
 
-  if(!(pfd = pfc_get(c, fd))) {
+  if(!(pfd = synchfetch_getpollfd(c, fd))) {
     c->pfds = realloc(c->pfds, (c->nfds + 1) * sizeof(struct pollfd));
     assert(c->pfds);
     c->pfds[c->nfds] = (struct pollfd){fd, 0, 0};
@@ -722,8 +725,8 @@ pfc_set(struct PollFdClosure* c, int fd, int events) {
 }
 
 static void
-pfc_delete(struct PollFdClosure* c, int fd) {
-  ssize_t i = pfc_index(c, fd);
+synchfetch_removefd(SyncFetch* c, int fd) {
+  ssize_t i = synchfetch_indexpollfd(c, fd);
 
   assert(i != -1);
 
@@ -738,19 +741,19 @@ pfc_delete(struct PollFdClosure* c, int fd) {
 
 JSValue
 minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  struct PollFdClosure* c = ptr;
+  SyncFetch* c = ptr;
   int32_t fd;
   BOOL rd = JS_ToBool(ctx, argv[1]), wr = JS_ToBool(ctx, argv[2]);
 
   JS_ToInt32(ctx, &fd, argv[0]);
 
   if(!rd && !wr) {
-    pfc_delete(ptr, fd);
+    synchfetch_removefd(ptr, fd);
   } else {
-    pfc_set(ptr, fd, (rd ? POLLIN : 0) | (wr ? POLLOUT : 0));
+    synchfetch_setevents(ptr, fd, (rd ? POLLIN : 0) | (wr ? POLLOUT : 0));
   }
 
-#ifdef DEBUG_OUTPUT
+#if 1 // def DEBUG_OUTPUT
   printf("%s argc=%d fd=%d rd=%d wr=%d c->nfds=%zu\n", __func__, argc, fd, rd, wr, c->nfds);
 #endif
 
@@ -759,21 +762,28 @@ minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 
 JSValue
 minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  struct PollFdClosure* c = ptr;
+  SyncFetch* c = ptr;
   int32_t fd = -1;
   MinnetWebsocket* ws;
+  BOOL is_error = argc > 1 && JS_IsError(ctx, argv[1]);
 
   if((ws = minnet_ws_data(argv[0])) && ws->fd != -1)
     fd = ws->fd;
   else
     JS_ToInt32(ctx, &fd, argv[0]);
 
-  assert(fd != -1);
+  printf("%s err=%i argv[1]=%s\n", __func__, is_error, JS_ToCString(ctx, argv[1]));
 
-  pfc_delete(c, fd);
+  if(fd != -1)
+    synchfetch_removefd(c, fd);
 
-#if 1 // def DEBUG_OUTPUT
-  printf("%s fd=%d c->nfds=%zu\n", __func__, fd, c->nfds);
+  if(is_error) {
+    JS_Throw(ctx, argv[1]);
+    c->exception = JS_DupValue(ctx, argv[1]);
+  }
+
+#ifdef DEBUG_OUTPUT
+  printf("%s fd=%d c=%p c->nfds=%zu\n", __func__, fd, c, c->nfds);
 #endif
 
   return JS_UNDEFINED;
@@ -949,6 +959,26 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
   errno = 0;
+  SyncFetch* c = 0;
+
+  if(block) {
+
+    if(!(c = malloc(sizeof(SyncFetch))))
+      return JS_ThrowOutOfMemory(ctx);
+
+    c->ref_count = 1;
+    c->nfds = 0;
+    c->pfds = 0;
+    c->touched = FALSE;
+    c->exception = JS_NULL;
+
+    client->on.fd = CALLBACK_INIT(ctx, js_function_cclosure(ctx, minnet_client_pollfd, 0, 0, synchfetch_dup(c), synchfetch_free), JS_UNDEFINED);
+    JS_DefinePropertyValueStr(ctx, client->on.fd.func_obj, "name", JS_NewString(ctx, "onFd"), 0);
+
+    client->on.close = CALLBACK_INIT(ctx, js_function_cclosure(ctx, minnet_client_onclose, 0, 0, synchfetch_dup(c), synchfetch_free), JS_UNDEFINED);
+
+    client->context.lws->event_loop_ops = &event_loop_ops_poll;
+  }
 
 #ifdef LWS_WITH_UDP
   if(proto == PROTOCOL_RAW && !strcmp(client->request->url.protocol, "udp")) {
@@ -998,42 +1028,22 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
         client->on.http = CALLBACK_INIT(ctx, JS_NewCFunctionData(ctx, minnet_client_response, 2, 0, 2, &fns.resolve), JS_UNDEFINED);
         js_async_free(JS_GetRuntime(ctx), &fns);
       } else {
-        struct PollFdClosure* c;
-
-        if(!(c = malloc(sizeof(struct PollFdClosure))))
-          return JS_ThrowOutOfMemory(ctx);
-
-        c->ref_count = 1;
-        c->nfds = 0;
-        c->pfds = 0;
-        c->touched = FALSE;
-
-        pfc_set(c, lws_get_socket_fd(lws_get_network_wsi(client->wsi)), POLLIN | POLLOUT);
-
-        /*
-                pfd->fd = lws_get_socket_fd(client->wsi);
-                pfd->events = 0;
-                pfd->revents = 0;*/
-
-        client->on.fd = CALLBACK_INIT(ctx, js_function_cclosure(ctx, minnet_client_pollfd, 0, 0, c, pfc_free), JS_UNDEFINED);
-        client->on.close = CALLBACK_INIT(ctx, js_function_cclosure(ctx, minnet_client_onclose, 0, 0, pfc_dup(c), pfc_free), JS_UNDEFINED);
-
-        client->context.lws->event_loop_ops = &event_loop_ops_poll;
+        synchfetch_setevents(c, lws_get_socket_fd(lws_get_network_wsi(client->wsi)), POLLIN | POLLOUT);
 
         struct wsi_opaque_user_data* opaque = lws_opaque(client->wsi, ctx);
         opaque->resp = client->response;
         Generator* gen = response_generator(opaque->resp, ctx);
-     
+
         assert(opaque->resp->body);
         generator_continuous(gen, JS_NULL);
 
-opaque->resp->sync = TRUE;
+        opaque->resp->sync = TRUE;
 
         while(1 /*!client->lwsret*/) {
           /*if(c->nfds == 1 && c->pfds[0].events == 0)
             lws_plat_service(client->context.lws, 100);*/
 
-#ifdef DEBUG_OUTPUT
+#if 1 // def DEBUG_OUTPUT
           printf("%s c->nfds=%zu\n", __func__, c->nfds);
 #endif
           int r = poll(c->pfds, c->nfds, 1000);
@@ -1062,8 +1072,12 @@ opaque->resp->sync = TRUE;
             break;
         }
 
+        if(!JS_IsNull(c->exception))
+          ret = JS_Throw(ctx, c->exception);
+        else
+          ret = JS_DupValue(ctx, client->session.resp_obj);
 
-        ret = JS_DupValue(ctx, client->session.resp_obj);
+        synchfetch_free(c);
       }
 
       break;
