@@ -13,9 +13,7 @@ async function main(...args) {
     return name;
   });
 
-  let module = await import(
-    /*'https://google.ch/_/x.html' ?? */ 'https://esm.sh/stable/preact@10.16.0/es2022/preact.development.mjs'
-  );
+  let module = await import(/*'https://google.ch/_/x.html' ?? */ 'https://esm.sh/stable/preact@10.16.0/es2022/preact.development.mjs');
 
   console.log('module', module);
   console.log('moduleList', console.config({ compact: false }), moduleList[moduleList.length - 1]);

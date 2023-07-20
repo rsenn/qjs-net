@@ -2,21 +2,9 @@ const IdSequencer = (start = 0, typedArr = Uint32Array, a) => ((a = new typedArr
 const StringLength = str => str.replace(/\x1b\[[^m]*m/g, '').length;
 const PadEnd = (str, n, ch = ' ') => str + ch.repeat(Math.max(0, n - StringLength(str)));
 const Color = (str, ...args) => `\x1b[${args.join(';')}m${str}\x1b[0m`;
-const Log = (...args) =>
-  console.log(console.config({ compact: 0, depth: 4, maxArrayLength: 2, maxStringLength: 64 }), ...args);
+const Log = (...args) => console.log(console.config({ compact: 0, depth: 4, maxArrayLength: 2, maxStringLength: 64 }), ...args);
 const LogMethod = (className, method, ...args) =>
-  Log(
-    PadEnd(
-      className +
-        Color('.', 1, 36) +
-        Color(
-          method,
-          ...(method == 'constructor' ? [38, 5, 165] : method.startsWith('on') && method.length > 2 ? [1, 32] : [1, 33])
-        ),
-      25
-    ),
-    ...args
-  );
+  Log(PadEnd(className + Color('.', 1, 36) + Color(method, ...(method == 'constructor' ? [38, 5, 165] : method.startsWith('on') && method.length > 2 ? [1, 32] : [1, 33])), 25), ...args);
 
 function isObject(value) {
   return typeof value == 'object' && value != null;
@@ -118,8 +106,7 @@ export function RPCApi(connection) {
   return api;
 }
 
-for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get'])
-  RPCApi.prototype[cmd] = MakeCommandFunction(cmd, o => o.connection);
+for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get']) RPCApi.prototype[cmd] = MakeCommandFunction(cmd, o => o.connection);
 
 export function RPCProxy(connection) {
   let obj = define(new.target ? this : new RPCProxy(c), { connection });
@@ -163,16 +150,13 @@ export class Connection {
 
   makeId = IdSequencer(0);
 
-  constructor(log, codec) {
-    log ??= Log;
+  constructor(codec, verbose) {
     codec ??= 'json';
 
     define(this, {
       id: 0,
       exception: null,
-      log(arg, ...args) {
-        LogMethod(getPrototypeName(this), arg, ...args);
-      }
+      log: verbose ? (arg, ...args) => LogMethod(getPrototypeName(this), arg, ...args) : () => {}
     });
 
     define(this, typeof codec == 'string' && codecs[codec] ? { codecName: codec, codec: codecs[codec]() } : {});
@@ -316,25 +300,13 @@ export function RPCConstructorEndpoint(classes, instances) {
     invoke: instance2obj((id, obj, method, params = []) => {
       if(method in obj && isFunction(obj[method])) {
         const result = obj[method](...params);
-        if(isThenable(result))
-          return result
-            .then(result => statusResponse(id, true, result))
-            .catch(error => statusResponse(id, false, error));
+        if(isThenable(result)) return result.then(result => statusResponse(id, true, result)).catch(error => statusResponse(id, false, error));
         return statusResponse(id, true, result);
       }
       return statusResponse(id, false, { message: `No such method on object #${instance}: ${method}` });
     }),
     keys: instance2obj((id, obj, enumerable = true) =>
-      statusResponse(
-        id,
-        true,
-        GetProperties(
-          obj,
-          enumerable
-            ? obj => ('keys' in obj && isFunction(obj.keys) ? [...obj.keys()] : Object.keys(obj))
-            : obj => Object.getOwnPropertyNames(obj)
-        )
-      )
+      statusResponse(id, true, GetProperties(obj, enumerable ? obj => ('keys' in obj && isFunction(obj.keys) ? [...obj.keys()] : Object.keys(obj)) : obj => Object.getOwnPropertyNames(obj)))
     ),
     names: instance2obj((id, obj, enumerable = true) =>
       statusResponse(
@@ -394,8 +366,7 @@ export function RPCConstructorEndpoint(classes, instances) {
             if(valueDescriptor) {
               value = SerializeValue(value, source);
 
-              for(let flag of ['enumerable', 'writable', 'configurable'])
-                if(!(flag in defaults) || desc[flag] == defaults[flag]) value[flag] = desc[flag];
+              for(let flag of ['enumerable', 'writable', 'configurable']) if(!(flag in defaults) || desc[flag] == defaults[flag]) value[flag] = desc[flag];
             } else if(isFunction(value)) {
               value = value + '';
             }
@@ -423,10 +394,11 @@ function statusResponse(id, success, resultOrError) {
 export class RPCServer extends Connection {
   #instances = {};
 
-  constructor(classes, codec, log) {
-    super(log, codec);
+  constructor(classes, codec, verbose) {
+    super(codec, verbose);
+    console.log('this.log', this.log);
 
-    this.log('constructor', { classes, codec, log });
+    this.log('constructor', { classes, codec });
 
     define(this, {
       classes,
@@ -484,10 +456,10 @@ RPCServer.list = [];
  *
  */
 export class RPCClient extends Connection {
-  constructor(classes, codec, log) {
-    super(log, codec ?? codecs.json(false));
+  constructor(classes, codec, verbose) {
+    super(codec ?? codecs.json(false), verbose);
 
-    this.log('constructor', { classes, codec, log });
+    this.log('constructor', { classes, codec });
 
     RPCClient.set.add(this);
 
@@ -519,12 +491,7 @@ export class RPCClient extends Connection {
   async sendCommand(command, ...params) {
     const message = { command, params, id: this.makeId() };
 
-    /* if(this.messages && this.messages.requests)
-      if(typeof message.id == 'number') this.messages.requests[message.id] = message;
-
-    if(this.messages && this.messages.requests) this.messages.requests[message.id] = message;*/
-
-    this.log('sendCommand', message);
+    //this.log('sendCommand', message);
 
     await this.sendMessage(message);
 
@@ -537,13 +504,8 @@ define(RPCClient.prototype, { [Symbol.toStringTag]: 'RPCClient' });
 export class RPCSocket {
   fdlist = {};
 
-  constructor(url, service = RPCServer, classes = {}) {
-    define(this, {
-      classes,
-      service,
-      url: typeof url != 'object' ? parseURL(url) : url,
-      log: (arg, ...args) => LogMethod(getPrototypeName(this), arg, ...args)
-    });
+  constructor(url, service = RPCServer, classes = {}, verbose) {
+    define(this, { verbose, classes, service, url: typeof url != 'object' ? parseURL(url) : url, log: verbose ? (arg, ...args) => LogMethod(getPrototypeName(this), arg, ...args) : () => {} });
 
     RPCSocket.set.add(this);
   }
@@ -582,14 +544,14 @@ export class RPCSocket {
   }
 
   getCallbacks(ctor = this.service) {
-    const { fdlist, classes, log } = this;
+    let { fdlist, classes, verbose, log } = this;
 
     return {
       onConnect(sock) {
         log('onConnect', { sock, ctor: ctor.name, fdlist });
 
         try {
-          fdlist[sock.fd] = new ctor(classes, 'json', log);
+          fdlist[sock.fd] = new ctor(classes, 'json', verbose);
           fdlist[sock.fd].socket ??= sock;
           log('onConnect', { fdlist, sock });
           handle(sock, 'open');
@@ -599,7 +561,7 @@ export class RPCSocket {
       },
       onOpen(sock) {
         log('onOpen', { sock, ctor: ctor.name });
-        fdlist[sock.fd] = new ctor(classes, 'json', log);
+        fdlist[sock.fd] = new ctor(classes, 'json', verbose);
         fdlist[sock.fd].socket ??= sock;
         handle(sock, 'open');
       },
@@ -720,12 +682,7 @@ function parseURL(urlOrPort) {
   );
 }
 
-function GetProperties(
-  arg,
-  method = Object.getOwnPropertyNames,
-  pred = (proto, depth) => proto !== Object.prototype,
-  propPred = (prop, obj, proto, depth) => true
-) {
+function GetProperties(arg, method = Object.getOwnPropertyNames, pred = (proto, depth) => proto !== Object.prototype, propPred = (prop, obj, proto, depth) => true) {
   const set = new Set();
   let obj = arg,
     depth = 0;
@@ -744,11 +701,7 @@ function GetProperties(
   return [...set];
 }
 
-function GetKeys(
-  obj,
-  pred = (proto, depth) => proto !== Object.prototype,
-  propPred = (prop, obj, proto, depth) => true
-) {
+function GetKeys(obj, pred = (proto, depth) => proto !== Object.prototype, propPred = (prop, obj, proto, depth) => true) {
   let keys = new Set();
 
   for(let key of GetProperties(obj, Object.getOwnPropertyNames, pred, propPred)) keys.add(key);
@@ -866,8 +819,7 @@ function MakeCommandFunction(cmd, getConnection, thisObj, t) {
 
   t ??= { methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
 
-  if(!isFunction(getConnection))
-    getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
+  if(!isFunction(getConnection)) getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
 
   // Log('MakeCommandFunction', { cmd, getConnection, thisObj });
 
