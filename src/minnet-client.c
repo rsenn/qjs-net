@@ -191,7 +191,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
   switch(reason) {
     case LWS_CALLBACK_GET_THREAD_ID: {
-      return gettid();
+      return 0;
     }
 
     case LWS_CALLBACK_VHOST_CERT_AGING:
