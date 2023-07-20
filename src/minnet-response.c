@@ -270,7 +270,8 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
     }
 
     case RESPONSE_HEADERS: {
-      ret = minnet_headers_wrap(ctx, &resp->headers, response_dup(resp), (HeadersFreeFunc*)&response_free);
+      ret = headers_object(ctx, resp->headers.start, resp->headers.end);
+      //    ret = minnet_headers_wrap(ctx, &resp->headers, response_dup(resp), (HeadersFreeFunc*)&response_free);
       break;
     }
 

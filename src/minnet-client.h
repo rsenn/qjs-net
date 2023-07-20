@@ -38,6 +38,8 @@ typedef struct client_context {
   };
   Queue* recvq;
   BOOL block;
+  BOOL buffering;
+  size_t buf_size;
   int lwsret;
 } MinnetClient;
 

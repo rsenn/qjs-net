@@ -6,7 +6,7 @@
 #include <libwebsockets.h>
 #include <strings.h>
 
-/*JSValue
+JSValue
 headers_object(JSContext* ctx, const void* start, const void* e) {
   JSValue ret = JS_NewObject(ctx);
   size_t len, namelen, n;
@@ -28,7 +28,7 @@ headers_object(JSContext* ctx, const void* start, const void* e) {
   }
 
   return ret;
-}*/
+}
 
 size_t
 headers_write(ByteBuffer* buffer, struct lws* wsi, uint8_t** in, uint8_t* end) {

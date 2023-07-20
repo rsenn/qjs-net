@@ -30,6 +30,7 @@ uint8_t* block_realloc(ByteBlock*, size_t size);
 void block_free(ByteBlock*);
 uint8_t* block_grow(ByteBlock*, size_t size);
 ByteBlock block_copy(const void*, size_t size);
+ByteBlock block_slice(const ByteBlock* blk, size_t start, size_t end);
 JSValue block_toarraybuffer(ByteBlock*, JSContext* ctx);
 JSValue block_tostring(ByteBlock*, JSContext* ctx);
 JSValue block_tojson(ByteBlock* blk, JSContext* ctx);

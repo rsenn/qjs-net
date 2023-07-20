@@ -389,7 +389,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       LOGCB("CLIENT-HTTP(2)", "resp->body=%p resp->body->q=%p", resp->body, resp->body->q);
 
       //
-      //  generator_finish(resp->body);
+      generator_finish(resp->body);
 
       if(client->on.http.ctx) {
         /*        MinnetRequest* req;

@@ -63,9 +63,29 @@ block_finalizer(JSRuntime* rt, void* alloc, void* start) {
 ByteBlock
 block_copy(const void* ptr, size_t size) {
   ByteBlock ret = {0, 0};
-  if(block_alloc(&ret, size)) {
+
+  if(block_alloc(&ret, size))
     memcpy(ret.start, ptr, size);
-  }
+
+  return ret;
+}
+
+ByteBlock
+block_slice(const ByteBlock* blk, size_t start, size_t end) {
+  ByteBlock ret = {0, 0};
+  size_t n = block_SIZE(blk);
+
+  if(start > n)
+    start = n;
+  if(end > n)
+    end = n;
+
+  if(end - start == 0)
+    return ret;
+
+  if(block_alloc(&ret, end - start))
+    memcpy(ret.start, blk->start + start, end - start);
+
   return ret;
 }
 

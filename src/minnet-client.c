@@ -163,6 +163,10 @@ client_generator(MinnetClient* client, JSContext* ctx) {
   if(!client->gen)
     client->gen = generator_new(ctx);
 
+  if(client->buffering) {
+    generator_buffering(client->gen, client->buf_size);
+  }
+
   return client->gen;
 }
 
@@ -791,7 +795,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   int argind = 0;
   JSValue value, ret = JS_NULL;
   MinnetClient* client = 0;
-  JSValue options = argv[0];
+  JSValue options;
   struct lws* wsi2;
   BOOL block = FALSE;
   // struct wsi_opaque_user_data* opaque = 0;
@@ -818,23 +822,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   js_async_zero(&client->promise);
 
-  if(argc >= 2) {
-
-    if(JS_IsObject(argv[1]))
-      argind++;
-
-    /*    if(JS_IsString(argv[argind])) {
-          tmp = JS_ToCString(ctx, argv[argind]);
-          argind++;
-        } else if((req = minnet_request_data(argv[argind]))) {
-          client->request = request_dup(req);
-          client->url = url_clone(req->url, ctx);
-          client->headers = JS_GetPropertyStr(ctx, argv[argind], "headers");
-          argind++;
-        }*/
-  }
-
-  options = argv[argind];
+  options = argc > 1 && JS_IsObject(argv[1]) ? argv[1] : JS_NewObject(ctx);
 
   if(!JS_IsObject(options))
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
@@ -894,7 +882,14 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
      headers_fromobj(&client->request->headers, client->headers, ctx);
    }
  */
+
+  if(js_has_propertystr(ctx, options, "buffering")) {
+    client->buffering = TRUE;
+    client->buf_size = js_get_propertystr_uint32(ctx, argv[1], "buffering");
+  }
+
   client->response = response_new(ctx);
+
   url_copy(&client->response->url, client->request->url, ctx);
 
   // client->response->body = generator_new(ctx);
@@ -1163,8 +1158,11 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
     closure_free(closure);
   }*/
-  ret = minnet_client_wrap(ctx, cl);
+
   if((cl = closure->pointer)) {
+
+    ret = minnet_client_wrap(ctx, cl);
+
     JSValue fn = JS_NewCFunctionMagic(ctx, minnet_client_iterator, "iterator", 0, JS_CFUNC_generic_magic, cl->block ? CLIENT_ITERATOR : CLIENT_ASYNCITERATOR);
     JSAtom prop = js_symbol_static_atom(ctx, cl->block ? "iterator" : "asyncIterator");
 
