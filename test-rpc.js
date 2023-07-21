@@ -6,7 +6,7 @@ import inspect from 'inspect';
 import { REPL } from '../qjs-modules/lib/repl.js';
 import * as std from 'std';
 import * as io from 'io';
-import { MessageReceiver, MessageTransmitter, MessageTransceiver, codecs, RPCApi, RPCProxy, RPCObject, RPCFactory, Connection, RPCConstructorEndpoint, RPCServer, RPCClient, RPCSocket, RPCConnect, RPCListen } from './js/rpc.js';
+import { MessageReceiver, MessageTransmitter, MessageTransceiver, codecs, RPCApi, RPCProxy, RPCObject, FactoryClient, RPCFactory, FactoryEndpoint, RPCServer, RPCClient, RPCSocket, RPCConnect, RPCListen } from './js/rpc.js';
 
 import { Directory } from 'directory';
 import { List } from 'list';
@@ -122,30 +122,37 @@ function main(...args) {
   let ctor = () =>
     new RPCSocket(
       url,
-      serve ? RPCServer : RPCClient,
-      {
-        Directory,
-        List,
-        Location,
-        Lexer,
-        Location,
-        SockAddr,
-        Socket,
-        AsyncSocket,
-        StreamReader,
-        StreamWriter,
-        ReadableStream,
-        ReadableStreamDefaultController,
-        WritableStream,
-        WritableStreamDefaultController,
-        TransformStream
-      },
+      serve
+        ? new RPCServer(
+            FactoryEndpoint(
+              {
+                Directory,
+                List,
+                Location,
+                Lexer,
+                Location,
+                SockAddr,
+                Socket,
+                AsyncSocket,
+                StreamReader,
+                StreamWriter,
+                ReadableStream,
+                ReadableStreamDefaultController,
+                WritableStream,
+                WritableStreamDefaultController,
+                TransformStream
+              },
+              params.verbose
+            ),
+            params.verbose
+          )
+        : new FactoryClient(params.verbose),
       params.verbose
     );
 
   let socket = (globalThis.socket = ctor());
 
-  socket.register({ Array, Map });
+  //socket.register({ Array, Map });
 
   //globalThis[['connection', 'listener'][+listen]] = cli;
 
@@ -156,7 +163,7 @@ function main(...args) {
     get connections() {
       return socket.connections;
     },
-    get c() {
+    get rpc() {
       const { connections } = socket;
       return connections[connections.length - 1];
     },
@@ -191,8 +198,6 @@ function main(...args) {
       RPCProxy,
       RPCObject,
       RPCFactory,
-      Connection,
-      RPCConstructorEndpoint,
       RPCServer,
       RPCClient,
       RPCSocket,

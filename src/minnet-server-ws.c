@@ -105,7 +105,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
 
         lws_set_opaque_user_data(wsi, 0);
 
-        opaque_free(opaque, ctx);
+        opaque_free(opaque, JS_GetRuntime(ctx));
       }
       return 0;
     }
