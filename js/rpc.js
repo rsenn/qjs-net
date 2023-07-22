@@ -3,11 +3,21 @@ const StringLength = str => str.replace(/\x1b\[[^m]*m/g, '').length;
 const PadEnd = (str, n, ch = ' ') => str + ch.repeat(Math.max(0, n - StringLength(str)));
 const Color = (str, ...args) => `\x1b[${args.join(';')}m${str}\x1b[0m`;
 const IsUpper = s => s.toUpperCase(s) == s;
-const Log = (...args) => console.log(console.config({ compact: 0, depth: 4, maxArrayLength: 2, maxStringLength: 64 }), ...args);
+const Log = (...args) =>
+  console.log(console.config({ compact: 0, depth: 4, maxArrayLength: 2, maxStringLength: 64 }), ...args);
 const LogMethod = (className, method, ...args) =>
   Log(
     PadEnd(
-      className + Color('.', 1, 36) + Color(method, ...(method == 'constructor' ? [38, 5, 165] : method.startsWith('on') && method.length > 2 ? [38, 5, IsUpper(method[2]) ? 40 : 45] : [38, 5, 208])),
+      className +
+        Color('.', 1, 36) +
+        Color(
+          method,
+          ...(method == 'constructor'
+            ? [38, 5, 165]
+            : method.startsWith('on') && method.length > 2
+            ? [38, 5, IsUpper(method[2]) ? 40 : 45]
+            : [38, 5, 208])
+        ),
       25
     ),
     ...args
@@ -113,7 +123,8 @@ export function RPCApi(connection) {
   return api;
 }
 
-for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get']) RPCApi.prototype[cmd] = MakeCommandFunction(cmd, o => o.connection);
+for(let cmd of ['list', 'new', 'methods', 'properties', 'keys', 'names', 'symbols', 'call', 'set', 'get'])
+  RPCApi.prototype[cmd] = MakeCommandFunction(cmd, o => o.connection);
 
 export function RPCProxy(connection) {
   let obj = define(new.target ? this : new RPCProxy(c), { connection });
@@ -297,13 +308,22 @@ export function FactoryEndpoint(classes, verbose, instances = {}) {
     invoke: instance((obj, method, params = []) => {
       if(method in obj && isFunction(obj[method])) {
         const result = obj[method](...params);
-        if(isThenable(result)) return result.then(result => Respond(true, result)).catch(error => Respond(false, error));
+        if(isThenable(result))
+          return result.then(result => Respond(true, result)).catch(error => Respond(false, error));
         return Respond(true, result);
       }
       return Respond(false, { message: `No such method on object #${instance}: ${method}` });
     }),
     keys: instance((obj, enumerable = true) =>
-      Respond(true, GetProperties(obj, enumerable ? obj => ('keys' in obj && isFunction(obj.keys) ? [...obj.keys()] : Object.keys(obj)) : obj => Object.getOwnPropertyNames(obj)))
+      Respond(
+        true,
+        GetProperties(
+          obj,
+          enumerable
+            ? obj => ('keys' in obj && isFunction(obj.keys) ? [...obj.keys()] : Object.keys(obj))
+            : obj => Object.getOwnPropertyNames(obj)
+        )
+      )
     ),
     names: instance((obj, enumerable = true) =>
       Respond(
@@ -336,7 +356,8 @@ export function FactoryEndpoint(classes, verbose, instances = {}) {
   };
 
   function instance(fn) {
-    return (key, ...args) => (key in instances ? fn(instances[key], ...args) : Respond(false, { message: `No such object #${key}` }));
+    return (key, ...args) =>
+      key in instances ? fn(instances[key], ...args) : Respond(false, { message: `No such object #${key}` });
   }
 
   function members(pred = v => !isFunction(v), defaults = { maxDepth: Infinity }) {
@@ -475,7 +496,9 @@ export class FactoryClient extends RPCClient {
 
     const methods = methodList.map(([key, value]) => key).map(DeserializeValue);
     const properties = propertyList.map(([key, value]) => key).map(DeserializeValue);
-    const descriptors = Object.fromEntries([...methodList, ...propertyList].map(([key, value, desc]) => [DeserializeValue(key), desc]));
+    const descriptors = Object.fromEntries(
+      [...methodList, ...propertyList].map(([key, value, desc]) => [DeserializeValue(key), desc])
+    );
 
     return new Proxy(
       {},
@@ -704,7 +727,12 @@ function parseURL(urlOrPort) {
   );
 }
 
-function GetProperties(arg, method = Object.getOwnPropertyNames, pred = (proto, depth) => proto !== Object.prototype, propPred = (prop, obj, proto, depth) => true) {
+function GetProperties(
+  arg,
+  method = Object.getOwnPropertyNames,
+  pred = (proto, depth) => proto !== Object.prototype,
+  propPred = (prop, obj, proto, depth) => true
+) {
   const set = new Set();
   let obj = arg,
     depth = 0;
@@ -723,7 +751,11 @@ function GetProperties(arg, method = Object.getOwnPropertyNames, pred = (proto, 
   return [...set];
 }
 
-function GetKeys(obj, pred = (proto, depth) => proto !== Object.prototype, propPred = (prop, obj, proto, depth) => true) {
+function GetKeys(
+  obj,
+  pred = (proto, depth) => proto !== Object.prototype,
+  propPred = (prop, obj, proto, depth) => true
+) {
   let keys = new Set();
 
   for(let key of GetProperties(obj, Object.getOwnPropertyNames, pred, propPred)) keys.add(key);
@@ -848,7 +880,8 @@ function MakeCommandFunction(cmd, getConnection, thisObj, t) {
 
   t ??= { methods: ForwardMethods, properties: DeserializeObject, symbols: DeserializeSymbols };
 
-  if(!isFunction(getConnection)) getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
+  if(!isFunction(getConnection))
+    getConnection = obj => (typeof obj == 'object' && obj != null && 'connection' in obj && obj.connection) || obj;
 
   // Log('MakeCommandFunction', { cmd, getConnection, thisObj });
 

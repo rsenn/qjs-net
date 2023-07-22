@@ -246,7 +246,7 @@ js_entry_clear(JSRuntime* rt, JSEntry* entry) {
 
 static inline void
 js_entry_reset(JSContext* ctx, JSEntry* entry, JSAtom key, JSValue value) {
-  js_entry_clear(ctx, JS_GetRuntime(entry));
+  js_entry_clear(JS_GetRuntime(ctx), entry);
   entry->key = key;
   entry->value = value;
 }

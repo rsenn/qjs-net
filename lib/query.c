@@ -31,7 +31,7 @@ query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry) {
     char* decoded;
     const char *value = q + len + 1, *end = q + n;
 
-    js_entry_clear(ctx, JS_GetRuntime(entry));
+    js_entry_clear(JS_GetRuntime(ctx), entry);
 
     entry->key = JS_NewAtomLen(ctx, q, len);
     len = end - value;

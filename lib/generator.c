@@ -255,7 +255,7 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
   printf("%-22s gen: %p reads: %zu\n", __func__, gen, list_size(&gen->iterator.reads));
 #endif
 
-  if(gen->buffering || list_empty(&gen->iterator.reads || (gen->q && gen->q->continuous))) {
+  if(gen->buffering || list_empty(&gen->iterator.reads) || (gen->q && gen->q->continuous)) {
     ret = enqueue_block(gen, blk, callback);
 
     if(gen->buffering) {
