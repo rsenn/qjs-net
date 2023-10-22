@@ -45,21 +45,24 @@ callback_zero(JSCallback* cb) {
 
 static inline void
 callback_clear(JSCallback* cb) {
+
   if(cb->ctx) {
     JS_FreeValue(cb->ctx, cb->this_obj);
     cb->this_obj = JS_UNDEFINED;
+
     JS_FreeValue(cb->ctx, cb->func_obj);
     cb->func_obj = JS_NULL;
   }
+
   cb->ctx = 0;
 }
 
-typedef enum callback_e { MESSAGE = 0, CONNECT, CLOSE, PONG, FD, HTTP, READ, POST, WRITEABLE, NUM_CALLBACKS } CallbackType;
+typedef enum callback_e { MESSAGE = 0, CONNECT, CLOSE, ERROR, PONG, FD, HTTP, READ, POST, WRITEABLE, NUM_CALLBACKS } CallbackType;
 
 typedef struct callbacks {
   union {
     struct {
-      JSCallback message, connect, close, pong, fd, http, read, post, writeable;
+      JSCallback message, connect, close, error, pong, fd, http, read, post, writeable;
     };
     JSCallback cb[NUM_CALLBACKS];
   };

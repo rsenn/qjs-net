@@ -614,14 +614,9 @@ export class RPCSocket {
         log('onMessage', { socket, msg });
         handle(socket, 'message', msg);
       },
-      onError(socket, error) {
-        log('onError', { socket, error });
-        callHandler(instance, 'error', error);
-        handle(socket, 'error', error);
-        remove(socket);
-      },
-      onClose(socket, code, why) {
+      onClose(socket, code, why,error) {
         log('onClose', { socket, code, why });
+        if((error) callHandler(instance, 'error', error);
         handle(socket, 'close', code, why);
         remove(socket);
       },
@@ -667,12 +662,12 @@ function MakeWebSocket(url, callbacks) {
   try {
     ws = new WebSocket(url + '');
   } catch(error) {
-    callbacks.onError(ws, error);
+    callbacks.onClose(ws, 0, 'error', error);
     return null;
   }
   ws.onconnect = () => callbacks.onConnect(ws);
   ws.onopen = () => callbacks.onOpen(ws);
-  ws.onerror = error => callbacks.onError(ws, error);
+  //ws.onerror = error => callbacks.onError(ws, error);
   ws.onmessage = msg => callbacks.onMessage(ws, msg);
   ws.onpong = pong => callbacks.onPong(ws, pong);
   ws.onclose = reason => callbacks.onClose(ws, reason);

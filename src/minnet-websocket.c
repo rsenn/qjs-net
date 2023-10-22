@@ -23,7 +23,7 @@ enum {
   WEBSOCKET_PORT,
   WEBSOCKET_LOCAL,
   WEBSOCKET_PEER,
-  WEBSOCKET_SSL,
+  WEBSOCKET_TLS,
   WEBSOCKET_BINARY,
   WEBSOCKET_READYSTATE,
   WEBSOCKET_CONTEXT,
@@ -348,7 +348,7 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
 
-    case WEBSOCKET_SSL: {
+    case WEBSOCKET_TLS: {
       ret = JS_NewBool(ctx, wsi_tls(lws_get_network_wsi(ws->lwsi)));
       break;
     }
@@ -482,8 +482,7 @@ static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("port", minnet_ws_get, 0, WEBSOCKET_PORT),
     JS_CGETSET_MAGIC_FLAGS_DEF("local", minnet_ws_get, 0, WEBSOCKET_LOCAL, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_get, 0, WEBSOCKET_PEER, 0),
-    JS_CGETSET_MAGIC_DEF("ssl", minnet_ws_get, 0, WEBSOCKET_SSL),
-    JS_ALIAS_DEF("tls", "ssl"),
+    JS_CGETSET_MAGIC_DEF("tls", minnet_ws_get, 0, WEBSOCKET_TLS),
     // JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_get, minnet_ws_set, WEBSOCKET_BINARY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, JS_PROP_ENUMERABLE),
     JS_ALIAS_DEF("remote", "peer"),

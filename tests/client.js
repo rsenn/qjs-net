@@ -1,20 +1,8 @@
-import { client } from 'net.so';
-import { Generator } from 'net.so';
-import { LLL_CLIENT } from 'net.so';
-import { LLL_USER } from 'net.so';
-import { LLL_WARN } from 'net.so';
-import { logLevels } from 'net.so';
-import { setLog } from 'net.so';
-import { setReadHandler } from 'os';
-import { setWriteHandler } from 'os';
-import { abbreviate } from './common.js';
-import { escape } from './common.js';
-import { Init } from './log.js';
-import { Levels } from './log.js';
-import { log } from './log.js';
-import { err } from 'std';
-import { exit } from 'std';
-import { puts } from 'std';
+import { client, Generator, LLL_CLIENT, LLL_USER, LLL_WARN, logLevels, setLog } from 'net.so';
+import { setReadHandler, setWriteHandler } from 'os';
+import { abbreviate, escape } from './common.js';
+import { Init, Levels, log } from './log.js';
+import { err, exit, puts } from 'std';
 
 const connections = new Set();
 
@@ -22,19 +10,7 @@ export default function Client(url, options, debug) {
   //log('MinnetClient', { url, options });
   Init('client.js', typeof debug == 'number' ? debug : LLL_CLIENT | (debug ? LLL_USER : 0));
 
-  let {
-    onConnect,
-    onClose,
-    onError,
-    onRequest,
-    onFd,
-    onMessage,
-    tls = true,
-    sslCert = 'localhost.crt',
-    sslPrivateKey = 'localhost.key',
-    headers = {},
-    ...opts
-  } = options;
+  let { onConnect, onClose, onError, onRequest, onFd, onMessage, tls = true, sslCert = 'localhost.crt', sslPrivateKey = 'localhost.key', headers = {}, ...opts } = options;
 
   log(`Client connecting to ${url} ...`);
 
@@ -47,23 +23,23 @@ export default function Client(url, options, debug) {
 */
   let writable,
     readable,
-    c,
     pr,
     resolve,
     reject,
     remoteName = new Promise((resolve, reject) => {
-      readable = new Generator(async (push, stop) => {
-        c = client(url, {
+      readable = new Generator(async (push, stop) =>
+        client(url, {
           tls,
           sslCert,
           sslPrivateKey,
+          block: false,
           headers: {
             'User-Agent': 'minnet',
             ...headers
           },
           ...opts,
           onConnect(ws, req) {
-            console.log('onConnect');
+            log('onConnect');
             connections.add(ws);
 
             writable = {
@@ -72,22 +48,20 @@ export default function Client(url, options, debug) {
               }
             };
 
-            onConnect ? onConnect(ws, req) : console.log('onConnect', ws, req);
+            onConnect ? onConnect(ws, req) : log('onConnect', ws, req);
           },
           onClose(ws, status, reason, error) {
             connections.delete(ws);
 
             if(resolve) resolve({ value: { status, reason, error }, done: true });
 
-            onClose
-              ? onClose(ws, status, reason, error)
-              : (console.log('onClose', { ws, reason }), exit(reason != 1000 && reason != 0 ? 1 : 0));
+            onClose ? onClose(ws, status, reason, error) : (log('onClose', { ws, reason }), exit(reason != 1000 && reason != 0 ? 1 : 0));
             pr = reject = resolve = null;
           },
           onError(ws, error) {
             connections.delete(ws);
 
-            onError ? onError(ws, error) : (console.log('onError', { ws, error }), exit(error));
+            onError ? onError(ws, error) : (log('onError', { ws, error }), exit(error));
           },
 
           onFd(fd, rd, wr) {
@@ -95,10 +69,7 @@ export default function Client(url, options, debug) {
             setWriteHandler(fd, wr);
           },
           onMessage(ws, msg) {
-            onMessage
-              ? onMessage(ws, msg)
-              : (console.log('onMessage', console.config({ maxStringLen: 100 }), { ws, msg }),
-                puts(escape(abbreviate(msg)) + '\n'));
+            onMessage ? onMessage(ws, msg) : (log('onMessage', config({ maxStringLen: 100 }), { ws, msg }), puts(escape(abbreviate(msg)) + '\n'));
           },
           async onRequest(req, resp) {
             let text = await resp.text();
@@ -110,10 +81,10 @@ export default function Client(url, options, debug) {
             log('onRequest(1)', resp.url.path);
             log('onRequest(2)', text.replace(/\n/g, '\\n').substring(0, 100));
 
-            console.log('push', /* await*/ push(text));
+            log('push', /* await*/ push(text));
           }
-        });
-      });
+        })
+      );
     });
 
   return {

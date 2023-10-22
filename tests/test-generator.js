@@ -1,6 +1,5 @@
 import { Generator } from 'net.so';
-import { eq } from './tinytest.js';
-import { tests } from './tinytest.js';
+import { eq, tests } from './tinytest.js';
 
 tests({
   async 'next() value'() {

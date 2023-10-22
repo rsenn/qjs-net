@@ -1,11 +1,4 @@
-import { close } from 'os';
-import { exec } from 'os';
-import { O_CREAT } from 'os';
-import { O_TRUNC } from 'os';
-import { O_WRONLY } from 'os';
-import { open } from 'os';
-import { readlink } from 'os';
-import { waitpid } from 'os';
+import { close, exec, O_CREAT, O_TRUNC, O_WRONLY, open, readlink, waitpid } from 'os';
 
 export { WNOHANG } from 'os';
 
@@ -45,6 +38,6 @@ export function wait4(pid, status, options = 0) {
     array: st => status.splice(0, status.length, st),
     object: st => (status.status = st),
     function: st => status(st)
-  }[Array.isArray(status) ? 'array' : typeof status](st));
+  })[Array.isArray(status) ? 'array' : typeof status](st);
   return ret;
 }

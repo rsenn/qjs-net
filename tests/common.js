@@ -1,5 +1,4 @@
-import { readlink } from 'os';
-import { stat } from 'os';
+import { readlink, stat } from 'os';
 import { open } from 'std';
 
 export function assert(actual, expected, message) {

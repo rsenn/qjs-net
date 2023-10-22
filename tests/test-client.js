@@ -1,55 +1,61 @@
-import { LLL_ALL } from 'net.so';
-import { LLL_INFO } from 'net.so';
-import { LLL_USER } from 'net.so';
-import { setLog } from 'net.so';
-import { close } from 'os';
-import { kill } from 'os';
-import { setReadHandler } from 'os';
-import { SIGINT } from 'os';
-import { signal } from 'os';
-import { sleep } from 'os';
-import { ttySetRaw } from 'os';
-import Client from './client.js';
-import { escape } from './common.js';
-import { save } from './common.js';
-import { log } from './log.js';
-import { spawn } from './spawn.js';
-import { wait4 } from './spawn.js';
-import { exit } from 'std';
-import { in as stdin } from 'std';
-import { open } from 'std';
-import { out as stdout } from 'std';
-import { puts } from 'std';
+import { LLL_CLIENT, LLL_ALL, LLL_INFO, LLL_USER, setLog, client } from 'net.so';
+import { close, kill, setReadHandler, SIGINT, signal, sleep, ttySetRaw } from 'os';
+//import Client from './client.js';
+import { escape, save } from './common.js';
+import { Init, Levels, log } from './log.js';
+import { spawn, wait4 } from './spawn.js';
+import { exit, in as stdin, open, out as stdout, puts } from 'std';
+
 function main(...args) {
   const debug = args.indexOf('-x') != -1;
   args = args.filter(arg => !/^-[x]/.test(arg));
   let pid;
+  Init(scriptArgs[0].replace(/.*\//g, ''), typeof debug == 'number' ? debug : LLL_CLIENT | (debug ? LLL_USER : 0));
 
   if(args.length == 0) {
     pid = spawn('server.js', ['localhost', 30000], scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log'));
     sleep(1000);
     args.push('wss://localhost:30000/ws');
-  }
-
-  /*setLog(
-    LLL_ALL,
-    (() => {
-      let lf = open('test-client.log', 'w');
-      return (level, msg) => {
-        log(logLevels[level].padEnd(10) + msg);
-        puts('LOG: ' + msg);
-        lf.puts(logLevels[level].padEnd(10) + msg + '\n');
-        lf.flush();
-      };
-    })()
-  );*/
+  } 
 
   (async function() {
     for(let arg of args) {
-      let result, gen;
+      let gen,cli;
+      log('arg', arg);
 
-      result = Client(
-        arg,
+     if(!arg.startsWith('http')) {
+                if(arg.startsWith('ws')) {
+                  setReadHandler(0, () => {
+                    stdout.puts(`\r\x1b[1;36m>\x1b[0m`);
+                    stdout.flush();
+                    let line = stdin.getline();
+
+                    if(line?.length) {
+                      let s = line;
+                      let result = cli.socket.send(line);
+                      //log('result:', { result, s });
+                      //result.then(() => log('Sent:', { s }));
+                      //stdout.puts(`\x1b[0m\n`);
+                      stdout.flush();
+                    }
+                  });
+                } else {
+                  ttySetRaw(0);
+                  setReadHandler(0, () => {
+                    let b = stdin.getByte();
+                    if(b == 13) b = 10;
+                    else if(b == 127) b = 8;
+                    else if(b < 32 || b > 'z'.charCodeAt(0)) stdout.puts('char: ' + b);
+                    stdout.putByte(b);
+                    stdout.flush();
+
+                    cli.socket.send(String.fromCharCode(b));
+                  });
+                }
+              }
+
+        cli = globalThis.cli=await client(
+        arg/*,
         {
           block: false,
           onConnect(ws, req) {
@@ -62,16 +68,16 @@ function main(...args) {
               if(!protocol.startsWith('http')) {
                 if(protocol.startsWith('ws')) {
                   setReadHandler(0, () => {
-                    stdout.puts(`\r\x1b[0;37m>`);
+                    stdout.puts(`\r\x1b[1;36m>\x1b[0m`);
                     stdout.flush();
                     let line = stdin.getline();
 
-                    if(line.length) {
+                    if(line?.length) {
                       let s = line;
                       let result = ws.send(line);
-                      log('result:', { result, s });
-                      result.then(() => log('Sent:', { s }));
-                      stdout.puts(`\x1b[0m\n`);
+                      //log('result:', { result, s });
+                      //result.then(() => log('Sent:', { s }));
+                      //stdout.puts(`\x1b[0m\n`);
                       stdout.flush();
                     }
                   });
@@ -98,7 +104,7 @@ function main(...args) {
             });
           },
           onClose(ws, status, reason, error) {
-            //log('onClose', { ws, status, reason, error });
+           log('onClose', { ws, status, reason, error });
             terminate(0);
           },
           onError(ws, error) {
@@ -109,20 +115,28 @@ function main(...args) {
             log('onMessage', { ws, msg });
             stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
             stdout.flush();
-            // ws.close(1000);
           }
         },
-        debug ? LLL_INFO - 1 : LLL_USER
+        debug ? LLL_INFO - 1 : LLL_USER*/
       );
+      log('cli', cli);
+
+      for await(let chunk of cli) {
+        if(typeof chunk != 'string')
+          chunk=new Uint8Array(chunk);
+        
+        stdout.puts(`\r\x1b[31mDATA\x1b[0m ${chunk}\n\x1b[1;36m>\x1b[0m`);
+        stdout.flush();
+      }
 
       /*log('result', result);
       log('result[Symbol.asyncIterator]', result[Symbol.asyncIterator]);*/
 
-      let file = (await result.remoteName) || 'output.txt';
+      /*let file = (await result.remoteName) || 'output.txt';
 
       log('file', file);
-
-      save(result.readable, file /*?? 'output.txt'*/);
+*/
+      //save(result.readable, file /*?? 'output.txt'*/);
 
       /*for await(let chunk of result.readable)
         log('chunk', chunk.length);*/

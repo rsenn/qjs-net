@@ -319,13 +319,6 @@ class CLI {
           let response = DNSResponse(msg);
         } else {
         }
-      },
-      onError(ws, error) {
-                console.log('onError', { ws,   error });
-
-        quit(`Connection error: ${error}`);
-
-        connections.delete(ws);
       }
     });
 

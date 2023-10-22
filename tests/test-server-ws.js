@@ -1,12 +1,8 @@
-import { kill } from 'os';
-import { SIGTERM } from 'os';
-import { sleep } from 'os';
-import { WNOHANG } from 'os';
+import { kill, SIGTERM, sleep, WNOHANG } from 'os';
 import Client from './client.js';
 import { randStr } from './common.js';
 import { log } from './log.js';
-import { spawn } from './spawn.js';
-import { wait4 } from './spawn.js';
+import { spawn, wait4 } from './spawn.js';
 import { exit } from 'std';
 function TestClient(url) {
   const message = randStr(100);
