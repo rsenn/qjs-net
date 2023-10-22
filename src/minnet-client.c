@@ -394,7 +394,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         JSValue msg;
 
         if(!single_fragment) {
-          BOOL done = FALSE, binary = FALSE;
+          BOOL done = FALSE;
           ByteBlock blk = queue_next(client->recvq, &done, &binary);
           msg = binary ? block_toarraybuffer(&blk, ctx) : block_tostring(&blk, ctx);
         } else {
