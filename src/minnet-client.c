@@ -387,7 +387,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       BOOL raw = reason == LWS_CALLBACK_RAW_RX;
       BOOL first = raw || lws_is_first_fragment(wsi), final = raw || lws_is_final_fragment(wsi);
       BOOL single_fragment = first && final;
-      BOOL binary = raw || lws_frame_is_binary(wsi);
+      BOOL binary = raw ? opaque->ws->binary : lws_frame_is_binary(wsi);
 
       if(!single_fragment) {
         if(!client->recvq)
