@@ -199,7 +199,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
 
-      lwsl_user("%-26s" FGC(171, "%-34s") "wsi#%d status=%d\n", "CLIENT-HTTP", lws_callback_name(reason) + 13, opaque ? opaque->serial : -1, resp->status);
+      lwsl_user("%-26s" FGC(171, "%-34s") "wsi#%d status=%d\n", "CLIENT-HTTP", lws_callback_name(reason) + 13, opaque ? (int)opaque->serial : -1, resp->status);
 
       {
         size_t i, hdrlen = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP);

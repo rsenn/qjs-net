@@ -45,7 +45,7 @@ opaque_free(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
     js_free_rt(rt, opaque);
   }
-} 
+}
 
 struct wsi_opaque_user_data*
 opaque_new(JSContext* ctx) {

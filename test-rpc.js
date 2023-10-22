@@ -7,8 +7,6 @@ import { REPL } from '../qjs-modules/lib/repl.js';
 import * as std from 'std';
 import * as io from 'io';
 import { MessageReceiver, MessageTransmitter, MessageTransceiver, codecs, RPCApi, RPCProxy, RPCObject, FactoryClient, RPCFactory, FactoryEndpoint, RPCServer, RPCClient, RPCSocket, RPCConnect, RPCListen } from './js/rpc.js';
-
-import { Directory } from 'directory';
 import { List } from 'list';
 import { Lexer } from 'lexer';
 import { Location } from 'location';
@@ -126,8 +124,7 @@ function main(...args) {
         ? new RPCServer(
             FactoryEndpoint(
               {
-                Directory,
-                List,
+                 List,
                 Location,
                 Lexer,
                 Location,

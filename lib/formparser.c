@@ -109,7 +109,7 @@ formparser_alloc(JSContext* ctx) {
   ret = js_mallocz(ctx, sizeof(FormParser));
   ret->ref_count = 1;
   return ret;
-} 
+}
 
 void
 formparser_clear(FormParser* fp, JSRuntime* rt) {
@@ -127,7 +127,6 @@ formparser_clear(FormParser* fp, JSRuntime* rt) {
   FREECB_RT(fp->cb.open);
   FREECB_RT(fp->cb.close);
 }
- 
 
 void
 formparser_free(FormParser* fp, JSRuntime* rt) {

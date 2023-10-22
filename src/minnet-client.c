@@ -276,7 +276,9 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         js_async_reject(ctx, &client->promise, client->context.error);
       }
 
-      if(client->on.close.ctx) {
+      JSCallback* cb = &client->on.close;
+
+      if(cb->ctx) {
         JSValue ret;
         int argc = 1;
         JSValueConst argv[4] = {client->session.ws_obj};
@@ -290,7 +292,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         }
         argv[argc++] = err != -1 ? JS_NewInt32(ctx, err) : JS_UNDEFINED;
 
-        ret = client_exception(client, callback_emit(&client->on.close, argc, argv));
+        ret = client_exception(client, callback_emit(cb, argc, argv));
 
         if(JS_IsNumber(ret))
           JS_ToInt32(ctx, &result, ret);

@@ -30,7 +30,7 @@ size_t ringbuffer_bytelength(struct ringbuffer*);
 size_t ringbuffer_waiting(struct ringbuffer*);
 size_t ringbuffer_avail(struct ringbuffer*);
 void ringbuffer_zero(struct ringbuffer*);
- void ringbuffer_free(struct ringbuffer*, JSRuntime* rt);
+void ringbuffer_free(struct ringbuffer*, JSRuntime* rt);
 
 static inline int
 ringbuffer_lock(struct ringbuffer* strm) {

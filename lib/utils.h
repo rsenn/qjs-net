@@ -111,7 +111,11 @@ unsigned uint_pow(unsigned, unsigned degree);
 
 int socket_geterror(socket_type);
 
-typedef int(__attribute__((stdcall)) getaddrfunc)(socket_type, struct sockaddr*, int*);
+typedef int(
+#ifdef _WIN32
+    __attribute__((stdcall))
+#endif
+    getaddrfunc)(socket_type, struct sockaddr*, socklen_t*);
 
 char* socket_address(int, getaddrfunc*);
 

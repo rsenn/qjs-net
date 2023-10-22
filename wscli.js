@@ -129,7 +129,7 @@ class CLI {
   }
 }
 
-async function main(...args) {
+/*async*/ function main(...args) {
   let headers = [];
   params = GetOpt(
     {
@@ -201,14 +201,14 @@ async function main(...args) {
         ...Object.fromEntries(headers)
       },
       ...callbacks,
-      async onConnect(ws, req) {
+      /*async*/ onConnect(ws, req) {
         if(params.verbose) console.log('onConnect', { ws, req });
         connections.add(ws);
         Object.assign(globalThis, { ws, req });
 
         const remote = `${ws.address}:${ws.port}`;
 
-        try {
+     /*   try {
           const module = await import('/home/roman/Projects/plot-cv/quickjs/qjs-modules/lib/repl.js').catch(() => ({
             REPL: CLI
           }));
@@ -233,11 +233,12 @@ async function main(...args) {
           };
         } catch(err) {
           console.log('error:', err.message + '\n' + err.stack);
-        }
+        }*/
 
         // console.log('onConnect', { remote, repl });
 
         repl.printStatus(`Connected to ${remote}`);
+
         if(req) {
           const { url } = req;
           const { protocol, port } = url;
@@ -319,7 +320,13 @@ async function main(...args) {
         } else {
         }
       },
-      onError(ws, error) {}
+      onError(ws, error) {
+                console.log('onError', { ws,   error });
+
+        quit(`Connection error: ${error}`);
+
+        connections.delete(ws);
+      }
     });
 
     function PrintMessage(msg) {

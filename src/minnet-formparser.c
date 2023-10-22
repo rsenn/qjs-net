@@ -76,7 +76,7 @@ minnet_formparser_constructor(JSContext* ctx, JSValueConst new_target, int argc,
     struct wsi_opaque_user_data* opaque = ws_opaque(ws);
 
     if(opaque->form_parser)
-      formparser_free(opaque->form_parser, ctx);
+      formparser_free(opaque->form_parser, JS_GetRuntime(ctx));
 
     opaque->form_parser = fp;
   }

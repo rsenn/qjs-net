@@ -98,7 +98,6 @@ ringbuffer_zero(struct ringbuffer* rb) {
   lws_ring_destroy(rb->ring);
   memset(rb, 0, sizeof(struct ringbuffer));
 }
- 
 
 void
 ringbuffer_free(struct ringbuffer* rb, JSRuntime* rt) {
