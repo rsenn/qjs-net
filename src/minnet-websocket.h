@@ -6,7 +6,6 @@
 typedef struct socket MinnetWebsocket;
 
 MinnetWebsocket* minnet_ws_data(JSValueConst);
-/*JSValue minnet_ws_new(JSContext*, struct lws*);*/
 JSValue minnet_ws_wrap(JSContext*, MinnetWebsocket*);
 JSValue minnet_ws_fromwsi(JSContext*, struct lws*);
 JSValue minnet_ws_constructor(JSContext*, JSValueConst, int, JSValueConst[]);

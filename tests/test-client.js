@@ -16,46 +16,51 @@ function main(...args) {
     pid = spawn('server.js', ['localhost', 30000], scriptArgs[0].replace(/.*\//g, '').replace('.js', '.log'));
     sleep(1000);
     args.push('wss://localhost:30000/ws');
-  } 
+  }
 
   (async function() {
     for(let arg of args) {
-      let gen,cli;
+      let gen, cli;
       log('arg', arg);
 
-     if(!arg.startsWith('http')) {
-                if(arg.startsWith('ws')) {
-                  setReadHandler(0, () => {
-                    stdout.puts(`\r\x1b[1;36m>\x1b[0m`);
-                    stdout.flush();
-                    let line = stdin.getline();
+      if(!arg.startsWith('http')) {
+        if(1 || arg.startsWith('ws')) {
+          setReadHandler(0, () => {
+            stdout.puts(`\r\x1b[1;36m>\x1b[0m`);
+            stdout.flush();
+            let line = stdin.getline();
 
-                    if(line?.length) {
-                      let s = line;
-                      let result = cli.socket.send(line);
-                      //log('result:', { result, s });
-                      //result.then(() => log('Sent:', { s }));
-                      //stdout.puts(`\x1b[0m\n`);
-                      stdout.flush();
-                    }
-                  });
-                } else {
-                  ttySetRaw(0);
-                  setReadHandler(0, () => {
-                    let b = stdin.getByte();
-                    if(b == 13) b = 10;
-                    else if(b == 127) b = 8;
-                    else if(b < 32 || b > 'z'.charCodeAt(0)) stdout.puts('char: ' + b);
-                    stdout.putByte(b);
-                    stdout.flush();
+            if(line?.length) {
+              let s = line;
+              let result = cli.socket.send(line + '\n');
+              log('cli.socket', cli.socket);
+              log('cli.socket.bufferedAmount', cli.socket.bufferedAmount);
+              //log('result:', { result, s });
+              //result.then(() => log('Sent:', { s }));
+              //stdout.puts(`\x1b[0m\n`);
+              stdout.flush();
+            }
+          });
+        } else {
+          ttySetRaw(0);
+          setReadHandler(0, () => {
+            let b = stdin.getByte();
+            if(b == 13) b = 10;
+            else if(b == 127) b = 8;
+            else if(b < 32 || b > 'z'.charCodeAt(0)) stdout.puts('char: ' + b);
+            stdout.putByte(b);
+            stdout.flush();
 
-                    cli.socket.send(String.fromCharCode(b));
-                  });
-                }
-              }
+            if(cli.socket) {
+              log('cli.socket', cli.socket);
+              cli.socket.send(String.fromCharCode(b));
+            }
+          });
+        }
+      }
 
-        cli = globalThis.cli=await client(
-        arg/*,
+      cli = globalThis.cli = await client(
+        arg /*,
         {
           block: false,
           onConnect(ws, req) {
@@ -122,9 +127,8 @@ function main(...args) {
       log('cli', cli);
 
       for await(let chunk of cli) {
-        if(typeof chunk != 'string')
-          chunk=new Uint8Array(chunk);
-        
+        if(typeof chunk != 'string') chunk = new Uint8Array(chunk);
+
         stdout.puts(`\r\x1b[31mDATA\x1b[0m ${chunk}\n\x1b[1;36m>\x1b[0m`);
         stdout.flush();
       }

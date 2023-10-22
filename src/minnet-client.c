@@ -320,6 +320,13 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
 
       opaque->status = OPEN;
 
+      if(!JS_IsObject(client->session.ws_obj))
+        client->session.ws_obj = opaque->ws ? minnet_ws_wrap(ctx, opaque->ws) : minnet_ws_fromwsi(ctx, wsi);
+
+      opaque->ws = minnet_ws_data(client->session.ws_obj);
+
+      opaque->ws->raw = reason == LWS_CALLBACK_RAW_CONNECTED;
+
       if(js_async_pending(&client->promise)) {
         JSValue cli = minnet_client_wrap(ctx, client_dup(client));
 
@@ -368,6 +375,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
       }
 
       buffer_reset(buf);*/
+      opaque->writable = TRUE;
 
       session_writable(&client->session, wsi, ctx);
       break;

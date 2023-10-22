@@ -69,26 +69,27 @@ ws_dup(struct socket* ws) {
   return ws;
 }
 
-QueueItem*
-ws_enqueue(struct socket* ws, ByteBlock chunk) {
+Queue*
+ws_queue(struct socket* ws) {
   struct wsi_opaque_user_data* opaque;
-  QueueItem* item = 0;
+  struct session_data* session;
 
-  if((opaque = ws_opaque(ws))) {
-    struct session_data* session = opaque->sess;
-
-    if((item = queue_add(&session->sendq, chunk))) {
-
-      session_want_write(session, ws->lwsi);
-    }
-  }
-
-  return item;
+  if((opaque = ws_opaque(ws)))
+    if((session = opaque->sess))
+      return &session->sendq;
+  return 0;
 }
 
 QueueItem*
-ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
-  ByteBlock chunk = block_copy(data, size);
+ws_enqueue(struct socket* ws, ByteBlock chunk) {
+  struct wsi_opaque_user_data* opaque;
+  struct session_data* session;
+  QueueItem* item;
 
-  return ws_enqueue(ws, chunk);
+  if((opaque = ws_opaque(ws)))
+    if((session = opaque->sess))
+      if((item = queue_add(&session->sendq, chunk)))
+        session_want_write(session, ws->lwsi);
+
+  return item;
 }

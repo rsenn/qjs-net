@@ -175,12 +175,12 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
 
       if(server->on.connect.ctx) {
 
-        if(!JS_IsObject(session->ws_obj))
-          session->ws_obj = minnet_ws_fromwsi(ctx, wsi);
-
-        if(!opaque->ws) {
-          if((opaque->ws = minnet_ws_data(session->ws_obj)))
-            opaque->ws->ref_count++;
+        if(!JS_IsObject(session->ws_obj)) {
+          session->ws_obj = opaque->ws ? minnet_ws_wrap(ctx, opaque->ws) : minnet_ws_fromwsi(ctx, wsi);
+        } else {
+          if(!opaque->ws)
+            if((opaque->ws = minnet_ws_data(session->ws_obj)))
+              opaque->ws->ref_count++;
         }
 
         LOGCB("ws", "wsi#%" PRId64 " req=%p", opaque->serial, opaque->req);

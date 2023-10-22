@@ -21,6 +21,7 @@ struct socket {
   int ref_count;
   struct lws* lwsi;
   int fd;
+  BOOL raw : 1, binary : 1;
 };
 
 struct socket* ws_new(struct lws*, JSContext* ctx);
@@ -28,7 +29,7 @@ void ws_clear(struct socket*, JSRuntime* rt);
 void ws_free(struct socket*, JSRuntime* rt);
 struct socket* ws_dup(struct socket*);
 QueueItem* ws_enqueue(struct socket*, ByteBlock);
-QueueItem* ws_send(struct socket*, const void* data, size_t size, JSContext* ctx);
+Queue* ws_queue(struct socket* ws);
 
 static inline struct session_data*
 lws_session(struct lws* wsi) {
@@ -59,6 +60,11 @@ static inline struct socket*
 ws_from_wsi(struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
   return ((opaque = lws_get_opaque_user_data(wsi)) && opaque_valid(opaque)) ? opaque->ws : 0;
+}
+
+static inline QueueItem*
+ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
+  return ws_enqueue(ws, block_copy(data, size));
 }
 
 #endif /* QJSNET_LIB_WS_H */

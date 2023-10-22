@@ -1,5 +1,5 @@
 import { LLL_CLIENT, LLL_DEBUG, LLL_ERR, LLL_EXT, LLL_HEADER, LLL_INFO, LLL_LATENCY, LLL_NOTICE, LLL_PARSER, LLL_THREAD, LLL_USER, LLL_WARN, setLog } from 'net.so';
-import { err,getenv } from 'std';
+import { err, getenv } from 'std';
 let logName;
 
 export const Levels = (() => {
@@ -24,7 +24,7 @@ export const Levels = (() => {
   }, {});
 })();
 
-export const isDebug = () => scriptArgs.some(a => /^-[dx]/.test(a)) || (getenv('DEBUG') !== undefined);
+export const isDebug = () => scriptArgs.some(a => /^-[dx]/.test(a)) || getenv('DEBUG') !== undefined;
 
 export const DebugCallback = fn => (isDebug() ? fn : () => {});
 

@@ -24,6 +24,8 @@ enum {
   WEBSOCKET_LOCAL,
   WEBSOCKET_PEER,
   WEBSOCKET_TLS,
+  WEBSOCKET_BUFFEREDAMOUNT,
+  WEBSOCKET_RAW,
   WEBSOCKET_BINARY,
   WEBSOCKET_READYSTATE,
   WEBSOCKET_CONTEXT,
@@ -106,14 +108,14 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   if(argc == 0)
     return JS_ThrowTypeError(ctx, "argument 1 expecting String/ArrayBuffer");
 
-  int argpos = js_buffer_fromargs(ctx, argc, argv, &jsbuf);
+  int i = js_buffer_fromargs(ctx, argc, argv, &jsbuf);
 
   if((opaque = ws_opaque(ws)) && opaque->writable) {
     int result;
     int32_t protocol = JS_IsString(jsbuf.value) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY;
 
-    if(argc > argpos)
-      JS_ToInt32(ctx, &protocol, argv[argpos]);
+    if(argc > i)
+      JS_ToInt32(ctx, &protocol, argv[i]);
 
     result = lws_write(ws->lwsi, jsbuf.data, jsbuf.size, protocol);
     ret = JS_NewInt32(ctx, result);
@@ -353,10 +355,16 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
 
-      /*case WEBSOCKET_BINARY: {
-        ret = JS_NewBool(ctx, ws_opaque(ws)->binary);
-        break;
-      }*/
+    case WEBSOCKET_RAW: {
+      ret = JS_NewBool(ctx, ws->raw);
+      break;
+    }
+
+    case WEBSOCKET_BINARY: {
+      if(ws->raw)
+        ret = JS_NewBool(ctx, ws->binary);
+      break;
+    }
 
     case WEBSOCKET_READYSTATE: {
       struct wsi_opaque_user_data* opaque;
@@ -395,11 +403,19 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
          ret = JS_NewInt32(ctx, lws_partial_buffered(ws->lwsi));
          break;
        }*/
+    case WEBSOCKET_BUFFEREDAMOUNT: {
+      Queue* q;
+
+      if((q = ws_queue(ws)))
+        ret = JS_NewUint32(ctx, queue_bytes(q));
+
+      break;
+    }
   }
   return ret;
 }
 
-/*static JSValue
+static JSValue
 minnet_ws_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
@@ -408,14 +424,13 @@ minnet_ws_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int mag
     return JS_EXCEPTION;
 
   switch(magic) {
-
     case WEBSOCKET_BINARY: {
-      ws_opaque(ws)->binary = JS_ToBool(ctx, value);
+      ws->binary = JS_ToBool(ctx, value);
       break;
     }
   }
   return ret;
-}*/
+}
 
 enum {
   WEBSOCKET_FROMFD = 0,
@@ -483,7 +498,9 @@ static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("local", minnet_ws_get, 0, WEBSOCKET_LOCAL, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("peer", minnet_ws_get, 0, WEBSOCKET_PEER, 0),
     JS_CGETSET_MAGIC_DEF("tls", minnet_ws_get, 0, WEBSOCKET_TLS),
-    // JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_get, minnet_ws_set, WEBSOCKET_BINARY, 0),
+    JS_CGETSET_MAGIC_DEF("bufferedAmount", minnet_ws_get, 0, WEBSOCKET_BUFFEREDAMOUNT),
+    JS_CGETSET_MAGIC_FLAGS_DEF("raw", minnet_ws_get, 0, WEBSOCKET_RAW, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_get, minnet_ws_set, WEBSOCKET_BINARY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, JS_PROP_ENUMERABLE),
     JS_ALIAS_DEF("remote", "peer"),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebsocket", JS_PROP_CONFIGURABLE),
