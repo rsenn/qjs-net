@@ -126,8 +126,7 @@ function main(...args) {
       );
       log('cli', cli);
 
-if(cli.socket)
-      cli.socket.binary=false;
+      if(cli.socket) cli.socket.binary = false;
 
       for await(let chunk of cli) {
         if(typeof chunk != 'string') chunk = new Uint8Array(chunk);

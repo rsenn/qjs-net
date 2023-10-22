@@ -5,6 +5,7 @@ import { escape, save } from './common.js';
 import { log } from './log.js';
 import { spawn, wait4 } from './spawn.js';
 import { exit, out as stdout, puts } from 'std';
+
 async function main(...args) {
   const debug = args.indexOf('-x') != -1;
   args = args.filter(arg => !/^-[x]/.test(arg));
