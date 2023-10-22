@@ -865,30 +865,31 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   GETCBPROP(options, "onFd", client->on.fd)
   GETCBPROP(options, "onWriteable", client->on.writeable)
 
-  if(!JS_IsFunction(ctx, client->on.fd.func_obj)) {
+  if(!JS_IsFunction(ctx, client->on.fd.func_obj))
     client->on.fd = CALLBACK_INIT(ctx, minnet_default_fd_callback(ctx), JS_NULL);
-  }
 
   value = JS_GetPropertyStr(ctx, options, "block");
+
   if(!JS_IsUndefined(value))
     block = client->block = JS_ToBool(ctx, value);
+
   JS_FreeValue(ctx, value);
 
   value = JS_GetPropertyStr(ctx, options, "body");
+
   if(!JS_IsUndefined(value))
     client->body = JS_DupValue(ctx, value);
+
   JS_FreeValue(ctx, value);
 
   /* value = JS_GetPropertyStr(ctx, options, "headers");
-   if(JS_IsObject(value)) {
+   if(JS_IsObject(value))
      client->headers = JS_DupValue(ctx, value);
-   }
+
    JS_FreeValue(ctx, value);
 
-   if(JS_IsObject(client->headers)) {
-     headers_fromobj(&client->request->headers, client->headers, ctx);
-   }
- */
+   if(JS_IsObject(client->headers))
+     headers_fromobj(&client->request->headers, client->headers, ctx);*/
 
   if(js_has_propertystr(ctx, options, "buffering")) {
     client->buffering = TRUE;
@@ -1005,12 +1006,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-  /*opaque = lws_opaque(client->wsi, client->context.js);
-  opaque->binary = binary;
-  opaque->connect_info = &client->connect_info;
-  opaque->req = client->request;
-  opaque->resp = client->response;*/
-
   switch(magic) {
     case RETURN_CLIENT: {
       ret = minnet_client_wrap(ctx, client);
@@ -1074,23 +1069,6 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-/*  for(;;) {
-    if(status != opaque->status)
-      status = opaque->status;
-
-    if(status == CLOSED)
-      break;
-
-    js_std_loop(ctx);
-
-    if(client->context.exception) {
-      ret = JS_EXCEPTION;
-      break;
-    }
-  }
-
-  // client_free(client);
-*/
 fail:
 
   if(c) {
