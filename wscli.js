@@ -51,14 +51,7 @@ function WriteFile(filename, buffer) {
 }
 
 function ToDomain(str, alpha = false) {
-  return str
-    .split('.')
-    .reduce(
-      alpha
-        ? (a, s) => a + String.fromCharCode(s.length) + s
-        : (a, s) => a.concat([s.length, ...s.split('').map(ch => ch.charCodeAt(0))]),
-      alpha ? '' : []
-    );
+  return str.split('.').reduce(alpha ? (a, s) => a + String.fromCharCode(s.length) + s : (a, s) => a.concat([s.length, ...s.split('').map(ch => ch.charCodeAt(0))]), alpha ? '' : []);
 }
 
 function DNSQuery(domain) {
@@ -68,26 +61,7 @@ function DNSQuery(domain) {
     type = 0x0c;
   }
 
-  let outBuf = new Uint8Array([
-    0xff,
-    0xff,
-    0x01,
-    0x00,
-    0x00,
-    0x01,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    ...ToDomain(domain),
-    0x00,
-    0x00,
-    type,
-    0x00,
-    0x01
-  ]).buffer;
+  let outBuf = new Uint8Array([0xff, 0xff, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ...ToDomain(domain), 0x00, 0x00, type, 0x00, 0x01]).buffer;
   new DataView(outBuf).setUint16(0, outBuf.byteLength - 2, false);
   return outBuf;
 }
@@ -200,10 +174,7 @@ async function main(...args) {
       urlObj = new URL(url);
 
     setLog(LLL_USER | (((debug ? LLL_INFO : LLL_NOTICE) << 1) - 1), (level, msg) => {
-      let p =
-        ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][
-          level && Math.log2(level)
-        ] ?? level + '';
+      let p = ['ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG', 'PARSER', 'HEADER', 'EXT', 'CLIENT', 'LATENCY', 'MINNET', 'THREAD'][level && Math.log2(level)] ?? level + '';
       if(p == 'INFO' || /RECEIVE_CLIENT_HTTP_READ|\[mux|__lws|\[wsicli|lws_/.test(msg)) return;
       msg = msg.replace(/\n/g, '\\n');
       if(params.verbose > 1 || params.debug) std.puts(p.padEnd(8) + '\t' + msg + '\n');
@@ -277,18 +248,18 @@ async function main(...args) {
         }
       },
       onClose(ws, status, reason, error) {
-    /*    if(error) {
-          quit(`Connection error: ${reason}`);
-        }
+        console.log('onClose', { ws, status, reason, error });
 
-        repl.printStatus('onClose', { ws, status, reason, error });
+        quit(`Connection ${error ? 'error' : 'closed'}: ${reason}`);
+
         connections.delete(ws);
+
         if(repl) {
           repl.printStatus(`Closed (${status}): ${reason}`);
           os.setTimeout(() => {
             repl.exit(status != 1000 ? 1 : 0);
           }, 100);
-        }*/
+        }
       },
       onRequest(req, resp) {
         console.log('onRequest', console.config({ compact: false }), { req, resp });
@@ -388,8 +359,7 @@ function GetOpt(options = {}, args) {
   let r = {};
   let positional = (r['@'] = []);
   if(!(options instanceof Array)) options = Object.entries(options);
-  const findOpt = a =>
-    options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
+  const findOpt = a => options.find(([optname, option]) => (Array.isArray(option) ? option.indexOf(a) != -1 : false) || a == optname);
   let [, params] = options.find(o => o[0] == '@') || [];
   if(typeof params == 'string') params = params.split(',');
   for(let i = 0; i < args.length; i++) {
