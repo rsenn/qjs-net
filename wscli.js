@@ -277,7 +277,7 @@ async function main(...args) {
         }
       },
       onClose(ws, status, reason, error) {
-        if(error) {
+    /*    if(error) {
           quit(`Connection error: ${reason}`);
         }
 
@@ -288,7 +288,7 @@ async function main(...args) {
           os.setTimeout(() => {
             repl.exit(status != 1000 ? 1 : 0);
           }, 100);
-        }
+        }*/
       },
       onRequest(req, resp) {
         console.log('onRequest', console.config({ compact: false }), { req, resp });
