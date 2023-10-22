@@ -727,7 +727,7 @@ function parseURL(urlOrPort) {
   );
 }
 
-function GetProperties(
+export function GetProperties(
   arg,
   method = Object.getOwnPropertyNames,
   pred = (proto, depth) => proto !== Object.prototype,
@@ -751,7 +751,7 @@ function GetProperties(
   return [...set];
 }
 
-function GetKeys(
+export function GetKeys(
   obj,
   pred = (proto, depth) => proto !== Object.prototype,
   propPred = (prop, obj, proto, depth) => true
@@ -904,11 +904,8 @@ function MakeCommandFunction(cmd, getConnection, thisObj, t) {
   };
 }
 
-/*export function MakeSendFunction(sendFn, returnFn) {
-  return returnFn ? msg => (sendFn(msg), returnFn()) : sendFn;
-}*/
 
-function SerializeValue(value, source = false) {
+export function SerializeValue(value, source = false) {
   const type = typeof value;
   let desc = { type };
 
@@ -943,11 +940,11 @@ function SerializeValue(value, source = false) {
   return desc;
 }
 
-function DeserializeSymbols(names) {
+export function DeserializeSymbols(names) {
   return names.map(n => n.replace(/Symbol\./, '')).map(n => Symbol[n]);
 }
 
-function DeserializeValue(desc) {
+export function DeserializeValue(desc) {
   if(desc.type == 'symbol') return Symbol.for(desc.description);
   if(desc.type == 'object' && 'class' in desc) {
     let ctor = globalThis[desc.class];

@@ -1,9 +1,30 @@
 import { exit } from 'std';
 import { close, exec, open, realpath, O_RDWR, setReadHandler, setWriteHandler, Worker, kill, SIGUSR1 } from 'os';
-import { AsyncIterator, Response, Request, Ringbuffer, Generator, Socket, FormParser, Hash, URL, server, client, fetch, getSessions, setLog, METHOD_GET, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_HEAD, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD, LLL_ALL, logLevels } from 'net.so';
+import { AsyncIterator, Response, Request, Ringbuffer, Generator, Socket, FormParser, Hash, URL, createServer, client, fetch, getSessions, setLog, METHOD_GET, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_HEAD, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD, LLL_ALL, logLevels } from 'net.so';
 import { Levels, DefaultLevels, Init, isDebug } from './log.js';
 import { getpid, once, exists } from './common.js';
-import { MakeSendFunction, Connection, DeserializeSymbols, DeserializeValue, GetKeys, GetProperties, LogWrap, MakeListCommand, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue, callHandler, define, getPropertyDescriptors, getPrototypeName, hasHandler, isThenable, objectCommand, parseURL, setHandlersFunction, statusResponse, weakDefine } from '../js/rpc.js';
+import { SerializeValue, MessageReceiver, MessageTransmitter, MessageTransceiver, codecs, RPCApi, RPCProxy, RPCObject, RPCFactory, Connection, RPC_PARSE_ERROR, RPC_INVALID_REQUEST, RPC_METHOD_NOT_FOUND, RPC_INVALID_PARAMS, RPC_INTERNAL_ERROR, RPC_SERVER_ERROR_BASE, FactoryEndpoint, RPCServer, RPCClient, FactoryClient, RPCSocket, GetProperties, GetKeys, DeserializeSymbols, DeserializeValue, RPCConnect, RPCListen } from '../js/rpc.js';
+
+function define(obj, ...args) {
+  const propdesc = {};
+
+  for(let props of args) {
+    let desc = Object.getOwnPropertyDescriptors(props);
+
+    for(let prop of GetKeys(desc)) {
+      propdesc[prop] = { ...desc[prop], enumerable: false, configurable: true };
+
+      if('value' in propdesc[prop]) propdesc[prop].writable = true;
+    }
+  }
+
+  Object.defineProperties(obj, propdesc);
+  return obj;
+}
+
+export function MakeSendFunction(sendFn, returnFn) {
+  return returnFn ? msg => (sendFn(msg), returnFn()) : sendFn;
+}
 
 let log;
 
@@ -54,24 +75,7 @@ const MimeTypes = [
 
 export function MakeCert(sslCert, sslPrivateKey) {
   let stderr = open('/dev/null', O_RDWR);
-  let ret = exec(
-    [
-      'openssl',
-      'req',
-      '-x509',
-      '-out',
-      sslCert,
-      '-keyout',
-      sslPrivateKey,
-      '-newkey',
-      'rsa:2048',
-      '-nodes',
-      '-sha256',
-      '-subj',
-      '/CN=localhost'
-    ],
-    { stderr }
-  );
+  let ret = exec(['openssl', 'req', '-x509', '-out', sslCert, '-keyout', sslPrivateKey, '-newkey', 'rsa:2048', '-nodes', '-sha256', '-subj', '/CN=localhost'], { stderr });
   close(stderr);
   return ret;
 }
@@ -109,12 +113,7 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
 
         console.log('MinnetServer', { host, port });
 
-        setLog(
-          LLL_WARN | LLL_USER,
-          (level, message) =>
-            !/LOAD_EXTRA|VHOST_CERT_AGING|EVENT_WAIT/.test(message) &&
-            log(`${logLevels[level].padEnd(10)} ${message.trim()}`)
-        );
+        setLog(LLL_WARN | LLL_USER, (level, message) => !/LOAD_EXTRA|VHOST_CERT_AGING|EVENT_WAIT/.test(message) && log(`${logLevels[level].padEnd(10)} ${message.trim()}`));
         //  setLog(0, (level, message) => {});
         //
         let fdmap = (globalThis.fdmap = {});
@@ -142,7 +141,7 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
           }
         );
 
-        server(
+        createServer(
           (globalThis.options = {
             block: false,
             tls: true,
