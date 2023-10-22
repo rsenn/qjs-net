@@ -22,6 +22,8 @@ ws_new(struct lws* wsi, JSContext* ctx) {
   ws->lwsi = wsi;
   ws->ref_count = 2;
   ws->fd = lws_get_socket_fd(lws_get_network_wsi(wsi));
+  ws->raw = FALSE;
+  ws->binary = TRUE;
 
   // ringbuffer_init2(&ws->sendq, sizeof(ByteBlock), 65536 * 2);
 
