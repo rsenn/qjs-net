@@ -57,6 +57,8 @@ callback_clear(JSCallback* cb) {
   cb->ctx = 0;
 }
 
+#undef ERROR
+
 typedef enum callback_e { MESSAGE = 0, CONNECT, CLOSE, ERROR, PONG, FD, HTTP, READ, POST, WRITEABLE, NUM_CALLBACKS } CallbackType;
 
 typedef struct callbacks {
