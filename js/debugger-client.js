@@ -16,17 +16,17 @@ import { InMemoryPubSub } from './lib/repeater/pubsub.js';
 import { semaphore, throttler } from './lib/repeater/limiters.js';
 import { HSLA, RGBA, Point, isPoint, Size, isSize, Line, isLine, Rect, isRect, PointList, Polyline, Matrix, isMatrix, BBox, TRBL, Timer, Tree, Node, XPath, Element, isElement, CSS, SVG, Container, Layer, Renderer, Select, ElementPosProps, ElementRectProps, ElementRectProxy, ElementSizeProps, ElementWHProps, ElementXYProps, Align, Anchor, dom, isNumber, Unit, ScalarValue, ElementTransformation, CSSTransformSetters, Transition, TransitionList, RandomColor } from './lib/dom.js';
 import { useIterable, useIterator, useAsyncGenerator, useAsyncIterable, useAsyncIterator, useGenerator, useActive, useClickout, useConditional, useDebouncedCallback, useDebounce, useDimensions, useDoubleClick, useElement, EventTracker, useEvent, useFocus, useForceUpdate, useGetSet, useHover, useMousePosition, useToggleButtonGroupState, useTrkl, useFetch, clamp, identity, noop, compose, maybe, snd, toPair, getOffset, getPositionOnElement, isChildOf } from './lib/hooks.js';
-/* prettier-ignore */ 
-/* prettier-ignore */ 
-/* prettier-ignore */ 
-/* prettier-ignore */ 
-/* prettier-ignore */ 
-/* prettier-ignore */ 
-/* prettier-ignore */ 
-/* prettier-ignore */ 
-/* prettier-ignore */ 
-/* prettier-ignore */ 
-/* prettier-ignore */ 
+/* prettier-ignore */
+/* prettier-ignore */
+/* prettier-ignore */
+/* prettier-ignore */
+/* prettier-ignore */
+/* prettier-ignore */
+/* prettier-ignore */
+/* prettier-ignore */
+/* prettier-ignore */
+/* prettier-ignore */
+/* prettier-ignore */
 let cwd = '.';
 let responses = {};
 let currentSource = trkl(null);
@@ -130,11 +130,7 @@ const SourceFile = props => {
       })) ||
     '';
 
-  return h('div', { class: 'container' }, [
-    h('div', {}, []),
-    h('div', { class: 'header' }, [filename]),
-    h(SourceText, { text, filename })
-  ]);
+  return h('div', { class: 'container' }, [h('div', {}, []), h('div', { class: 'header' }, [filename]), h(SourceText, { text, filename })]);
 };
 
 /******************************************************************************
@@ -190,10 +186,7 @@ function* TokenizeJS(data, filename) {
   lex.setInput(data, filename);
 
   let { tokens } = lex;
-  let colors = Object.entries(tokenColors).reduce(
-    (acc, [type, c]) => ({ ...acc, [tokens.indexOf(type) + 1]: c.hex() }),
-    {}
-  );
+  let colors = Object.entries(tokenColors).reduce((acc, [type, c]) => ({ ...acc, [tokens.indexOf(type) + 1]: c.hex() }), {});
   let prev = {};
   let out = [];
   for(let { id, lexeme, line } of lex) {

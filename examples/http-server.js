@@ -5,9 +5,7 @@ import { setLog } from 'net';
 import { getenv } from 'std';
 import('console').then(({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 0 } })));
 
-setLog((std.getenv('DEBUG') ? LLL_USER : 0) | LLL_ERR, (level, message) =>
-  console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n'))
-);
+setLog((std.getenv('DEBUG') ? LLL_USER : 0) | LLL_ERR, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
 
 createServer({
   port: 8765,
