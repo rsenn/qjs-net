@@ -63,7 +63,7 @@ function main(...args) {
   const config = ReadJSON(`.${base}-config`) ?? {};
 
   globalThis.console = new Console({
-    inspectOptions: { compact: 10, customInspect: true, maxStringLength: 100 }
+    inspectOptions: { compact: 10, customInspect: true, maxStringLength: 1024 }
   });
 
   /* globalThis.console = {
@@ -124,7 +124,7 @@ function main(...args) {
         ? new RPCServer(
             FactoryEndpoint(
               {
-                 List,
+                List,
                 Location,
                 Lexer,
                 Location,

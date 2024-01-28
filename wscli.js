@@ -208,7 +208,7 @@ class CLI {
 
         const remote = `${ws.address}:${ws.port}`;
 
-     /*   try {
+        /*   try {
           const module = await import('/home/roman/Projects/plot-cv/quickjs/qjs-modules/lib/repl.js').catch(() => ({
             REPL: CLI
           }));

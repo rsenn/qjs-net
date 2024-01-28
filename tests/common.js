@@ -6,20 +6,11 @@ export function assert(actual, expected, message) {
 
   if(actual === expected) return;
 
-  if(
-    actual !== null &&
-    expected !== null &&
-    typeof actual == 'object' &&
-    typeof expected == 'object' &&
-    actual.toString() === expected.toString()
-  )
-    return;
+  if(actual !== null && expected !== null && typeof actual == 'object' && typeof expected == 'object' && actual.toString() === expected.toString()) return;
 
   console.log('assert', { actual, expected, message });
 
-  throw Error(
-    'assertion failed: got |' + actual + '|' + ', expected |' + expected + '|' + (message ? ' (' + message + ')' : '')
-  );
+  throw Error('assertion failed: got |' + actual + '|' + ', expected |' + expected + '|' + (message ? ' (' + message + ')' : ''));
 }
 
 export const getpid = () => parseInt(readlink('/proc/self')[0]);
@@ -35,11 +26,7 @@ export const exists = path => {
   return !err;
 };
 
-export const randStr = (
-  n,
-  set = '_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-  rng = Math.random
-) => {
+export const randStr = (n, set = '_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', rng = Math.random) => {
   let o = '';
   while(--n >= 0) o += set[Math.round(rng() * (set.length - 1))];
   return o;
