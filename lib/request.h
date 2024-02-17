@@ -21,6 +21,7 @@ typedef struct http_request {
   Generator* body;
 } Request;
 
+const char* method_name(int m);
 const char* method_string(enum http_method);
 int method_number(const char*);
 void request_init(Request*, URL url, enum http_method method);
@@ -32,27 +33,5 @@ void request_clear(Request*, JSRuntime* rt);
 void request_free(Request*, JSRuntime* rt);
 Request* request_from(int, JSValueConst argv[], JSContext* ctx);
 BOOL request_match(Request*, const char* path, enum http_method method);
-
-/*static inline JSValue
-request_promise(Request* req, ResolveFunctions* fns, JSContext* ctx) {
-  JSValue pr = js_async_create(ctx, fns);
-  req->promise = pr;
-  return pr;
-}*/
-static inline const char*
-method_name(int m) {
-  if(m < 0)
-    return "-1";
-  return ((const char* const[]){
-      "GET",
-      "POST",
-      "OPTIONS",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "CONNECT",
-      "HEAD",
-  })[m];
-}
 
 #endif /* QJSNET_LIB_REQUEST_H */

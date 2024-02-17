@@ -12,27 +12,37 @@ static const char* const method_names[] = {
     "GET",
     "POST",
     "OPTIONS",
-    "PUT",
     "PATCH",
+    "PUT",
     "DELETE",
-    "CONNECT",
     "HEAD",
 };
+
+const char*
+method_name(int m) {
+  if(m < 0)
+    return "-1";
+
+  return method_names[m];
+}
 
 const char*
 method_string(enum http_method m) {
   if(m >= 0 && m < countof(method_names))
     return method_names[m];
+
   return 0;
 }
 
 int
 method_number(const char* name) {
   int i = 0;
+
   if(name)
     for(i = countof(method_names) - 1; i >= 0; --i)
       if(!strcasecmp(name, method_names[i]))
         break;
+
   return i;
 }
 
