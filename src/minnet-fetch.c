@@ -21,7 +21,9 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   union closure* closure = opaque;
   MinnetClient* client = closure->pointer;
 
-  DEBUG("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
+#ifdef DEBUT_OUTPUT
+  printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
+#endif
 
   switch(magic) {
     case ON_HTTP: {
@@ -107,7 +109,9 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   JS_FreeValue(ctx, args[1]);
 
-  DEBUG("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->pointer);
+#ifdef DEBUT_OUTPUT
+  printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->pointer);
+#endif
 
   cc->pointer = client_dup(cc->pointer);
 

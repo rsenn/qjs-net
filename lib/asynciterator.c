@@ -90,6 +90,7 @@ BOOL
 asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   if(asynciterator_pending(it)) {
     asynciterator_emplace(it, value, TRUE, ctx);
+    it->closing = FALSE;
     it->closed = TRUE;
     asynciterator_cancel(it, JS_NULL, ctx);
     return TRUE;

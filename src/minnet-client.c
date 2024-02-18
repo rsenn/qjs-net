@@ -98,7 +98,9 @@ client_free(MinnetClient* client, JSContext* ctx) {
 void
 client_free(MinnetClient* client, JSRuntime* rt) {
   if(--client->ref_count == 0) {
-    DEBUG("%s() client=%p\n", __func__, client);
+#ifdef DEBUT_OUTPUT
+    printf("%s() client=%p\n", __func__, client);
+#endif
 
     // if(client->link.prev) list_del(&client->link);
 
@@ -926,7 +928,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
   JS_FreeValue(ctx, value);
 
-  DEBUG("alpn = '%s'\n", client->connect_info.alpn);
+#ifdef DEBUT_OUTPUT
+  printf("alpn = '%s'\n", client->connect_info.alpn);
+#endif
 
   client->connect_info.pwsi = &client->wsi;
   client->connect_info.context = client->context.lws;
@@ -954,8 +958,13 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     }
   }
 
-  DEBUG("METHOD: %s\n", client->connect_info.method);
-  DEBUG("PROTOCOL: %s\n", client->connect_info.protocol);
+#ifdef DEBUT_OUTPUT
+  printf("METHOD: %s\n", client->connect_info.method);
+#endif
+
+#ifdef DEBUT_OUTPUT
+  printf("PROTOCOL: %s\n", client->connect_info.protocol);
+#endif
 
   if(!block) {
     ret = js_async_create(ctx, &client->promise);
@@ -999,7 +1008,9 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
     wsi2 = lws_client_connect_via_info(&client->connect_info);
 
-  DEBUG("client->wsi = %p, wsi2 = %p, h2 = %d, ssl = %d\n", client->wsi, wsi2, wsi_http2(client->wsi), wsi_tls(client->wsi));
+#ifdef DEBUT_OUTPUT
+  printf("client->wsi = %p, wsi2 = %p, h2 = %d, ssl = %d\n", client->wsi, wsi2, wsi_http2(client->wsi), wsi_tls(client->wsi));
+#endif
 
   if(!client->wsi /*&& !wsi2*/) {
     if(!block) {

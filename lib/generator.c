@@ -20,7 +20,8 @@ dequeue_value(Generator* gen, BOOL* done_p, BOOL* binary_p) {
 static Queue*
 create_queue(Generator* gen) {
   if(!gen->q) {
-#ifdef DEBUG_OUTPUT
+
+#ifdef DEBUG_OUTPUT_
     printf("Creating Queue... %s\n", JS_ToCString(gen->ctx, gen->callback));
 #endif
     gen->q = queue_new(gen->ctx);
@@ -34,7 +35,7 @@ enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
   QueueItem* item;
   ssize_t ret = block_SIZE(&blk);
 
-#ifdef DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT_
   printf("%s blk.size=%zu\n", __func__, block_SIZE(&blk));
 #endif
 
@@ -129,30 +130,47 @@ static int
 generator_update(Generator* gen) {
   int i = 0;
 
-  while(!list_empty(&gen->iterator.reads) && gen->q && !queue_empty(gen->q)) {
+  while(!list_empty(&gen->iterator.reads) && gen->q && queue_size(gen->q)) {
+    size_t s = block_SIZE(&queue_front(gen->q)->block);
 
     if(!gen->closing)
-      if(gen->buffering && block_SIZE(&queue_front(gen->q)->block) < gen->chunk_size)
+      if(gen->buffering && s < gen->chunk_size)
         break;
 
     BOOL done = FALSE, binary = FALSE;
     JSValue chunk = dequeue_value(gen, &done, &binary);
 
 #ifdef DEBUG_OUTPUT
-    printf("%-22s i: %i reads: %zu q->items: %zu done: %i\n", __func__, i, list_size(&gen->iterator.reads), gen->q ? list_size(&gen->q->items) : 0, done);
+    printf("%-22s i: %i queue: %zu/%zub dequeued: %zu done: %i\n", __func__, i, gen->q ? queue_size(gen->q) : 0, gen->q ? queue_bytes(gen->q) : 0, s, done);
 #endif
+
+    // asynciterator_emplace(&gen->iterator, chunk, done, gen->ctx);
     done ? asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx) : asynciterator_yield(&gen->iterator, chunk, gen->ctx);
+
     JS_FreeValue(gen->ctx, chunk);
+
+    if(done)
+      gen->closed = TRUE;
 
     ++i;
   }
 
-  /*  if(gen->closing && !gen->closed) {
-      asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx);
-      gen->closing=FALSE;
-      gen->closed=TRUE;
-    }*/
-
+#ifdef DEBUG_OUTPUT
+  printf("%-22s gen: %p chunk_size: %zu i: %zu reads: %zu continuous: %i buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
+         __func__,
+         (uint32_t)gen,
+         gen->chunk_size,
+         i,
+         list_size(&gen->iterator.reads),
+         (gen->q && gen->q->continuous),
+         gen->buffering,
+         gen->closing,
+         gen->closed,
+         gen->bytes_read,
+         gen->bytes_written,
+         gen->q ? queue_size(gen->q) : 0,
+         gen->q ? queue_bytes(gen->q) : 0);
+#endif
   return i;
 }
 
@@ -228,16 +246,17 @@ JSValue
 generator_next(Generator* gen, JSValueConst arg) {
   JSValue ret = JS_UNDEFINED;
 
-  /* if(gen->closing && !asynciterator_pending(&gen->iterator)) {
-     ResolveFunctions async;
-     ret = js_async_create(gen->ctx, &async);
-     js_async_resolve(gen->ctx, &async, js_iterator_result(gen->ctx, JS_UNDEFINED, TRUE));
-     js_async_free(JS_GetRuntime(gen->ctx), &async);
-     gen->closing = FALSE;
-     gen->closed = TRUE;
-     return ret;
-   }
- */
+#ifdef DEBUG_OUTPUT
+  printf("%-22s gen: %p chunk_size: %zu reads: %zu pending: %zu queue: %zu/%zub\n",
+         __func__,
+         (uint32_t)gen,
+         gen->chunk_size,
+         list_size(&gen->iterator.reads),
+         asynciterator_pending(&gen->iterator),
+         gen->q ? queue_size(gen->q) : 0,
+         gen->q ? queue_bytes(gen->q) : 0);
+#endif
+
   ret = asynciterator_next(&gen->iterator, arg, gen->ctx);
 
   if(!start_executor(gen) && !gen->started) {
@@ -249,7 +268,7 @@ generator_next(Generator* gen, JSValueConst arg) {
 
   if(n == 0) {
     if(gen->closing || gen->closed) {
-      if(asynciterator_emplace(&gen->iterator, JS_UNDEFINED, TRUE, gen->ctx)) {
+      if(asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx)) {
         gen->closing = FALSE;
         gen->closed = TRUE;
       }
@@ -257,9 +276,20 @@ generator_next(Generator* gen, JSValueConst arg) {
   }
 
 #ifdef DEBUG_OUTPUT
-  printf("%-22s gen: %p reads: %zu updated: %zu read: %i\n", __func__, gen, list_size(&gen->iterator.reads), rds1 - list_size(&gen->iterator.reads), id);
+  printf("%-22s gen: %p chunk_size: %zu reads: %zu ret: '%s' buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
+         __func__,
+         (uint32_t)gen,
+         gen->chunk_size,
+         list_size(&gen->iterator.reads),
+         JS_ToCString(gen->ctx, ret),
+         gen->buffering,
+         gen->closing,
+         gen->closed,
+         gen->bytes_written,
+         gen->bytes_read,
+         gen->q ? queue_size(gen->q) : 0,
+         gen->q ? queue_bytes(gen->q) : 0);
 #endif
-
   return ret;
 }
 
@@ -278,35 +308,34 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
   ByteBlock blk = block_copy(data, len);
   ssize_t ret = -1, size = block_SIZE(&blk);
 
-#ifdef DEBUG_OUTPUT
-  printf("%-22s gen: %p reads: %zu\n", __func__, gen, list_size(&gen->iterator.reads));
-#endif
-
-  if(gen->buffering || list_empty(&gen->iterator.reads) || (gen->q && gen->q->continuous)) {
-    ret = enqueue_block(gen, blk, callback);
-
-    if(gen->buffering) {
-
-      while(!list_empty(&gen->iterator.reads) && gen->q && !queue_empty(gen->q) && block_SIZE(&queue_front(gen->q)->block) >= gen->chunk_size) {
-        BOOL done = FALSE, binary = FALSE;
-        ByteBlock blk = queue_next(gen->q, &done, &binary);
-#ifdef DEBUG_OUTPUT
-        printf("%s block_SIZE(&blk) = %zu\n", __func__, block_SIZE(&blk));
-#endif
-        JSValue chunk = gen->block_fn(&blk, gen->ctx);
-
-        asynciterator_yield(&gen->iterator, chunk, gen->ctx);
-        JS_FreeValue(gen->ctx, chunk);
-      }
-    }
-  } else {
+  if(!gen->buffering && !(gen->q && gen->q->continuous) && (!gen->q || !queue_size(gen->q)) && asynciterator_pending(&gen->iterator)) {
 
     JSValue chunk = gen->block_fn(&blk, gen->ctx);
+
+    gen->bytes_read += block_SIZE(&blk);
+    gen->chunks_read += 1;
 
     if(asynciterator_yield(&gen->iterator, chunk, gen->ctx))
       ret = size;
 
     JS_FreeValue(gen->ctx, chunk);
+  } else {
+    ret = enqueue_block(gen, blk, callback);
+
+    // gen->buffering = !queue_empty(gen->q);
+
+    while(asynciterator_pending(&gen->iterator) && gen->q && !queue_empty(gen->q) && block_SIZE(&queue_front(gen->q)->block) >= gen->chunk_size) {
+      BOOL done = FALSE, binary = FALSE;
+
+#ifdef DEBUG_OUTPUT
+      printf("%s block_SIZE(&blk) = %zu\n", __func__, block_SIZE(&blk));
+#endif
+
+      JSValue chunk = dequeue_value(gen, &done, &binary);
+      asynciterator_emplace(&gen->iterator, chunk, done, gen->ctx);
+
+      JS_FreeValue(gen->ctx, chunk);
+    }
   }
 
   if(ret >= 0) {
@@ -314,6 +343,25 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
     gen->chunks_written += 1;
   }
 
+#ifdef DEBUG_OUTPUT
+  printf("%-22s gen: %p chunk_size: %zu data: '%.*s' len: %zu chunk_size: %zu reads: %zu continuous: %i buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
+         __func__,
+         (uint32_t)gen,
+         gen->chunk_size,
+         MIN(10, (int)len),
+         data,
+         len,
+         gen->chunk_size,
+         list_size(&gen->iterator.reads),
+         (gen->q && gen->q->continuous),
+         gen->buffering,
+         gen->closing,
+         gen->closed,
+         gen->bytes_read,
+         gen->bytes_written,
+         gen->q ? queue_size(gen->q) : 0,
+         gen->q ? queue_bytes(gen->q) : 0);
+#endif
   return ret;
 }
 
@@ -331,12 +379,24 @@ generator_push(Generator* gen, JSValueConst value) {
 
   ret = js_async_create(gen->ctx, &gen->resolve_reject);
 
-#ifdef DEBUG_OUTPUT
-  printf("%-22s reads: %zu value: %.*s closing: %i closed: %i\n", __func__, list_size(&gen->iterator.reads), 10, JS_ToCString(gen->ctx, value), gen->closing, gen->closed);
-#endif
-
   if(!generator_yield(gen, value, JS_UNDEFINED))
     js_async_reject(gen->ctx, &gen->resolve_reject, JS_UNDEFINED);
+
+#ifdef DEBUG_OUTPUT
+  printf("%-22s gen: %p chunk_size: %zu reads: %zu value: '%s' buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
+         __func__,
+         (uint32_t)gen,
+         gen->chunk_size,
+         list_size(&gen->iterator.reads),
+         JS_ToCString(gen->ctx, value),
+         gen->buffering,
+         gen->closing,
+         gen->closed,
+         gen->bytes_read,
+         gen->bytes_written,
+         gen->q ? queue_size(gen->q) : 0,
+         gen->q ? queue_bytes(gen->q) : 0);
+#endif
 
   gen->promise = js_promise_wrap(gen->ctx, ret);
   JS_FreeValue(gen->ctx, ret);
@@ -428,12 +488,19 @@ generator_stop(Generator* gen, JSValueConst arg) {
   Queue* q;
   QueueItem* item = 0;
 
+#ifdef DEBUG_OUTPUT
+  printf("%-22s gen: %p chunk_size: %zu arg: '%s' closed: %zu queue: %zu/%zub\n",
+         __func__,
+         (uint32_t)gen,
+         gen->chunk_size,
+         JS_ToCString(gen->ctx, arg),
+         gen->closed,
+         gen->q ? queue_size(gen->q) : 0,
+         gen->q ? queue_bytes(gen->q) : 0);
+#endif
+
   if(gen->closed)
     return ret;
-
-#ifdef DEBUG_OUTPUT
-  printf("generator_stop(%s)\n", JS_ToCString(gen->ctx, arg));
-#endif
 
   if((q = gen->q)) {
     if(!queue_complete(q)) {
@@ -524,8 +591,7 @@ generator_finish(Generator* gen) {
     return TRUE;
   }
 
-  if(gen->buffering)
-    generator_update(gen);
+  generator_update(gen);
 
   return FALSE;
 }

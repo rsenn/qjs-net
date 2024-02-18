@@ -145,7 +145,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       size_t n = headers_write(&req->headers, wsi, &buf.write, buf.end);
 
-      DEBUG("APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
+#ifdef DEBUT_OUTPUT
+      printf("APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
+#endif
+
       *(uint8_t**)in += n;
 
       if(method_number(client->connect_info.method) == METHOD_POST && !lws_http_is_redirected_to_get(wsi)) {
@@ -311,7 +314,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           while(!done) {
             value = js_iterator_next(ctx, client->body, &client->next, &done, 0, 0);
 
-            DEBUG("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), done);
+#ifdef DEBUT_OUTPUT
+            printf("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), done);
+#endif
 
             if(JS_IsException(value)) {
               JSValue exception = JS_GetException(ctx);
@@ -321,9 +326,15 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
               JSBuffer input = js_buffer_new(ctx, value);
               // js_std_dump_error(ctx);
 
-              DEBUG("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
+#ifdef DEBUT_OUTPUT
+              printf("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
+#endif
+
               buffer_append(&buf, input.data, input.size);
-              DEBUG("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
+#ifdef DEBUT_OUTPUT
+              printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
+#endif
+
               js_buffer_free(&input, JS_GetRuntime(ctx));
             }
 
@@ -334,7 +345,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         size = buf.write - buf.start;
         if((r = lws_write(wsi, buf.start, size, (enum lws_write_protocol)n)) != size)
           return 1;
-        DEBUG("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
+#ifdef DEBUT_OUTPUT
+        printf("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
+#endif
+
         if(n != LWS_WRITE_HTTP_FINAL)
           lws_callback_on_writable(wsi);
       }
@@ -375,7 +389,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(!JS_IsObject(session->resp_obj))
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
 
-      DEBUG("LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ len=%zu in='%.*s'", len, /*len > 30 ? 30 :*/ (int)len, (char*)in);
+#ifdef DEBUT_OUTPUT
+      printf("LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ len=%zu in='%.*s'", len, /*len > 30 ? 30 :*/ (int)len, (char*)in);
+#endif
 
       generator_write(resp->body, in, len, JS_UNDEFINED);
 

@@ -315,26 +315,41 @@ server_certificate(struct context* context, JSValueConst options) {
 
   if(JS_IsString(context->crt)) {
     info->ssl_cert_filepath = js_tostring(ctx, context->crt);
-    DEBUG("server SSL certificate file: %s\n", info->ssl_cert_filepath);
+#ifdef DEBUT_OUTPUT
+    printf("server SSL certificate file: %s\n", info->ssl_cert_filepath);
+#endif
+
   } else {
     info->server_ssl_cert_mem = js_toptrsize(ctx, &info->server_ssl_cert_mem_len, context->crt);
-    DEBUG("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
+#ifdef DEBUT_OUTPUT
+    printf("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
+#endif
   }
 
   if(JS_IsString(context->key)) {
     info->ssl_private_key_filepath = js_tostring(ctx, context->key);
-    DEBUG("server SSL private key file: %s\n", info->ssl_private_key_filepath);
+#ifdef DEBUT_OUTPUT
+    printf("server SSL private key file: %s\n", info->ssl_private_key_filepath);
+#endif
+
   } else {
     info->server_ssl_private_key_mem = js_toptrsize(ctx, &info->server_ssl_private_key_mem_len, context->key);
-    DEBUG("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
+#ifdef DEBUT_OUTPUT
+    printf("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
+#endif
   }
 
   if(JS_IsString(context->ca)) {
     info->ssl_ca_filepath = js_tostring(ctx, context->ca);
-    DEBUG("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
+#ifdef DEBUT_OUTPUT
+    printf("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
+#endif
+
   } else {
     info->server_ssl_ca_mem = js_toptrsize(ctx, &info->server_ssl_ca_mem_len, context->ca);
-    DEBUG("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
+#ifdef DEBUT_OUTPUT
+    printf("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
+#endif
   }
 }
 
@@ -519,7 +534,10 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   struct TimerClosure* timer = server->context.timer;
 
   if(timer) {
-    // DEBUG("timeout %" PRIu32 "\n", timer->interval);
+#ifdef DEBUT_OUTPUT
+    printf("timeout %" PRIu32 "\n", timer->interval);
+#endif
+
     uint32_t new_interval;
 
     do {
@@ -529,14 +547,19 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
         lws_service_tsi(server->context.lws, -1, 0);
     } while(new_interval == 0);
 
-    // DEBUG("new_interval %" PRIu32 "\n", new_interval);
+#ifdef DEBUT_OUTPUT
+    printf("new_interval %" PRIu32 "\n", new_interval);
+#endif
+
     timer->interval = new_interval;
 
     js_timer_restart(timer);
 
     return JS_FALSE;
   }
-  // DEBUG("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
+#ifdef DEBUT_OUTPUT
+  printf("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
+#endif
 
   return JS_TRUE;
 }
@@ -606,7 +629,9 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsUndefined(opt_tls)) {
 
     is_tls = JS_ToBool(ctx, opt_tls);
-    DEBUG("is_tls = %d\n", is_tls);
+#ifdef DEBUT_OUTPUT
+    printf("is_tls = %d\n", is_tls);
+#endif
   }
 
   /*if(!JS_IsUndefined(opt_port)) {
@@ -701,7 +726,10 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     MinnetVhostOptions* pvo;
 
     for(pvo = server->mimetypes; pvo; pvo = pvo->next) {
-      DEBUG("pvo mimetype %s %s\n", pvo->name, pvo->value);
+      #ifdef DEBUT_OUTPUT
+printf("pvo mimetype %s %s\n", pvo->name, pvo->value);
+#endif
+
     }
   }*/
 

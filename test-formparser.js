@@ -35,7 +35,7 @@ createServer({
             onOpen(fp, name) {
               log('onOpen', name);
               this.name = name;
-              this.data = new Generator(() => {});
+              this.data = new Generator(() => {} /*, 4096*/);
 
               const { data } = this;
               /*const params = this.params;
@@ -69,7 +69,7 @@ createServer({
             }
           }
         );
-      }, 4096);
+      });
 
       (async function() {
         for await(let [name, data] of await gen) {
