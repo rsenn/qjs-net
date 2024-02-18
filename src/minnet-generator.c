@@ -11,10 +11,15 @@ enum {
   GENERATOR_NEXT = 0,
   GENERATOR_RETURN,
   GENERATOR_THROW,
+  GENERATOR_WRITE,
+  GENERATOR_ENQUEUE,
+  GENERATOR_CONTINUOUS,
+  GENERATOR_FINISH,
+  GENERATOR_ITERATOR,
 };
 
 static JSValue
-minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+minnet_generator_function(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
   JSValue ret = JS_UNDEFINED;
 
@@ -40,6 +45,48 @@ minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValue
         asynciterator_cancel(&gen->iterator, argv[0], ctx);
         js_async_reject(ctx, &async, argv[0]);*/
       ret = generator_throw(gen, argv[0]);
+      break;
+    }
+  }
+  return ret;
+}
+
+static JSValue
+minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+  MinnetGenerator* gen;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(gen = minnet_generator_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case GENERATOR_WRITE: {
+      JSBuffer buf = js_input_chars(ctx, argv[0]);
+
+      ssize_t result = generator_write(gen, buf.data, buf.size, argc > 1 ? argv[1] : JS_NULL);
+      ret = JS_NewInt64(ctx, result);
+
+      break;
+    }
+
+    case GENERATOR_ENQUEUE: {
+      ssize_t result = generator_enqueue(gen, argv[0]);
+      ret = JS_NewInt64(ctx, result);
+      break;
+    }
+
+    case GENERATOR_CONTINUOUS: {
+      ret = JS_NewBool(ctx, generator_continuous(gen, argc > 0 ? argv[0] : JS_NULL));
+      break;
+    }
+
+    case GENERATOR_FINISH: {
+      ret = JS_NewBool(ctx, generator_finish(gen));
+      break;
+    }
+
+    case GENERATOR_ITERATOR: {
+      ret = minnet_generator_iterator(ctx, gen);
       break;
     }
   }
@@ -77,6 +124,18 @@ minnet_generator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 }
 
 JSValue
+minnet_generator_wrap(JSContext* ctx, MinnetGenerator* req) {
+  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_generator_proto, minnet_generator_class_id);
+
+  if(JS_IsException(ret))
+    return JS_EXCEPTION;
+
+  JS_SetOpaque(ret, generator_dup(req));
+
+  return ret;
+}
+
+JSValue
 minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   MinnetGenerator* gen;
   JSValue args[2];
@@ -97,11 +156,21 @@ minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, 
   JS_FreeValue(ctx, args[0]);
   JS_FreeValue(ctx, args[1]);
 
-  return minnet_generator_iterator(ctx, gen);
+  return minnet_generator_wrap(ctx, gen);
+  // return minnet_generator_iterator(ctx, gen);
 }
 
-static const JSCFunctionListEntry minnet_generator_funcs[] = {
+static const JSCFunctionListEntry minnet_generator_iter[] = {
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, (JSCFunction*)&JS_DupValue),
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetGeneratorIterator", JS_PROP_CONFIGURABLE),
+};
+
+static const JSCFunctionListEntry minnet_generator_proto_funcs[] = {
+    JS_CFUNC_MAGIC_DEF("write", 1, minnet_generator_method, GENERATOR_WRITE),
+    JS_CFUNC_MAGIC_DEF("enqueue", 1, minnet_generator_method, GENERATOR_ENQUEUE),
+    JS_CFUNC_MAGIC_DEF("continuous", 0, minnet_generator_method, GENERATOR_CONTINUOUS),
+    JS_CFUNC_MAGIC_DEF("finish", 0, minnet_generator_method, GENERATOR_FINISH),
+    JS_CFUNC_MAGIC_DEF("[Symbol.asyncIterator]", 0, minnet_generator_method, GENERATOR_ITERATOR),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetGenerator", JS_PROP_CONFIGURABLE),
 };
 
@@ -115,11 +184,11 @@ minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
   JS_FreeValue(ctx, proto);
 
   for(size_t i = 0; i < countof(method_names); i++) {
-    JSValue func = js_function_cclosure(ctx, minnet_generator_method, 0, i, generator_dup(gen), (void*)&generator_free);
+    JSValue func = js_function_cclosure(ctx, minnet_generator_function, 0, i, generator_dup(gen), (void*)&generator_free);
     JS_DefinePropertyValueStr(ctx, ret, method_names[i], func, JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
   }
 
-  JS_SetPropertyFunctionList(ctx, ret, minnet_generator_funcs, countof(minnet_generator_funcs));
+  JS_SetPropertyFunctionList(ctx, ret, minnet_generator_iter, countof(minnet_generator_iter));
 
   return ret;
 }
@@ -156,7 +225,7 @@ minnet_generator_init(JSContext* ctx, JSModuleDef* m) {
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);
   minnet_generator_proto = JS_NewObject(ctx);
-  // JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, countof(minnet_generator_proto_funcs));
+  JS_SetPropertyFunctionList(ctx, minnet_generator_proto, minnet_generator_proto_funcs, countof(minnet_generator_proto_funcs));
   JS_SetClassProto(ctx, minnet_generator_class_id, minnet_generator_proto);
 
   minnet_generator_ctor = JS_NewCFunction2(ctx, minnet_generator_constructor, "MinnetGenerator", 0, JS_CFUNC_constructor, 0);
