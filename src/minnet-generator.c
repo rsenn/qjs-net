@@ -14,7 +14,8 @@ enum {
   GENERATOR_WRITE,
   GENERATOR_ENQUEUE,
   GENERATOR_CONTINUOUS,
-  GENERATOR_FINISH,
+  GENERATOR_BUFFERING,
+  GENERATOR_STOP,
   GENERATOR_ITERATOR,
 };
 
@@ -80,8 +81,17 @@ minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValue
       break;
     }
 
-    case GENERATOR_FINISH: {
-      ret = JS_NewBool(ctx, generator_finish(gen));
+    case GENERATOR_BUFFERING: {
+      size_t sz = 4096;
+      if(argc > 0)
+        JS_ToIndex(ctx, &sz, argv[0]);
+
+      ret = JS_NewBool(ctx, generator_buffering(gen, sz));
+      break;
+    }
+
+    case GENERATOR_STOP: {
+      ret = JS_NewBool(ctx, generator_stop(gen, argc > 0 ? argv[0] : JS_NULL));
       break;
     }
 
@@ -153,6 +163,13 @@ minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, 
   /*  ret = JS_Call(ctx, argv[0], JS_UNDEFINED, 2, args);
 
     JS_FreeValue(ctx, ret);*/
+
+  if(argc > 1) {
+    size_t sz = 4096;
+    JS_ToIndex(ctx, &sz, argv[1]);
+    generator_buffering(gen, sz);
+  }
+
   JS_FreeValue(ctx, args[0]);
   JS_FreeValue(ctx, args[1]);
 
@@ -169,7 +186,8 @@ static const JSCFunctionListEntry minnet_generator_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("write", 1, minnet_generator_method, GENERATOR_WRITE),
     JS_CFUNC_MAGIC_DEF("enqueue", 1, minnet_generator_method, GENERATOR_ENQUEUE),
     JS_CFUNC_MAGIC_DEF("continuous", 0, minnet_generator_method, GENERATOR_CONTINUOUS),
-    JS_CFUNC_MAGIC_DEF("finish", 0, minnet_generator_method, GENERATOR_FINISH),
+    JS_CFUNC_MAGIC_DEF("buffering", 0, minnet_generator_method, GENERATOR_BUFFERING),
+    JS_CFUNC_MAGIC_DEF("stop", 0, minnet_generator_method, GENERATOR_STOP),
     JS_CFUNC_MAGIC_DEF("[Symbol.asyncIterator]", 0, minnet_generator_method, GENERATOR_ITERATOR),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetGenerator", JS_PROP_CONFIGURABLE),
 };

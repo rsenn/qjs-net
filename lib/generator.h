@@ -27,7 +27,7 @@ typedef struct generator {
   uint64_t bytes_written, bytes_read;
   uint32_t chunks_written, chunks_read;
   uint32_t chunk_size;
-  BOOL buffering;
+  BOOL started, buffering;
   JSValue (*block_fn)(ByteBlock*, JSContext*);
 } Generator;
 
@@ -38,7 +38,7 @@ ssize_t generator_write(Generator*, const void* data, size_t len, JSValueConst c
 JSValue generator_push(Generator*, JSValueConst value);
 JSValue generator_throw(Generator* gen, JSValueConst error);
 BOOL generator_yield(Generator*, JSValueConst value, JSValueConst callback);
-BOOL generator_stop(Generator*, JSValueConst callback);
+BOOL generator_stop(Generator*, JSValueConst);
 BOOL generator_continuous(Generator*, JSValueConst callback);
 BOOL generator_buffering(Generator*, size_t chunk_size);
 BOOL generator_finish(Generator* gen);

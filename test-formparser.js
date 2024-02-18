@@ -35,49 +35,48 @@ createServer({
             onOpen(fp, name) {
               log('onOpen', name);
               this.name = name;
-this.data=new Generator(() => {});
+              this.data = new Generator(() => {});
 
-const{data}=this;
+              const { data } = this;
               /*const params = this.params;
             log('onOpen', { params: params.map(n => [n, this[n]]) });*/
 
-              push([name,data]);
+              push([name, data]);
             },
             onContent(fp, buf) {
-              const { name,data } = this;
+              const { name, data } = this;
               log('onContent', buf);
 
-data.write(buf);
+              data.write(buf);
 
               /* const params = this.params;
             log('onContent', { params: params.map(n => [n, this[n]]) });*/
             },
             onClose(fp, name) {
-              log('onClose', name);
+              const { data } = this;
+              log('onClose', name, data);
 
-              /*const params = this.params;
-            log('onClose', { params: params.map(n => [n, this[n]]) });*/
+              data.stop();
             },
             onFinalize(fp) {
               const { name } = this;
               const resp = new Response('done', { status: 200 });
- 
+
               log('onFinalize', resp);
- stop();
+              stop();
 
               return resp;
             }
           }
         );
-      });
+      }, 4096);
 
       (async function() {
-        for await(let [name,data] of await gen) {
-          console.log('Gen', name,data);
+        for await(let [name, data] of await gen) {
+          console.log('Gen', name, data);
 
           for await(let chunk of data) {
-console.log('chunk', chunk);
-            
+            console.log('chunk', chunk);
           }
         }
       })();

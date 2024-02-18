@@ -147,6 +147,12 @@ generator_update(Generator* gen) {
     ++i;
   }
 
+  /*  if(gen->closing && !gen->closed) {
+      asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx);
+      gen->closing=FALSE;
+      gen->closed=TRUE;
+    }*/
+
   return i;
 }
 
@@ -222,12 +228,32 @@ JSValue
 generator_next(Generator* gen, JSValueConst arg) {
   JSValue ret = JS_UNDEFINED;
 
+  if(gen->closing && !asynciterator_pending(&gen->iterator)) {
+    ResolveFunctions async;
+    ret = js_async_create(gen->ctx, &async);
+    js_async_resolve(gen->ctx, &async, js_iterator_result(gen->ctx, JS_UNDEFINED, TRUE));
+    js_async_free(JS_GetRuntime(gen->ctx), &async);
+    gen->closing = FALSE;
+    gen->closed = TRUE;
+    return ret;
+  }
+
   ret = asynciterator_next(&gen->iterator, arg, gen->ctx);
 
-  if(!start_executor(gen))
+  if(!start_executor(gen) && !gen->started) {
     generator_callback(gen, arg);
+    gen->started = TRUE;
+  }
 
-  generator_update(gen);
+  int n = gen->q ? generator_update(gen) : 0;
+
+  if(n == 0) {
+    if(gen->closing) {
+      asynciterator_emplace(&gen->iterator, JS_UNDEFINED, TRUE, gen->ctx);
+      gen->closing = FALSE;
+      gen->closed = TRUE;
+    }
+  }
 
 #ifdef DEBUG_OUTPUT
   printf("%-22s gen: %p reads: %zu updated: %zu read: %i\n", __func__, gen, list_size(&gen->iterator.reads), rds1 - list_size(&gen->iterator.reads), id);
@@ -401,6 +427,9 @@ generator_stop(Generator* gen, JSValueConst arg) {
   Queue* q;
   QueueItem* item = 0;
 
+  if(gen->closed)
+    return ret;
+
 #ifdef DEBUG_OUTPUT
   printf("generator_stop(%s)\n", JS_ToCString(gen->ctx, arg));
 #endif
@@ -424,12 +453,14 @@ generator_stop(Generator* gen, JSValueConst arg) {
         JS_FreeValue(gen->ctx, chunk);
       }
     }
+  } else {
+    if(asynciterator_pending(&gen->iterator))
+      ret = asynciterator_stop(&gen->iterator, arg, gen->ctx);
+    else {
+      gen->closing = TRUE;
+      ret = TRUE;
+    }
   }
-
-  if(js_is_nullish(arg))
-    ret = asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx);
-  else
-    ret = asynciterator_cancel(&gen->iterator, arg, gen->ctx);
 
   return ret;
 }

@@ -64,10 +64,11 @@ asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
 
   ret = js_async_create(ctx, &async);
 
-  if(/*it->closing ||*/ it->closed) {
+  if(it->closed) {
     assert(list_empty(&it->reads));
     js_async_resolve(ctx, &async, js_iterator_result(ctx, JS_UNDEFINED, TRUE));
     js_async_free(JS_GetRuntime(ctx), &async);
+    // it->closed = TRUE;
   } else {
 
     if(!(rd = js_malloc(ctx, sizeof(AsyncRead))))
@@ -86,10 +87,9 @@ asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
 
 BOOL
 asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
-  if(!list_empty(&it->reads)) {
+  if(asynciterator_pending(it)) {
     asynciterator_emplace(it, value, TRUE, ctx);
     it->closed = TRUE;
-
     asynciterator_cancel(it, JS_NULL, ctx);
     return TRUE;
   } else {
