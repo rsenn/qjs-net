@@ -370,7 +370,7 @@ static JSClassExoticMethods minnet_formparser_exotic_methods = {
 static const JSClassDef minnet_formparser_class = {
     "MinnetFormParser",
     .finalizer = minnet_formparser_finalizer,
-    .exotic = &minnet_formparser_exotic_methods,
+    //.exotic = &minnet_formparser_exotic_methods,
     .call = &minnet_formparser_call,
 };
 

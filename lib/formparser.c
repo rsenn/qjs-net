@@ -16,15 +16,17 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
     case LWS_UFS_CONTENT:
     case LWS_UFS_FINAL_CONTENT: {
       cb = &fp->cb.content;
-      if(cb->ctx) {
+
+      if(cb->ctx)
         if(len > 0)
           args[1] = JS_NewArrayBufferCopy(cb->ctx, (uint8_t*)buf, len);
-      }
+
       break;
     }
 
     case LWS_UFS_OPEN: {
       cb = &fp->cb.open;
+
       if(cb->ctx) {
         if(!JS_IsUndefined(fp->file)) {
           if(fp->cb.close.ctx) {
@@ -32,31 +34,37 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
             JSValue ret = callback_emit(&fp->cb.close, 2, args);
             JS_FreeValue(cb->ctx, ret);
           }
+
           JS_FreeValue(cb->ctx, fp->file);
           fp->file = JS_UNDEFINED;
         }
+
         if(filename) {
           fp->file = JS_NewString(cb->ctx, filename);
           args[1] = JS_DupValue(cb->ctx, fp->file);
         }
-        if(!JS_IsUndefined(fp->name)) {
 
+        if(!JS_IsUndefined(fp->name)) {
           JS_FreeValue(cb->ctx, fp->name);
           fp->name = JS_UNDEFINED;
         }
-        if(name) {
+
+        if(name)
           fp->name = JS_NewString(cb->ctx, name);
-        }
       }
+
       break;
     }
 
     case LWS_UFS_CLOSE: {
       cb = &fp->cb.close;
+
       if(cb->ctx) {
         // args[0] = JS_DupValue(cb->ctx, fp->name);
+
         if(!JS_IsUndefined(fp->file))
           args[1] = JS_DupValue(cb->ctx, fp->file);
+
         JS_FreeValue(cb->ctx, fp->file);
         fp->file = JS_UNDEFINED;
       }
@@ -67,9 +75,10 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
   if(cb && cb->ctx) {
     JSValue ret;
 
-    /*  if(JS_IsUndefined(fp->name) && name)
-          args[0] = JS_NewString(cb->ctx, name);
-        else*/
+    /*if(JS_IsUndefined(fp->name) && name)
+    args[0] = JS_NewString(cb->ctx, name);
+     else*/
+
     if(JS_IsUndefined(fp->name))
       args[0] = JS_DupValue(cb->ctx, fp->name);
 
@@ -118,9 +127,9 @@ formparser_clear(FormParser* fp, JSRuntime* rt) {
     fp->spa = 0;
   }
 
-  if(fp->spa_create_info.param_names) {
+  if(fp->spa_create_info.param_names)
     js_free_rt(rt, (void*)fp->spa_create_info.param_names);
-  }
+
   memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
 
   FREECB_RT(fp->cb.content);
@@ -139,17 +148,17 @@ formparser_free(FormParser* fp, JSRuntime* rt) {
 
 const char*
 formparser_param_name(FormParser* fp, int index) {
-  if(index >= 0 && index < fp->spa_create_info.count_params) {
+  if(index >= 0 && index < fp->spa_create_info.count_params)
     return fp->spa_create_info.param_names[index];
-  }
+
   return 0;
 }
 
 bool
 formparser_param_valid(FormParser* fp, int index) {
-  if(index >= 0 && index < fp->spa_create_info.count_params) {
+  if(index >= 0 && index < fp->spa_create_info.count_params)
     return true;
-  }
+
   return false;
 }
 
@@ -161,10 +170,11 @@ formparser_param_count(FormParser* fp) {
 int
 formparser_param_index(FormParser* fp, const char* name) {
   int i;
-  for(i = 0; i < fp->spa_create_info.count_params; i++) {
+
+  for(i = 0; i < fp->spa_create_info.count_params; i++)
     if(!strcmp(fp->spa_create_info.param_names[i], name))
       return i;
-  }
+
   return -1;
 }
 
@@ -179,5 +189,6 @@ int
 formparser_process(FormParser* fp, const void* data, size_t len) {
   int retval = lws_spa_process(fp->spa, data, len);
   fp->read += len;
+
   return retval;
 }
