@@ -89,8 +89,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
 
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);
-      /*      if(session)
-              session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);*/
+
       break;
       return 0;
     }
