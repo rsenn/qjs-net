@@ -870,13 +870,25 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(ctx && opaque->ws)
         session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
+
       if(!opaque->req)
         opaque->req = request_fromwsi(wsi, ctx);
+
       if(in) {
         /* opaque->uri = in;
          opaque->uri_len = len ? len : strlen(in);*/
         url_set_path_len(&opaque->req->url, in, len, ctx);
       }
+
+      if(!JS_IsObject(session->ws_obj) && opaque->ws)
+        session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
+
+      if(!JS_IsObject(session->req_obj) && opaque->req)
+        session->req_obj = minnet_request_wrap(ctx, opaque->req);
+
+      if(!JS_IsObject(session->resp_obj) && opaque->resp)
+        session->resp_obj = minnet_request_wrap(ctx, opaque->resp);
+
       url_set_protocol(&opaque->req->url, wsi_tls(wsi) ? "https" : "http");
       break;
     }
@@ -897,7 +909,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_HTTP_BODY: {
       // LOGCB("HTTP", "%slen: %zu parser: %p", wsi_http2(wsi) ? "h2, " : "", len, opaque->form_parser);
 
-      MinnetRequest* req = minnet_request_data2(ctx, session->req_obj);
+      MinnetRequest* req = opaque->req; // minnet_request_data2(ctx, session->req_obj);
       session->in_body = TRUE;
 
       if(len) {
@@ -940,7 +952,14 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         if(fp->cb.finalize.ctx) {
           JSValue ret = server_exception(server, callback_emit(&fp->cb.finalize, 0, 0));
-          JS_FreeValue(fp->cb.finalize.ctx, ret);
+
+          if(minnet_response_data(ret)) {
+            session->resp_obj = ret;
+            opaque->resp = minnet_response_data2(ctx, session->resp_obj);
+            ret = JS_UNDEFINED;
+          } else {
+            JS_FreeValue(fp->cb.finalize.ctx, ret);
+          }
         }
       }
 
@@ -981,7 +1000,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         }
       }*/
 
-      // session_want_write(session, wsi);
+      session_want_write(session, wsi);
       return 0;
     }
 
@@ -1097,14 +1116,22 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         if(mount && mount->lws.origin_protocol == LWSMPRO_CALLBACK) {
           if(cb && cb->ctx)
-            if(req->method == METHOD_GET)
-              ret = serve_callback(cb, session, wsi);
+            // if(req->method == METHOD_GET)
+            ret = serve_callback(cb, session, wsi);
         }
       }
 
       if(callback_valid(&server->on.http)) {
         cb = &server->on.http;
+
+        if(!JS_IsObject(session->ws_obj) && opaque->ws)
+          session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
+
+        // if(!JS_IsObject(session->req_obj) && opaque->req)
+        session->req_obj = minnet_request_wrap(ctx, opaque->req);
+
         JSValue val = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &session->req_obj));
+
         JS_FreeValue(ctx, val);
       }
 
@@ -1141,7 +1168,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         }
 
         ByteBuffer b = BUFFER(buf);
-        session->response_sent = !serve_response(wsi, &b, opaque->resp, ctx, session);
+
+        if(!serve_response(wsi, &b, opaque->resp, ctx, session))
+          return -1;
       }
 
       if(!(qsize = queue_bytes(&session->sendq))) {
@@ -1160,7 +1189,21 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           ret = serve_generator(ctx, session, wsi, &done);
       }
 
-      LOGCB("HTTP(3)", "callback=%" PRIu32 " ret=%d sendq=%zu want_write=%d wait_resolve=%d", session->callback_count, ret, queue_bytes(&session->sendq), session->want_write, session->wait_resolve);
+      LOGCB("HTTP(3)",
+            "callback=%" PRIu32 " %smnt=%s closed=%d complete=%d sendq=%zu wait_resolve=%d"
+            " ret=%d sendq=%zu want_write=%d wait_resolve=%d response_sent=%d",
+            session->callback_count,
+            wsi_http2(wsi) ? "h2, " : "",
+            session->mount ? session->mount->mnt : 0,
+            queue_closed(&session->sendq),
+            queue_complete(&session->sendq),
+            queue_bytes(&session->sendq),
+            session->wait_resolve,
+            ret,
+            queue_bytes(&session->sendq),
+            session->want_write,
+            session->wait_resolve,
+            session->response_sent);
 
       return ret;
 

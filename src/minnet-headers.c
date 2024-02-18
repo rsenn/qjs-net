@@ -215,7 +215,7 @@ minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValue
     if(magic == HEADERS_ENTRIES) {
       entry = JS_NewArray(ctx);
       JS_SetPropertyUint32(ctx, entry, 0, name);
-      JS_SetPropertyUint32(ctx, entry, 0, value);
+      JS_SetPropertyUint32(ctx, entry, 1, value);
     } else {
       entry = magic == HEADERS_KEYS ? name : value;
       JS_FreeValue(ctx, magic == HEADERS_KEYS ? value : name);
