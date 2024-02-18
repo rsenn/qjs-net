@@ -228,16 +228,16 @@ JSValue
 generator_next(Generator* gen, JSValueConst arg) {
   JSValue ret = JS_UNDEFINED;
 
-  if(gen->closing && !asynciterator_pending(&gen->iterator)) {
-    ResolveFunctions async;
-    ret = js_async_create(gen->ctx, &async);
-    js_async_resolve(gen->ctx, &async, js_iterator_result(gen->ctx, JS_UNDEFINED, TRUE));
-    js_async_free(JS_GetRuntime(gen->ctx), &async);
-    gen->closing = FALSE;
-    gen->closed = TRUE;
-    return ret;
-  }
-
+  /* if(gen->closing && !asynciterator_pending(&gen->iterator)) {
+     ResolveFunctions async;
+     ret = js_async_create(gen->ctx, &async);
+     js_async_resolve(gen->ctx, &async, js_iterator_result(gen->ctx, JS_UNDEFINED, TRUE));
+     js_async_free(JS_GetRuntime(gen->ctx), &async);
+     gen->closing = FALSE;
+     gen->closed = TRUE;
+     return ret;
+   }
+ */
   ret = asynciterator_next(&gen->iterator, arg, gen->ctx);
 
   if(!start_executor(gen) && !gen->started) {
@@ -248,10 +248,11 @@ generator_next(Generator* gen, JSValueConst arg) {
   int n = gen->q ? generator_update(gen) : 0;
 
   if(n == 0) {
-    if(gen->closing) {
-      asynciterator_emplace(&gen->iterator, JS_UNDEFINED, TRUE, gen->ctx);
-      gen->closing = FALSE;
-      gen->closed = TRUE;
+    if(gen->closing || gen->closed) {
+      if(asynciterator_emplace(&gen->iterator, JS_UNDEFINED, TRUE, gen->ctx)) {
+        gen->closing = FALSE;
+        gen->closed = TRUE;
+      }
     }
   }
 
