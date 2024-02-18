@@ -5,7 +5,7 @@ const args = [...(globalThis.scriptArgs ?? process.argv)];
 const host = args[1] ?? 'localhost',
   port = args[2] ? +args[2] : 30000;
 
-//setLog(LLL_USER, (level, message) => /(HTTP|WS)/.test(message) && console.log('LOG', message));
+//  setLog(LLL_USER, (level, message) => /(HTTP|WS)/.test(message) && console.log('LOG', message));
 
 const log = (fnName, ...args) => console.log(`\x1b[1;33m${fnName}\x1b[0m`, ...args);
 
@@ -35,15 +35,19 @@ createServer({
             onOpen(fp, name) {
               log('onOpen', name);
               this.name = name;
+this.data=new Generator(() => {});
 
+const{data}=this;
               /*const params = this.params;
             log('onOpen', { params: params.map(n => [n, this[n]]) });*/
 
-              push({ name });
+              push([name,data]);
             },
             onContent(fp, buf) {
-              const { name } = this;
+              const { name,data } = this;
               log('onContent', buf);
+
+data.write(buf);
 
               /* const params = this.params;
             log('onContent', { params: params.map(n => [n, this[n]]) });*/
@@ -57,7 +61,10 @@ createServer({
             onFinalize(fp) {
               const { name } = this;
               const resp = new Response('done', { status: 200 });
+ 
               log('onFinalize', resp);
+ stop();
+
               return resp;
             }
           }
@@ -65,8 +72,13 @@ createServer({
       });
 
       (async function() {
-        for await(let data of await gen) {
-          console.log('Gen', data);
+        for await(let [name,data] of await gen) {
+          console.log('Gen', name,data);
+
+          for await(let chunk of data) {
+console.log('chunk', chunk);
+            
+          }
         }
       })();
     } else {
