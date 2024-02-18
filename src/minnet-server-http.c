@@ -1223,12 +1223,13 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_CLOSED_HTTP: {
-      /* if(session->wait_resolve_ptr) {
-         *session->wait_resolve_ptr = 0;
-         session->wait_resolve_ptr = 0;
-       }*/
-      if(session)
+      /*if(session)
         session_clear(session, JS_GetRuntime(ctx));
+
+      if(opaque)
+        opaque_free(opaque, JS_GetRuntime(ctx));*/
+
+      return -1;
 
       // lws_close_free_wsi(wsi, LWS_CLOSE_STATUS_NOSTATUS, __func__);
       ret = -1;

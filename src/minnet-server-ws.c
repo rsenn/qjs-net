@@ -97,16 +97,18 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
 
     case LWS_CALLBACK_WSI_DESTROY: {
 
-      /*   if((opaque = lws_get_opaque_user_data(wsi)))*/ {
-        if(opaque->ws)
-          opaque->ws->lwsi = 0;
+      if(opaque->ws)
+        opaque->ws->lwsi = 0;
 
+      lws_set_opaque_user_data(wsi, 0);
+
+      /*if(opaque->sess) {
+        session_clear(opaque->sess, JS_GetRuntime(ctx));
         opaque->sess = 0;
+      }*/
 
-        lws_set_opaque_user_data(wsi, 0);
+      opaque_free(opaque, JS_GetRuntime(ctx));
 
-        opaque_free(opaque, JS_GetRuntime(ctx));
-      }
       return 0;
     }
 

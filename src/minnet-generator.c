@@ -176,10 +176,12 @@ static const JSCFunctionListEntry minnet_generator_proto_funcs[] = {
 
 JSValue
 minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
-  JSValue proto, ret;
-  static const char* method_names[] = {"next", "return", "throw"};
-
-  proto = js_asyncgenerator_prototype(ctx);
+  static const char* method_names[] = {
+      "next",
+      "return",
+      "throw",
+  };
+  JSValue ret, proto = js_asyncgenerator_prototype(ctx);
   ret = JS_NewObjectProto(ctx, proto);
   JS_FreeValue(ctx, proto);
 

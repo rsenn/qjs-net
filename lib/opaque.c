@@ -19,16 +19,19 @@ opaque_clear(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
     opaque->ws = 0;
     ws_free(ws, rt);
   }
+
   if(opaque->req) {
     Request* req = opaque->req;
     opaque->req = 0;
     request_free(req, rt);
   }
+
   if(opaque->resp) {
     Response* resp = opaque->resp;
     opaque->resp = 0;
     response_free(resp, rt);
   }
+
   if(opaque->form_parser) {
     formparser_free(opaque->form_parser, rt);
     opaque->form_parser = 0;
