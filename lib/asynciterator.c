@@ -64,11 +64,12 @@ asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
 
   ret = js_async_create(ctx, &async);
 
-  if(it->closed) {
+  if(it->closing || it->closed) {
     assert(list_empty(&it->reads));
     js_async_resolve(ctx, &async, js_iterator_result(ctx, JS_UNDEFINED, TRUE));
     js_async_free(JS_GetRuntime(ctx), &async);
-    // it->closed = TRUE;
+   it->closed = TRUE;
+   it->closing = TRUE;
   } else {
 
     if(!(rd = js_malloc(ctx, sizeof(AsyncRead))))
