@@ -1211,6 +1211,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
+      // session_clear(session, ctx);
       // opaque_clear(opaque, ctx);
       break;
     }
