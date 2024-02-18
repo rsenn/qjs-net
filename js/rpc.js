@@ -3,7 +3,7 @@ const StringLength = str => str.replace(/\x1b\[[^m]*m/g, '').length;
 const PadEnd = (str, n, ch = ' ') => str + ch.repeat(Math.max(0, n - StringLength(str)));
 const Color = (str, ...args) => `\x1b[${args.join(';')}m${str}\x1b[0m`;
 const IsUpper = s => s.toUpperCase(s) == s;
-const Log = (...args) => console.log(console.config({ compact: 0, depth: 4, maxArrayLength: 2, maxStringLength: Infinity }), ...args);
+const Log = (...args) => console.log(/*console.config({ compact: 0, depth: 4, maxArrayLength: 2, maxStringLength: Infinity }),*/ ...args);
 const LogMethod = (className, method, ...args) =>
   Log(
     PadEnd(
