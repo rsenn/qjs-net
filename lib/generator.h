@@ -60,4 +60,13 @@ generator_stopped(Generator* gen) {
   return gen->closing || gen->closed;
 }
 
+static inline uint32_t
+generator_written(Generator* gen) {
+  return gen->bytes_written;
+}
+static inline uint32_t
+generator_read(Generator* gen) {
+  return gen->bytes_read;
+}
+
 #endif /* QJSNET_LIB_GENERATOR_H */

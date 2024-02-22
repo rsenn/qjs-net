@@ -516,6 +516,7 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
 
 static int
 serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, BOOL* done_p) {
+  int result = 0;
 
   DBG("callback=%" PRIu32 " run=%" PRIu32 " done=%s wait_resolve=%i closed=%s complete=%s",
       session->callback_count,
@@ -529,7 +530,7 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
   assert(!queue_complete(&session->sendq));
 
   if(session->wait_resolve)
-    return 0;
+    return result;
 
   if(JS_IsObject(session->generator) && !queue_complete(&session->sendq)) {
     session->next = JS_UNDEFINED;
@@ -549,17 +550,20 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
         JSValue exception = JS_GetException(ctx);
         js_error_print(ctx, exception);
         *done_p = TRUE;
+        result = 1;
       } else {
         JSBuffer out = JS_BUFFER_DEFAULT();
+
         if(js_buffer_from(ctx, &out, ret)) {
           DBG("out={ .data = '%.*s', .size = %zu }", (int)(out.size > 255 ? 255 : out.size), out.size > 255 ? &out.data[out.size - 255] : out.data, out.size);
+
           queue_write(&session->sendq, out.data, out.size, ctx);
         }
+
         js_buffer_free(&out, JS_GetRuntime(ctx));
       }
+
       JS_FreeValue(ctx, ret);
-      if(*done_p)
-        queue_close(&session->sendq);
 
       break; /* XXX: generate multiple? */
     }
@@ -569,13 +573,13 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
 
   DBG("wait_resolve=%d sendq=%zu done=%s", session->wait_resolve, queue_bytes(&session->sendq), *done_p ? "TRUE" : "FALSE");
 
-  if(!session->wait_resolve && queue_bytes(&session->sendq))
+  if(!session->wait_resolve && (queue_bytes(&session->sendq) || *done_p))
     session_want_write(session, wsi);
 
   if(session->wait_resolve)
     lws_set_timeout(wsi, PENDING_TIMEOUT_HTTP_CONTENT, 30);
 
-  return 0;
+  return result;
 }
 
 static int
@@ -588,8 +592,10 @@ serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
     case ASYNC_GENERATOR:
     case GENERATOR: {
       BOOL done = FALSE;
+
       if(serve_generator(cb->ctx, session, wsi, &done))
         return 1;
+
       break;
     }
 
@@ -633,14 +639,15 @@ static int
 serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext* ctx, struct session_data* session) {
   struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
   lws_filepos_t content_len = LWS_ILLEGAL_HTTP_CONTENT_LEN;
+  Queue* q = session_queue(session);
 
   if(session->response_sent)
     return 0;
 
   DBG("status=%d generator=%d", resp->status, resp->body != NULL);
 
-  if(queue_complete(&session->sendq))
-    content_len = queue_bytes(&session->sendq);
+  if(q && queue_complete(q))
+    content_len = queue_bytes(q);
 
   if(resp->status >= 300 && resp->status <= 399) {
     size_t len;
@@ -763,7 +770,8 @@ http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) 
   enum lws_write_protocol n, wp = -1;
   size_t remain = 0;
   ssize_t ret = 0;
-  size_t qsize = queue_bytes(&session->sendq);
+  Queue* q = session_queue(session);
+  size_t qsize = queue_bytes(q);
 
   DBG("callback=%" PRIu32 " generator=%d qsize=%zu done=%d", session->callback_count, resp->body != NULL, qsize, done);
 
@@ -774,7 +782,7 @@ http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) 
     size_t pos = 0;
     BOOL binary = FALSE;
 
-    buf = queue_next(&session->sendq, &done, &binary);
+    buf = queue_next(q, &done, &binary);
 
     while((remain = block_SIZE(&buf) - pos) > 0) {
 
@@ -782,7 +790,7 @@ http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) 
       size_t l = wsi_http2(wsi) ? (remain > 1024 ? 1024 : remain) : remain;
 
       if(l > 0) {
-        wp = queue_complete(&session->sendq) && remain == l ? LWS_WRITE_HTTP_FINAL : n;
+        wp = queue_complete(q) && remain == l ? LWS_WRITE_HTTP_FINAL : n;
         ret = lws_write(wsi, x, l, wp);
         DBG("len=%zu final=%d ret=%zd data='%.*s'", l, wp == LWS_WRITE_HTTP_FINAL, ret, (int)(l > 32 ? 32 : l), x);
 
@@ -792,11 +800,16 @@ http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) 
     }
 
     block_free(&buf);
+  } else {
+    done = TRUE;
   }
-  DBG("done=%i remain=%zu closed=%d", done, remain, queue_closed(&session->sendq));
 
-  if(done || queue_closed(&session->sendq))
+  DBG("done=%i remain=%zu closed=%d", done, remain, queue_closed(q));
+
+  if(done || queue_closed(q)) {
+    lws_http_transaction_completed(wsi);
     return 1;
+  }
 
   /* if(!done) session_want_write(session, wsi);*/
 
@@ -1143,11 +1156,17 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       MinnetResponse* resp;
       BOOL done = FALSE;
       uint32_t qsize;
+      Queue* q = session_queue(session);
 
-      if(!session->want_write)
-        return 0;
+      if(!session->want_write) {
+        if(q && queue_complete(q))
+          session_want_write(session, wsi);
+        else
+          return 0;
+      }
 
       assert(session->want_write);
+
       session->want_write = FALSE;
 
       LOGCB("HTTP(2)",
@@ -1155,9 +1174,9 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             session->callback_count,
             wsi_http2(wsi) ? "h2, " : "",
             session->mount ? session->mount->mnt : 0,
-            queue_closed(&session->sendq),
-            queue_complete(&session->sendq),
-            queue_bytes(&session->sendq),
+            q ? queue_closed(q) : -1,
+            q ? queue_complete(q) : -1,
+            q ? queue_bytes(q) : -1,
             session->wait_resolve);
 
       if(!session->response_sent) {
@@ -1169,38 +1188,48 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         ByteBuffer b = BUFFER(buf);
 
-        if(!serve_response(wsi, &b, opaque->resp, ctx, session))
-          return -1;
+        if((ret = serve_response(wsi, &b, opaque->resp, ctx, session)))
+          return ret;
       }
 
-      if(!(qsize = queue_bytes(&session->sendq))) {
-        if(!(queue_closed(&session->sendq) || queue_complete(&session->sendq)) && !session->wait_resolve)
+      if(!q || !(qsize = queue_bytes(q))) {
+        if((!q || !(queue_closed(q) || queue_complete(q))) && !session->wait_resolve) {
           ret = serve_generator(ctx, session, wsi, &done);
+
+          if(done && (q = session_queue(session)))
+            queue_close(q);
+        }
       }
 
-      // if(queue_closed(&session->sendq) || queue_size(&session->sendq))
-      if(http_server_writeable(session, wsi, !!queue_closed(&session->sendq)))
+      // if(queue_closed(q) || queue_size(q))
+
+      if(q && http_server_writeable(session, wsi, !!queue_closed(q))) {
         ret = http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, session, in, len);
-      else if(queue_closed(&session->sendq) && queue_complete(&session->sendq))
-        ret = lws_http_transaction_completed(wsi);
+
+        if(queue_size(q) == 0)
+          ret = lws_http_transaction_completed(wsi);
+      }
 
       if(qsize && !session->want_write) {
-        if(!(queue_closed(&session->sendq) || queue_complete(&session->sendq)) && !session->wait_resolve)
+        if(!(queue_closed(q) || queue_complete(q)) && !session->wait_resolve) {
           ret = serve_generator(ctx, session, wsi, &done);
+
+          if(done)
+            queue_close(q);
+        }
       }
 
       LOGCB("HTTP(3)",
             "callback=%" PRIu32 " %smnt=%s closed=%d complete=%d sendq=%zu wait_resolve=%d"
-            " ret=%d sendq=%zu want_write=%d wait_resolve=%d response_sent=%d",
+            " ret=%d want_write=%d wait_resolve=%d response_sent=%d",
             session->callback_count,
             wsi_http2(wsi) ? "h2, " : "",
             session->mount ? session->mount->mnt : 0,
-            queue_closed(&session->sendq),
-            queue_complete(&session->sendq),
-            queue_bytes(&session->sendq),
+            q ? queue_closed(q) : -1,
+            q ? queue_complete(q) : -1,
+            q ? queue_bytes(q) : -1,
             session->wait_resolve,
             ret,
-            queue_bytes(&session->sendq),
             session->want_write,
             session->wait_resolve,
             session->response_sent);

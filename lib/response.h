@@ -36,7 +36,13 @@ static inline Generator*
 response_generator(struct http_response* resp, JSContext* ctx) {
   if(!resp->body)
     resp->body = generator_new(ctx);
+
   return resp->body;
+}
+
+static inline BOOL
+response_body_used(struct http_response* resp) {
+  return resp->body && generator_written(resp->body);
 }
 
 struct http_response* response_new(JSContext*);

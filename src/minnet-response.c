@@ -25,6 +25,8 @@ enum {
   RESPONSE_TYPE,
   RESPONSE_OFFSET,
   RESPONSE_HEADERS,
+  RESPONSE_WRITE,
+  RESPONSE_FINISH,
 };
 
 MinnetResponse*
@@ -111,6 +113,18 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
         generator_continuous(gen, funcs.resolve);
       }
 
+      break;
+    }
+
+    case RESPONSE_WRITE: {
+      ret = generator_push(gen, argv[0]);
+      break;
+    }
+
+    case RESPONSE_FINISH: {
+      BOOL result = generator_finish(gen);
+
+      ret = JS_NewBool(ctx, result);
       break;
     }
   }
@@ -276,13 +290,14 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
     }
 
     case RESPONSE_BODYUSED: {
-      ret = JS_NewBool(ctx, resp->body != NULL);
+      ret = JS_NewBool(ctx, response_body_used(resp));
       break;
     }
 
     case RESPONSE_BODY: {
       if(resp->body)
-        ret = minnet_generator_iterator(ctx, generator_dup(resp->body));
+        ret = minnet_generator_wrap(ctx, generator_dup(resp->body));
+      //    ret = minnet_generator_iterator(ctx, generator_dup(resp->body));
       break;
     }
   }
@@ -424,6 +439,8 @@ static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("location", 1, minnet_response_header, HEADERS_LOCATION),
     JS_CFUNC_MAGIC_DEF("set", 2, minnet_response_header, HEADERS_SET),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
+    JS_CFUNC_MAGIC_DEF("write", 1, minnet_response_method, RESPONSE_WRITE),
+    JS_CFUNC_MAGIC_DEF("finish", 0, minnet_response_method, RESPONSE_FINISH),
     JS_CFUNC_MAGIC_DEF("arrayBuffer", 0, minnet_response_method, RESPONSE_ARRAYBUFFER),
     JS_CFUNC_DEF("clone", 0, minnet_response_clone),
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, minnet_response_iterator),

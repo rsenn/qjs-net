@@ -592,6 +592,7 @@ generator_finish(Generator* gen) {
   }
 
   generator_update(gen);
+  queue_close(gen->q);
 
   return FALSE;
 }
