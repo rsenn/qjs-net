@@ -278,10 +278,10 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
 
     // printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
     if(opaque->status < CLOSING) {
-      // const struct lws_protocols* protocol = lws_get_protocol(ws->lwsi);
+      const struct lws_protocols* protocol = lws_get_protocol(ws->lwsi);
 
-      // if(!strncmp(protocol->name, "ws", 2))
-      lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
+      if(!strncmp(protocol->name, "ws", 2))
+        lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
     }
 
     opaque->status = CLOSED;
@@ -492,7 +492,7 @@ static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_ws_get, 0, WEBSOCKET_PROTOCOL, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_get, 0, WEBSOCKET_ADDRESS, 0),
-    JS_ALIAS_DEF("remoteAddress", "address"),
+    // JS_ALIAS_DEF("remoteAddress", "address"),
     JS_CGETSET_MAGIC_DEF("family", minnet_ws_get, 0, WEBSOCKET_FAMILY),
     JS_CGETSET_MAGIC_DEF("port", minnet_ws_get, 0, WEBSOCKET_PORT),
     JS_CGETSET_MAGIC_FLAGS_DEF("local", minnet_ws_get, 0, WEBSOCKET_LOCAL, 0),
@@ -502,7 +502,7 @@ static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("raw", minnet_ws_get, 0, WEBSOCKET_RAW, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_get, minnet_ws_set, WEBSOCKET_BINARY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, JS_PROP_ENUMERABLE),
-    JS_ALIAS_DEF("remote", "peer"),
+    // JS_ALIAS_DEF("remote", "peer"),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebsocket", JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("CONNECTING", 0, JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("OPEN", 1, JS_PROP_CONFIGURABLE),

@@ -237,7 +237,7 @@ class CLI {
 
         // console.log('onConnect', { remote, repl });
 
-        repl.printStatus(`Connected to ${remote}`);
+        console.log(`Connected to ${remote}`);
 
         if(req) {
           const { url } = req;
@@ -330,8 +330,9 @@ class CLI {
         }
       } catch(e) {}
 
-      repl.printStatus('Message: ' + msg);
+      console.log('Message: ' + msg);
     }
+
     Object.assign(globalThis, {
       get connections() {
         return [...connections];

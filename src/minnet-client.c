@@ -111,10 +111,7 @@ client_free(MinnetClient* client, JSRuntime* rt) {
     JS_FreeValueRT(rt, client->next);
     client->next = JS_UNDEFINED;
 
-    if(client->connect_info.method) {
-      js_free_rt(rt, (void*)client->connect_info.method);
-      client->connect_info.method = 0;
-    }
+    client->connect_info.method = 0;
 
     js_async_free(rt, &client->promise);
 
@@ -123,8 +120,8 @@ client_free(MinnetClient* client, JSRuntime* rt) {
 
     session_clear(&client->session, rt);
 
-    /*    if(--client->iter.ref_count == 0)
-          asynciterator_clear(&client->iter, rt);*/
+    /*if(--client->iter.ref_count == 0)
+      asynciterator_clear(&client->iter, rt);*/
     if(client->gen) {
       generator_free(client->gen);
       client->gen = 0;
@@ -193,7 +190,16 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
   if((ctx = client->context.js))
     opaque = lws_opaque(wsi, ctx);
 
-  LOGCB("CLIENT      ", "fd=%d h2=%i tls=%i len=%zu%s%.*s%s", lws_get_socket_fd(wsi), wsi_http2(wsi), wsi_tls(wsi), len, (in && len) ? " in='" : "", (int)len, (char*)in, (in && len) ? "'" : "");
+  LOGCB("CLIENT      ",
+        "fd=%d h2=%i tls=%i len=%zu%s%.*s%s",
+        lws_get_socket_fd(wsi),
+        wsi_http2(wsi),
+        wsi_tls(wsi),
+        len,
+        (in && len) ? " in='" : "",
+        (int)MIN(32, len),
+        (char*)in,
+        (in && len) ? "'" : "");
 
   switch(reason) {
     case LWS_CALLBACK_GET_THREAD_ID: {
@@ -386,48 +392,64 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE:
     case LWS_CALLBACK_RAW_RX: {
-      BOOL raw = reason == LWS_CALLBACK_RAW_RX;
-      BOOL first = raw || lws_is_first_fragment(wsi), final = raw || lws_is_final_fragment(wsi);
-      BOOL single_fragment = first && final;
-      BOOL binary = raw ? opaque->ws->binary : lws_frame_is_binary(wsi);
+      const raw = reason == LWS_CALLBACK_RAW_RX;
+      const BOOL first = raw || lws_is_first_fragment(wsi), final = raw || lws_is_final_fragment(wsi);
+      const BOOL single_fragment = first && final && !client->line_buffered;
+      // const BOOL binary = !client->line_buffered && (raw ? opaque->ws->binary : lws_frame_is_binary(wsi));
+      const BOOL binary = (!client->line_buffered) && (raw || lws_frame_is_binary(wsi));
+      const BOOL text = !client->binary || client->line_buffered;
 
       if(!single_fragment) {
         if(!client->recvq)
           client->recvq = queue_new(ctx);
 
-        QueueItem* it = first ? queue_write(client->recvq, in, len, ctx) : queue_append(client->recvq, in, len, ctx);
+        QueueItem* it = client->line_buffered ? queue_putline(client->recvq, in, len, ctx) : first ? queue_write(client->recvq, in, len, ctx) : queue_append(client->recvq, in, len, ctx);
 
-        it->binary = binary;
+        // it->binary = binary;
       }
 
       if(final) {
         JSValue msg;
 
-        if(!single_fragment) {
+        while(single_fragment || queue_size(client->recvq)) {
           BOOL done = FALSE;
-          ByteBlock blk = queue_next(client->recvq, &done, &binary);
-          msg = binary ? block_toarraybuffer(&blk, ctx) : block_tostring(&blk, ctx);
-        } else {
-          msg = binary ? JS_NewArrayBufferCopy(ctx, in, len) : JS_NewStringLen(ctx, in, len);
-        }
 
-        if(client->iter) {
-          if(asynciterator_yield(client->iter, msg, ctx))
-            return 0;
-        }
+          if(!single_fragment) {
+            ByteBlock blk = queue_next(client->recvq, &done, &binary);
+            msg = text ? block_tostring(&blk, ctx) : block_toarraybuffer(&blk, ctx);
+          } else {
+            msg = text ? JS_NewStringLen(ctx, in, len) : JS_NewArrayBufferCopy(ctx, in, len);
+          }
 
-        if(client->on.message.ctx) {
-          JSValue argv[] = {
-              client->session.ws_obj,
-              msg,
-          };
+          /* if(client->iter)
+             if(asynciterator_yield(client->iter, msg, ctx))
+               return 0;*/
 
-          client_exception(client, callback_emit(&client->on.message, countof(argv), argv));
+          if(!(client->gen && generator_yield(client->gen, msg, JS_UNDEFINED))) {
+            if(client->on.message.ctx) {
+              JSValue argv[] = {client->session.ws_obj, msg};
 
-          JS_FreeValue(client->on.message.ctx, argv[1]);
+              client_exception(client, callback_emit(&client->on.message, countof(argv), argv));
+
+              JS_FreeValue(client->on.message.ctx, argv[1]);
+            }
+          }
+
+          if(done || single_fragment)
+            break;
         }
       }
 
+      Queue* q = client->recvq;
+
+      LOGCB("RAW(1)",
+            "closed=%d complete=%d recvq=%zd/%zdb r/w=%zd/%zd",
+            q ? queue_closed(q) : -1,
+            q ? queue_complete(q) : -1,
+            q ? queue_size(q) : -1,
+            q ? queue_bytes(q) : -1,
+            client->gen ? generator_read(client->gen) : -1,
+            client->gen ? generator_written(client->gen) : -1);
       break;
     }
 
@@ -449,6 +471,11 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
         (is_error ? js_async_reject : js_async_resolve)(client->context.js, &client->promise, client->context.error);
         JS_FreeValue(client->context.js, client->context.error);
         client->context.error = JS_UNDEFINED;
+
+        struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
+
+        if(opaque && opaque->ws)
+          opaque->ws->lwsi = 0;
       }
 
       break;
@@ -591,6 +618,7 @@ enum {
   CLIENT_ONREAD,
   CLIENT_ONPOST,
   CLIENT_ONWRITEABLE,
+  CLIENT_LINEBUFFERED,
 };
 
 static JSValue
@@ -630,6 +658,11 @@ minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
       ret = JS_DupValue(ctx, client->on.cb[magic - CLIENT_ONMESSAGE].func_obj);
       break;
     }
+
+    case CLIENT_LINEBUFFERED: {
+      ret = JS_NewBool(ctx, client->line_buffered);
+      break;
+    }
   }
   return ret;
 }
@@ -663,7 +696,13 @@ minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int
 
       break;
     }
+
+    case CLIENT_LINEBUFFERED: {
+      client->line_buffered = JS_ToBool(ctx, value);
+      break;
+    }
   }
+
   return ret;
 }
 
@@ -810,15 +849,10 @@ minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 JSValue
 minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   int argind = 0;
-  JSValue value, ret = JS_NULL;
+  JSValue value, options, ret = JS_UNDEFINED;
   MinnetClient* client = 0;
-  JSValue options;
   struct lws* wsi2;
-  BOOL block = FALSE;
-  // struct wsi_opaque_user_data* opaque = 0;
   MinnetProtocol proto;
-
-  // SETLOG(LLL_INFO)
 
   if(!(client = client_new(ctx)))
     return JS_EXCEPTION;
@@ -881,7 +915,21 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   value = JS_GetPropertyStr(ctx, options, "block");
 
   if(!JS_IsUndefined(value))
-    block = client->block = JS_ToBool(ctx, value);
+    client->blocking = JS_ToBool(ctx, value);
+
+  JS_FreeValue(ctx, value);
+
+  value = JS_GetPropertyStr(ctx, options, "lineBuffered");
+
+  if(!JS_IsUndefined(value))
+    client->line_buffered = JS_ToBool(ctx, value);
+
+  JS_FreeValue(ctx, value);
+
+  value = JS_GetPropertyStr(ctx, options, "binary");
+
+  if(!JS_IsUndefined(value))
+    client->binary = JS_ToBool(ctx, value);
 
   JS_FreeValue(ctx, value);
 
@@ -937,7 +985,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   switch(proto) {
     case PROTOCOL_RAW: {
-      client->connect_info.method = js_strdup(ctx, "RAW");
+      client->connect_info.method = "RAW";
       break;
     }
 
@@ -947,7 +995,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
       value = JS_GetPropertyStr(ctx, options, "method");
       str = JS_ToCString(ctx, value);
-      client->connect_info.method = js_strdup(ctx, JS_IsString(value) ? str : method_string(METHOD_GET));
+      int method_num = JS_IsString(value) ? method_number(str) : METHOD_GET;
+      client->connect_info.method = method_string(METHOD_GET);
       JS_FreeValue(ctx, value);
       JS_FreeCString(ctx, str);
 
@@ -966,7 +1015,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   printf("PROTOCOL: %s\n", client->connect_info.protocol);
 #endif
 
-  if(!block) {
+  if(!client->blocking) {
     ret = js_async_create(ctx, &client->promise);
 
     if(JS_IsNull(client->on.connect.func_obj))
@@ -978,7 +1027,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   errno = 0;
   SyncFetch* c = 0;
 
-  if(block) {
+  if(client->blocking) {
 
     if(!(c = malloc(sizeof(SyncFetch))))
       return JS_ThrowOutOfMemory(ctx);
@@ -1013,7 +1062,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 #endif
 
   if(!client->wsi /*&& !wsi2*/) {
-    if(!block) {
+    if(!client->blocking) {
       if(js_async_pending(&client->promise)) {
         JSValue err = js_error_new(ctx, "[2] Connection failed: %s", strerror(errno));
         js_async_reject(ctx, &client->promise, err);
@@ -1027,12 +1076,13 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   switch(magic) {
     case RETURN_CLIENT: {
-      ret = minnet_client_wrap(ctx, client);
+      if(JS_IsUndefined(ret))
+        ret = minnet_client_wrap(ctx, client);
       break;
     }
 
     case RETURN_RESPONSE: {
-      if(!block) {
+      if(!client->blocking) {
         ResolveFunctions fns;
         ret = js_async_create(ctx, &fns);
 
@@ -1128,6 +1178,7 @@ static const JSCFunctionListEntry minnet_client_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("onfd", minnet_client_get, minnet_client_set, CLIENT_ONFD, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("onhttp", minnet_client_get, minnet_client_set, CLIENT_ONHTTP, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("onwriteable", minnet_client_get, minnet_client_set, CLIENT_ONWRITEABLE, 0),
+    JS_CGETSET_MAGIC_FLAGS_DEF("lineBuffered", minnet_client_get, minnet_client_set, CLIENT_LINEBUFFERED, 0),
     // JS_CFUNC_MAGIC_DEF("[Symbol.asyncIterator]", 0, minnet_client_iterator, CLIENT_ASYNCITERATOR),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetClient", JS_PROP_CONFIGURABLE),
 };
@@ -1143,37 +1194,31 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
 
-  /*
-   if(js_is_promise(ctx, ret)) {
-    JSValue func[2], tmp;
+  if(js_is_promise(ctx, ret)) {
+    /* JSValue func[2], tmp;
 
-    func[0] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
-    func[1] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
+     func[0] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
+     func[1] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
 
-    tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
-    JS_FreeValue(ctx, ret);
-    ret = tmp;
+     tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
+     JS_FreeValue(ctx, ret);
+     ret = tmp;
 
-    tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
-    JS_FreeValue(ctx, ret);
-    ret = tmp;
+     tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
+     JS_FreeValue(ctx, ret);
+     ret = tmp;
 
-    JS_FreeValue(ctx, func[0]);
-    JS_FreeValue(ctx, func[1]);
+     JS_FreeValue(ctx, func[0]);
+     JS_FreeValue(ctx, func[1]);
 
-    closure_free(closure);
-  }*/
+     closure_free(closure);*/
+  } else
 
-  if((cl = closure->pointer)) {
+      if((cl = closure->pointer)) {
 
     ret = minnet_client_wrap(ctx, cl);
-
-    JSValue fn = JS_NewCFunctionMagic(ctx, minnet_client_iterator, "iterator", 0, JS_CFUNC_generic_magic, cl->block ? CLIENT_ITERATOR : CLIENT_ASYNCITERATOR);
-    JSAtom prop = js_symbol_static_atom(ctx, cl->block ? "iterator" : "asyncIterator");
-
-    JS_DefinePropertyValue(ctx, ret, prop, fn, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-    JS_FreeAtom(ctx, prop);
   }
+
   return ret;
 }
 
@@ -1184,9 +1229,13 @@ minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
   if(JS_IsException(ret))
     return JS_EXCEPTION;
 
-  JS_SetOpaque(ret, (client));
+  JS_SetOpaque(ret, client);
 
-  /*JS_SetPropertyFunctionList(ctx, ret, client->block ? minnet_client_sync_funcs : minnet_client_async_funcs, 1);*/
+  JSValue fn = JS_NewCFunctionMagic(ctx, minnet_client_iterator, "iterator", 0, JS_CFUNC_generic_magic, client->blocking ? CLIENT_ITERATOR : CLIENT_ASYNCITERATOR);
+  JSAtom prop = js_symbol_static_atom(ctx, client->blocking ? "iterator" : "asyncIterator");
+
+  JS_DefinePropertyValue(ctx, ret, prop, fn, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+  JS_FreeAtom(ctx, prop);
 
   return ret;
 }

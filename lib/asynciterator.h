@@ -45,8 +45,7 @@ asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   if(list_empty(&it->reads))
     return FALSE;
 
-  asynciterator_emplace(it, value, FALSE, ctx);
-  return TRUE;
+  return asynciterator_emplace(it, value, FALSE, ctx);
 }
 
 static inline BOOL

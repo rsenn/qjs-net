@@ -1,4 +1,4 @@
-import { client, Generator, LLL_CLIENT, LLL_USER, LLL_WARN, logLevels, setLog } from 'net.so';
+import { client, Generator, LLL_CLIENT, LLL_USER, LLL_WARN, LLL_ALL, logLevels, setLog } from 'net.so';
 import { setReadHandler, setWriteHandler } from 'os';
 import { abbreviate, escape } from './common.js';
 import { Init, Levels, log } from './log.js';
@@ -8,7 +8,7 @@ const connections = new Set();
 
 export default function Client(url, options, debug) {
   //log('MinnetClient', { url, options });
-  Init('client.js', typeof debug == 'number' ? debug : LLL_CLIENT | (debug ? LLL_USER : 0));
+  Init('client.js', typeof debug == 'number' ? debug : LLL_CLIENT | (debug ? LLL_USER : 0) | LLL_INFO | LLL_ALL);
 
   let { onConnect, onClose, onError, onRequest, onFd, onMessage, tls = true, sslCert = 'localhost.crt', sslPrivateKey = 'localhost.key', headers = {}, ...opts } = options;
 
@@ -54,6 +54,7 @@ export default function Client(url, options, debug) {
             connections.delete(ws);
 
             if(resolve) resolve({ value: { status, reason, error }, done: true });
+            else stop({ status, reason, error });
 
             onClose ? onClose(ws, status, reason, error) : (log('onClose', { ws, reason }), exit(reason != 1000 && reason != 0 ? 1 : 0));
             pr = reject = resolve = null;

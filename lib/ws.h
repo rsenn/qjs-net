@@ -43,7 +43,10 @@ lws_session(struct lws* wsi) {
 
 static inline struct wsi_opaque_user_data*
 ws_opaque(struct socket* ws) {
-  return ws->lwsi ? lws_get_opaque_user_data(ws->lwsi) : 0;
+  struct wsi_opaque_user_data* opaque = ws->lwsi ? lws_get_opaque_user_data(ws->lwsi) : 0;
+  if(opaque == (void*)1)
+    opaque = 0;
+  return opaque;
 }
 
 static inline struct session_data*

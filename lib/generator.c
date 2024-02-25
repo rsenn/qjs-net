@@ -144,8 +144,17 @@ generator_update(Generator* gen) {
     printf("%-22s i: %i queue: %zu/%zub dequeued: %zu done: %i\n", __func__, i, gen->q ? queue_size(gen->q) : 0, gen->q ? queue_bytes(gen->q) : 0, s, done);
 #endif
 
-    // asynciterator_emplace(&gen->iterator, chunk, done, gen->ctx);
-    done ? asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx) : asynciterator_yield(&gen->iterator, chunk, gen->ctx);
+    asynciterator_emplace(&gen->iterator, chunk, done, gen->ctx);
+    /*if(done) {
+      asynciterator_stop(&gen->iterator, JS_UNDEFINED, gen->ctx);
+      break;
+
+    } else {
+      if(!asynciterator_yield(&gen->iterator, chunk, gen->ctx)) {
+        JS_FreeValue(gen->ctx, chunk);
+        break;
+      }
+    }*/
 
     JS_FreeValue(gen->ctx, chunk);
 
@@ -454,12 +463,16 @@ BOOL
 generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
   ssize_t ret;
 
-  if(gen->closing || gen->closed)
-    return FALSE;
+  /*  if(gen->closing || gen->closed)
+      return FALSE;*/
 
   if(asynciterator_yield(&gen->iterator, value, gen->ctx)) {
     JSBuffer buf = js_input_chars(gen->ctx, value);
     ret = buf.size;
+
+    gen->bytes_read += ret;
+    gen->chunks_read += 1;
+
     js_buffer_free(&buf, JS_GetRuntime(gen->ctx));
   } else {
     if((ret = enqueue_value(gen, value, callback)) < 0)
@@ -521,13 +534,13 @@ generator_stop(Generator* gen, JSValueConst arg) {
         JS_FreeValue(gen->ctx, chunk);
       }
     }
-  } else {
-    if(asynciterator_pending(&gen->iterator))
-      ret = asynciterator_stop(&gen->iterator, arg, gen->ctx);
-    else {
-      gen->closing = TRUE;
-      ret = TRUE;
-    }
+  }
+
+  if(asynciterator_pending(&gen->iterator))
+    ret = asynciterator_stop(&gen->iterator, arg, gen->ctx);
+  else {
+    gen->closing = TRUE;
+    ret = TRUE;
   }
 
   return ret;

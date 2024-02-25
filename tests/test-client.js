@@ -58,7 +58,7 @@ function main(...args) {
           });
         }
       }
-
+      log('arg', arg);
       cli = globalThis.cli = await client(
         arg /*,
         {

@@ -130,8 +130,7 @@ asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContex
     js_async_resolve(ctx, &rd->promise, obj);
     JS_FreeValue(ctx, obj);
     js_free(ctx, rd);
-    // it->serial++;
-    //
+
     return TRUE;
   }
 

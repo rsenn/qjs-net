@@ -37,7 +37,7 @@ typedef struct client_context {
     Generator* gen;
   };
   Queue* recvq;
-  BOOL block : 1, buffering : 1;
+  BOOL blocking, buffering, line_buffered, binary;
   size_t buf_size;
   int lwsret;
 } MinnetClient;

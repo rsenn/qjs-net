@@ -121,6 +121,7 @@ block_append(ByteBlock* blk, const void* data, size_t size) {
     memcpy(start + offset, data, size);
     return size;
   }
+
   return -1;
 }
 

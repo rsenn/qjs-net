@@ -38,6 +38,6 @@ export function wait4(pid, status, options = 0) {
     array: st => status.splice(0, status.length, st),
     object: st => (status.status = st),
     function: st => status(st)
-  })[Array.isArray(status) ? 'array' : typeof status](st);
+  }[Array.isArray(status) ? 'array' : typeof status](st));
   return ret;
 }

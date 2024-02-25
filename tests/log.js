@@ -1,4 +1,4 @@
-import { LLL_CLIENT, LLL_DEBUG, LLL_ERR, LLL_EXT, LLL_HEADER, LLL_INFO, LLL_LATENCY, LLL_NOTICE, LLL_PARSER, LLL_THREAD, LLL_USER, LLL_WARN, setLog } from 'net.so';
+import { LLL_ALL, LLL_CLIENT, LLL_DEBUG, LLL_ERR, LLL_EXT, LLL_HEADER, LLL_INFO, LLL_LATENCY, LLL_NOTICE, LLL_PARSER, LLL_THREAD, LLL_USER, LLL_WARN, setLog } from 'net.so';
 import { err, getenv } from 'std';
 let logName;
 
@@ -34,7 +34,7 @@ export const Init = (name, mask = LLL_USER | ((LLL_CLIENT << 1) - 1)) => {
   if(typeof name == 'string') logName = name;
   mask |= isDebug() ? LLL_USER : 0;
   setLog(
-    mask,
+    mask | LLL_DEBUG | LLL_ALL,
     DebugCallback((level, msg) => {
       let l = Levels[level];
       /*  if(!(level & mask)) return;
