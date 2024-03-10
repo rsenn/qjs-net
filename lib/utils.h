@@ -48,7 +48,7 @@
             args);
 
 //#define DBG(fmt, args...) LOG(__FILE__, FG("%d") "%-38s" NC " " fmt, (((__LINE__ % 220) + 20) & 0xff), __func__, args)
-#define DBG(fmt, args...) lwsl_user("%-25s " fmt, __func__, args);
+#define DBG(fmt, args...) lwsl_debug("%-25s " fmt, __func__, args);
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))

@@ -52,8 +52,16 @@ typedef union {
 
 #define BOOL_OPTION(name, prop, var) \
   JSValue name = JS_GetPropertyStr(ctx, options, prop); \
-  if(!JS_IsUndefined(name)) \
+  if(!JS_IsUndefined(name) && !JS_IsException(name)) \
     var = JS_ToBool(ctx, name); \
+  JS_FreeValue(ctx, name);
+
+#define BOOL_OPTION_DEFAULT(name, prop, var, def) \
+  JSValue name = JS_GetPropertyStr(ctx, options, prop); \
+  if(!JS_IsUndefined(name) && !JS_IsException(name)) \
+    var = JS_ToBool(ctx, name); \
+  else \
+    var = (def); \
   JS_FreeValue(ctx, name);
 
 typedef enum socket_state MinnetStatus;
