@@ -392,7 +392,7 @@ client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, v
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE:
     case LWS_CALLBACK_RAW_RX: {
-      const raw = reason == LWS_CALLBACK_RAW_RX;
+      const int raw = reason == LWS_CALLBACK_RAW_RX;
       const BOOL first = raw || lws_is_first_fragment(wsi), final = raw || lws_is_final_fragment(wsi);
       const BOOL single_fragment = first && final && !client->line_buffered;
       // const BOOL binary = !client->line_buffered && (raw ? opaque->ws->binary : lws_frame_is_binary(wsi));

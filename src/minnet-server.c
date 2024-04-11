@@ -65,7 +65,7 @@ static const struct lws_http_mount mount = {
     /* .cache_intermediaries */ 0,
     /* .origin_protocol */ LWSMPRO_FILE, /* files in a dir */
     /* .mountpoint_len */ 1,             /* char count */
-    /* .basic_auth_login_file */ NULL,
+    /* .basic_auth_login_file */ 0
 };
 
 static const struct lws_extension extension_pmd[] = {
