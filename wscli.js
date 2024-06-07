@@ -82,6 +82,7 @@ function DNSResponse(buffer) {
 class CLI {
   constructor(prompt) {
     this.prompt = prompt + '> ';
+    os.ttySetRaw(1);
   }
 
   getline() {
