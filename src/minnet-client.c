@@ -839,7 +839,7 @@ minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     c->exception = JS_DupValue(ctx, argv[1]);
   }
 
-#ifdef DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT_
   printf("%s fd=%d c=%p c->nfds=%zu\n", __func__, fd, c, c->nfds);
 #endif
 
