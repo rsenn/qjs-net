@@ -108,7 +108,7 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     case RESPONSE_JSON: {
       if(resp->sync) {
         ByteBlock blk = queue_next(gen->q, NULL, NULL);
-        ret = block_fn(&blk, ctx);
+        ret = block_tojson(&blk, ctx);
       } else {
         generator_continuous(gen, funcs.resolve);
       }

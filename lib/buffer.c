@@ -107,9 +107,9 @@ block_tostring(ByteBlock* blk, JSContext* ctx) {
 JSValue
 block_tojson(ByteBlock* blk, JSContext* ctx) {
   ByteBlock mem = block_move((ByteBlock*)blk);
-  JSValue str = JS_ParseJSON(ctx, block_BEGIN(&mem), block_SIZE(&mem), 0);
+  JSValue ret = JS_ParseJSON2(ctx, block_BEGIN(&mem), block_SIZE(&mem), 0, JS_PARSE_JSON_EXT);
   block_free(&mem);
-  return str;
+  return ret;
 }
 
 ssize_t
@@ -225,4 +225,19 @@ uint8_t*
 buffer_grow(ByteBuffer* buf, size_t size) {
   size += buffer_SIZE(buf);
   return buffer_realloc(buf, size);
+}
+
+int
+buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
+  int ret = -1;
+  JSBuffer input = js_input_chars(ctx, value);
+
+  if(input.data == 0 || input.size == 0) {
+    ret = 0;
+  } else if(buffer_append(buf, input.data, input.size) == input.size) {
+    ret = 1;
+  }
+
+  js_buffer_free(&input, JS_GetRuntime(ctx));
+  return ret;
 }

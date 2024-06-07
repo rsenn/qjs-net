@@ -996,7 +996,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       value = JS_GetPropertyStr(ctx, options, "method");
       str = JS_ToCString(ctx, value);
       int method_num = JS_IsString(value) ? method_number(str) : METHOD_GET;
-      client->connect_info.method = method_string(METHOD_GET);
+      client->connect_info.method = method_string(method_num);
       JS_FreeValue(ctx, value);
       JS_FreeCString(ctx, str);
 

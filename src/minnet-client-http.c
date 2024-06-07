@@ -179,7 +179,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
-        resp->body = generator_dup(client_generator(client, ctx));
+        // resp->body = generator_dup(client_generator(client, ctx));
         resp->status = lws_http_client_http_response(wsi);
 
         headers_tobuffer(ctx, &opaque->resp->headers, wsi);
@@ -310,6 +310,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         if(lws_http_is_redirected_to_get(wsi))
           break;
+
         if(JS_IsObject(client->body)) {
           while(!done) {
             value = js_iterator_next(ctx, client->body, &client->next, &done, 0, 0);
@@ -340,7 +341,11 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
             break;
           }
+        } else if(!js_is_nullish(client->body)) {
+          buffer_fromvalue(&buf, client->body, ctx);
+          done = TRUE;
         }
+
         n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
         size = buf.write - buf.start;
         if((r = lws_write(wsi, buf.start, size, (enum lws_write_protocol)n)) != size)

@@ -82,7 +82,7 @@ function DNSResponse(buffer) {
 class CLI {
   constructor(prompt) {
     this.prompt = prompt + '> ';
-    os.ttySetRaw(1);
+    //os.ttySetRaw(1);
   }
 
   getline() {
@@ -215,6 +215,8 @@ class CLI {
           }));
 
           repl = globalThis.repl = new module.REPL(GetPrompt(remote));
+*/
+ repl=new CLI(remote);
 
           repl.run(data => {
             if(command) return repl.evalAndPrint(data);
@@ -232,10 +234,10 @@ class CLI {
             repl.prompt = repl.ps1 = GetPrompt(remote) + '> ';
             repl.readlinePrintPrompt();
           };
-        } catch(err) {
+   /*     } catch(err) {
           console.log('error:', err.message + '\n' + err.stack);
-        }*/
-
+        }
+*/
         // console.log('onConnect', { remote, repl });
 
         console.log(`Connected to ${remote}`);
@@ -324,14 +326,14 @@ class CLI {
     });
 
     function PrintMessage(msg) {
-      try {
+     try {
         if(/^{.*}\s*$/gm.test(msg)) {
-          let obj = JSON.parse(msg);
-          msg = inspect(obj, { colors: true, depth: Infinity, compact: 3 });
-        }
+          msg = JSON.parse(msg);
+         }
       } catch(e) {}
 
-      console.log('Message: ' + msg);
+repl.printStatus('Message:',console.config({compact:false}), msg);
+      //console.log('Message: ' + msg);
     }
 
     Object.assign(globalThis, {

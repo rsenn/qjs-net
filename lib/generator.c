@@ -2,6 +2,7 @@
  * @file generator.c
  */
 #include "generator.h"
+#include "js-utils.h"
 #include <assert.h>
 
 static JSValue
@@ -595,7 +596,7 @@ generator_finish(Generator* gen) {
 
   gen->closing = TRUE;
 
-  if((gen->q && gen->q->continuous) && !JS_IsNull(gen->callback)) {
+  if((gen->q && gen->q->continuous) && !js_is_nullish(gen->callback)) {
     BOOL done = FALSE, binary = FALSE;
     JSValue ret = dequeue_value(gen, &done, &binary);
 
