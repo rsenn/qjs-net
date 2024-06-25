@@ -1,7 +1,4 @@
-import { createServer } from 'net';
-import { LLL_USER } from 'net';
-import { logLevels } from 'net';
-import { setLog } from 'net';
+import { createServer, LLL_USER, logLevels, setLog } from 'net';
 import { getenv } from 'std';
 import('console').then(({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 0 } })));
 
