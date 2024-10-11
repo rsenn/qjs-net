@@ -289,49 +289,50 @@ link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${OPENSSL_L
                  ${MBEDTLS_LIBRARY_DIR})
 include_directories(lib ${CMAKE_CURRENT_BINARY_DIR} ${QUICKJS_INCLUDE_DIR}
                     ${LIBWEBSOCKETS_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
-include_directories(libwebsockets/lib/abstract
-libwebsockets/lib/abstract/protocols/smtp
-libwebsockets/lib/core
-libwebsockets/lib/core-net
-libwebsockets/lib/cose
-libwebsockets/lib/drivers/led
-libwebsockets/lib/event-libs
-libwebsockets/lib/event-libs/glib
-libwebsockets/lib/event-libs/libev
-libwebsockets/lib/event-libs/libevent
-libwebsockets/lib/event-libs/libuv
-libwebsockets/lib/event-libs/poll
-libwebsockets/lib/event-libs/sdevent
-libwebsockets/lib/event-libs/uloop
-libwebsockets/lib/jose
-libwebsockets/lib/jose/jwe
-libwebsockets/lib/jose/jws
-libwebsockets/lib/misc/cache-ttl
-libwebsockets/lib/misc/fts
-libwebsockets/lib/misc/lwsac
-libwebsockets/lib/plat/freertos
-libwebsockets/lib/plat/optee
-libwebsockets/lib/plat/unix
-libwebsockets/lib/plat/windows
-libwebsockets/lib/roles
-libwebsockets/lib/roles/cgi
-libwebsockets/lib/roles/dbus
-libwebsockets/lib/roles/h1
-libwebsockets/lib/roles/h2
-libwebsockets/lib/roles/http
-libwebsockets/lib/roles/http/compression
-libwebsockets/lib/roles/mqtt
-libwebsockets/lib/roles/raw-proxy
-libwebsockets/lib/roles/ws
-libwebsockets/lib/secure-streams
-libwebsockets/lib/system/async-dns
-libwebsockets/lib/system/dhcpclient
-libwebsockets/lib/system/fault-injection
-libwebsockets/lib/system/metrics
-libwebsockets/lib/system/smd
-libwebsockets/lib/tls
-libwebsockets/lib/tls/mbedtls
-libwebsockets/lib/tls/openssl)
+include_directories(
+  libwebsockets/lib/abstract
+  libwebsockets/lib/abstract/protocols/smtp
+  libwebsockets/lib/core
+  libwebsockets/lib/core-net
+  libwebsockets/lib/cose
+  libwebsockets/lib/drivers/led
+  libwebsockets/lib/event-libs
+  libwebsockets/lib/event-libs/glib
+  libwebsockets/lib/event-libs/libev
+  libwebsockets/lib/event-libs/libevent
+  libwebsockets/lib/event-libs/libuv
+  libwebsockets/lib/event-libs/poll
+  libwebsockets/lib/event-libs/sdevent
+  libwebsockets/lib/event-libs/uloop
+  libwebsockets/lib/jose
+  libwebsockets/lib/jose/jwe
+  libwebsockets/lib/jose/jws
+  libwebsockets/lib/misc/cache-ttl
+  libwebsockets/lib/misc/fts
+  libwebsockets/lib/misc/lwsac
+  libwebsockets/lib/plat/freertos
+  libwebsockets/lib/plat/optee
+  libwebsockets/lib/plat/unix
+  libwebsockets/lib/plat/windows
+  libwebsockets/lib/roles
+  libwebsockets/lib/roles/cgi
+  libwebsockets/lib/roles/dbus
+  libwebsockets/lib/roles/h1
+  libwebsockets/lib/roles/h2
+  libwebsockets/lib/roles/http
+  libwebsockets/lib/roles/http/compression
+  libwebsockets/lib/roles/mqtt
+  libwebsockets/lib/roles/raw-proxy
+  libwebsockets/lib/roles/ws
+  libwebsockets/lib/secure-streams
+  libwebsockets/lib/system/async-dns
+  libwebsockets/lib/system/dhcpclient
+  libwebsockets/lib/system/fault-injection
+  libwebsockets/lib/system/metrics
+  libwebsockets/lib/system/smd
+  libwebsockets/lib/tls
+  libwebsockets/lib/tls/mbedtls
+  libwebsockets/lib/tls/openssl)
 
 file(GLOB JS_BINDINGS_SOURCES lib/*.[ch] src/minnet*.[ch])
 
