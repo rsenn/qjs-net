@@ -236,7 +236,6 @@ minnet_default_fd_callback(JSContext* ctx) {
   JSValue os = js_global_get(ctx, "os");
 
   if(JS_IsObject(os)) {
-
     struct FDCallbackClosure* closure;
 
     if(!(closure = js_malloc(ctx, sizeof(struct FDCallbackClosure))))
@@ -247,19 +246,7 @@ minnet_default_fd_callback(JSContext* ctx) {
     closure->set_write = JS_GetPropertyStr(ctx, os, "setWriteHandler");
     closure->set_handler = *((void**)JS_VALUE_GET_OBJ(closure->set_read) + 7);
 
-    /*  closure->set_write_handler=*(void**)&JS_VALUE_GET_OBJ( closure->set_write)->u;
-     */
-
     return js_function_cclosure(ctx, minnet_fd_callback_closure, 3, 0, closure, minnet_fd_callback_free);
-
-    /*  JSValueConst data[4] = {
-          JS_GetPropertyStr(ctx, os, "setReadHandler"),
-          JS_GetPropertyStr(ctx, os, "setWriteHandler"),
-          JS_UNDEFINED,
-          JS_UNDEFINED,
-      };
-
-      return JS_NewCFunctionData(ctx, minnet_fd_callback, 3, 0, countof(data), data);*/
   }
 
   return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
@@ -271,7 +258,6 @@ minnet_log_callback(int level, const char* line) {
     size_t n = 0, len = strlen(line);
 
     if(JS_IsFunction(minnet_log_ctx, minnet_log_cb)) {
-
       n = skip_brackets(line, len);
       line += n;
       len -= n;
