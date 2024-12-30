@@ -201,7 +201,7 @@ import('console').then(({ Console }) => { globalThis.console = new Console(err, 
               console.log('onRequest', { req, rsp });
             },
             onFd: (fd, rd, wr) => {
-              //log('onFd', { fd, rd, wr });
+              console.log('onFd', { fd, rd, wr });
               setReadHandler(fd, rd);
               setWriteHandler(fd, wr);
             },

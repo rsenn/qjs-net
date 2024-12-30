@@ -21,7 +21,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   union closure* closure = opaque;
   MinnetClient* client = closure->pointer;
 
-#ifdef DEBUT_OUTPUT
+#ifdef DEBUG_OUTPUT
   printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
 #endif
 
@@ -109,7 +109,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
 
   JS_FreeValue(ctx, args[1]);
 
-#ifdef DEBUT_OUTPUT
+#ifdef DEBUG_OUTPUT
   printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->pointer);
 #endif
 

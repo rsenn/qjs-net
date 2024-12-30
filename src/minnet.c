@@ -406,7 +406,7 @@ minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
   list_for_each_prev(el, &opaque_list) {
     struct wsi_opaque_user_data* opaque = list_entry(el, struct wsi_opaque_user_data, link);
-#ifdef DEBUT_OUTPUT
+#ifdef DEBUG_OUTPUT
     printf("%s @%u #%" PRId64 " %p\n", __func__, i, opaque->serial, opaque);
 #endif
 

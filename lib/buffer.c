@@ -241,3 +241,18 @@ buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
   js_buffer_free(&input, JS_GetRuntime(ctx));
   return ret;
 }
+
+void
+buffer_avail(ByteBuffer* buf) {
+  return buf->end - buf->write;
+}
+
+void
+buffer_remain(ByteBuffer* buf) {
+  return buf->write - buf->read;
+}
+
+void
+buffer_bytes(ByteBuffer* buf) {
+  return buf->write - buf->start;
+}
