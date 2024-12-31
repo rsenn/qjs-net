@@ -933,7 +933,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
         }
       }
 
-      if(server->on.read.ctx) {
+      if(callback_valid(&server->on.read)) {
         JSValue args[] = {
             JS_NewStringLen(server->on.read.ctx, in, len),
         };
@@ -957,7 +957,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
       if((fp = opaque->form_parser)) {
         lws_spa_finalize(fp->spa);
 
-        if(fp->cb.finalize.ctx) {
+        if(callback_valid(&fp->cb.finalize)) {
           JSValue ret = minnet_server_exception(server, callback_emit(&fp->cb.finalize, 0, 0));
 
           if(minnet_response_data(ret)) {
@@ -990,7 +990,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
         generator_stop(req->body, JS_UNDEFINED);
       }
 
-      if(server->on.post.ctx) {
+      if(callback_valid(&server->on.post)) {
         JSValue args[] = {
             minnet_generator_iterator(server->on.post.ctx, gen),
         };

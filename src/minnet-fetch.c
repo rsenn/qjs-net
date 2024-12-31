@@ -22,7 +22,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   MinnetClient* client = closure->pointer;
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG                    %-22s magic=%s client=%p", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
+  lwsl_user("DEBUG                    %-22s magic=%s client=%p", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : magic == ON_CLOSE ? "ON_CLOSE" : "ON_FD", client);
 #endif
 
   switch(magic) {
@@ -96,9 +96,9 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   handlers[0] = js_function_cclosure(ctx, &fetch_handler, 2, ON_HTTP, closure_dup(cc), closure_free);
   handlers[1] = js_function_cclosure(ctx, &fetch_handler, 2, ON_ERROR, closure_dup(cc), closure_free);
   handlers[2] = js_function_cclosure(ctx, &fetch_handler, 2, ON_CLOSE, closure_dup(cc), closure_free);
-  handlers[3] = js_function_cclosure(ctx, &fetch_handler, 3, ON_FD, closure_dup(cc), closure_free);
+  // handlers[3] = js_function_cclosure(ctx, &fetch_handler, 3, ON_FD, closure_dup(cc), closure_free);
 
-  JS_SetPropertyStr(ctx, args[1], "onHttp", handlers[0]);
+  JS_SetPropertyStr(ctx, args[1], "onResponse", handlers[0]);
   JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);
   JS_SetPropertyStr(ctx, args[1], "onClose", handlers[2]);
   // JS_SetPropertyStr(ctx, args[1], "onFd", handlers[3]);

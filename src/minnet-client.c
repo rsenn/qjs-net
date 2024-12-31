@@ -27,6 +27,92 @@ static const struct lws_protocols client_protocols[] = {
     LWS_PROTOCOL_LIST_TERM,
 };
 
+enum {
+  CLIENT_ASYNCITERATOR,
+  CLIENT_ITERATOR,
+};
+
+typedef struct {
+  JSValue msg;
+  JSContext* ctx;
+} MessageClosure;
+
+typedef struct {
+  size_t nfds;
+  struct pollfd* pfds;
+  int ref_count;
+  BOOL touched;
+  JSValue exception;
+} SyncFetch;
+
+static SyncFetch*
+synchfetch_dup(SyncFetch* c) {
+  ++c->ref_count;
+  return c;
+}
+
+static void
+synchfetch_free(void* ptr) {
+  SyncFetch* c = ptr;
+
+  if(--c->ref_count == 0) {
+    memset(c, 0, sizeof(SyncFetch));
+    free(c);
+  }
+}
+
+static ssize_t
+synchfetch_indexpollfd(SyncFetch* c, int fd) {
+  size_t i;
+
+  for(i = 0; i < c->nfds; i++)
+    if(c->pfds[i].fd == fd)
+      return i;
+
+  return -1;
+}
+
+static struct pollfd*
+synchfetch_getpollfd(SyncFetch* c, int fd) {
+  ssize_t i;
+
+  if((i = synchfetch_indexpollfd(c, fd)) == -1)
+    return 0;
+
+  return &c->pfds[i];
+}
+
+static void
+synchfetch_setevents(SyncFetch* c, int fd, int events) {
+  struct pollfd* pfd;
+
+  if(!(pfd = synchfetch_getpollfd(c, fd))) {
+    c->pfds = realloc(c->pfds, (c->nfds + 1) * sizeof(struct pollfd));
+    assert(c->pfds);
+    c->pfds[c->nfds] = (struct pollfd){fd, 0, 0};
+    pfd = &c->pfds[c->nfds++];
+  }
+
+  if(pfd->events != events) {
+    pfd->events = events;
+    c->touched = TRUE;
+  }
+}
+
+static void
+synchfetch_removefd(SyncFetch* c, int fd) {
+  size_t n;
+  ssize_t i = synchfetch_indexpollfd(c, fd);
+
+  assert(i != -1);
+
+  if((n = (c->nfds - (i + 1))))
+    memcpy(&c->pfds[i], &c->pfds[i + 1], n * sizeof(struct pollfd));
+
+  --c->nfds;
+  c->touched = TRUE;
+}
+
 static JSValue
 close_status(JSContext* ctx, const char* in, size_t len) {
   if(len >= 2)
@@ -83,11 +169,6 @@ minnet_client_new(JSContext* ctx) {
 
   return client;
 }
-/*
-void
-minnet_client_free(MinnetClient* client, JSContext* ctx) {
-  return minnet_client_free(client, JS_GetRuntime(ctx));
-}*/
 
 void
 minnet_client_free(MinnetClient* client, JSRuntime* rt) {
@@ -97,10 +178,6 @@ minnet_client_free(MinnetClient* client, JSRuntime* rt) {
     lwsl_user("DEBUG %-22s client=%p\n", __func__, client);
 #endif
 
-    // if(client->link.prev) list_del(&client->link);
-
-    /*JS_FreeValueRT(rt, client->headers);
-    client->headers = JS_UNDEFINED;*/
     JS_FreeValueRT(rt, client->body);
     client->body = JS_UNDEFINED;
     JS_FreeValueRT(rt, client->next);
@@ -115,8 +192,6 @@ minnet_client_free(MinnetClient* client, JSRuntime* rt) {
 
     session_clear(&client->session, rt);
 
-    /*if(--client->iter.ref_count == 0)
-      asynciterator_clear(&client->iter, rt);*/
     if(client->gen) {
       generator_free(client->gen);
       client->gen = 0;
@@ -129,7 +204,6 @@ minnet_client_free(MinnetClient* client, JSRuntime* rt) {
 void
 minnet_client_zero(MinnetClient* client) {
   client->ref_count = 1;
-  /*client->headers = JS_NULL;*/
   client->body = JS_NULL;
   client->next = JS_NULL;
 
@@ -141,14 +215,14 @@ minnet_client_zero(MinnetClient* client) {
 
   if(client->gen)
     generator_free(client->gen);
-  client->gen = 0;
 
-  // asynciterator_zero(&client->iter);
+  client->gen = 0;
 }
 
 MinnetClient*
 minnet_client_dup(MinnetClient* client) {
   ++client->ref_count;
+
   return client;
 }
 
@@ -157,9 +231,8 @@ minnet_client_generator(MinnetClient* client, JSContext* ctx) {
   if(!client->gen)
     client->gen = generator_new(ctx);
 
-  if(client->buffering) {
+  if(client->buffering)
     generator_buffering(client->gen, client->buf_size);
-  }
 
   return client->gen;
 }
@@ -227,7 +300,6 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
 
     case LWS_CALLBACK_WS_CLIENT_DROP_PROTOCOL:
     case LWS_CALLBACK_RAW_SKT_DROP_PROTOCOL: {
-
       break;
     }
 
@@ -262,6 +334,7 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
         } else {
           client->context.error = JS_NewStringLen(client->context.js, in, len);
         }
+
       } else {
         client->context.error = JS_UNDEFINED;
       }
@@ -337,7 +410,7 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
         JS_FreeValue(ctx, cli);
       }
 
-      if(client->on.connect.ctx) {
+      if(callback_valid(&client->on.connect)) {
         if(reason != LWS_CALLBACK_RAW_CONNECTED)
           client->session.req_obj = minnet_request_wrap(ctx, client->request);
 
@@ -349,14 +422,14 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
 
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
-      if(client->on.writeable.ctx) {
+      if(callback_valid(&client->on.writeable)) {
         JSValue ret = minnet_client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
 
         if(JS_IsBool(ret))
           if(JS_ToBool(ctx, ret) == FALSE)
             client->on.writeable = CALLBACK_INIT(0, JS_NULL, JS_NULL);
 
-        if(client->on.writeable.ctx)
+        if(callback_valid(&client->on.writeable))
           lws_callback_on_writable(wsi);
 
         return 0;
@@ -388,12 +461,14 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
       const BOOL single_fragment = first && final && !client->line_buffered;
       BOOL binary = (!client->line_buffered) && (raw || lws_frame_is_binary(wsi));
       BOOL text = !client->binary || client->line_buffered;
+      Queue* q;
+      QueueItem* it;
 
       if(!single_fragment) {
         if(!client->recvq)
           client->recvq = queue_new(ctx);
 
-        QueueItem* it = client->line_buffered ? queue_putline(client->recvq, in, len, ctx) : first ? queue_write(client->recvq, in, len, ctx) : queue_append(client->recvq, in, len, ctx);
+        it = client->line_buffered ? queue_putline(client->recvq, in, len, ctx) : first ? queue_write(client->recvq, in, len, ctx) : queue_append(client->recvq, in, len, ctx);
       }
 
       if(final) {
@@ -414,7 +489,7 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
             return 0;*/
 
           if(!(client->gen && generator_yield(client->gen, msg, JS_UNDEFINED))) {
-            if(client->on.message.ctx) {
+            if(callback_valid(&client->on.message)) {
               JSValue argv[] = {
                   client->session.ws_obj,
                   msg,
@@ -431,16 +506,16 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
         }
       }
 
-      Queue* q = client->recvq;
+      q = client->recvq;
 
       LOGCB("RAW(1)",
-            "closed=%d complete=%d recvq=%zd/%zdb r/w=%" PRIu32 "/%" PRIu32 "",
+            "closed=%d complete=%d recvq=%zd/%zdb r/w=%" PRIu64 "/%" PRIu64 "",
             q ? queue_closed(q) : -1,
             q ? queue_complete(q) : -1,
             q ? queue_size(q) : -1,
             q ? queue_bytes(q) : -1,
-            client->gen ? generator_read(client->gen) : -1,
-            client->gen ? generator_written(client->gen) : -1);
+            client->gen ? generator_bytes_read(client->gen) : -1,
+            client->gen ? generator_bytes_written(client->gen) : -1);
 
       break;
     }
@@ -502,16 +577,6 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
 
   return ret;
 }
-
-enum {
-  CLIENT_ASYNCITERATOR,
-  CLIENT_ITERATOR,
-};
-
-typedef struct {
-  JSValue msg;
-  JSContext* ctx;
-} MessageClosure;
 
 static void
 message_closure_free(void* ptr) {
@@ -604,6 +669,7 @@ minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
   return ret;
 }
+
 enum {
   CLIENT_REQUEST,
   CLIENT_RESPONSE,
@@ -712,83 +778,8 @@ minnet_client_response(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   JSValue ret = JS_Call(ctx, func_data[0], JS_UNDEFINED, 1, &argv[1]);
 
   JS_FreeValue(ctx, ret);
+
   return JS_NewInt32(ctx, 1);
-}
-
-typedef struct {
-  size_t nfds;
-  struct pollfd* pfds;
-  int ref_count;
-  BOOL touched;
-  JSValue exception;
-} SyncFetch;
-
-static SyncFetch*
-synchfetch_dup(SyncFetch* c) {
-  ++c->ref_count;
-  return c;
-}
-
-static void
-synchfetch_free(void* ptr) {
-  SyncFetch* c = ptr;
-
-  if(--c->ref_count == 0) {
-    memset(c, 0, sizeof(SyncFetch));
-    free(c);
-  }
-}
-
-static ssize_t
-synchfetch_indexpollfd(SyncFetch* c, int fd) {
-  size_t i;
-
-  for(i = 0; i < c->nfds; i++)
-    if(c->pfds[i].fd == fd)
-      return i;
-
-  return -1;
-}
-
-static struct pollfd*
-synchfetch_getpollfd(SyncFetch* c, int fd) {
-  ssize_t i;
-
-  if((i = synchfetch_indexpollfd(c, fd)) == -1)
-    return 0;
-
-  return &c->pfds[i];
-}
-
-static void
-synchfetch_setevents(SyncFetch* c, int fd, int events) {
-  struct pollfd* pfd;
-
-  if(!(pfd = synchfetch_getpollfd(c, fd))) {
-    c->pfds = realloc(c->pfds, (c->nfds + 1) * sizeof(struct pollfd));
-    assert(c->pfds);
-    c->pfds[c->nfds] = (struct pollfd){fd, 0, 0};
-    pfd = &c->pfds[c->nfds++];
-  }
-
-  if(pfd->events != events) {
-    pfd->events = events;
-    c->touched = TRUE;
-  }
-}
-
-static void
-synchfetch_removefd(SyncFetch* c, int fd) {
-  size_t n;
-  ssize_t i = synchfetch_indexpollfd(c, fd);
-
-  assert(i != -1);
-
-  if((n = (c->nfds - (i + 1))))
-    memcpy(&c->pfds[i], &c->pfds[i + 1], n * sizeof(struct pollfd));
-
-  --c->nfds;
-  c->touched = TRUE;
 }
 
 JSValue
@@ -892,6 +883,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
     if(!(context->lws = lws_create_context(&context->info))) {
       lwsl_err("minnet-client: libwebsockets init failed\n");
+
       return JS_ThrowInternalError(ctx, "minnet-client: libwebsockets init failed");
     }
   }
@@ -907,33 +899,33 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsFunction(ctx, client->on.fd.func_obj))
     client->on.fd = CALLBACK_INIT(ctx, minnet_default_fd_callback(ctx), JS_NULL);
 
-  if(!JS_IsUndefined((value = JS_GetPropertyStr(ctx, options, "block"))))
+  if(!js_is_nullish((value = JS_GetPropertyStr(ctx, options, "block"))))
     client->blocking = JS_ToBool(ctx, value);
 
   JS_FreeValue(ctx, value);
 
-  if(!JS_IsUndefined((value = JS_GetPropertyStr(ctx, options, "lineBuffered"))))
+  if(!js_is_nullish((value = JS_GetPropertyStr(ctx, options, "lineBuffered"))))
     client->line_buffered = JS_ToBool(ctx, value);
 
   JS_FreeValue(ctx, value);
 
-  if(!JS_IsUndefined((value = JS_GetPropertyStr(ctx, options, "binary"))))
+  if(!js_is_nullish((value = JS_GetPropertyStr(ctx, options, "binary"))))
     client->binary = JS_ToBool(ctx, value);
 
   JS_FreeValue(ctx, value);
 
-  if(!JS_IsUndefined((value = JS_GetPropertyStr(ctx, options, "body"))))
+  if(!js_is_nullish((value = JS_GetPropertyStr(ctx, options, "body"))))
     client->body = JS_DupValue(ctx, value);
 
   JS_FreeValue(ctx, value);
 
   /*if(JS_IsObject((value = JS_GetPropertyStr(ctx, options, "headers"))))
-     client->headers = JS_DupValue(ctx, value);
+    client->headers = JS_DupValue(ctx, value);
 
-   JS_FreeValue(ctx, value);
+  JS_FreeValue(ctx, value);
 
-   if(JS_IsObject(client->headers))
-     headers_fromobj(&client->request->headers, client->headers, ctx);*/
+  if(JS_IsObject(client->headers))
+    headers_fromobj(&client->request->headers, client->headers, ctx);*/
 
   if(js_has_propertystr(ctx, options, "buffering")) {
     client->buffering = TRUE;
@@ -950,8 +942,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   url_info(client->request->url, &client->connect_info);
 
-  value = JS_GetPropertyStr(ctx, options, "protocol");
-  if(!JS_IsUndefined(value)) {
+  if(!js_is_nullish((value = JS_GetPropertyStr(ctx, options, "protocol")))) {
     const char* str = JS_ToCString(ctx, value);
 
     if(client->connect_info.protocol)

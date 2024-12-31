@@ -88,6 +88,7 @@ deferred_new_x(ptr_t fn, ...) {
   va_list a;
   int argc = 0;
   ptr_t args[8] = {0}, arg;
+
   va_start(a, fn);
 
   while((arg = va_arg(a, void*))) {
@@ -97,12 +98,14 @@ deferred_new_x(ptr_t fn, ...) {
   }
 
   va_end(a);
+
   return deferred_newv(fn, argc, args);
 }
 
 static inline Deferred*
 deferred_dup(Deferred* def) {
   ++def->ref_count;
+
   return def;
 }
 
@@ -127,6 +130,7 @@ deferred_new2(ptr_t fn, ptr_t arg1, ptr_t arg2) {
       arg1,
       arg2,
   };
+
   return deferred_newv(fn, 2, args);
 }
 
@@ -137,6 +141,7 @@ deferred_new3(ptr_t fn, ptr_t arg1, ptr_t arg2, ptr_t arg3) {
       arg2,
       arg3,
   };
+
   return deferred_newv(fn, 3, args);
 }
 #endif /* QJSNET_LIB_DEFERRED_H */

@@ -89,6 +89,9 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
         ret = block_fn(&blk, ctx);
       } else {
         generator_continuous(gen, funcs.resolve);
+
+        if(generator_stopped(gen))
+          generator_finish(gen);
       }
 
       break;
@@ -101,6 +104,9 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
         ret = block_fn(&blk, ctx);
       } else {
         generator_continuous(gen, funcs.resolve);
+
+        if(generator_stopped(gen))
+          generator_finish(gen);
       }
 
       break;
@@ -112,6 +118,9 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
         ret = block_tojson(&blk, ctx);
       } else {
         generator_continuous(gen, funcs.resolve);
+
+        if(generator_stopped(gen))
+          generator_finish(gen);
       }
 
       break;
@@ -286,7 +295,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
 
     case RESPONSE_HEADERS: {
       ret = headers_object(ctx, resp->headers.start, resp->headers.end);
-      //    ret = minnet_headers_wrap(ctx, &resp->headers, response_dup(resp), (HeadersFreeFunc*)&response_free);
+      // ret = minnet_headers_wrap(ctx, &resp->headers, response_dup(resp), (HeadersFreeFunc*)&response_free);
       break;
     }
 
@@ -297,8 +306,8 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
 
     case RESPONSE_BODY: {
       if(resp->body)
-        ret = minnet_generator_wrap(ctx, generator_dup(resp->body));
-      //    ret = minnet_generator_iterator(ctx, generator_dup(resp->body));
+        // ret = minnet_generator_wrap(ctx, generator_dup(resp->body));
+        ret = minnet_generator_iterator(ctx, generator_dup(resp->body));
       break;
     }
   }

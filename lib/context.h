@@ -23,10 +23,10 @@ struct context {
   struct lws_context_creation_info info;
 };
 
-JSValue context_exception(struct context*, JSValue retval);
+JSValue context_exception(struct context*, JSValue);
 void context_clear(struct context*);
 void context_add(struct context*);
 void context_delete(struct context*);
-struct context* context_for_fd(int, struct lws** p_wsi);
+/*struct context* context_for_fd(int, struct lws** p_wsi);*/
 
 #endif /* QJSNET_LIB_CONTEXT_H */

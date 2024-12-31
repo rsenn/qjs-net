@@ -106,6 +106,77 @@ minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValue
   return ret;
 }
 
+enum {
+  GENERATOR_IS_STARTED,
+  GENERATOR_IS_STOPPED,
+  GENERATOR_IS_CONTINUOUS,
+  GENERATOR_IS_BUFFERING,
+  GENERATOR_BYTES_READ,
+  GENERATOR_BYTES_WRITTEN,
+  GENERATOR_CHUNKS_READ,
+  GENERATOR_CHUNKS_WRITTEN,
+  GENERATOR_CHUNK_SIZE,
+};
+
+static JSValue
+minnet_generator_get(JSContext* ctx, JSValueConst this_val, int magic) {
+  MinnetGenerator* gen;
+  JSValue ret = JS_UNDEFINED;
+
+  if(!(gen = minnet_generator_data2(ctx, this_val)))
+    return JS_EXCEPTION;
+
+  switch(magic) {
+    case GENERATOR_IS_STARTED: {
+      ret = JS_NewBool(ctx, generator_started(gen));
+      break;
+    }
+
+    case GENERATOR_IS_STOPPED: {
+      ret = JS_NewBool(ctx, generator_stopped(gen));
+      break;
+    }
+    case GENERATOR_IS_CONTINUOUS: {
+      ret = JS_NewBool(ctx, generator_is_continuous(gen));
+      break;
+    }
+
+    case GENERATOR_IS_BUFFERING: {
+      ret = JS_NewBool(ctx, generator_is_buffering(gen));
+      break;
+    }
+
+    case GENERATOR_BYTES_READ: {
+      ret = JS_NewInt64(ctx, generator_bytes_read(gen));
+      break;
+    }
+
+    case GENERATOR_BYTES_WRITTEN: {
+      ret = JS_NewInt64(ctx, generator_bytes_written(gen));
+      break;
+    }
+
+    case GENERATOR_CHUNKS_READ: {
+      ret = JS_NewUint32(ctx, generator_chunks_read(gen));
+      break;
+    }
+
+    case GENERATOR_CHUNKS_WRITTEN: {
+      ret = JS_NewUint32(ctx, generator_chunks_written(gen));
+      break;
+    }
+
+    case GENERATOR_CHUNK_SIZE: {
+      if(generator_is_buffering(gen))
+        ret = JS_NewUint32(ctx, generator_chunk_size(gen));
+
+      break;
+    }
+
+      return ret;
+  }
+}
+
 static JSValue
 minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
@@ -118,6 +189,7 @@ minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   ret = generator_push(gen, argv[0]);
   // JS_FreeValue(ctx, callback);
+
   return ret;
 }
 
@@ -162,9 +234,9 @@ minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, 
   args[1] = js_function_cclosure(ctx, minnet_generator_stop, 0, 0, generator_dup(gen), (void (*)(void*)) & generator_free);
 
   gen->executor = js_function_bind_argv(ctx, argv[0], 2, args);
-  /*  ret = JS_Call(ctx, argv[0], JS_UNDEFINED, 2, args);
 
-    JS_FreeValue(ctx, ret);*/
+  /*ret = JS_Call(ctx, argv[0], JS_UNDEFINED, 2, args);
+  JS_FreeValue(ctx, ret);*/
 
   if(argc > 1) {
     size_t sz = 4096;
@@ -176,7 +248,6 @@ minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, 
   JS_FreeValue(ctx, args[1]);
 
   return minnet_generator_wrap(ctx, gen);
-  // return minnet_generator_iterator(ctx, gen);
 }
 
 static const JSCFunctionListEntry minnet_generator_iter[] = {
@@ -190,6 +261,15 @@ static const JSCFunctionListEntry minnet_generator_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("continuous", 0, minnet_generator_method, GENERATOR_CONTINUOUS),
     JS_CFUNC_MAGIC_DEF("buffering", 0, minnet_generator_method, GENERATOR_BUFFERING),
     JS_CFUNC_MAGIC_DEF("stop", 0, minnet_generator_method, GENERATOR_STOP),
+    JS_CGETSET_MAGIC_DEF("isStarted", minnet_generator_get, 0, GENERATOR_IS_STARTED),
+    JS_CGETSET_MAGIC_DEF("isStopped", minnet_generator_get, 0, GENERATOR_IS_STOPPED),
+    JS_CGETSET_MAGIC_DEF("isContinuous", minnet_generator_get, 0, GENERATOR_IS_CONTINUOUS),
+    JS_CGETSET_MAGIC_DEF("isBuffering", minnet_generator_get, 0, GENERATOR_IS_BUFFERING),
+    JS_CGETSET_MAGIC_DEF("bytesRead", minnet_generator_get, 0, GENERATOR_BYTES_READ),
+    JS_CGETSET_MAGIC_DEF("bytesWritten", minnet_generator_get, 0, GENERATOR_BYTES_WRITTEN),
+    JS_CGETSET_MAGIC_DEF("chunksRead", minnet_generator_get, 0, GENERATOR_CHUNKS_READ),
+    JS_CGETSET_MAGIC_DEF("chunksWritten", minnet_generator_get, 0, GENERATOR_CHUNKS_WRITTEN),
+    JS_CGETSET_MAGIC_DEF("chunkSize", minnet_generator_get, 0, GENERATOR_CHUNK_SIZE),
     JS_CFUNC_MAGIC_DEF("[Symbol.asyncIterator]", 0, minnet_generator_method, GENERATOR_ITERATOR),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetGenerator", JS_PROP_CONFIGURABLE),
 };

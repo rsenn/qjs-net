@@ -40,7 +40,7 @@ struct wsi_opaque_user_data {
   BOOL writable;
 };
 
-extern THREAD_LOCAL int64_t serial;
+extern THREAD_LOCAL int64_t opaque_serial;
 extern THREAD_LOCAL struct list_head opaque_list;
 
 void opaque_clear(struct wsi_opaque_user_data*, JSRuntime* rt);

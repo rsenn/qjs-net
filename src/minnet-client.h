@@ -77,4 +77,9 @@ minnet_client_data2(JSContext* ctx, JSValueConst obj) {
   return JS_GetOpaque2(ctx, obj, minnet_client_class_id);
 }
 
+static inline struct lws*
+minnet_client_lws(MinnetClient* client) {
+  return client->wsi;
+}
+
 #endif

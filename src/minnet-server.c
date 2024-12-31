@@ -778,7 +778,7 @@ lwsl_user("DEBUG pvo mimetype %s %s\n", pvo->name, pvo->value);
       break;
     }
 
-    if(server->on.fd.ctx)
+    if(callback_valid(&server->on.fd))
       js_std_loop(ctx);
     else
       a = lws_service(server->context.lws, 20);

@@ -10,7 +10,7 @@ static int
 formparser_callback(void* data, const char* name, const char* filename, char* buf, int len, enum lws_spa_fileupload_states state) {
   FormParser* fp = data;
   JSCallback* cb = 0;
-  JSValue args[2] = {JS_NULL, JS_NULL};
+  JSValue result, args[2] = {JS_NULL, JS_NULL};
 
   switch(state) {
     case LWS_UFS_CONTENT:
@@ -29,10 +29,10 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
 
       if(cb->ctx) {
         if(!JS_IsUndefined(fp->file)) {
-          if(fp->cb.close.ctx) {
+          if(callback_valid(&fp->cb.close)) {
             args[1] = fp->file;
-            JSValue ret = callback_emit(&fp->cb.close, 2, args);
-            JS_FreeValue(cb->ctx, ret);
+            result = callback_emit(&fp->cb.close, 2, args);
+            JS_FreeValue(cb->ctx, result);
           }
 
           JS_FreeValue(cb->ctx, fp->file);
@@ -73,7 +73,6 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
   }
 
   if(cb && cb->ctx) {
-    JSValue ret;
 
     /*if(JS_IsUndefined(fp->name) && name)
     args[0] = JS_NewString(cb->ctx, name);
@@ -82,9 +81,9 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
     if(JS_IsUndefined(fp->name))
       args[0] = JS_DupValue(cb->ctx, fp->name);
 
-    ret = callback_emit(cb, 2, args);
+    result = callback_emit(cb, 2, args);
 
-    if(JS_IsException(ret))
+    if(JS_IsException(result))
       js_error_print(cb->ctx, fp->exception = JS_GetException(cb->ctx));
 
     JS_FreeValue(cb->ctx, args[0]);
@@ -96,8 +95,8 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
 
 void
 formparser_init(FormParser* fp, struct socket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
-
   memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
+
   fp->ws = ws_dup(ws);
   fp->spa_create_info.count_params = nparams;
   fp->spa_create_info.param_names = param_names;
@@ -117,6 +116,7 @@ formparser_alloc(JSContext* ctx) {
 
   ret = js_mallocz(ctx, sizeof(FormParser));
   ret->ref_count = 1;
+
   return ret;
 }
 
@@ -188,6 +188,7 @@ formparser_param_exists(FormParser* fp, const char* name) {
 int
 formparser_process(FormParser* fp, const void* data, size_t len) {
   int retval = lws_spa_process(fp->spa, data, len);
+
   fp->read += len;
 
   return retval;

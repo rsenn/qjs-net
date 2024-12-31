@@ -174,7 +174,7 @@ minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, voi
 
       opaque->status = OPEN;
 
-      if(server->on.connect.ctx) {
+      if(callback_valid(&server->on.connect)) {
 
         if(!JS_IsObject(session->ws_obj)) {
           session->ws_obj = opaque->ws ? minnet_ws_wrap(ctx, opaque->ws) : minnet_ws_fromwsi(ctx, wsi);
@@ -248,7 +248,7 @@ minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, voi
     }
 
     case LWS_CALLBACK_RECEIVE_PONG: {
-      if(server->on.pong.ctx) {
+      if(callback_valid(&server->on.pong)) {
         // ws_obj = minnet_ws_fromwsi(server->on.pong.ctx, wsi);
         JSValue msg = JS_NewArrayBufferCopy(server->on.pong.ctx, in, len);
         JSValue args[2] = {

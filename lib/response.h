@@ -42,7 +42,7 @@ response_generator(struct http_response* resp, JSContext* ctx) {
 
 static inline BOOL
 response_body_used(struct http_response* resp) {
-  return resp->body && generator_written(resp->body);
+  return resp->body && generator_bytes_written(resp->body);
 }
 
 struct http_response* response_new(JSContext*);

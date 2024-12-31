@@ -9,14 +9,17 @@
 THREAD_LOCAL struct list_head context_list = {0, 0};
 
 JSValue
-context_exception(struct context* context, JSValue retval) {
-  if(JS_IsException(retval)) {
+context_exception(struct context* context, JSValue value) {
+  if(JS_IsException(value)) {
+    JSValue stack;
+    const char *err, *stk;
+
     context->exception = TRUE;
     context->error = JS_GetException(context->js);
 
-    JSValue stack = JS_GetPropertyStr(context->js, context->error, "stack");
-    const char* err = JS_ToCString(context->js, context->error);
-    const char* stk = JS_ToCString(context->js, stack);
+    stack = JS_GetPropertyStr(context->js, context->error, "stack");
+    err = JS_ToCString(context->js, context->error);
+    stk = JS_ToCString(context->js, stack);
     // printf("Got exception: %s\n%s\n", err, stk);
 
     js_error_print(context->js, context->error);
@@ -29,7 +32,7 @@ context_exception(struct context* context, JSValue retval) {
     js_async_reject(context->js, &context->promise, context->error);
   }
 
-  return retval;
+  return value;
 }
 
 void

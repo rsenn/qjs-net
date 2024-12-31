@@ -68,6 +68,11 @@ queue_gotline(Queue* q) {
   return FALSE;
 }
 
+static inline BOOL
+queue_is_continuous(Queue* q) {
+  return q->continuous;
+}
+
 static inline size_t
 queue_size(Queue* q) {
   return q->size;

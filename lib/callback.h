@@ -37,10 +37,10 @@ typedef struct js_callback {
 
 static inline void
 callback_zero(JSCallback* cb) {
-  cb->ctx = 0;
   cb->this_obj = JS_UNDEFINED;
   cb->func_obj = JS_NULL;
-  cb->name = 0;
+  cb->ctx = NULL;
+  cb->name = NULL;
 }
 
 static inline void
@@ -54,7 +54,7 @@ callback_clear(JSCallback* cb) {
     cb->func_obj = JS_NULL;
   }
 
-  cb->ctx = 0;
+  cb->ctx = NULL;
 }
 
 #undef ERROR
@@ -84,10 +84,10 @@ callbacks_clear(CallbackList* cbs) {
 
 static inline int
 callback_valid(JSCallback const* cb) {
-  return cb->ctx != 0 && JS_IsObject(cb->func_obj);
+  return cb->ctx != NULL && JS_IsObject(cb->func_obj);
 }
 
-JSValue callback_emit_this(const struct js_callback*, JSValue, int, JSValue* argv);
-JSValue callback_emit(const struct js_callback*, int, JSValue*);
+JSValue callback_emit_this(const JSCallback*, JSValue, int, JSValue* argv);
+JSValue callback_emit(const JSCallback*, int, JSValue*);
 
 #endif /* QJSNET_LIB_CALLBACK_H */
