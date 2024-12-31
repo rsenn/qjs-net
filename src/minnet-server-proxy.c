@@ -1,20 +1,6 @@
 #include "minnet-server-proxy.h"
 #include <libwebsockets.h>
 
-typedef struct proxy_msg {
-  lws_dll2_t list;
-  size_t len;
-
-} proxy_msg_t;
-
-typedef struct proxy_conn {
-  struct lws* wsi_ws;
-  struct lws* wsi_raw;
-
-  lws_dll2_owner_t pending_msg_to_ws;
-  lws_dll2_owner_t pending_msg_to_raw;
-} proxy_conn_t;
-
 static MinnetProxyConnection*
 proxy_new() {
   MinnetProxyConnection* pc;
