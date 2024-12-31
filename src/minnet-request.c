@@ -399,7 +399,6 @@ static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
 
 int
 minnet_request_init(JSContext* ctx, JSModuleDef* m) {
-  // Add class Request
   JS_NewClassID(&minnet_request_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);

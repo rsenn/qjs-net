@@ -8,8 +8,7 @@
 #include "formparser.h"
 #include <assert.h>
 
-// static THREAD_LOCAL void* prev_ptr = 0;
-THREAD_LOCAL int64_t serial = 0;
+THREAD_LOCAL int64_t opaque_serial = 0;
 THREAD_LOCAL struct list_head opaque_list = {0, 0};
 
 void
@@ -55,7 +54,7 @@ opaque_new(JSContext* ctx) {
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data)))) {
-    opaque->serial = ++serial;
+    opaque->serial = ++opaque_serial;
     opaque->status = CONNECTING;
     opaque->ref_count = 1;
     opaque->fd = -1;

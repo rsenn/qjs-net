@@ -568,7 +568,6 @@ static const JSCFunctionListEntry minnet_ws_proto_defs[] = {
 
 int
 minnet_ws_init(JSContext* ctx, JSModuleDef* m) {
-  // Add class WebSocket
   JS_NewClassID(&minnet_ws_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
   minnet_ws_proto = JS_NewObject(ctx);

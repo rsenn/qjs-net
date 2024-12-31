@@ -352,7 +352,6 @@ static const JSClassDef minnet_headers_class = {
 
 int
 minnet_headers_init(JSContext* ctx, JSModuleDef* m) {
-  // Add class Headers
   JS_NewClassID(&minnet_headers_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_headers_class_id, &minnet_headers_class);

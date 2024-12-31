@@ -465,7 +465,6 @@ static const JSCFunctionListEntry minnet_response_static_funcs[] = {
 
 int
 minnet_response_init(JSContext* ctx, JSModuleDef* m) {
-  // Add class Response
   JS_NewClassID(&minnet_response_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
 

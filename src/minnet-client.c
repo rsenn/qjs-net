@@ -18,11 +18,7 @@
 THREAD_LOCAL JSValue minnet_client_proto, minnet_client_ctor;
 THREAD_LOCAL JSClassID minnet_client_class_id;
 
-// static JSCallback client_cb_message, client_cb_connect, client_cb_close, client_cb_pong, client_cb_fd;
-
 static int minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len);
-
-static THREAD_LOCAL struct list_head minnet_clients = {0, 0};
 
 static const struct lws_protocols client_protocols[] = {
     {"raw", minnet_client_callback, 0, 0, 0, 0, 0},
@@ -35,6 +31,7 @@ static JSValue
 close_status(JSContext* ctx, const char* in, size_t len) {
   if(len >= 2)
     return JS_NewInt32(ctx, ((uint8_t*)in)[0] << 8 | ((uint8_t*)in)[1]);
+
   return JS_UNDEFINED;
 }
 
@@ -42,6 +39,7 @@ static JSValue
 close_reason(JSContext* ctx, const char* in, size_t len) {
   if(len > 2)
     return JS_NewStringLen(ctx, &in[2], len - 2);
+
   return JS_UNDEFINED;
 }
 
@@ -79,11 +77,7 @@ minnet_client_new(JSContext* ctx) {
 
   minnet_client_zero(client);
 
-  if(minnet_clients.next == NULL)
-    init_list_head(&minnet_clients);
-
-  /*  list_add_tail(&client->link, &minnet_clients);*/
-  context_add(&client->context);
+  context_add(minnet_client_context(client));
 
   client->gen = NULL;
 
@@ -98,8 +92,9 @@ minnet_client_free(MinnetClient* client, JSContext* ctx) {
 void
 minnet_client_free(MinnetClient* client, JSRuntime* rt) {
   if(--client->ref_count == 0) {
+
 #ifdef DEBUG_OUTPUT
-    lwsl_user("DEBUG %s() client=%p\n", __func__, client);
+    lwsl_user("DEBUG %-22s client=%p\n", __func__, client);
 #endif
 
     // if(client->link.prev) list_del(&client->link);
@@ -115,8 +110,8 @@ minnet_client_free(MinnetClient* client, JSRuntime* rt) {
 
     js_async_free(rt, &client->promise);
 
-    context_clear(&client->context);
-    context_delete(&client->context);
+    context_clear(minnet_client_context(client));
+    context_delete(minnet_client_context(client));
 
     session_clear(&client->session, rt);
 
@@ -245,29 +240,31 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);
+
       break;
     }
 
     case LWS_CALLBACK_CLIENT_CLOSED: {
-      if(opaque->status < CLOSED) {
+      if(opaque->status < CLOSED)
         opaque->status = CLOSED;
-      }
     }
 
     case LWS_CALLBACK_RAW_CLOSE:
     case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
-      int32_t result = -1, err = -1;
+      int32_t r32 = -1, err = -1;
+      JSCallback* cb;
 
       if(reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR && in) {
         if(!strncmp("conn fail: ", in, 11)) {
-          err = /*opaque->error =*/atoi(&((const char*)in)[11]);
+          err = atoi(&((const char*)in)[11]);
           client->context.error = JS_NewString(client->context.js, strerror(err));
         } else {
           client->context.error = JS_NewStringLen(client->context.js, in, len);
         }
-      } else
+      } else {
         client->context.error = JS_UNDEFINED;
+      }
 
       opaque->status = CLOSING;
 
@@ -280,14 +277,13 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
           return 0;
       }
 
-      if(js_async_pending(&client->promise)) {
+      if(js_async_pending(&client->promise))
         js_async_reject(ctx, &client->promise, client->context.error);
-      }
 
-      JSCallback* cb = reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR ? &client->on.error : &client->on.close;
+      cb = reason == LWS_CALLBACK_CLIENT_CONNECTION_ERROR ? &client->on.error : &client->on.close;
 
       if(cb->ctx) {
-        JSValue ret;
+        JSValue result;
         int argc = 1;
         JSValueConst argv[4] = {client->session.ws_obj};
 
@@ -298,26 +294,26 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
           argv[argc++] = close_status(ctx, in, len);
           argv[argc++] = close_reason(ctx, in, len);
         }
+
         argv[argc++] = err != -1 ? JS_NewInt32(ctx, err) : JS_UNDEFINED;
 
-        ret = minnet_client_exception(client, callback_emit(cb, argc, argv));
+        result = minnet_client_exception(client, callback_emit(cb, argc, argv));
 
-        if(JS_IsNumber(ret))
-          JS_ToInt32(ctx, &result, ret);
+        if(JS_IsNumber(result))
+          JS_ToInt32(ctx, &r32, result);
 
-        JS_FreeValue(ctx, ret);
+        JS_FreeValue(ctx, result);
 
         while(--argc >= 0)
           JS_FreeValue(ctx, argv[argc]);
       }
 
-      ret = result;
+      ret = r32;
+
       break;
     }
 
     case LWS_CALLBACK_RAW_ADOPT: {
-      // lwsl_user("ADOPT! %s", client->request->url.protocol);
-
       if(strcasecmp(client->request->url.protocol, "udp"))
         break;
     }
@@ -325,14 +321,12 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
     case LWS_CALLBACK_ESTABLISHED:
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
     case LWS_CALLBACK_RAW_CONNECTED: {
-
       opaque->status = OPEN;
 
       if(!JS_IsObject(client->session.ws_obj))
         client->session.ws_obj = opaque->ws ? minnet_ws_wrap(ctx, opaque->ws) : minnet_ws_fromwsi(ctx, wsi);
 
       opaque->ws = minnet_ws_data(client->session.ws_obj);
-
       opaque->ws->raw = reason == LWS_CALLBACK_RAW_CONNECTED;
 
       if(js_async_pending(&client->promise)) {
@@ -349,31 +343,26 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
 
         minnet_client_exception(client, callback_emit(&client->on.connect, 3, &client->session.ws_obj));
       }
-      /*if(!minnet_response_data(sess->resp_obj))*/
+
       break;
     }
 
     case LWS_CALLBACK_CLIENT_WRITEABLE:
     case LWS_CALLBACK_RAW_WRITEABLE: {
       if(client->on.writeable.ctx) {
-        JSValue ret;
-        // opaque->callback = WRITEABLE;
-        ret = minnet_client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
+        JSValue ret = minnet_client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
 
-        if(JS_IsBool(ret)) {
-          if(JS_ToBool(ctx, ret) == FALSE) {
+        if(JS_IsBool(ret))
+          if(JS_ToBool(ctx, ret) == FALSE)
             client->on.writeable = CALLBACK_INIT(0, JS_NULL, JS_NULL);
-          }
-        }
-        // opaque->callback = -1;
 
         if(client->on.writeable.ctx)
           lws_callback_on_writable(wsi);
+
         return 0;
       }
 
-      /*
-      ByteBuffer* buf = &client->session.send_buf;
+      /*ByteBuffer* buf = &client->session.send_buf;
       int ret, size = buffer_REMAIN(buf);
 
       if((ret = lws_write(wsi, buf->read, size, LWS_WRITE_TEXT)) != size) {
@@ -383,29 +372,28 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
       }
 
       buffer_reset(buf);*/
+
       opaque->writable = TRUE;
 
       session_writable(&client->session, wsi, ctx);
+
       break;
     }
 
     case LWS_CALLBACK_RECEIVE:
     case LWS_CALLBACK_CLIENT_RECEIVE:
     case LWS_CALLBACK_RAW_RX: {
-      const int raw = reason == LWS_CALLBACK_RAW_RX;
+      const BOOL raw = reason == LWS_CALLBACK_RAW_RX;
       const BOOL first = raw || lws_is_first_fragment(wsi), final = raw || lws_is_final_fragment(wsi);
       const BOOL single_fragment = first && final && !client->line_buffered;
-      // const BOOL binary = !client->line_buffered && (raw ? opaque->ws->binary : lws_frame_is_binary(wsi));
-      const BOOL binary = (!client->line_buffered) && (raw || lws_frame_is_binary(wsi));
-      const BOOL text = !client->binary || client->line_buffered;
+      BOOL binary = (!client->line_buffered) && (raw || lws_frame_is_binary(wsi));
+      BOOL text = !client->binary || client->line_buffered;
 
       if(!single_fragment) {
         if(!client->recvq)
           client->recvq = queue_new(ctx);
 
         QueueItem* it = client->line_buffered ? queue_putline(client->recvq, in, len, ctx) : first ? queue_write(client->recvq, in, len, ctx) : queue_append(client->recvq, in, len, ctx);
-
-        // it->binary = binary;
       }
 
       if(final) {
@@ -421,13 +409,16 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
             msg = text ? JS_NewStringLen(ctx, in, len) : JS_NewArrayBufferCopy(ctx, in, len);
           }
 
-          /* if(client->iter)
-             if(asynciterator_yield(client->iter, msg, ctx))
-               return 0;*/
+          /*if(client->iter)
+          if(asynciterator_yield(client->iter, msg, ctx))
+            return 0;*/
 
           if(!(client->gen && generator_yield(client->gen, msg, JS_UNDEFINED))) {
             if(client->on.message.ctx) {
-              JSValue argv[] = {client->session.ws_obj, msg};
+              JSValue argv[] = {
+                  client->session.ws_obj,
+                  msg,
+              };
 
               minnet_client_exception(client, callback_emit(&client->on.message, countof(argv), argv));
 
@@ -443,23 +434,30 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
       Queue* q = client->recvq;
 
       LOGCB("RAW(1)",
-            "closed=%d complete=%d recvq=%zd/%zdb r/w=%zd/%zd",
+            "closed=%d complete=%d recvq=%zd/%zdb r/w=%" PRIu32 "/%" PRIu32 "",
             q ? queue_closed(q) : -1,
             q ? queue_complete(q) : -1,
             q ? queue_size(q) : -1,
             q ? queue_bytes(q) : -1,
             client->gen ? generator_read(client->gen) : -1,
             client->gen ? generator_written(client->gen) : -1);
+
       break;
     }
 
     case LWS_CALLBACK_CLIENT_RECEIVE_PONG: {
       JSContext* ctx;
+
       if((ctx = client->on.pong.ctx)) {
         JSValue data = JS_NewArrayBufferCopy(ctx, in, len);
-        JSValue cb_argv[] = {client->session.ws_obj, data};
-        minnet_client_exception(client, callback_emit(&client->on.pong, 2, cb_argv));
-        JS_FreeValue(ctx, cb_argv[1]);
+        JSValue argv[] = {
+            client->session.ws_obj,
+            data,
+        };
+
+        minnet_client_exception(client, callback_emit(&client->on.pong, 2, argv));
+
+        JS_FreeValue(ctx, argv[1]);
       }
       break;
     }
@@ -467,14 +465,13 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
     case LWS_CALLBACK_WSI_DESTROY: {
       if(client->wsi == wsi) {
         BOOL is_error = JS_IsUndefined(client->context.error);
+        struct wsi_opaque_user_data* opaque;
 
         (is_error ? js_async_reject : js_async_resolve)(client->context.js, &client->promise, client->context.error);
         JS_FreeValue(client->context.js, client->context.error);
         client->context.error = JS_UNDEFINED;
 
-        struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
-
-        if(opaque && opaque->ws)
+        if((opaque = lws_get_opaque_user_data(wsi)) && opaque->ws)
           opaque->ws->lwsi = 0;
       }
 
@@ -484,6 +481,7 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
     case LWS_CALLBACK_PROTOCOL_DESTROY: {
       break;
     }
+
     default: {
       minnet_lws_unhandled(__func__, reason);
       break;
@@ -493,7 +491,7 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
   if(opaque && opaque->status >= CLOSING)
     ret = -1;
 
-  /*  lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu\n",
+  /*lwsl_user(len ? "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s' ret=%d\n" : "client      " FG("%d") "%-38s" NC " is_ssl=%i len=%zu\n",
               22 + (reason * 2),
               lws_callback_name(reason) + 13,
               wsi_tls(wsi),
@@ -519,6 +517,7 @@ static void
 message_closure_free(void* ptr) {
   MessageClosure* closure = ptr;
   JSContext* ctx = closure->ctx;
+
   js_free(ctx, closure);
 }
 
@@ -539,6 +538,7 @@ minnet_client_onmessage(JSContext* ctx, JSValueConst this_val, int argc, JSValue
   MessageClosure* closure = opaque;
 
   closure->msg = JS_DupValue(ctx, argv[0]);
+
   return JS_UNDEFINED;
 }
 
@@ -664,6 +664,7 @@ minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
   }
+
   return ret;
 }
 
@@ -708,11 +709,6 @@ minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int
 
 JSValue
 minnet_client_response(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue func_data[]) {
-  /*JS_DefinePropertyValueStr(ctx, argv[1], "ws", JS_DupValue(ctx, this_val), 0);
-
-  if(!js_is_nullish(argv[0]))
-    JS_DefinePropertyValueStr(ctx, argv[1], "request", JS_DupValue(ctx, argv[0]), 0);*/
-
   JSValue ret = JS_Call(ctx, func_data[0], JS_UNDEFINED, 1, &argv[1]);
 
   JS_FreeValue(ctx, ret);
@@ -783,13 +779,12 @@ synchfetch_setevents(SyncFetch* c, int fd, int events) {
 
 static void
 synchfetch_removefd(SyncFetch* c, int fd) {
+  size_t n;
   ssize_t i = synchfetch_indexpollfd(c, fd);
 
   assert(i != -1);
 
-  size_t n = (c->nfds - (i + 1));
-
-  if(n)
+  if((n = (c->nfds - (i + 1))))
     memcpy(&c->pfds[i], &c->pfds[i + 1], n * sizeof(struct pollfd));
 
   --c->nfds;
@@ -804,14 +799,13 @@ minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 
   JS_ToInt32(ctx, &fd, argv[0]);
 
-  if(!rd && !wr) {
+  if(!rd && !wr)
     synchfetch_removefd(ptr, fd);
-  } else {
+  else
     synchfetch_setevents(ptr, fd, (rd ? POLLIN : 0) | (wr ? POLLOUT : 0));
-  }
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG %-22s argc=%d fd=%d rd=%d wr=%d c->nfds=%zu\n", __func__, argc, fd, rd, wr, c->nfds);
+  lwsl_user("DEBUG                    %-22s argc=%d fd=%d rd=%d wr=%d c->nfds=%zu\n", __func__, argc, fd, rd, wr, c->nfds);
 #endif
 
   return JS_UNDEFINED;
@@ -830,7 +824,7 @@ minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     JS_ToInt32(ctx, &fd, argv[0]);
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG %-22s err=%i argv[1]=%s\n", __func__, is_error, JS_ToCString(ctx, argv[1]));
+  lwsl_user("DEBUG                    %-22s err=%i argv[1]=%s\n", __func__, is_error, JS_ToCString(ctx, argv[1]));
 #endif
 
   if(fd != -1)
@@ -842,7 +836,7 @@ minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
 #ifdef DEBUG_OUTPUT_
-  lwsl_user("DEBUG %-22s fd=%d c=%p c->nfds=%zu\n", __func__, fd, c, c->nfds);
+  lwsl_user("DEBUG                    %-22s fd=%d c=%p c->nfds=%zu\n", __func__, fd, c, c->nfds);
 #endif
 
   return JS_UNDEFINED;
@@ -855,9 +849,12 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   MinnetClient* client = 0;
   struct lws* wsi2;
   MinnetProtocol proto;
+  struct context* context;
 
   if(!(client = minnet_client_new(ctx)))
     return JS_EXCEPTION;
+
+  context = minnet_client_context(client);
 
   minnet_client_zero(client);
 
@@ -880,26 +877,22 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsObject(options))
     return JS_ThrowTypeError(ctx, "argument %d must be options object", argind + 1);
 
-  {
-    struct context* context = &client->context;
+  context->js = ctx;
+  context->error = JS_NULL;
 
-    context->js = ctx;
-    context->error = JS_NULL;
+  memset(&context->info, 0, sizeof(struct lws_context_creation_info));
+  context->info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+  context->info.options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
+  context->info.port = CONTEXT_PORT_NO_LISTEN;
+  context->info.protocols = client_protocols;
+  context->info.user = client;
 
-    memset(&context->info, 0, sizeof(struct lws_context_creation_info));
-    context->info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-    context->info.options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
-    context->info.port = CONTEXT_PORT_NO_LISTEN;
-    context->info.protocols = client_protocols;
-    context->info.user = client;
+  if(!context->lws) {
+    minnet_client_certificate(minnet_client_context(client), options);
 
-    if(!context->lws) {
-      //  minnet_client_certificate(&client->context, options);
-
-      if(!(context->lws = lws_create_context(&context->info))) {
-        lwsl_err("minnet-client: libwebsockets init failed\n");
-        return JS_ThrowInternalError(ctx, "minnet-client: libwebsockets init failed");
-      }
+    if(!(context->lws = lws_create_context(&context->info))) {
+      lwsl_err("minnet-client: libwebsockets init failed\n");
+      return JS_ThrowInternalError(ctx, "minnet-client: libwebsockets init failed");
     }
   }
 
@@ -914,36 +907,27 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(!JS_IsFunction(ctx, client->on.fd.func_obj))
     client->on.fd = CALLBACK_INIT(ctx, minnet_default_fd_callback(ctx), JS_NULL);
 
-  value = JS_GetPropertyStr(ctx, options, "block");
-
-  if(!JS_IsUndefined(value))
+  if(!JS_IsUndefined((value = JS_GetPropertyStr(ctx, options, "block"))))
     client->blocking = JS_ToBool(ctx, value);
 
   JS_FreeValue(ctx, value);
 
-  value = JS_GetPropertyStr(ctx, options, "lineBuffered");
-
-  if(!JS_IsUndefined(value))
+  if(!JS_IsUndefined((value = JS_GetPropertyStr(ctx, options, "lineBuffered"))))
     client->line_buffered = JS_ToBool(ctx, value);
 
   JS_FreeValue(ctx, value);
 
-  value = JS_GetPropertyStr(ctx, options, "binary");
-
-  if(!JS_IsUndefined(value))
+  if(!JS_IsUndefined((value = JS_GetPropertyStr(ctx, options, "binary"))))
     client->binary = JS_ToBool(ctx, value);
 
   JS_FreeValue(ctx, value);
 
-  value = JS_GetPropertyStr(ctx, options, "body");
-
-  if(!JS_IsUndefined(value))
+  if(!JS_IsUndefined((value = JS_GetPropertyStr(ctx, options, "body"))))
     client->body = JS_DupValue(ctx, value);
 
   JS_FreeValue(ctx, value);
 
-  /* value = JS_GetPropertyStr(ctx, options, "headers");
-   if(JS_IsObject(value))
+  /*if(JS_IsObject((value = JS_GetPropertyStr(ctx, options, "headers"))))
      client->headers = JS_DupValue(ctx, value);
 
    JS_FreeValue(ctx, value);
@@ -976,10 +960,11 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     client->connect_info.protocol = strdup(str);
     JS_FreeCString(ctx, str);
   }
+
   JS_FreeValue(ctx, value);
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG alpn = '%s'\n", client->connect_info.alpn);
+  lwsl_user("DEBUG %-22s alpn = '%s'\n", __func__, client->connect_info.alpn);
 #endif
 
   client->connect_info.pwsi = &client->wsi;
@@ -994,27 +979,27 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     case PROTOCOL_HTTP:
     case PROTOCOL_HTTPS: {
       const char* str;
+      int method_num;
 
       value = JS_GetPropertyStr(ctx, options, "method");
       str = JS_ToCString(ctx, value);
-      int method_num = JS_IsString(value) ? method_number(str) : METHOD_GET;
+      method_num = JS_IsString(value) ? method_number(str) : METHOD_GET;
+
       client->connect_info.method = method_string(method_num);
+
       JS_FreeValue(ctx, value);
       JS_FreeCString(ctx, str);
 
       break;
     }
+
     default: {
       break;
     }
   }
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG METHOD: %s\n", client->connect_info.method);
-#endif
-
-#ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG PROTOCOL: %s\n", client->connect_info.protocol);
+  lwsl_user("DEBUG %-22s method=%s protocol=%s\n", __func__, client->connect_info.method, client->connect_info.protocol);
 #endif
 
   if(!client->blocking) {
@@ -1022,6 +1007,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
     if(JS_IsNull(client->on.connect.func_obj))
       client->on.connect = CALLBACK_INIT(ctx, JS_DupValue(ctx, client->promise.resolve), JS_NULL);
+
     if(JS_IsNull(client->on.close.func_obj))
       client->on.close = CALLBACK_INIT(ctx, JS_DupValue(ctx, client->promise.reject), JS_NULL);
   }
@@ -1051,7 +1037,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     struct lws_vhost* vhost;
     MinnetURL* url = &client->request->url;
 
-    vhost = lws_create_vhost(client->context.lws, &client->context.info);
+    vhost = lws_create_vhost(client->context.lws, &minnet_client_context(client)->info);
     wsi2 = lws_create_adopt_udp(vhost, url->host, url->port, 0, "raw", 0, 0, 0, 0, 0);
     *client->connect_info.pwsi = wsi2;
   } else
@@ -1060,7 +1046,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     wsi2 = lws_client_connect_via_info(&client->connect_info);
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG client->wsi = %p, wsi2 = %p, h2 = %d, ssl = %d\n", client->wsi, wsi2, wsi_http2(client->wsi), wsi_tls(client->wsi));
+  lwsl_user("DEBUG %-22s client->wsi = %p, wsi2 = %p, h2 = %d, ssl = %d\n", __func__, client->wsi, wsi2, wsi_http2(client->wsi), wsi_tls(client->wsi));
 #endif
 
   if(!client->wsi /*&& !wsi2*/) {
@@ -1103,19 +1089,21 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
         opaque->resp->sync = TRUE;
 
         for(;;) {
+          int r;
+          size_t i;
 
 #ifdef DEBUG_OUTPUT
-          lwsl_user("DEBUG %-22s c->nfds=%zu\n", __func__, c->nfds);
+          lwsl_user("DEBUG                    %-22s c->nfds=%zu\n", __func__, c->nfds);
 #endif
-          int r = poll(c->pfds, c->nfds, 1000);
+          r = poll(c->pfds, c->nfds, 1000);
 
           c->touched = FALSE;
 
-          for(size_t i = 0; i < c->nfds; i++) {
+          for(i = 0; i < c->nfds; i++) {
             struct pollfd* x = &c->pfds[i];
 
 #ifdef DEBUG_OUTPUT
-            lwsl_user("DEBUG %-22s c->pfds[%zu] = { %d, %d, %d }\n", __func__, i, x->fd, x->events, x->revents);
+            lwsl_user("DEBUG                    %-22s c->pfds[%zu] = { %d, %d, %d }\n", __func__, i, x->fd, x->events, x->revents);
 #endif
 
             if(x->events) {
@@ -1158,9 +1146,8 @@ static void
 minnet_client_finalizer(JSRuntime* rt, JSValue val) {
   MinnetClient* client;
 
-  if((client = minnet_client_data(val))) {
+  if((client = minnet_client_data(val)))
     minnet_client_free(client, rt);
-  }
 }
 
 static const JSClassDef minnet_client_class = {
@@ -1197,27 +1184,24 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   ret = minnet_client_closure(ctx, this_val, argc, argv, 0, closure);
 
   if(js_is_promise(ctx, ret)) {
-    /* JSValue func[2], tmp;
+    /*JSValue func[2], tmp;
 
-     func[0] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
-     func[1] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
+    func[0] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_RESOLVE, closure_dup(closure), closure_free);
+    func[1] = js_function_cclosure(ctx, &minnet_client_handler, 1, ON_REJECT, closure_dup(closure), closure_free);
 
-     tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
-     JS_FreeValue(ctx, ret);
-     ret = tmp;
+    tmp = js_invoke(ctx, ret, "then", 1, &func[0]);
+    JS_FreeValue(ctx, ret);
+    ret = tmp;
 
-     tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
-     JS_FreeValue(ctx, ret);
-     ret = tmp;
+    tmp = js_invoke(ctx, ret, "catch", 1, &func[1]);
+    JS_FreeValue(ctx, ret);
+    ret = tmp;
 
-     JS_FreeValue(ctx, func[0]);
-     JS_FreeValue(ctx, func[1]);
+    JS_FreeValue(ctx, func[0]);
+    JS_FreeValue(ctx, func[1]);
 
-     closure_free(closure);*/
-  } else
-
-      if((cl = closure->pointer)) {
-
+    closure_free(closure);*/
+  } else if((cl = closure->pointer)) {
     ret = minnet_client_wrap(ctx, cl);
   }
 
@@ -1226,15 +1210,16 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
 JSValue
 minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
-  JSValue ret = JS_NewObjectProtoClass(ctx, minnet_client_proto, minnet_client_class_id);
+  JSAtom prop;
+  JSValue fn, ret = JS_NewObjectProtoClass(ctx, minnet_client_proto, minnet_client_class_id);
 
   if(JS_IsException(ret))
     return JS_EXCEPTION;
 
   JS_SetOpaque(ret, client);
 
-  JSValue fn = JS_NewCFunctionMagic(ctx, minnet_client_iterator, "iterator", 0, JS_CFUNC_generic_magic, client->blocking ? CLIENT_ITERATOR : CLIENT_ASYNCITERATOR);
-  JSAtom prop = js_symbol_static_atom(ctx, client->blocking ? "iterator" : "asyncIterator");
+  fn = JS_NewCFunctionMagic(ctx, minnet_client_iterator, "iterator", 0, JS_CFUNC_generic_magic, client->blocking ? CLIENT_ITERATOR : CLIENT_ASYNCITERATOR);
+  prop = js_symbol_static_atom(ctx, client->blocking ? "iterator" : "asyncIterator");
 
   JS_DefinePropertyValue(ctx, ret, prop, fn, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
   JS_FreeAtom(ctx, prop);
@@ -1244,7 +1229,6 @@ minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
 
 int
 minnet_client_init(JSContext* ctx, JSModuleDef* m) {
-  // Add class Client
   JS_NewClassID(&minnet_client_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_client_class_id, &minnet_client_class);

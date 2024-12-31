@@ -242,17 +242,17 @@ buffer_fromvalue(ByteBuffer* buf, JSValueConst value, JSContext* ctx) {
   return ret;
 }
 
-void
+size_t
 buffer_avail(ByteBuffer* buf) {
   return buf->end - buf->write;
 }
 
-void
+size_t
 buffer_remain(ByteBuffer* buf) {
   return buf->write - buf->read;
 }
 
-void
+size_t
 buffer_bytes(ByteBuffer* buf) {
   return buf->write - buf->start;
 }

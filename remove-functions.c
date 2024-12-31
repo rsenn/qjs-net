@@ -1049,15 +1049,6 @@ tail_bind(JSContext* ctx, JSValue func, JSValueConst this_val, JSValueConst arg)
   return ret;
 }
 
-static void
-client_resolved_free(void* ptr) {
-  HTTPAsyncResolveClosure* closure = ptr;
-  if(--closure->ref_count == 0) {
-    response_free(closure->resp, closure->ctx);
-    js_free(closure->ctx, ptr);
-  }
-}
-
 static JSValue
 client_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   const char* val = JS_ToCString(ctx, argv[0]);

@@ -106,7 +106,6 @@ static const JSCFunctionListEntry minnet_asynciterator_proto_funcs[] = {
 
 int
 minnet_asynciterator_init(JSContext* ctx, JSModuleDef* m) {
-  // Add class AsyncIterator
   JS_NewClassID(&minnet_asynciterator_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_asynciterator_class_id, &minnet_asynciterator_class);
 

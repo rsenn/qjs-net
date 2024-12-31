@@ -7,6 +7,7 @@
 void
 queue_zero(Queue* q) {
   init_list_head(&q->items);
+
   q->size = 0;
   q->continuous = FALSE;
 }
@@ -23,6 +24,7 @@ queue_clear(Queue* q, JSRuntime* rt) {
 
     list_del(p);
     block_free(&i->block);
+
     // JS_FreeValueRT(rt, i->value);
 
     free(p);
@@ -130,7 +132,6 @@ queue_read(Queue* q, void* buf, size_t n) {
   while((i = queue_front(q))) {
     ByteBlock ret = i->block;
     BOOL done = i->done;
-
     size_t len = block_SIZE(&ret);
     char* b = block_BEGIN(&ret);
     size_t j = MIN(len, n);
@@ -223,6 +224,7 @@ queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
   if(q->continuous && (i = queue_last_chunk(q))) {
     if(block_append(&i->block, data, size) == -1)
       i = 0;
+
   } else {
     ByteBlock chunk = block_copy(data, size);
 
@@ -243,10 +245,7 @@ queue_putline(Queue* q, const void* data, size_t size, JSContext* ctx) {
     char* b = block_BEGIN(&i->block);
     size_t s = block_SIZE(&i->block);
 
-    if((lineend = memchr(x, '\n', size)))
-      linelen = (lineend - x) + 1;
-    else
-      linelen = size;
+    linelen = (lineend = memchr(x, '\n', size)) ? (lineend - x) + 1 : size;
 
     if(b && s > 0 && b[s - 1] != '\n') {
       if(!(i = queue_append(q, x, linelen, ctx)))
@@ -258,10 +257,7 @@ queue_putline(Queue* q, const void* data, size_t size, JSContext* ctx) {
   }
 
   while(size) {
-    if((lineend = memchr(x, '\n', size)))
-      linelen = (lineend - x) + 1;
-    else
-      linelen = size;
+    linelen = (lineend = memchr(x, '\n', size)) ? (lineend - x) + 1 : size;
 
     i = queue_add(q, block_copy(x, linelen));
 
@@ -292,9 +288,6 @@ QueueItem*
 queue_close(Queue* q) {
   QueueItem* i;
 
-  /* if(q->items.next == 0 && q->items.prev == 0)
-     init_list_head(&q->items);
- */
   if(queue_complete(q))
     return queue_back(q);
 
@@ -306,6 +299,7 @@ queue_close(Queue* q) {
     i->unref = 0;
 
     list_add_tail(&i->link, &q->items);
+
     ++q->size;
   }
 
@@ -343,6 +337,7 @@ queue_continuous(Queue* q) {
       i->unref = 0;
 
       list_add_tail(&i->link, &q->items);
+
       ++q->size;
     }
   }

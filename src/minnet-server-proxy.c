@@ -140,18 +140,20 @@ minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reaso
   LOG("PROXY-RAW-CLIENT", "in=%.*s len=%d", (int)len, (char*)in, (int)len);
 
   switch(reason) {
-    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       lwsl_warn("%s: onward raw connection failed\n", __func__);
       pc->wsi[ONWARD] = NULL;
       break;
+    }
 
-    case LWS_CALLBACK_RAW_ADOPT:
+    case LWS_CALLBACK_RAW_ADOPT: {
       lwsl_user("LWS_CALLBACK_RAW_ADOPT\n");
       pc->wsi[ONWARD] = wsi;
       lws_callback_on_writable(wsi);
       break;
+    }
 
-    case LWS_CALLBACK_RAW_CLOSE:
+    case LWS_CALLBACK_RAW_CLOSE: {
       lwsl_user("LWS_CALLBACK_RAW_CLOSE\n");
 
       lws_dll2_foreach_safe(&pc->queue[ONWARD], NULL, proxy_ws_raw_msg_destroy);
@@ -173,8 +175,9 @@ minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reaso
 
       lws_wsi_close(pc->wsi[ACCEPTED], LWS_TO_KILL_ASYNC);
       break;
+    }
 
-    case LWS_CALLBACK_RAW_RX:
+    case LWS_CALLBACK_RAW_RX: {
       lwsl_user("LWS_CALLBACK_RAW_RX (%d)\n", (int)len);
       if(!pc || !pc->wsi[ACCEPTED])
         break;
@@ -195,8 +198,9 @@ minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reaso
 
       lws_callback_on_writable(pc->wsi[ACCEPTED]);
       break;
+    }
 
-    case LWS_CALLBACK_RAW_WRITEABLE:
+    case LWS_CALLBACK_RAW_WRITEABLE: {
       lwsl_user("LWS_CALLBACK_RAW_WRITEABLE\n");
       if(!pc || !pc->queue[ONWARD].count)
         break;
@@ -217,6 +221,7 @@ minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reaso
       if(pc->queue[ONWARD].count)
         lws_callback_on_writable(wsi);
       break;
+    }
     default: break;
   }
 

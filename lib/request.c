@@ -48,14 +48,11 @@ method_number(const char* name) {
 
 void
 request_init(Request* req, URL url, enum http_method method) {
-  // memset(req, 0, sizeof(Request));
-
   req->url = url;
   req->method = method;
   req->body = 0;
   req->read_only = FALSE;
   req->secure = url_is_tls(url);
-  /*req->promise = JS_UNDEFINED;*/
 }
 
 Request*
@@ -82,6 +79,7 @@ request_new(URL url, HTTPMethod method, JSContext* ctx) {
 Request*
 request_dup(Request* req) {
   ++req->ref_count;
+
   return req;
 }
 
@@ -130,28 +128,24 @@ request_from(int argc, JSValueConst argv[], JSContext* ctx) {
   if(url_valid(url))
     req = request_new(url, METHOD_GET, ctx);
 
-  if(req)
-    if(argc >= 2 && JS_IsObject(argv[1])) {
-      JSValue headers = JS_GetPropertyStr(ctx, argv[1], "headers");
-      if(!JS_IsUndefined(headers))
-        headers_fromobj(&req->headers, headers, "\r\n", ": ", ctx);
+  if(req && argc >= 2 && JS_IsObject(argv[1])) {
+    JSValue headers = JS_GetPropertyStr(ctx, argv[1], "headers");
+    if(!JS_IsUndefined(headers))
+      headers_fromobj(&req->headers, headers, "\r\n", ": ", ctx);
 
-      JS_FreeValue(ctx, headers);
-    }
+    JS_FreeValue(ctx, headers);
+  }
 
   return req;
 }
 
 BOOL
 request_match(Request* req, const char* path, enum http_method method) {
+  if(path && strcmp(req->url.path, path))
+    return FALSE;
 
-  if(path)
-    if(strcmp(req->url.path, path))
-      return FALSE;
-
-  if((int)method != -1)
-    if(method != req->method)
-      return FALSE;
+  if((int)method != -1 && method != req->method)
+    return FALSE;
 
   return TRUE;
 }

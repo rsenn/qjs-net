@@ -242,7 +242,6 @@ static const JSClassDef minnet_generator_class = {
 int
 minnet_generator_init(JSContext* ctx, JSModuleDef* m) {
 
-  // Add class Generator
   JS_NewClassID(&minnet_generator_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_generator_class_id, &minnet_generator_class);

@@ -94,9 +94,9 @@ char* buffer_escaped(ByteBuffer const*);
 BOOL buffer_clone(ByteBuffer*, const ByteBuffer* other);
 BOOL buffer_putchar(ByteBuffer*, char c);
 uint8_t* buffer_grow(ByteBuffer* buf, size_t size);
-void buffer_avail(ByteBuffer*);
-void buffer_remain(ByteBuffer*);
-void buffer_bytes(ByteBuffer*);
+size_t buffer_avail(ByteBuffer*);
+size_t buffer_remain(ByteBuffer*);
+size_t buffer_bytes(ByteBuffer*);
 
 static inline void
 buffer_reset(ByteBuffer* buf) {

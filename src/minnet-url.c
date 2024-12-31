@@ -374,7 +374,6 @@ int
 minnet_url_init(JSContext* ctx, JSModuleDef* m) {
   JSAtom inspect_atom;
 
-  // Add class URL
   JS_NewClassID(&minnet_url_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_url_class_id, &minnet_url_class);
   minnet_url_proto = JS_NewObject(ctx);

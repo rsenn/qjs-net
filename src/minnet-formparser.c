@@ -370,7 +370,6 @@ static const JSCFunctionListEntry minnet_formparser_proto_funcs[] = {
 
 int
 minnet_formparser_init(JSContext* ctx, JSModuleDef* m) {
-  // Add class FormParser
   JS_NewClassID(&minnet_formparser_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_formparser_class_id, &minnet_formparser_class);

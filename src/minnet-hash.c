@@ -400,7 +400,6 @@ static const JSCFunctionListEntry minnet_hash_static_funcs[] = {
 
 int
 minnet_hash_init(JSContext* ctx, JSModuleDef* m) {
-  // Add class Hash
   JS_NewClassID(&minnet_hash_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_hash_class_id, &minnet_hash_class);

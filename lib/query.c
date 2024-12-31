@@ -17,6 +17,7 @@ query_object_len(const char* q, size_t n, JSContext* ctx) {
 
   for(p = q; p < end; p += entrylen + 1) {
     entrylen = byte_chr(p, end - p, '&');
+
     if(query_entry(p, entrylen, ctx, &entry))
       js_entry_apply(ctx, &entry, ret);
   }
@@ -39,7 +40,9 @@ query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry) {
     decoded = js_strndup(ctx, value, len);
     lws_urldecode(decoded, decoded, len + 1);
     entry->value = JS_NewString(ctx, decoded);
+
     js_free(ctx, decoded);
+
     return TRUE;
   }
 
@@ -78,5 +81,6 @@ query_from(JSValueConst obj, JSContext* ctx) {
   }
 
   js_free(ctx, tab);
+
   return (char*)out.buf;
 }

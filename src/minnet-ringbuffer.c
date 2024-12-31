@@ -450,7 +450,6 @@ static const JSCFunctionListEntry minnet_ringbuffer_proto_funcs[] = {
 
 int
 minnet_ringbuffer_init(JSContext* ctx, JSModuleDef* m) {
-  // Add class Ringbuffer
   JS_NewClassID(&minnet_ringbuffer_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_ringbuffer_class_id, &minnet_ringbuffer_class);

@@ -20,8 +20,6 @@ response_zero(Response* resp) {
 
 void
 response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type) {
-  // memset(resp, 0, sizeof(Response));
-
   resp->status = status;
   resp->status_text = status_text;
   resp->headers_sent = headers_sent;
@@ -33,6 +31,7 @@ response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL h
 Response*
 response_dup(Response* resp) {
   ++resp->ref_count;
+
   return resp;
 }
 
