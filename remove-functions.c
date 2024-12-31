@@ -191,25 +191,6 @@ minnet_protocol_count(MinnetProtocols** plist) {
   return i;
 }
 
-static proxy_conn_t*
-proxy_new() {
-  proxy_conn_t* pc;
-  if((pc = malloc(sizeof(*pc))))
-    memset(pc, 0, sizeof(*pc));
-
-  return pc;
-}
-
-int
-proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
-  proxy_msg_t* msg = lws_container_of(d, proxy_msg_t, list);
-
-  lws_dll2_remove(d);
-  free(msg);
-
-  return 0;
-}
-
 void
 request_clear(Request* req, JSContext* ctx) {
   url_free_rt(&req->url, JS_GetRuntime(ctx));

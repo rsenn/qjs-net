@@ -11,7 +11,7 @@
 
 struct http_mount;
 
-typedef struct server_context {
+typedef struct {
   union {
     struct {
       int ref_count;

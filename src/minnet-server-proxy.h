@@ -16,7 +16,6 @@ typedef struct proxy_connection {
   lws_dll2_owner_t queue[2];
 } MinnetProxyConnection;
 
-int proxy_ws_raw_msg_destroy(struct lws_dll2*, void*);
 int minnet_proxy_server_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
 int minnet_proxy_rawclient_callback(struct lws*, enum lws_callback_reasons, void*, void* in, size_t len);
 

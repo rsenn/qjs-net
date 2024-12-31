@@ -22,7 +22,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   MinnetClient* client = closure->pointer;
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG %s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
+  lwsl_user("DEBUG %-22s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
 #endif
 
   switch(magic) {
@@ -111,7 +111,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   JS_FreeValue(ctx, args[1]);
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG %s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->pointer);
+  lwsl_user("DEBUG %-22s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->pointer);
 #endif
 
   cc->pointer = minnet_client_dup(cc->pointer);

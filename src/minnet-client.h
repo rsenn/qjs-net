@@ -15,7 +15,7 @@
 
 #define minnet_client_exception(client, retval) context_exception(&(client->context), (retval))
 
-typedef struct client_context {
+typedef struct {
   union {
     struct {
       int ref_count;
@@ -53,7 +53,7 @@ void minnet_client_free(MinnetClient*, JSRuntime*);
 void minnet_client_zero(MinnetClient*);
 MinnetClient* minnet_client_dup(MinnetClient*);
 Generator* minnet_client_generator(MinnetClient*, JSContext*);
-struct client_context* lws_client(struct lws*);
+MinnetClient* lws_client(struct lws*);
 JSValue minnet_client_closure(JSContext*, JSValueConst, int, JSValueConst[], int, void*);
 JSValue minnet_client(JSContext*, JSValueConst, int, JSValueConst[]);
 JSValue minnet_client_wrap(JSContext*, MinnetClient*);

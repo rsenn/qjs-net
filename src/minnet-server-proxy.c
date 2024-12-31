@@ -11,6 +11,16 @@ proxy_new() {
   return pc;
 }
 
+static int
+proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
+  MinnetProxyMessage* msg = lws_container_of(d, MinnetProxyMessage, list);
+
+  lws_dll2_remove(d);
+  free(msg);
+
+  return 0;
+}
+
 int
 minnet_proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetProxyConnection* pc = (MinnetProxyConnection*)lws_get_opaque_user_data(wsi);

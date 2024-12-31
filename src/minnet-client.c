@@ -811,7 +811,7 @@ minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   }
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG %s argc=%d fd=%d rd=%d wr=%d c->nfds=%zu\n", __func__, argc, fd, rd, wr, c->nfds);
+  lwsl_user("DEBUG %-22s argc=%d fd=%d rd=%d wr=%d c->nfds=%zu\n", __func__, argc, fd, rd, wr, c->nfds);
 #endif
 
   return JS_UNDEFINED;
@@ -830,7 +830,7 @@ minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     JS_ToInt32(ctx, &fd, argv[0]);
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG %s err=%i argv[1]=%s\n", __func__, is_error, JS_ToCString(ctx, argv[1]));
+  lwsl_user("DEBUG %-22s err=%i argv[1]=%s\n", __func__, is_error, JS_ToCString(ctx, argv[1]));
 #endif
 
   if(fd != -1)
@@ -842,7 +842,7 @@ minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
 #ifdef DEBUG_OUTPUT_
-  lwsl_user("DEBUG %s fd=%d c=%p c->nfds=%zu\n", __func__, fd, c, c->nfds);
+  lwsl_user("DEBUG %-22s fd=%d c=%p c->nfds=%zu\n", __func__, fd, c, c->nfds);
 #endif
 
   return JS_UNDEFINED;
@@ -1105,7 +1105,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
         for(;;) {
 
 #ifdef DEBUG_OUTPUT
-          lwsl_user("DEBUG %s c->nfds=%zu\n", __func__, c->nfds);
+          lwsl_user("DEBUG %-22s c->nfds=%zu\n", __func__, c->nfds);
 #endif
           int r = poll(c->pfds, c->nfds, 1000);
 
@@ -1115,7 +1115,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
             struct pollfd* x = &c->pfds[i];
 
 #ifdef DEBUG_OUTPUT
-            lwsl_user("DEBUG %s c->pfds[%zu] = { %d, %d, %d }\n", __func__, i, x->fd, x->events, x->revents);
+            lwsl_user("DEBUG %-22s c->pfds[%zu] = { %d, %d, %d }\n", __func__, i, x->fd, x->events, x->revents);
 #endif
 
             if(x->events) {
