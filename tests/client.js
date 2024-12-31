@@ -66,7 +66,8 @@ export default function Client(url, options, debug) {
           },
 
           onFd(fd, rd, wr) {
-            setReadHandler(fd, rd);
+                         console.log('onFd', { fd, rd, wr });
+ setReadHandler(fd, rd);
             setWriteHandler(fd, wr);
           },
           onMessage(ws, msg) {

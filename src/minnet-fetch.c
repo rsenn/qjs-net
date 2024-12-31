@@ -22,7 +22,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   MinnetClient* client = closure->pointer;
 
 #ifdef DEBUG_OUTPUT
-  printf("%s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
+  lwsl_user("DEBUG %s magic=%s client=%p\n", __func__, magic == ON_HTTP ? "ON_HTTP" : magic == ON_ERROR ? "ON_ERROR" : "ON_FD", client);
 #endif
 
   switch(magic) {
@@ -31,7 +31,6 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
         js_async_resolve(ctx, &client->promise, argv[1]);
 
       return JS_NewInt32(ctx, 0);
-      break;
     }
 
     case ON_CLOSE:
@@ -40,25 +39,31 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
       JSValue err = js_error_new(ctx, "%s: %s", magic == ON_CLOSE ? "onClose" : "onError", str);
       JS_FreeCString(ctx, str);
 
-      //  JS_SetPropertyStr(ctx, err, "message", JS_DupValue(ctx, argv[1]));
       if(js_async_pending(&client->promise))
         js_async_reject(ctx, &client->promise, err);
+
       JS_FreeValue(ctx, err);
       break;
     }
 
     case ON_FD: {
       JSValue os, tmp, set_write, set_read, args[2] = {argv[0], JS_NULL};
+
       os = js_global_get(ctx, "os");
+
       if(!JS_IsObject(os))
         return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
+
       set_read = JS_GetPropertyStr(ctx, os, "setReadHandler");
       set_write = JS_GetPropertyStr(ctx, os, "setWriteHandler");
       args[1] = argv[1];
       tmp = JS_Call(ctx, set_read, os, 2, args);
+
       JS_FreeValue(ctx, tmp);
+
       args[1] = argv[2];
       tmp = JS_Call(ctx, set_write, os, 2, args);
+
       JS_FreeValue(ctx, tmp);
       JS_FreeValue(ctx, os);
       JS_FreeValue(ctx, set_write);
@@ -75,13 +80,9 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   JSValue ret, handlers[4], args[2];
   union closure* cc;
   BOOL block = TRUE;
-  // MinnetFetch* fc;
 
   if(argc >= 2 && !JS_IsObject(argv[1]))
     return JS_ThrowTypeError(ctx, "argument 2 must be an object");
-  /*
-    if(!(fc = fetch_new(ctx)))
-      return JS_EXCEPTION;*/
 
   if(!(cc = closure_new(ctx)))
     return JS_EXCEPTION;
@@ -100,7 +101,7 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   JS_SetPropertyStr(ctx, args[1], "onHttp", handlers[0]);
   JS_SetPropertyStr(ctx, args[1], "onError", handlers[1]);
   JS_SetPropertyStr(ctx, args[1], "onClose", handlers[2]);
-  JS_SetPropertyStr(ctx, args[1], "onFd", handlers[3]);
+  // JS_SetPropertyStr(ctx, args[1], "onFd", handlers[3]);
 
   if(!js_has_propertystr(ctx, args[1], "block"))
     JS_SetPropertyStr(ctx, args[1], "block", JS_NewBool(ctx, block));
@@ -110,10 +111,10 @@ minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   JS_FreeValue(ctx, args[1]);
 
 #ifdef DEBUG_OUTPUT
-  printf("%s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->pointer);
+  lwsl_user("DEBUG %s url=%s client=%p\n", __func__, JS_ToCString(ctx, args[0]), cc->pointer);
 #endif
 
-  cc->pointer = client_dup(cc->pointer);
+  cc->pointer = minnet_client_dup(cc->pointer);
 
   return ret;
 }

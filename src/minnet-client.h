@@ -13,7 +13,7 @@
 #include "generator.h"
 #include "queue.h"
 
-#define client_exception(client, retval) context_exception(&(client->context), (retval))
+#define minnet_client_exception(client, retval) context_exception(&(client->context), (retval))
 
 typedef struct client_context {
   union {
@@ -47,12 +47,12 @@ enum {
   RETURN_RESPONSE,
 };
 
-void client_certificate(struct context*, JSValueConst);
-MinnetClient* client_new(JSContext*);
-void client_free(MinnetClient*, JSRuntime*);
-void client_zero(MinnetClient*);
-MinnetClient* client_dup(MinnetClient*);
-Generator* client_generator(MinnetClient*, JSContext*);
+void minnet_client_certificate(struct context*, JSValueConst);
+MinnetClient* minnet_client_new(JSContext*);
+void minnet_client_free(MinnetClient*, JSRuntime*);
+void minnet_client_zero(MinnetClient*);
+MinnetClient* minnet_client_dup(MinnetClient*);
+Generator* minnet_client_generator(MinnetClient*, JSContext*);
 struct client_context* lws_client(struct lws*);
 JSValue minnet_client_closure(JSContext*, JSValueConst, int, JSValueConst[], int, void*);
 JSValue minnet_client(JSContext*, JSValueConst, int, JSValueConst[]);

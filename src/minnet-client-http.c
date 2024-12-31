@@ -16,25 +16,22 @@ typedef struct {
 } HTTPAsyncResolveClosure;
 
 int
-http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
-
-  if(reason == LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS)
-    return 0;
-
+minnet_http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetClient* client = lws_client(wsi);
   struct session_data* session = &client->session;
   JSContext* ctx = client ? client->context.js : 0;
   struct wsi_opaque_user_data* opaque;
 
+  if(reason == LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS)
+    return 0;
+
   if(lws_reason_poll(reason))
     return wsi_handle_poll(wsi, reason, &client->on.fd, in);
 
-  if((opaque = lws_opaque(wsi, ctx))) {
+  if((opaque = lws_opaque(wsi, ctx)))
     if(!opaque->sess && session)
       opaque->sess = session;
-  }
 
-  // lwsl_user("client-http " FG("%d") "%-38s" NC " is_ssl=%i len=%zu in='%.*s'\n", 22 + (reason * 2), lws_callback_name(reason) + 13, wsi_tls(wsi), len, (int)MIN(len, 32), (char*)in);
   if(reason != LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ)
     LOGCB("CLIENT-HTTP ",
           "fd=%d, h2=%i, tls=%i%s%.*s%s",
@@ -48,13 +45,11 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
   switch(reason) {
     case LWS_CALLBACK_CLIENT_FILTER_PRE_ESTABLISH: {
+      /*MinnetRequest* req = client->request;
+        MinnetResponse* resp;
 
-      /*      MinnetRequest* req = client->request;
-            MinnetResponse* resp;
-
-            if(req) {
-              session->req_obj = minnet_request_wrap(ctx, client->request);
-            }*/
+        if(req)
+          session->req_obj = minnet_request_wrap(ctx, client->request);*/
 
       /*if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
@@ -93,6 +88,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR: {
       if(js_async_pending(&client->promise)) {
         JSValue err = js_error_new(ctx, "%s", (char*)in);
+
         js_async_reject(ctx, &client->promise, err);
         JS_FreeValue(ctx, err);
       }
@@ -103,7 +99,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             js_error_new(ctx, "%s", (char*)in),
         };
 
-        client_exception(client, callback_emit(&client->on.close, countof(argv), argv));
+        minnet_client_exception(client, callback_emit(&client->on.close, countof(argv), argv));
 
         JS_FreeValue(ctx, argv[0]);
         JS_FreeValue(ctx, argv[1]);
@@ -120,7 +116,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
                 opaque->ws ? JS_DupValue(client->on.close.ctx, session->ws_obj) : JS_NewInt32(client->on.close.ctx, opaque->fd),
                 JS_NewInt32(client->on.close.ctx, 0),
             };
-            client_exception(client, callback_emit(&client->on.close, countof(argv), argv));
+
+            minnet_client_exception(client, callback_emit(&client->on.close, countof(argv), argv));
+
             JS_FreeValue(client->on.close.ctx, argv[0]);
             JS_FreeValue(client->on.close.ctx, argv[1]);
           }
@@ -128,8 +126,10 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       session_init(session, wsi_context(wsi));
+
       session->req_obj = JS_NULL;
       session->resp_obj = JS_NULL;
+
       break;
     }
 
@@ -138,7 +138,6 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
 
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER: {
-
       MinnetRequest* req = client->request;
       ByteBuffer buf = BUFFER_N(*(uint8_t**)in, len);
 
@@ -147,7 +146,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       size_t n = headers_write(&req->headers, wsi, &buf.write, buf.end);
 
 #ifdef DEBUG_OUTPUT
-      printf("APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
+      lwsl_user("DEBUG APPEND_HANDSHAKE_HEADER %zu %zd '%.*s'\n", n, buffer_HEAD(&buf), (int)n, buf.read);
 #endif
 
       *(uint8_t**)in += n;
@@ -156,6 +155,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         lws_client_http_body_pending(wsi, 1);
         lws_callback_on_writable(wsi);
       }
+
       break;
     }
 
@@ -165,7 +165,6 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
           js_async_resolve(ctx, &client->promise, JS_UNDEFINED);
 
       return -1;
-      break;
     }
 
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
@@ -180,7 +179,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       if(!(resp = opaque->resp)) {
         resp = opaque->resp = response_new(ctx);
-        // resp->body = generator_dup(client_generator(client, ctx));
+        // resp->body = generator_dup(minnet_client_generator(client, ctx));
         resp->status = lws_http_client_http_response(wsi);
 
         headers_tobuffer(ctx, &opaque->resp->headers, wsi);
@@ -191,6 +190,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if((type = response_type(resp, ctx))) {
         if(!strncmp(type, "text/", 5))
           resp->body->block_fn = &block_tostring;
+
         js_free(ctx, type);
       }
 
@@ -208,15 +208,18 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       {
         size_t i, hdrlen = lws_hdr_total_length(wsi, WSI_TOKEN_HTTP);
         char buf[(((hdrlen + 1) + 7) >> 3) << 3];
+
         lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_HTTP);
         buf[hdrlen] = '\0';
+
         if(buf[(i = byte_chr(buf, hdrlen, ' '))])
           i += 1;
+
         client->response->status_text = js_strdup(ctx, &buf[i]);
       }
 
       if(js_async_pending(&client->promise)) {
-        JSValue cli = minnet_client_wrap(ctx, client_dup(client));
+        JSValue cli = minnet_client_wrap(ctx, minnet_client_dup(client));
 
         js_async_resolve(ctx, &client->promise, cli);
 
@@ -224,13 +227,13 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       }
 
       if(client->on.http.ctx) {
-        JSValue retval = client_exception(client, callback_emit_this(&client->on.http, session->ws_obj, 2, &session->req_obj));
+        JSValue retval = minnet_client_exception(client, callback_emit_this(&client->on.http, session->ws_obj, 2, &session->req_obj));
+
         if(!js_is_nullish(retval)) {
           BOOL terminate = JS_ToBool(ctx, retval);
 
-          if(terminate) {
+          if(terminate)
             client->lwsret = 1;
-          }
         }
         JS_FreeValue(client->on.http.ctx, retval);
       }
@@ -258,8 +261,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         /*if(opaque->resp->body)
           generator_finish(opaque->resp->body);*/
 
-        /*      if(opaque->resp->body)
-                generator_stop(opaque->resp->body, JS_UNDEFINED);*/
+        /*if(opaque->resp->body)
+          generator_stop(opaque->resp->body, JS_UNDEFINED);*/
       }
 
       if(client->on.close.ctx) {
@@ -267,7 +270,9 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             opaque->ws ? JS_DupValue(client->on.close.ctx, session->ws_obj) : JS_NewInt32(ctx, opaque->fd),
             JS_NewInt32(client->on.close.ctx, 0),
         };
-        client_exception(client, callback_emit(&client->on.close, countof(argv), argv));
+
+        minnet_client_exception(client, callback_emit(&client->on.close, countof(argv), argv));
+
         JS_FreeValue(client->on.close.ctx, argv[0]);
         JS_FreeValue(client->on.close.ctx, argv[1]);
       }
@@ -278,7 +283,6 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
       opaque->status = CLOSED;
 
-      // lws_cancel_service(lws_get_context(wsi)); /* abort poll wait */
       return -1;
     }
 
@@ -286,13 +290,12 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       if(client->on.writeable.ctx) {
         JSValue ret;
         opaque->writable = TRUE;
-        ret = client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
+        ret = minnet_client_exception(client, callback_emit(&client->on.writeable, 1, &client->session.ws_obj));
 
-        if(JS_IsBool(ret)) {
-          if(JS_ToBool(ctx, ret) == FALSE) {
-            client->on.writeable = CALLBACK_INIT(0, JS_NULL, JS_NULL);
-          }
-        }
+        // if(JS_IsBool(ret))
+        if(JS_ToBool(ctx, ret) == FALSE)
+          client->on.writeable = CALLBACK_INIT(0, JS_NULL, JS_NULL);
+
         opaque->writable = FALSE;
 
         if(client->on.writeable.ctx)
@@ -306,8 +309,8 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         JSValue value;
         int n;
         ssize_t size, r;
-        // MinnetRequest* req = client->request;
         ByteBuffer buf;
+
         buffer_alloc(&buf, 1024);
 
         if(lws_http_is_redirected_to_get(wsi))
@@ -318,24 +321,25 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
             value = js_iterator_next(ctx, client->body, &client->next, &done, 0, 0);
 
 #ifdef DEBUG_OUTPUT
-            printf("js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), done);
+            lwsl_user("DEBUG js_iterator_next() = %s %i done=%i\n", JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), done);
 #endif
 
             if(JS_IsException(value)) {
               JSValue exception = JS_GetException(ctx);
               js_error_print(ctx, exception);
               JS_Throw(ctx, exception);
+
             } else if(!js_is_nullish(value)) {
               JSBuffer input = js_buffer_new(ctx, value);
               // js_std_dump_error(ctx);
 
 #ifdef DEBUG_OUTPUT
-              printf("\x1b[2K\ryielded %p %zu\n", input.data, input.size);
+              lwsl_user("DEBUG \x1b[2K\ryielded %p %zu\n", input.data, input.size);
 #endif
 
               buffer_append(&buf, input.data, input.size);
 #ifdef DEBUG_OUTPUT
-              printf("\x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
+              lwsl_user("DEBUG \x1b[2K\rbuffered %zu/%zu bytes\n", buffer_REMAIN(&buf), buffer_HEAD(&buf));
 #endif
 
               js_buffer_free(&input, JS_GetRuntime(ctx));
@@ -343,6 +347,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
             break;
           }
+
         } else if(!js_is_nullish(client->body)) {
           buffer_fromvalue(&buf, client->body, ctx);
           done = TRUE;
@@ -350,15 +355,20 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
         n = done ? LWS_WRITE_HTTP_FINAL : LWS_WRITE_HTTP;
         size = buf.write - buf.start;
+
         if((r = lws_write(wsi, buf.start, size, (enum lws_write_protocol)n)) != size)
           return 1;
+
 #ifdef DEBUG_OUTPUT
-        printf("\x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
+        lwsl_user("DEBUG \x1b[2K\rwrote %zd%s\n", r, n == LWS_WRITE_HTTP_FINAL ? " (final)" : "");
 #endif
 
         if(n != LWS_WRITE_HTTP_FINAL)
           lws_callback_on_writable(wsi);
+        else
+          lws_client_http_body_pending(wsi, 0);
       }
+
       return 0;
     }
 
@@ -367,38 +377,40 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       static uint8_t buffer[1024 + LWS_PRE];
       ByteBuffer buf = BUFFER(buffer);
       int len = buffer_AVAIL(&buf);
-      // lwsl_user("http #1  " FGC(171, "%-38s") " fd=%d buf=%p write=%zu len=%d\n", lws_callback_name(reason) + 13, lws_get_socket_fd(wsi), block_BEGIN(&buf), buffer_HEAD(&buf), len);
-      ret = lws_http_client_read(wsi, (char**)&buf.write, &len);
-      if(ret)
+
+      if((ret = lws_http_client_read(wsi, (char**)&buf.write, &len)))
         return -1;
+
       return 0;
     }
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ: {
-
-      /*   if(client->iter) {
-           BOOL binary = lws_frame_is_binary(client->wsi);
-           ByteBlock blk = block_copy(in, len);
-           JSValue chunk = binary ? block_toarraybuffer(&blk, ctx) : block_tostring(&blk, ctx);
-           BOOL ok = 0;
-
-           ok = asynciterator_yield(client->iter, chunk, ctx);
-
-           JS_FreeValue(ctx, chunk);
-           if(ok)
-             return 0;
-         }*/
-
       MinnetResponse* resp = opaque->resp;
 
       LOGCB("CLIENT-HTTP(2)", "len=%zu in='%.*s'", len, len > 30 ? 30 : (int)len, (char*)in);
+
+      /*if(client->iter) {
+         BOOL binary = lws_frame_is_binary(client->wsi);
+         ByteBlock blk = block_copy(in, len);
+         JSValue chunk = binary ? block_toarraybuffer(&blk, ctx) : block_tostring(&blk, ctx);
+         BOOL ok = 0;
+
+         ok = asynciterator_yield(client->iter, chunk, ctx);
+
+         JS_FreeValue(ctx, chunk);
+         if(ok)
+           return 0;
+       }*/
 
       if(!JS_IsObject(session->resp_obj))
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
 
 #ifdef DEBUG_OUTPUT
-      printf("LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ len=%zu in='%.*s'", len, /*len > 30 ? 30 :*/ (int)len, (char*)in);
+      lwsl_user("DEBUG LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ len=%zu in='%.*s'", len, /*len > 30 ? 30 :*/ (int)len, (char*)in);
 #endif
+
+      if(!resp->body)
+        resp->body = generator_new(ctx);
 
       generator_write(resp->body, in, len, JS_UNDEFINED);
 
@@ -407,25 +419,21 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
 
     case LWS_CALLBACK_COMPLETED_CLIENT_HTTP: {
       MinnetResponse* resp = opaque->resp;
-      /*  Generator* gen = resp->body;*/
 
       LOGCB("CLIENT-HTTP(2)", "resp->body=%p resp->body->q=%p", resp->body, resp->body->q);
 
-      //
       generator_finish(resp->body);
 
       if(client->on.http.ctx) {
-        /*        MinnetRequest* req;
-                MinnetResponse* resp = minnet_response_data2(client->on.http.ctx, session->resp_obj);
-                int32_t result = -1;
-                JSValue ret;
-        */
+        /*MinnetRequest* req;
+          MinnetResponse* resp = minnet_response_data2(client->on.http.ctx, session->resp_obj);
+          int32_t result = -1;
+          JSValue ret;*/
 
         // url_copy(&resp->url, client->request->url, client->on.http.ctx);
-
         // resp->type = headers_get(&resp->headers, "content-type", client->on.http.ctx);
 
-        /*    ret = client_exception(client, callback_emit_this(&client->on.http, session->ws_obj, 2, &session->req_obj));
+        /*ret = minnet_client_exception(client, callback_emit_this(&client->on.http, session->ws_obj, 2, &session->req_obj));
 
             if(JS_IsNumber(ret)) {
               JS_ToInt32(client->on.http.ctx, &result, ret);
@@ -482,6 +490,7 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     case LWS_CALLBACK_CLIENT_HTTP_REDIRECT: {
       // lws_wsi_close(wsi, LWS_TO_KILL_SYNC);
       client->lwsret = 1;
+
       return 0;
     }
 
@@ -495,8 +504,5 @@ http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
     }
   }
 
-  /* if(reason < LWS_CALLBACK_ADD_POLL_FD || reason > LWS_CALLBACK_UNLOCK_POLL)
-     lwsl_notice("client-http  %-38s fd=%i, in='%.*s'\n", lws_callback_name(reason) + 13, lws_get_socket_fd(lws_get_network_wsi(wsi)), (int)len, (char*)in);
-  */
   return lws_callback_http_dummy(wsi, reason, user, in, len);
 }

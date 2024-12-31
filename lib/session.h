@@ -11,7 +11,6 @@ struct http_mount;
 struct proxy_connection;
 struct context;
 struct server_context;
-struct client_context;
 struct wsi_opaque_user_data;
 
 typedef enum { SYNC = 0, ASYNC = 1, GENERATOR = 2, ASYNC_GENERATOR = 3 } FunctionType;

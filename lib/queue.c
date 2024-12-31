@@ -176,7 +176,7 @@ queue_add(Queue* q, ByteBlock chunk) {
   QueueItem* i;
 
 #ifdef DEBUG_OUTPUT
-  printf("%s chunk.size=%zu\n", __func__, block_SIZE(&chunk));
+  lwsl_user("DEBUG %s chunk.size=%zu\n", __func__, block_SIZE(&chunk));
 #endif
 
   if(queue_complete(q))

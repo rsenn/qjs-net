@@ -19,18 +19,18 @@
 THREAD_LOCAL JSValue minnet_server_proto, minnet_server_ctor;
 THREAD_LOCAL JSClassID minnet_server_class_id = 0;
 
-int proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
-int ws_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int minnet_proxy_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int minnet_ws_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 static JSValue minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr);
 
 static struct lws_protocols protocols[] = {
-    {"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-    {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"ws", minnet_ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"http", minnet_http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
     /* {"defprot", lws_callback_http_dummy, sizeof(struct session_data), 1024, 0, NULL, 0},
-     {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
-       {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
-     {"proxy-ws", proxy_callback, 0, 1024, 0, NULL, 0},*/
+     {"proxy-ws-raw-ws", minnet_proxy_server_callback, 0, 1024, 0, NULL, 0},
+       {"proxy-ws-raw-raw", minnet_proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
+     {"proxy-ws", minnet_proxy_callback, 0, 1024, 0, NULL, 0},*/
     MINNET_PLUGIN_BROKER(broker),
     LWS_PLUGIN_PROTOCOL_DEADDROP,
     // LWS_PLUGIN_PROTOCOL_RAW_PROXY,
@@ -38,12 +38,12 @@ static struct lws_protocols protocols[] = {
     LWS_PROTOCOL_LIST_TERM,
 };
 
-static struct lws_protocols protocols2[] = {{"ws", ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-                                            {"http", http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+static struct lws_protocols protocols2[] = {{"ws", minnet_ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+                                            {"http", minnet_http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
                                             /* {"defprot", defprot_callback, sizeof(struct session_data), 0},
-                                             {"proxy-ws-raw-ws", proxy_server_callback, 0, 1024, 0, NULL, 0},
-                                              {"proxy-ws-raw-raw", proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
-                                           {"proxy-ws", proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0}, MINNET_PLUGIN_BROKER(broker),
+                                             {"proxy-ws-raw-ws", minnet_proxy_server_callback, 0, 1024, 0, NULL, 0},
+                                              {"proxy-ws-raw-raw", minnet_proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
+                                           {"proxy-ws", minnet_proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0}, MINNET_PLUGIN_BROKER(broker),
                                                 LWS_PLUGIN_PROTOCOL_RAW_PROXY,*/
                                             LWS_PLUGIN_PROTOCOL_MIRROR,
                                             LWS_PROTOCOL_LIST_TERM};
@@ -102,7 +102,7 @@ server_new(JSContext* ctx) {
 }
 
 MinnetServer*
-server_dup(MinnetServer* srv) {
+minnet_server_dup(MinnetServer* srv) {
   ++srv->ref_count;
   return srv;
 }
@@ -131,7 +131,7 @@ server_listen(MinnetServer* server) {
 }
 
 void
-server_free(MinnetServer* server) {
+minnet_server_free(MinnetServer* server) {
   JSContext* ctx = server->context.js;
 
   if(--server->ref_count == 0) {
@@ -184,7 +184,7 @@ minnet_server_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
 };
 
 static JSValue
-minnet_server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   struct ServerMatchClosure* closure = opaque;
   JSValue ret = JS_UNDEFINED;
   MinnetRequest* req;
@@ -232,7 +232,7 @@ minnet_server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 }
 
 JSValue
-server_match(MinnetServer* server, const char* path, enum http_method method, JSValue callback, JSValue prev_callback) {
+minnet_server_match(MinnetServer* server, const char* path, enum http_method method, JSValue callback, JSValue prev_callback) {
   JSContext* ctx = server->context.js;
   struct ServerMatchClosure* closure;
 
@@ -249,7 +249,7 @@ server_match(MinnetServer* server, const char* path, enum http_method method, JS
       FALSE,
   };
 
-  JSValue ret = js_function_cclosure(ctx, minnet_server_match, 0, 0, closure, server_match_free);
+  JSValue ret = js_function_cclosure(ctx, server_match, 0, 0, closure, server_match_free);
 
   JS_DefinePropertyValueStr(ctx, ret, "name", JS_NewString(ctx, path != 0 ? path : "*"), 0);
 
@@ -265,7 +265,7 @@ server_match(MinnetServer* server, const char* path, enum http_method method, JS
 }
 
 void
-server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
+minnet_server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
   JSContext* ctx = server->context.js;
   struct lws_context_creation_info* info = &server->context.info;
   MinnetHttpMount** m = (MinnetHttpMount**)&info->mounts;
@@ -304,7 +304,7 @@ server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
 }
 
 void
-server_certificate(struct context* context, JSValueConst options) {
+minnet_server_certificate(struct context* context, JSValueConst options) {
   struct lws_context_creation_info* info = &context->info;
   JSContext* ctx = context->js;
 
@@ -315,39 +315,39 @@ server_certificate(struct context* context, JSValueConst options) {
   if(JS_IsString(context->crt)) {
     info->ssl_cert_filepath = js_tostring(ctx, context->crt);
 #ifdef DEBUG_OUTPUT
-    printf("server SSL certificate file: %s\n", info->ssl_cert_filepath);
+    lwsl_user("DEBUG server SSL certificate file: %s\n", info->ssl_cert_filepath);
 #endif
 
   } else {
     info->server_ssl_cert_mem = js_toptrsize(ctx, &info->server_ssl_cert_mem_len, context->crt);
 #ifdef DEBUG_OUTPUT
-    printf("server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
+    lwsl_user("DEBUG server SSL certificate memory: %p [%u]\n", info->server_ssl_cert_mem, info->server_ssl_cert_mem_len);
 #endif
   }
 
   if(JS_IsString(context->key)) {
     info->ssl_private_key_filepath = js_tostring(ctx, context->key);
 #ifdef DEBUG_OUTPUT
-    printf("server SSL private key file: %s\n", info->ssl_private_key_filepath);
+    lwsl_user("DEBUG server SSL private key file: %s\n", info->ssl_private_key_filepath);
 #endif
 
   } else {
     info->server_ssl_private_key_mem = js_toptrsize(ctx, &info->server_ssl_private_key_mem_len, context->key);
 #ifdef DEBUG_OUTPUT
-    printf("server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
+    lwsl_user("DEBUG server SSL private key memory: %p [%u]\n", info->server_ssl_private_key_mem, info->server_ssl_private_key_mem_len);
 #endif
   }
 
   if(JS_IsString(context->ca)) {
     info->ssl_ca_filepath = js_tostring(ctx, context->ca);
 #ifdef DEBUG_OUTPUT
-    printf("server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
+    lwsl_user("DEBUG server SSL CA certificate file: %s\n", info->ssl_ca_filepath);
 #endif
 
   } else {
     info->server_ssl_ca_mem = js_toptrsize(ctx, &info->server_ssl_ca_mem_len, context->ca);
 #ifdef DEBUG_OUTPUT
-    printf("server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
+    lwsl_user("DEBUG server SSL CA certificate memory: %p [%u]\n", info->server_ssl_ca_mem, info->server_ssl_ca_mem_len);
 #endif
   }
 }
@@ -359,7 +359,7 @@ minnet_server_wrap(JSContext* ctx, MinnetServer* srv) {
   if(JS_IsException(ret))
     return JS_EXCEPTION;
 
-  JS_SetOpaque(ret, server_dup(srv));
+  JS_SetOpaque(ret, minnet_server_dup(srv));
   return ret;
 }
 
@@ -460,7 +460,7 @@ minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
         new_cb = JS_DupValue(ctx, argv[index]);
       } else */
       {
-        new_cb = server_match(server, path, method, JS_DupValue(ctx, argv[index]), server->on.http.func_obj);
+        new_cb = minnet_server_match(server, path, method, JS_DupValue(ctx, argv[index]), server->on.http.func_obj);
         path = 0;
       }
 
@@ -534,7 +534,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
   if(timer) {
 #ifdef DEBUG_OUTPUT
-    printf("timeout %" PRIu32 "\n", timer->interval);
+    lwsl_user("DEBUG timeout %" PRIu32 "\n", timer->interval);
 #endif
 
     uint32_t new_interval;
@@ -547,7 +547,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     } while(new_interval == 0);
 
 #ifdef DEBUG_OUTPUT
-    printf("new_interval %" PRIu32 "\n", new_interval);
+    lwsl_user("DEBUG new_interval %" PRIu32 "\n", new_interval);
 #endif
 
     timer->interval = new_interval;
@@ -557,7 +557,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_FALSE;
   }
 #ifdef DEBUG_OUTPUT
-  printf("timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
+  lwsl_user("DEBUG timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
 #endif
 
   return JS_TRUE;
@@ -580,7 +580,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(ptr) {
     union closure* closure = ptr;
     closure->pointer = server;
-    closure->free_func = (closure_free_t*)server_free;
+    closure->free_func = (closure_free_t*)minnet_server_free;
   }
 
   info = &server->context.info;
@@ -629,7 +629,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
     is_tls = JS_ToBool(ctx, opt_tls);
 #ifdef DEBUG_OUTPUT
-    printf("is_tls = %d\n", is_tls);
+    lwsl_user("DEBUG is_tls = %d\n", is_tls);
 #endif
   }
 
@@ -683,8 +683,6 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   if(per_message_deflate)
     info->extensions = extension_pmd;
 
-  // client_certificate(&server->context, options);
-
   info->options |= LWS_SERVER_OPTION_PEER_CERT_NOT_REQUIRED;
   info->options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
   info->options |= LWS_SERVER_OPTION_DISABLE_IPV6;
@@ -695,13 +693,14 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   info->options |= LWS_SERVER_OPTION_REQUIRE_VALID_OPENSSL_CLIENT_CERT;
 
   if(is_tls) {
-    server_certificate(&server->context, options);
+    minnet_server_certificate(&server->context, options);
 
     // info->options |= LWS_SERVER_OPTION_REDIRECT_HTTP_TO_HTTPS;
     info->options |= LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER;
     info->options |= LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT;
   }
-  client_certificate(&server->context, options);
+
+  minnet_client_certificate(&server->context, options);
 
   if(is_h2) {
     info->options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
@@ -726,7 +725,7 @@ minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 
     for(pvo = server->mimetypes; pvo; pvo = pvo->next) {
       #ifdef DEBUG_OUTPUT
-printf("pvo mimetype %s %s\n", pvo->name, pvo->value);
+lwsl_user("DEBUG pvo mimetype %s %s\n", pvo->name, pvo->value);
 #endif
 
     }
@@ -748,7 +747,7 @@ printf("pvo mimetype %s %s\n", pvo->name, pvo->value);
     vhost_options_dump(vhopt->options);
   }
 
-  server_mounts(server, opt_mounts);
+  minnet_server_mounts(server, opt_mounts);
 
   if(server->context.info.port > 0)
     if(!server_listen(server))
@@ -917,7 +916,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
       if(server->on.fd.ctx) {
         JSValue argv[3] = {JS_NewInt32(server->on.fd.ctx, args->fd)};
         minnet_io_handlers(server->on.fd.ctx, wsi, *args, &argv[1]);
-        server_exception(server, callback_emit(&server->on.fd, 3, argv));
+        minnet_server_exception(server, callback_emit(&server->on.fd, 3, argv));
         JS_FreeValue(server->on.fd.ctx, argv[0]);
         JS_FreeValue(server->on.fd.ctx, argv[1]);
         JS_FreeValue(server->on.fd.ctx, argv[2]);
@@ -932,7 +931,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
             JS_NewInt32(server->on.fd.ctx, args->fd),
         };
         minnet_io_handlers(server->on.fd.ctx, wsi, *args, &argv[1]);
-        server_exception(server, callback_emit(&server->on.fd, 3, argv));
+        minnet_server_exception(server, callback_emit(&server->on.fd, 3, argv));
         JS_FreeValue(server->on.fd.ctx, argv[0]);
         JS_FreeValue(server->on.fd.ctx, argv[1]);
         JS_FreeValue(server->on.fd.ctx, argv[2]);
@@ -946,7 +945,7 @@ defprot_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, 
         if(args->events != args->prev_events) {
           JSValue argv[3] = {JS_NewInt32(server->on.fd.ctx, args->fd)};
           minnet_io_handlers(server->on.fd.ctx, wsi, *args, &argv[1]);
-          server_exception(server, callback_emit(&server->on.fd, 3, argv));
+          minnet_server_exception(server, callback_emit(&server->on.fd, 3, argv));
           JS_FreeValue(server->on.fd.ctx, argv[0]);
           JS_FreeValue(server->on.fd.ctx, argv[1]);
           JS_FreeValue(server->on.fd.ctx, argv[2]);

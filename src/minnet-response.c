@@ -90,6 +90,7 @@ minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       } else {
         generator_continuous(gen, funcs.resolve);
       }
+
       break;
     }
 

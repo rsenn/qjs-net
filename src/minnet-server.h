@@ -7,7 +7,7 @@
 #include "minnet-server-http.h"
 #include "context.h"
 
-#define server_exception(server, retval) context_exception(&((server)->context), (retval))
+#define minnet_server_exception(server, retval) context_exception(&((server)->context), (retval))
 
 struct http_mount;
 
@@ -29,11 +29,11 @@ typedef struct server_context {
 
 struct proxy_connection;
 
-MinnetServer* server_dup(MinnetServer*);
-void server_free(MinnetServer*);
-JSValue server_match(MinnetServer*, const char*, enum http_method, JSValueConst callback, JSValueConst prev_callback);
-void server_mounts(MinnetServer*, JSValueConst);
-void server_certificate(struct context*, JSValueConst);
+MinnetServer* minnet_server_dup(MinnetServer*);
+void minnet_server_free(MinnetServer*);
+JSValue minnet_server_match(MinnetServer*, const char*, enum http_method, JSValueConst callback, JSValueConst prev_callback);
+void minnet_server_mounts(MinnetServer*, JSValueConst);
+void minnet_server_certificate(struct context*, JSValueConst);
 JSValue minnet_server_wrap(JSContext*, MinnetServer*);
 JSValue minnet_server_method(JSContext*, JSValueConst, int, JSValueConst argv[], int magic);
 JSValue minnet_server_closure(JSContext*, JSValueConst, int, JSValueConst argv[], int magic, void* ptr);
@@ -44,7 +44,7 @@ int minnet_server_init(JSContext*, JSModuleDef*);
 extern THREAD_LOCAL JSClassID minnet_server_class_id;
 extern THREAD_LOCAL JSValue minnet_server_proto, minnet_server_ctor;
 
-static inline struct server_context*
+static inline MinnetServer*
 lws_server(struct lws* wsi) {
   return lws_context_user(lws_get_context(wsi));
 }

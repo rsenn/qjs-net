@@ -390,7 +390,7 @@ serve_rejected(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   MinnetServer* server;
 
   if((server = lws_context_user(lws_get_context(closure->wsi))))
-    server_exception(server, JS_Throw(ctx, argv[0]));
+    minnet_server_exception(server, JS_Throw(ctx, argv[0]));
 
   queue_write(&session->sendq, error, strlen(error), ctx);
 
@@ -817,7 +817,7 @@ http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) 
 }
 
 int
-http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   int ret = 0;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
@@ -943,7 +943,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         JSValue args[] = {
             JS_NewStringLen(server->on.read.ctx, in, len),
         };
-        JSValue ret = server_exception(server, callback_emit_this(&server->on.read, session->req_obj, countof(args), args));
+        JSValue ret = minnet_server_exception(server, callback_emit_this(&server->on.read, session->req_obj, countof(args), args));
         JS_FreeValue(server->on.read.ctx, ret);
       }
       break;
@@ -964,7 +964,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         lws_spa_finalize(fp->spa);
 
         if(fp->cb.finalize.ctx) {
-          JSValue ret = server_exception(server, callback_emit(&fp->cb.finalize, 0, 0));
+          JSValue ret = minnet_server_exception(server, callback_emit(&fp->cb.finalize, 0, 0));
 
           if(minnet_response_data(ret)) {
             session->resp_obj = ret;
@@ -1000,7 +1000,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         JSValue args[] = {
             minnet_generator_iterator(server->on.post.ctx, gen),
         };
-        JSValue ret = server_exception(server, callback_emit_this(&server->on.post, session->req_obj, countof(args), args));
+        JSValue ret = minnet_server_exception(server, callback_emit_this(&server->on.post, session->req_obj, countof(args), args));
         JS_FreeValue(server->on.post.ctx, ret);
 
       } else {
@@ -1143,7 +1143,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
         // if(!JS_IsObject(session->req_obj) && opaque->req)
         session->req_obj = minnet_request_wrap(ctx, opaque->req);
 
-        JSValue val = server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &session->req_obj));
+        JSValue val = minnet_server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &session->req_obj));
 
         JS_FreeValue(ctx, val);
       }
@@ -1204,7 +1204,7 @@ http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* us
       // if(queue_closed(q) || queue_size(q))
 
       if(q && http_server_writeable(session, wsi, !!queue_closed(q))) {
-        ret = http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, session, in, len);
+        ret = minnet_http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, session, in, len);
 
         if(queue_size(q) == 0)
           ret = lws_http_transaction_completed(wsi);

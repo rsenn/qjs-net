@@ -57,7 +57,7 @@ enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
       ret = block_SIZE(&blk);
 
 #ifdef DEBUG_OUTPUT
-      printf("%s ret=%zu\n", __func__, ret);
+      lwsl_user("DEBUG %s ret=%zu\n", __func__, ret);
 #endif
 
       if(ret > gen->chunk_size) {
@@ -142,7 +142,7 @@ generator_update(Generator* gen) {
     JSValue chunk = dequeue_value(gen, &done, &binary);
 
 #ifdef DEBUG_OUTPUT
-    printf("%-22s i: %i queue: %zu/%zub dequeued: %zu done: %i\n", __func__, i, gen->q ? queue_size(gen->q) : 0, gen->q ? queue_bytes(gen->q) : 0, s, done);
+    lwsl_user("DEBUG %-22s i: %i queue: %zu/%zub dequeued: %zu done: %i\n", __func__, i, gen->q ? queue_size(gen->q) : 0, gen->q ? queue_bytes(gen->q) : 0, s, done);
 #endif
 
     asynciterator_emplace(&gen->iterator, chunk, done, gen->ctx);
@@ -166,20 +166,20 @@ generator_update(Generator* gen) {
   }
 
 #ifdef DEBUG_OUTPUT
-  printf("%-22s gen: %p chunk_size: %zu i: %zu reads: %zu continuous: %i buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
-         __func__,
-         (uint32_t)gen,
-         gen->chunk_size,
-         i,
-         list_size(&gen->iterator.reads),
-         (gen->q && gen->q->continuous),
-         gen->buffering,
-         gen->closing,
-         gen->closed,
-         gen->bytes_read,
-         gen->bytes_written,
-         gen->q ? queue_size(gen->q) : 0,
-         gen->q ? queue_bytes(gen->q) : 0);
+  lwsl_user("DEBUG %-22s gen: %p chunk_size: %zu i: %zu reads: %zu continuous: %i buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
+            __func__,
+            (uint32_t)gen,
+            gen->chunk_size,
+            i,
+            list_size(&gen->iterator.reads),
+            (gen->q && gen->q->continuous),
+            gen->buffering,
+            gen->closing,
+            gen->closed,
+            gen->bytes_read,
+            gen->bytes_written,
+            gen->q ? queue_size(gen->q) : 0,
+            gen->q ? queue_bytes(gen->q) : 0);
 #endif
   return i;
 }
@@ -257,14 +257,14 @@ generator_next(Generator* gen, JSValueConst arg) {
   JSValue ret = JS_UNDEFINED;
 
 #ifdef DEBUG_OUTPUT
-  printf("%-22s gen: %p chunk_size: %zu reads: %zu pending: %zu queue: %zu/%zub\n",
-         __func__,
-         (uint32_t)gen,
-         gen->chunk_size,
-         list_size(&gen->iterator.reads),
-         asynciterator_pending(&gen->iterator),
-         gen->q ? queue_size(gen->q) : 0,
-         gen->q ? queue_bytes(gen->q) : 0);
+  lwsl_user("DEBUG %-22s gen: %p chunk_size: %zu reads: %zu pending: %zu queue: %zu/%zub\n",
+            __func__,
+            (uint32_t)gen,
+            gen->chunk_size,
+            list_size(&gen->iterator.reads),
+            asynciterator_pending(&gen->iterator),
+            gen->q ? queue_size(gen->q) : 0,
+            gen->q ? queue_bytes(gen->q) : 0);
 #endif
 
   ret = asynciterator_next(&gen->iterator, arg, gen->ctx);
@@ -286,19 +286,19 @@ generator_next(Generator* gen, JSValueConst arg) {
   }
 
 #ifdef DEBUG_OUTPUT
-  printf("%-22s gen: %p chunk_size: %zu reads: %zu ret: '%s' buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
-         __func__,
-         (uint32_t)gen,
-         gen->chunk_size,
-         list_size(&gen->iterator.reads),
-         JS_ToCString(gen->ctx, ret),
-         gen->buffering,
-         gen->closing,
-         gen->closed,
-         gen->bytes_written,
-         gen->bytes_read,
-         gen->q ? queue_size(gen->q) : 0,
-         gen->q ? queue_bytes(gen->q) : 0);
+  lwsl_user("DEBUG %-22s gen: %p chunk_size: %zu reads: %zu ret: '%s' buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
+            __func__,
+            (uint32_t)gen,
+            gen->chunk_size,
+            list_size(&gen->iterator.reads),
+            JS_ToCString(gen->ctx, ret),
+            gen->buffering,
+            gen->closing,
+            gen->closed,
+            gen->bytes_written,
+            gen->bytes_read,
+            gen->q ? queue_size(gen->q) : 0,
+            gen->q ? queue_bytes(gen->q) : 0);
 #endif
   return ret;
 }
@@ -338,7 +338,7 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
       BOOL done = FALSE, binary = FALSE;
 
 #ifdef DEBUG_OUTPUT
-      printf("%s block_SIZE(&blk) = %zu\n", __func__, block_SIZE(&blk));
+      lwsl_user("DEBUG %s block_SIZE(&blk) = %zu\n", __func__, block_SIZE(&blk));
 #endif
 
       JSValue chunk = dequeue_value(gen, &done, &binary);
@@ -354,23 +354,23 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
   }
 
 #ifdef DEBUG_OUTPUT
-  printf("%-22s gen: %p chunk_size: %zu data: '%.*s' len: %zu chunk_size: %zu reads: %zu continuous: %i buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
-         __func__,
-         (uint32_t)gen,
-         gen->chunk_size,
-         MIN(10, (int)len),
-         data,
-         len,
-         gen->chunk_size,
-         list_size(&gen->iterator.reads),
-         (gen->q && gen->q->continuous),
-         gen->buffering,
-         gen->closing,
-         gen->closed,
-         gen->bytes_read,
-         gen->bytes_written,
-         gen->q ? queue_size(gen->q) : 0,
-         gen->q ? queue_bytes(gen->q) : 0);
+  lwsl_user("DEBUG %-22s gen: %p chunk_size: %zu data: '%.*s' len: %zu chunk_size: %zu reads: %zu continuous: %i buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
+            __func__,
+            (uint32_t)gen,
+            gen->chunk_size,
+            MIN(10, (int)len),
+            data,
+            len,
+            gen->chunk_size,
+            list_size(&gen->iterator.reads),
+            (gen->q && gen->q->continuous),
+            gen->buffering,
+            gen->closing,
+            gen->closed,
+            gen->bytes_read,
+            gen->bytes_written,
+            gen->q ? queue_size(gen->q) : 0,
+            gen->q ? queue_bytes(gen->q) : 0);
 #endif
   return ret;
 }
@@ -393,19 +393,19 @@ generator_push(Generator* gen, JSValueConst value) {
     js_async_reject(gen->ctx, &gen->resolve_reject, JS_UNDEFINED);
 
 #ifdef DEBUG_OUTPUT
-  printf("%-22s gen: %p chunk_size: %zu reads: %zu value: '%s' buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
-         __func__,
-         (uint32_t)gen,
-         gen->chunk_size,
-         list_size(&gen->iterator.reads),
-         JS_ToCString(gen->ctx, value),
-         gen->buffering,
-         gen->closing,
-         gen->closed,
-         gen->bytes_read,
-         gen->bytes_written,
-         gen->q ? queue_size(gen->q) : 0,
-         gen->q ? queue_bytes(gen->q) : 0);
+  lwsl_user("DEBUG %-22s gen: %p chunk_size: %zu reads: %zu value: '%s' buffering: %i closing: %i closed: %i r/w: %zu/%zu queue: %zu/%zub\n",
+            __func__,
+            (uint32_t)gen,
+            gen->chunk_size,
+            list_size(&gen->iterator.reads),
+            JS_ToCString(gen->ctx, value),
+            gen->buffering,
+            gen->closing,
+            gen->closed,
+            gen->bytes_read,
+            gen->bytes_written,
+            gen->q ? queue_size(gen->q) : 0,
+            gen->q ? queue_bytes(gen->q) : 0);
 #endif
 
   gen->promise = js_promise_wrap(gen->ctx, ret);
@@ -503,14 +503,14 @@ generator_stop(Generator* gen, JSValueConst arg) {
   QueueItem* item = 0;
 
 #ifdef DEBUG_OUTPUT
-  printf("%-22s gen: %p chunk_size: %zu arg: '%s' closed: %zu queue: %zu/%zub\n",
-         __func__,
-         (uint32_t)gen,
-         gen->chunk_size,
-         JS_ToCString(gen->ctx, arg),
-         gen->closed,
-         gen->q ? queue_size(gen->q) : 0,
-         gen->q ? queue_bytes(gen->q) : 0);
+  lwsl_user("DEBUG %-22s gen: %p chunk_size: %zu arg: '%s' closed: %zu queue: %zu/%zub\n",
+            __func__,
+            (uint32_t)gen,
+            gen->chunk_size,
+            JS_ToCString(gen->ctx, arg),
+            gen->closed,
+            gen->q ? queue_size(gen->q) : 0,
+            gen->q ? queue_bytes(gen->q) : 0);
 #endif
 
   if(gen->closed)

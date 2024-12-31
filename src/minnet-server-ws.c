@@ -7,12 +7,12 @@
 #include <assert.h>
 #include <libwebsockets.h>
 
-int http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
+int minnet_http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 char* lws_hdr_simple_ptr(struct lws*, int);
 
 int
-ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   struct session_data* session = user;
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
@@ -22,7 +22,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
     return wsi_handle_poll(wsi, reason, &server->on.fd, in);
 
   if(lws_reason_http(reason))
-    return http_server_callback(wsi, reason, user, in, len);
+    return minnet_http_server_callback(wsi, reason, user, in, len);
 
   if(reason != LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS && reason != LWS_CALLBACK_VHOST_CERT_AGING && reason != LWS_CALLBACK_EVENT_WAIT_CANCELLED)
     LOGCB("WS", "fd=%d, %s%slen=%zu in='%.*s'", lws_get_socket_fd(wsi), wsi_http2(wsi) ? "h2, " : "", wsi_tls(wsi) ? "ssl, " : "", len, (int)len, (char*)in);
@@ -185,7 +185,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
         }
 
         LOGCB("ws", "wsi#%" PRId64 " req=%p", opaque->serial, opaque->req);
-        server_exception(server, callback_emit_this(&server->on.connect, session->ws_obj, 2, &session->ws_obj));
+        minnet_server_exception(server, callback_emit_this(&server->on.connect, session->ws_obj, 2, &session->ws_obj));
       }
       return 0;
     }
@@ -213,7 +213,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
               code != -1 ? JS_NewInt32(ctx, code) : JS_UNDEFINED,
               why,
           };
-          server_exception(server, callback_emit(&server->on.close, code != -1 ? 3 : 1, args));
+          minnet_server_exception(server, callback_emit(&server->on.close, code != -1 ? 3 : 1, args));
           JS_FreeValue(ctx, args[1]);
         }
         JS_FreeValue(server->context.js, why);
@@ -240,7 +240,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
             JS_NewBool(ctx, first),
             JS_NewBool(ctx, final),
         };
-        server_exception(server, callback_emit(&server->on.message, countof(args), args));
+        minnet_server_exception(server, callback_emit(&server->on.message, countof(args), args));
         JS_FreeValue(ctx, args[0]);
         JS_FreeValue(ctx, args[1]);
       }
@@ -255,7 +255,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
             JS_DupValue(server->on.pong.ctx, session->ws_obj),
             msg,
         };
-        server_exception(server, callback_emit(&server->on.pong, 2, args));
+        minnet_server_exception(server, callback_emit(&server->on.pong, 2, args));
         JS_FreeValue(server->on.pong.ctx, args[0]);
         JS_FreeValue(server->on.pong.ctx, args[1]);
       }
@@ -281,7 +281,7 @@ ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user
       return 0;
     }
     default: {
-      // printf("ws_server_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
+      // printf("minnet_ws_server_callback %s %p %p %zu\n", lws_callback_name(reason), user, in, len);
       minnet_lws_unhandled(__func__, reason);
       break;
     }
