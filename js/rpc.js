@@ -3,7 +3,7 @@ const StringLength = str => str.replace(/\x1b\[[^m]*m/g, '').length;
 const PadEnd = (str, n, ch = ' ') => str + ch.repeat(Math.max(0, n - StringLength(str)));
 const Color = (str, ...args) => `\x1b[${args.join(';')}m${str}\x1b[0m`;
 const IsUpper = s => s.toUpperCase(s) == s;
-const Log = (...args) => console.log(/*console.config({ compact: 0, depth: 4, maxArrayLength: 2, maxStringLength: Infinity }),*/ ...args);
+const Log = (...args) => console.log(...args);
 const LogMethod = (className, method, ...args) =>
   Log(
     PadEnd(
@@ -12,6 +12,9 @@ const LogMethod = (className, method, ...args) =>
     ),
     ...args
   );
+
+const Compact = () => console.config({ compact: true });
+const idSymbol = Symbol.for('rpcid');
 
 function isObject(value) {
   return typeof value == 'object' && value != null;
@@ -100,7 +103,7 @@ export const codecs = {
 
     return {
       name: 'js',
-      encode: v => inspect(v, { colors: false, compact: verbose ? false : -2 }),
+      encode: v => inspect(v, { colors: false, compact: verbose ? false : -2, reparseable: true }),
       decode: v => eval(`(${v})`)
     };
   }
@@ -148,6 +151,41 @@ export function RPCFactory(api) {
 RPCFactory.prototype = function() {};
 
 define(RPCFactory.prototype, { [Symbol.toStringTag]: 'RPCFactory' });
+
+export function EncodeValue(arg) {
+  if(typeof arg == 'object' && arg != null) {
+    if(arg instanceof RegExp) return { type: 'regexp', source: arg.source, flags: arg.flags };
+    if(arg[idSymbol]) return { type: 'instance', key: arg[idSymbol] };
+    if(typeof arg.instance == 'number') return { type: 'instance', key: arg.instance };
+    if(typeof arg.type == 'string' && 'value' in arg) return arg;
+  }
+
+  return { type: typeof arg, value: arg };
+}
+
+export function DecodeValue(arg, instances) {
+  if(typeof arg == 'object' && arg != null) {
+    if(typeof arg.instance == 'number') return instances[arg.instance];
+    if(typeof arg.type == 'string' && 'value' in arg) {
+      const { type, value } = arg;
+
+      switch (type) {
+        case 'instance':
+          return instances[arg.key];
+        case 'number':
+          return +value;
+        case 'regexp':
+          const { source, flags } = arg;
+          return new RegExp(source, flags);
+
+        default:
+          return value;
+      }
+    }
+  }
+
+  return arg;
+}
 
 /**
  * @interface Connection
@@ -204,7 +242,7 @@ export class Connection {
     }
 
     let response = this.processMessage(data);
-    this.log('onmessage(y)', response);
+    //this.log('onmessage', response);
 
     if(isThenable(response)) response.then(r => this.sendMessage(r));
     else if(response !== undefined) this.sendMessage(response);
@@ -215,16 +253,16 @@ export class Connection {
     throw new Error('Virtual method');
   }
 
-  onopen(data) {
-    this.log('onopen:', data);
+  onopen() {
+    this.log('onopen', Compact(), this.socket);
   }
 
-  onconnect(data) {
-    this.log('onconnect:', data);
+  onconnect() {
+    this.log('onconnect', Compact(), this.socket);
   }
 
   onpong(data) {
-    this.log('onpong:', data);
+    this.log('onpong', Compact(), data);
   }
 
   onerror(error) {
@@ -240,7 +278,7 @@ export class Connection {
   }
 
   sendMessage(obj) {
-    this.log('sendMessage', obj);
+    this.log('sendMessage', Compact(), obj);
 
     const msg = this.codec.encode(obj);
 
@@ -278,15 +316,15 @@ export function FactoryEndpoint(classes, verbose, instances = {}) {
       let obj, ret, instance;
 
       try {
-        obj = new classes[name](...args);
+        obj = new classes[name](...args.map(a => DecodeValue(a, instances)));
         instance = makeId();
         instances[instance] = obj;
       } catch({ message, stack }) {
         return Respond(false, { message, stack });
       }
-      log('new', { name, args, obj, instance });
+      log('new', Compact(), { name, args, instance });
 
-      return Respond(true, { instance });
+      return Respond(true, { type: 'instance', key: instance });
     },
     list() {
       return Respond(true, Object.keys(classes));
@@ -296,7 +334,7 @@ export function FactoryEndpoint(classes, verbose, instances = {}) {
     },
     invoke: instance((obj, method, params = []) => {
       if(method in obj && isFunction(obj[method])) {
-        const result = obj[method](...params);
+        const result = obj[method](...params.map(a => DecodeValue(a, instances)));
         if(isThenable(result)) return result.then(result => Respond(true, result)).catch(error => Respond(false, error));
         return Respond(true, result);
       }
@@ -377,7 +415,7 @@ export class RPCServer extends Connection {
   constructor(methods, verbose, codec) {
     super(codec, verbose);
 
-    this.log('constructor', { codec, verbose });
+    this.log('constructor', Compact(), { codec, verbose });
 
     define(this, {
       methods
@@ -418,8 +456,6 @@ export class RPCServer extends Connection {
 
 define(RPCServer.prototype, { [Symbol.toStringTag]: 'RPCServer' });
 
-RPCServer.list = [];
-
 /**
  * @class This class describes a client connection.
  *
@@ -432,17 +468,17 @@ RPCServer.list = [];
 export class RPCClient extends Connection {
   #handlers = {};
 
-  constructor(verbose, codec) {
-    super(codec ?? codecs.json(false), verbose);
+  constructor(verbose, codec = codecs.json(false)) {
+    super(codec, verbose);
 
-    this.log('constructor', { codec, verbose });
+    this.log('constructor', Compact(), { codec, verbose });
 
     RPCClient.set.add(this);
   }
 
   processMessage(msg) {
     if(!msg.success) this.log('ERROR', error.message + '\n' + error.stack);
-    else this.log('processMessage', msg);
+    else this.log('processMessage', Compact(), msg);
 
     const { id, result } = msg;
 
@@ -451,6 +487,8 @@ export class RPCClient extends Connection {
 
   async call(method, ...params) {
     const message = { method, params, id: this.makeId() };
+
+    this.log('call', Compact(), message);
 
     await this.sendMessage(message);
 
@@ -461,14 +499,16 @@ export class RPCClient extends Connection {
 define(RPCClient.prototype, { [Symbol.toStringTag]: 'RPCClient' });
 
 export class FactoryClient extends RPCClient {
-  idSymbol = Symbol('id');
-
   constructor(verbose, codec) {
     super(verbose, codec);
   }
 
   async new(className, ...params) {
-    const { instance } = await this.call('new', className, params);
+    const { key: instance } = await this.call(
+      'new',
+      className,
+      params.map(a => EncodeValue(a))
+    );
 
     const methodList = await this.call('methods', instance, true, false),
       propertyList = await this.call('properties', instance, true, false);
@@ -484,10 +524,16 @@ export class FactoryClient extends RPCClient {
           let sprop = SerializeValue(prop);
           let tmp;
 
-          if(prop == this.idSymbol) return instance;
+          if(prop == idSymbol) return instance;
 
           if((tmp = methods.indexOf(prop)) != -1) {
-            return (...args) => this.call('invoke', instance, prop, args);
+            return (...args) =>
+              this.call(
+                'invoke',
+                instance,
+                prop,
+                args.map(a => EncodeValue(a))
+              );
           } else if((tmp = properties.indexOf(prop)) != -1) {
             return this.call('get', instance, prop).then(DeserializeValue);
           }
@@ -505,7 +551,7 @@ export class FactoryClient extends RPCClient {
   }
 
   list = () => this.call('list');
-  id = proxy => proxy[this.idSymbol];
+  id = proxy => proxy[idSymbol];
 }
 
 /**
@@ -546,7 +592,7 @@ export class RPCSocket {
 
   listen(createSocket = MakeWebSocket) {
     const { service, url } = this;
-    this.log(`listen`, `${service.name} listening on ${url}`);
+    this.log(`listen`, service, `listening on`, url);
     this.listening = true;
     this.ws = createSocket(url, this.getCallbacks(), true);
 
@@ -559,7 +605,7 @@ export class RPCSocket {
 
   connect(createSocket = MakeWebSocket) {
     const { service, url } = this;
-    this.log(`connect`, `${service.name} connecting to ${url}`);
+    this.log(`connect`, service, `connecting to`, url);
     this.ws = createSocket(url, this.getCallbacks(), false);
     return this;
   }
@@ -570,12 +616,10 @@ export class RPCSocket {
 
     return {
       onConnect(socket) {
-        log('onConnect', { socket, ctor: ctor.name, fdlist });
-
+        log('onConnect', Compact(), socket);
         try {
           fdlist[socket.fd] = service;
           define(fdlist[socket.fd], { socket });
-          log('onConnect', { fdlist, socket });
           handle(socket, 'open');
         } catch(error) {
           log('onConnect', { error });
@@ -588,12 +632,12 @@ export class RPCSocket {
         handle(socket, 'open');
       },
       onMessage(socket, msg) {
-        log('onMessage', { socket, msg });
+        log('onMessage', Compact(), msg);
         handle(socket, 'message', msg);
       },
       onError(socket, error) {
         log('onError', { socket, error });
-        callHandler(instance, 'error', error);
+        //callHandler(instance, 'error', error);
         handle(socket, 'error', error);
         remove(socket);
       },
@@ -611,7 +655,8 @@ export class RPCSocket {
     function handle(sock, event, ...args) {
       let conn;
       if((conn = fdlist[sock.fd])) callHandler(conn, event, ...args);
-      else throw new Error(`No connection for fd #${sock.fd}!`);
+      else if(sock) throw new Error(`No connection for fd #${sock.fd}!`);
+      else throw new Error(`No socket!`);
 
       return { then: fn => (fn(sock.fd), obj) };
     }
@@ -670,7 +715,7 @@ function callHandler(obj, eventName, ...args) {
   if(fn) return fn.call(obj, ...args);
 }
 
-function parseURL(urlOrPort) {
+export function parseURL(urlOrPort) {
   let protocol, host, port;
 
   if(!isNaN(+urlOrPort)) {

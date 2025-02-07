@@ -6,7 +6,7 @@ import inspect from 'inspect';
 import { REPL } from '../qjs-modules/lib/repl.js';
 import * as std from 'std';
 import * as io from 'io';
-import { MessageReceiver, MessageTransmitter, MessageTransceiver, codecs, RPCApi, RPCProxy, RPCObject, FactoryClient, RPCFactory, FactoryEndpoint, RPCServer, RPCClient, RPCSocket, RPCConnect, RPCListen } from './js/rpc.js';
+import { MessageReceiver, MessageTransmitter, MessageTransceiver, codecs, RPCApi, RPCProxy, RPCObject, RPCFactory, EncodeValue, DecodeValue, Connection, RPC_PARSE_ERROR, RPC_INVALID_REQUEST, RPC_METHOD_NOT_FOUND, RPC_INVALID_PARAMS, RPC_INTERNAL_ERROR, RPC_SERVER_ERROR_BASE, FactoryEndpoint, RPCServer, RPCClient, FactoryClient, RPCSocket, parseURL, GetProperties, GetKeys, SerializeValue, DeserializeSymbols, DeserializeValue, RPCConnect, RPCListen } from './js/rpc.js';
 import { List } from 'list';
 import { Lexer } from 'lexer';
 import { Location } from 'location';
@@ -124,6 +124,8 @@ function main(...args) {
         ? new RPCServer(
             FactoryEndpoint(
               {
+                ArrayBuffer,
+                Uint8Array,
                 List,
                 Location,
                 Lexer,
@@ -159,6 +161,9 @@ function main(...args) {
     },
     get connections() {
       return socket.connections;
+    },
+    get sockets() {
+      return socket.connections.map(c => c.socket);
     },
     get rpc() {
       const { connections } = socket;
@@ -199,7 +204,9 @@ function main(...args) {
       RPCClient,
       RPCSocket,
       RPCConnect,
-      RPCListen
+      RPCListen,
+      DecodeValue,
+      EncodeValue
     }
   );
 
