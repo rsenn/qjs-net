@@ -31,65 +31,13 @@ enum {
   RINGBUFFER_CONSUMERANGE,
 };
 
-JSValue
-minnet_ringbuffer_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
-  JSValue proto, obj;
-  MinnetRingbuffer* rb;
-
-  if(!(rb = ringbuffer_new(ctx)))
-    return JS_EXCEPTION;
-
-  /* using new_target to get the prototype is necessary when the class is extended. */
-  proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-  if(JS_IsException(proto) || JS_IsUndefined(proto))
-    proto = JS_DupValue(ctx, minnet_ringbuffer_proto);
-
-  obj = JS_NewObjectProtoClass(ctx, proto, minnet_ringbuffer_class_id);
-  JS_FreeValue(ctx, proto);
-  if(JS_IsException(obj))
-    goto fail;
-
-  while(argc > 0) {
-
-    if(JS_IsString(argv[0])) {
-      const char* type;
-      type = JS_ToCString(ctx, argv[0]);
-      pstrcpy(rb->type, sizeof(rb->type), type);
-      JS_FreeCString(ctx, type);
-      argc -= 1;
-      argv += 1;
-
-    } else if(argc >= 2 && JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
-      uint32_t element_size = 0, count = 0;
-      JS_ToUint32(ctx, &element_size, argv[0]);
-      JS_ToUint32(ctx, &count, argv[1]);
-
-      rb->ring = lws_ring_create(rb->element_len = element_size, rb->size = count, ringbuffer_destroy_element);
-
-      argc -= 2;
-      argv += 2;
-    } else {
-      break;
-    }
-  }
-
-  JS_SetOpaque(obj, rb);
-
-  return obj;
-
-fail:
-  js_free(ctx, rb);
-  JS_FreeValue(ctx, obj);
-  return JS_EXCEPTION;
-}
-
 struct ringbuffer_tail {
+  MinnetRingbuffer* rb;
+  JSContext* ctx;
   union {
     JSBuffer buf;
     uint32_t* ptr;
   };
-  MinnetRingbuffer* rb;
-  JSContext* ctx;
 };
 
 static void
@@ -110,6 +58,7 @@ tail_new(JSContext* ctx, struct ringbuffer* rb, JSValueConst tail_value) {
     tail->rb = ringbuffer_dup(rb);
     tail->buf = js_input_chars(ctx, tail_value);
   }
+
   return tail;
 }
 
@@ -131,6 +80,15 @@ tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], 
   js_buffer_free(&buf, JS_GetRuntime(ctx));
 
   return ret;
+}
+
+static JSValue minnet_ringbuffer_multitail(JSContext*, JSValueConst, int, JSValueConst[], int);
+
+static void
+tail_decorate(JSContext* ctx, JSValueConst obj, JSValueConst ringbuffer, const char* name, int argc, int magic) {
+  JSValue func = JS_NewCFunctionMagic(ctx, minnet_ringbuffer_multitail, name, 0, JS_CFUNC_generic_magic, magic);
+  JS_SetPropertyStr(ctx, obj, name, js_function_bind_this_1(ctx, func, ringbuffer, obj));
+  JS_FreeValue(ctx, func);
 }
 
 static JSValue
@@ -181,15 +139,18 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
 
       if(buf.data) {
         size_t elem_len = ringbuffer_element_len(rb);
+
         if((buf.size % elem_len) != 0) {
           ret = JS_ThrowRangeError(ctx, "buffer size not a multiple of element length (%lu)", (unsigned long int)elem_len);
           break;
         }
+
         count = buf.size / elem_len;
       } else if(argc - index < 1 || JS_ToUint32(ctx, &count, argv[index++])) {
         ret = JS_ThrowRangeError(ctx, "invalid tail");
         break;
       }
+
       ret = JS_NewUint32(ctx, lws_ring_consume(rb->ring, tail_ptr, buf.data, count));
       js_buffer_free(&buf, JS_GetRuntime(ctx));
       break;
@@ -199,8 +160,8 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
       JSValue ab = JS_GetPropertyStr(ctx, this_val, "buffer");
 
       ret = js_typedarray_new(ctx, 8, FALSE, FALSE, ab, new_tail, (ringbuffer_bytelength(rb) - new_tail) / rb->element_len);
-      JS_FreeValue(ctx, ab);
 
+      JS_FreeValue(ctx, ab);
       break;
     }
 
@@ -211,6 +172,7 @@ minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSV
         ret = JS_ThrowRangeError(ctx, "invalid count");
         break;
       }
+
       ret = JS_NewUint32(ctx, lws_ring_consume(rb->ring, tail_ptr, 0, n));
       break;
     }
@@ -226,11 +188,57 @@ fail:
   return ret;
 }
 
-static void
-tail_decorate(JSContext* ctx, JSValueConst obj, JSValueConst ringbuffer, const char* name, int argc, int magic) {
-  JSValue func = JS_NewCFunctionMagic(ctx, minnet_ringbuffer_multitail, name, 0, JS_CFUNC_generic_magic, magic);
-  JS_SetPropertyStr(ctx, obj, name, js_function_bind_this_1(ctx, func, ringbuffer, obj));
-  JS_FreeValue(ctx, func);
+JSValue
+minnet_ringbuffer_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+  JSValue proto, obj;
+  MinnetRingbuffer* rb;
+
+  if(!(rb = ringbuffer_new(ctx)))
+    return JS_EXCEPTION;
+
+  /* using new_target to get the prototype is necessary when the class is extended. */
+  proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+  if(JS_IsException(proto) || JS_IsUndefined(proto))
+    proto = JS_DupValue(ctx, minnet_ringbuffer_proto);
+
+  obj = JS_NewObjectProtoClass(ctx, proto, minnet_ringbuffer_class_id);
+  JS_FreeValue(ctx, proto);
+  if(JS_IsException(obj))
+    goto fail;
+
+  while(argc > 0) {
+    if(JS_IsString(argv[0])) {
+      const char* type;
+
+      type = JS_ToCString(ctx, argv[0]);
+      pstrcpy(rb->type, sizeof(rb->type), type);
+      JS_FreeCString(ctx, type);
+      argc -= 1;
+      argv += 1;
+
+    } else if(argc >= 2 && JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
+      uint32_t element_size = 0, count = 0;
+
+      JS_ToUint32(ctx, &element_size, argv[0]);
+      JS_ToUint32(ctx, &count, argv[1]);
+
+      rb->ring = lws_ring_create(rb->element_len = element_size, rb->size = count, ringbuffer_destroy_element);
+
+      argc -= 2;
+      argv += 2;
+    } else {
+      break;
+    }
+  }
+
+  JS_SetOpaque(obj, rb);
+
+  return obj;
+
+fail:
+  js_free(ctx, rb);
+  JS_FreeValue(ctx, obj);
+  return JS_EXCEPTION;
 }
 
 static JSValue
@@ -264,6 +272,7 @@ minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValu
         ret = JS_ThrowRangeError(ctx, "input argument size not a multiple of element length (%lu)", (unsigned long int)elem_len);
         break;
       }
+
       ret = JS_NewUint32(ctx, ringbuffer_insert(rb, buf.data, buf.size / elem_len));
       js_buffer_free(&buf, JS_GetRuntime(ctx));
       break;
@@ -359,8 +368,8 @@ minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
       JSValue ab = JS_GetPropertyStr(ctx, this_val, "buffer");
 
       ret = js_typedarray_new(ctx, 8, FALSE, FALSE, ab, r->head, (r->buflen - r->head) / r->element_len);
-      JS_FreeValue(ctx, ab);
 
+      JS_FreeValue(ctx, ab);
       break;
     }
   }
@@ -369,6 +378,7 @@ minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
 
 static JSValue
 minnet_ringbuffer_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+  JSValue ret = JS_UNDEFINED;
   MinnetRingbuffer* rb;
   struct {
     void* buf;
@@ -381,7 +391,6 @@ minnet_ringbuffer_set(JSContext* ctx, JSValueConst this_val, JSValueConst value,
 
   r = (void*)rb->ring;
 
-  JSValue ret = JS_UNDEFINED;
   switch(magic) {
     case RINGBUFFER_HEAD: {
       uint32_t n;
@@ -414,10 +423,8 @@ static void
 minnet_ringbuffer_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRingbuffer* rb;
 
-  if((rb = JS_GetOpaque(val, minnet_ringbuffer_class_id))) {
-
+  if((rb = JS_GetOpaque(val, minnet_ringbuffer_class_id)))
     ringbuffer_free(rb, rt);
-  }
 }
 
 static const JSClassDef minnet_ringbuffer_class = {
