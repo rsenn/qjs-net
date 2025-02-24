@@ -13,7 +13,7 @@ const LogMethod = (className, method, ...args) =>
     ...args
   );
 
-const Compact = () => console.config({ compact: true });
+const Compact = console.config ? (() => console.config({ compact: true })) : (() =>  '');
 const idSymbol = Symbol.for('rpcid');
 
 function isObject(value) {
