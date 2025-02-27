@@ -378,13 +378,17 @@ minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
   ret = JS_NewArray(ctx);
 
+  if(opaque_list.prev == NULL)
+    init_list_head(&opaque_list);
+
   list_for_each_prev(el, &opaque_list) {
     struct wsi_opaque_user_data* opaque = list_entry(el, struct wsi_opaque_user_data, link);
+
 #ifdef DEBUG_OUTPUT
     lwsl_user("DEBUG                    %-22s @%u #%" PRId64 " %p", __func__, i, opaque->serial, opaque);
 #endif
 
-    JS_SetPropertyUint32(ctx, ret, i++, opaque->sess ? session_object(opaque->sess, ctx) : JS_NewInt64(ctx, opaque->serial));
+    JS_SetPropertyUint32(ctx, ret, i++, opaque->sess ? session_object(opaque->sess, ctx) : opaque->ws ? minnet_ws_wrap(ctx, opaque->ws) : JS_NewInt64(ctx, opaque->serial));
   }
   return ret;
 }

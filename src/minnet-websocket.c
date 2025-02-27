@@ -28,6 +28,7 @@ enum {
   WEBSOCKET_RAW,
   WEBSOCKET_BINARY,
   WEBSOCKET_READYSTATE,
+  WEBSOCKET_SERIAL,
   WEBSOCKET_CONTEXT,
   /*  WEBSOCKET_RESERVED_BITS,
     WEBSOCKET_FINAL_FRAGMENT,
@@ -258,25 +259,22 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
     return JS_EXCEPTION;
 
   if(ws->lwsi) {
-    int optind = 0;
     int32_t status = LWS_CLOSE_STATUS_NORMAL;
     struct wsi_opaque_user_data* opaque;
 
-    while(optind < argc) {
-      if(JS_IsNumber(argv[optind]) || optind + 1 < argc) {
-        JS_ToInt32(ctx, &status, argv[optind]);
-      } else {
-        reason = JS_ToCStringLen(ctx, &rlen, argv[optind]);
-        if(rlen > 124)
-          rlen = 124;
-      }
-      optind++;
+    if(argc > 0)
+      JS_ToInt32(ctx, &status, argv[0]);
+
+    if(argc > 1) {
+      reason = JS_ToCStringLen(ctx, &rlen, argv[1]);
+
+      if(rlen > 124)
+        rlen = 124;
     }
 
     opaque = ws_opaque(ws);
     assert(opaque);
 
-    // printf("minnet_ws_close fd=%d reason=%s\n", lws_get_socket_fd(ws->lwsi), reason);
     if(opaque->status < CLOSING) {
       const struct lws_protocols* protocol = lws_get_protocol(ws->lwsi);
 
@@ -319,6 +317,7 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
 
       if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
         char address[1024];
+
         lws_get_peer_simple(ws->lwsi, address, sizeof(address));
 
         ret = JS_NewString(ctx, address);
@@ -332,9 +331,9 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       socklen_t addrlen = sizeof(addr);
       int fd = lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
 
-      if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
+      if(getpeername(fd, (struct sockaddr*)&addr, &addrlen) != -1)
         ret = JS_NewInt32(ctx, magic == WEBSOCKET_FAMILY ? addr.sin_family : ntohs(addr.sin_port));
-      }
+
       break;
     }
 
@@ -344,9 +343,9 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       socklen_t addrlen = sizeof(addr);
       int fd = lws_get_socket_fd(lws_get_network_wsi(ws->lwsi));
 
-      if((magic == WEBSOCKET_LOCAL ? getsockname : getpeername)(fd, (struct sockaddr*)&addr, &addrlen) != -1) {
+      if((magic == WEBSOCKET_LOCAL ? getsockname : getpeername)(fd, (struct sockaddr*)&addr, &addrlen) != -1)
         ret = JS_NewArrayBufferCopy(ctx, (const uint8_t*)&addr, addrlen);
-      }
+
       break;
     }
 
@@ -375,34 +374,24 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
       break;
     }
 
-    case WEBSOCKET_PROTOCOL: {
-      const struct lws_protocols* protocol;
-      /*struct lws_client_connect_info* cinfo;
+    case WEBSOCKET_SERIAL: {
+      struct wsi_opaque_user_data* opaque;
 
-      if(ws_opaque(ws) && (cinfo = ws_opaque(ws)->connect_info) && cinfo->protocol)
-        ret = JS_NewString(ctx, cinfo->protocol);
-      else*/
-      if((protocol = lws_get_protocol(ws->lwsi)))
-        ret = JS_NewString(ctx, protocol->name);
+      if((opaque = ws_opaque(ws)))
+        ret = JS_NewInt64(ctx, opaque->serial);
+
       break;
     }
 
-      /* case WEBSOCKET_RESERVED_BITS: {
-         ret = JS_NewUint32(ctx, lws_get_reserved_bits(ws->lwsi));
-         break;
-       }
-       case WEBSOCKET_FINAL_FRAGMENT: {
-         ret = JS_NewBool(ctx, lws_is_final_fragment(ws->lwsi));
-         break;
-       }
-       case WEBSOCKET_FIRST_FRAGMENT: {
-         ret = JS_NewBool(ctx, lws_is_first_fragment(ws->lwsi));
-         break;
-       }
-       case WEBSOCKET_PARTIAL_BUFFERED: {
-         ret = JS_NewInt32(ctx, lws_partial_buffered(ws->lwsi));
-         break;
-       }*/
+    case WEBSOCKET_PROTOCOL: {
+      const struct lws_protocols* protocol;
+
+      if((protocol = lws_get_protocol(ws->lwsi)))
+        ret = JS_NewString(ctx, protocol->name);
+
+      break;
+    }
+
     case WEBSOCKET_BUFFEREDAMOUNT: {
       Queue* q;
 
@@ -429,6 +418,7 @@ minnet_ws_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int mag
       break;
     }
   }
+
   return ret;
 }
 
@@ -492,7 +482,6 @@ static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("protocol", minnet_ws_get, 0, WEBSOCKET_PROTOCOL, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("fd", minnet_ws_get, 0, WEBSOCKET_FD, JS_PROP_ENUMERABLE),
     JS_CGETSET_MAGIC_FLAGS_DEF("address", minnet_ws_get, 0, WEBSOCKET_ADDRESS, 0),
-    // JS_ALIAS_DEF("remoteAddress", "address"),
     JS_CGETSET_MAGIC_DEF("family", minnet_ws_get, 0, WEBSOCKET_FAMILY),
     JS_CGETSET_MAGIC_DEF("port", minnet_ws_get, 0, WEBSOCKET_PORT),
     JS_CGETSET_MAGIC_FLAGS_DEF("local", minnet_ws_get, 0, WEBSOCKET_LOCAL, 0),
@@ -502,7 +491,7 @@ static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CGETSET_MAGIC_FLAGS_DEF("raw", minnet_ws_get, 0, WEBSOCKET_RAW, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("binary", minnet_ws_get, minnet_ws_set, WEBSOCKET_BINARY, 0),
     JS_CGETSET_MAGIC_FLAGS_DEF("readyState", minnet_ws_get, 0, WEBSOCKET_READYSTATE, JS_PROP_ENUMERABLE),
-    // JS_ALIAS_DEF("remote", "peer"),
+    JS_CGETSET_MAGIC_FLAGS_DEF("serial", minnet_ws_get, 0, WEBSOCKET_SERIAL, JS_PROP_ENUMERABLE),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetWebsocket", JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("CONNECTING", 0, JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("OPEN", 1, JS_PROP_CONFIGURABLE),
