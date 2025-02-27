@@ -432,7 +432,7 @@ export class RPCServer extends Connection {
     if(this.#instances) for(let instance in this.#instances) delete this.#instances[instance];
   }
 
-  async processMessage(msg) {
+   processMessage(msg) {
     this.log('processMessage', msg);
 
     if(!('method' in msg)) return Respond(msg.id, false, `No method specified`);
@@ -443,7 +443,7 @@ export class RPCServer extends Connection {
     let ret;
 
     try {
-      ret = await fn(...(params ?? []));
+      ret =   fn(...(params ?? []));
     } catch(error) {
       this.log('ERROR', error.message);
     }

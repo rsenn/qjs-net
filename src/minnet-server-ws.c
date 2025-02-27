@@ -64,6 +64,17 @@ minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, voi
     }
 
     case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
+      if(!opaque && ctx)
+        opaque = opaque_from_wsi(wsi, ctx);
+
+      if(opaque && session) {
+        session_init(session, wsi_context(wsi));
+        opaque->sess = session;
+      }
+
+      if(!opaque->ws)
+        opaque->ws = ws_new(wsi, ctx);
+
       struct lws* parent;
 
       if((parent = lws_get_parent(wsi))) {
@@ -81,16 +92,6 @@ minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, voi
     }
 
     case LWS_CALLBACK_WSI_CREATE: {
-      if(!opaque && ctx)
-        opaque = opaque_from_wsi(wsi, ctx);
-
-      if(opaque && session) {
-        session_init(session, wsi_context(wsi));
-        opaque->sess = session;
-      }
-
-      if(!opaque->ws)
-        opaque->ws = ws_new(wsi, ctx);
 
       break;
     }
@@ -171,13 +172,12 @@ minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, voi
         if(!JS_IsObject(session->req_obj))
           session->req_obj = minnet_request_wrap(ctx, opaque->req);
 
-        session->resp_obj = minnet_response_new(ctx, opaque->req->url, status, 0, TRUE, "text/html");
+        // session->resp_obj = minnet_response_new(ctx, opaque->req->url, status, 0, TRUE, "text/html");
       }
 
       opaque->status = OPEN;
 
       if(callback_valid(&server->on.connect)) {
-
         if(!JS_IsObject(session->ws_obj)) {
           session->ws_obj = opaque->ws ? minnet_ws_wrap(ctx, opaque->ws) : minnet_ws_fromwsi(ctx, wsi);
         } else {
@@ -186,8 +186,8 @@ minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, voi
               opaque->ws->ref_count++;
         }
 
-        LOGCB("ws", "wsi#%" PRId64 " req=%p", opaque->serial, opaque->req);
-        minnet_server_exception(server, callback_emit_this(&server->on.connect, session->ws_obj, 2, &session->ws_obj));
+        LOGCB("WS", "wsi#%" PRId64 " req=%p", opaque->serial, opaque->req);
+        minnet_server_exception(server, callback_emit_this(&server->on.connect, session->ws_obj, 1, &session->ws_obj));
       }
 
       return 0;

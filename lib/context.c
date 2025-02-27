@@ -53,7 +53,6 @@ context_clear(struct context* context) {
 
 void
 context_add(struct context* context) {
-
   if(context_list.next == 0 && context_list.prev == 0)
     init_list_head(&context_list);
 

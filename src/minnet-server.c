@@ -37,14 +37,16 @@ static struct lws_protocols protocols[] = {
     LWS_PROTOCOL_LIST_TERM,
 };
 
-static struct lws_protocols protocols2[] = {{"ws", minnet_ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-                                            {"http", minnet_http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
-                                            /* {"proxy-ws-raw-ws", minnet_proxy_server_callback, 0, 1024, 0, NULL, 0},
-                                              {"proxy-ws-raw-raw", minnet_proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
-                                           {"proxy-ws", minnet_proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0}, MINNET_PLUGIN_BROKER(broker),
-                                                LWS_PLUGIN_PROTOCOL_RAW_PROXY,*/
-                                            LWS_PLUGIN_PROTOCOL_MIRROR,
-                                            LWS_PROTOCOL_LIST_TERM};
+static struct lws_protocols protocols2[] = {
+    {"ws", minnet_ws_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    {"http", minnet_http_server_callback, sizeof(struct session_data), 1024, 0, NULL, 0},
+    /* {"proxy-ws-raw-ws", minnet_proxy_server_callback, 0, 1024, 0, NULL, 0},
+      {"proxy-ws-raw-raw", minnet_proxy_rawclient_callback, 0, 1024, 0, NULL, 0},
+   {"proxy-ws", minnet_proxy_callback, sizeof(struct session_data), 1024, 0, NULL, 0}, MINNET_PLUGIN_BROKER(broker),
+        LWS_PLUGIN_PROTOCOL_RAW_PROXY,*/
+    LWS_PLUGIN_PROTOCOL_MIRROR,
+    LWS_PROTOCOL_LIST_TERM,
+};
 
 static const struct lws_http_mount mount = {
     .mount_next = NULL,  /* linked-list "next" */

@@ -45,9 +45,9 @@ opaque_clear(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
 
 void
 opaque_free(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
-  opaque_clear(opaque, rt);
-
   if(--opaque->ref_count == 0) {
+    opaque_clear(opaque, rt);
+
     assert(opaque->link.next);
     list_del(&opaque->link);
 

@@ -41,7 +41,6 @@ session_init(struct session_data* session, struct context* context) {
 
 void
 session_clear(struct session_data* session, JSRuntime* rt) {
-
   JS_FreeValueRT(rt, session->ws_obj);
   session->ws_obj = JS_UNDEFINED;
   JS_FreeValueRT(rt, session->req_obj);
