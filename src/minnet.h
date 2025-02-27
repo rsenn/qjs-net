@@ -69,7 +69,7 @@ struct js_callback;
 
 void minnet_io_handlers(JSContext*, struct lws*, struct lws_pollargs, JSValueConst[2]);
 JSValue minnet_default_fd_callback(JSContext*);
-int wsi_handle_poll(struct lws*, enum lws_callback_reasons, struct js_callback*, struct lws_pollargs*);
+int minnet_pollfds_change(struct lws*, enum lws_callback_reasons, struct js_callback*, struct lws_pollargs*);
 int minnet_lws_unhandled(const char*, int);
 
 #endif /* MINNET_H */

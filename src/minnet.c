@@ -47,12 +47,6 @@ struct lws_protocols *minnet_client_protocols = 0, *minnet_server_protocols = 0;
 
 #define PIO (POLLIN | POLLOUT | POLLERR)
 
-typedef struct {
-  JSContext* ctx;
-  struct lws* lwsi;
-  struct wsi_opaque_user_data* opaque;
-} LWSIOHandler;
-
 typedef enum { READ_HANDLER = 0, WRITE_HANDLER } JSIOHandler;
 
 #ifdef _WIN32
@@ -64,15 +58,18 @@ make_osf_handle(intptr_t handle) {
   int ret;
 
   assert((HANDLE)handle != INVALID_HANDLE_VALUE);
+
   ret = _open_osfhandle((SOCKET)handle, 0);
 
   if(ret >= osfhandle_count) {
     size_t oldsize = osfhandle_count;
+
     osfhandle_count = ret + 1;
     osfhandle_map = realloc(osfhandle_map, sizeof(intptr_t) * osfhandle_count);
     assert(osfhandle_map);
     memset(&osfhandle_map[oldsize], 0, (osfhandle_count - oldsize) * sizeof(intptr_t));
   }
+
   osfhandle_map[ret] = handle;
 
   return ret;
@@ -82,19 +79,16 @@ static int
 get_osf_handle(intptr_t handle) {
   assert((HANDLE)handle != INVALID_HANDLE_VALUE);
 
-  if(osfhandle_map) {
-    size_t i;
-    for(i = 0; i < osfhandle_count; i++)
+  if(osfhandle_map)
+    for(size_t i = 0; i < osfhandle_count; i++)
       if(osfhandle_map[i] == handle)
         return i;
-  }
 
   return make_osf_handle(handle);
 }
 
 static void
 close_osf_handle(int fd) {
-  int ret;
   intptr_t handle = (intptr_t)_get_osfhandle(fd);
 
   assert(fd + 1 <= osfhandle_count);
@@ -113,47 +107,46 @@ close_osf_handle(int fd) {
 #define get_osf_handle(fd) (fd)
 #endif
 
+typedef struct {
+  JSContext* ctx;
+  struct lws* lwsi;
+  struct wsi_opaque_user_data* opaque;
+} IOHandlerClosure;
+
 static void
 lws_iohandler_free(void* ptr) {
-  LWSIOHandler* closure = ptr;
-  JSContext* ctx = closure->ctx;
-  js_free(ctx, closure);
+  IOHandlerClosure* closure = ptr;
+
+  js_free(closure->ctx, closure);
 };
 
 static JSValue
 lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  LWSIOHandler* closure = ptr;
+  IOHandlerClosure* closure = ptr;
   struct pollfd* p;
-  int32_t wr;
+  JSIOHandler wr = JS_ToBool(ctx, argv[0]);
   JSValue ret = JS_UNDEFINED;
+  int events = (wr ? POLLOUT : POLLIN);
 
   assert(closure->opaque);
   p = &closure->opaque->poll;
 
-  JS_ToInt32(ctx, &wr, argv[0]);
+  p->revents = events;
 
-  p->revents = magic & (wr == WRITE_HANDLER ? POLLOUT : POLLIN);
-
-  if((p->revents & PIO) != magic) {
+  /*if((p->revents & PIO) != magic)
     if(poll(p, 1, 0) < 0)
       lwsl_err("poll error: %s\n", strerror(errno));
-  }
 
-  if(p->revents & PIO) {
-    struct lws_pollfd x = {p->fd, magic, p->revents & PIO};
+  if(p->revents & PIO)*/
+  {
+    struct lws_pollfd x = {p->fd, events, p->revents & PIO};
 
 #ifdef _WIN32
     x.fd = (SOCKET)_get_osfhandle(p->fd);
 #endif
 
-    if(p->revents & (POLLERR | POLLHUP)) {
-      closure->opaque->poll = *p;
-      // closure->opaque->error = errno;
-    }
-    /*if(x.revents & POLLOUT)
-      if(x.revents & POLLIN)
-        x.revents &= ~(POLLOUT);*/
-    // errno = 0;
+    /* if(p->revents & (POLLERR | POLLHUP))
+       closure->opaque->poll = *p;*/
 
     ret = JS_NewInt32(ctx, lws_service_fd(lws_get_context(closure->lwsi), &x));
   }
@@ -162,45 +155,75 @@ lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 }
 
 static JSValue
-minnet_io_handler(JSContext* ctx, int fd, int events, struct lws* wsi) {
-  LWSIOHandler* h;
+minnet_io_handler(JSContext* ctx, struct lws* wsi) {
+  IOHandlerClosure* h;
 
-  if(!(h = js_mallocz(ctx, sizeof(LWSIOHandler))))
+  if(!(h = js_mallocz(ctx, sizeof(IOHandlerClosure))))
     return JS_EXCEPTION;
 
-  *h = (LWSIOHandler){ctx, wsi, lws_opaque(wsi, ctx)};
+  *h = (IOHandlerClosure){ctx, wsi, opaque_from_wsi(wsi, ctx)};
 
-  h->opaque->poll = (struct pollfd){fd, events, 0};
-
-  return js_function_cclosure(ctx, lws_iohandler, 1, events, h, lws_iohandler_free);
+  return js_function_cclosure(ctx, lws_iohandler, 1, 0, h, lws_iohandler_free);
 }
 
 void
 minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {
-  JSValue func = JS_NULL;
-  int events = args.events & (POLLIN | POLLOUT);
+  struct wsi_opaque_user_data* opaque = opaque_from_wsi(wsi, ctx);
 
-  if(events)
-    func = minnet_io_handler(ctx, get_osf_handle(args.fd), events, wsi);
+  if(JS_IsNull(opaque->handlers[0])) {
+    JSValue func = minnet_io_handler(ctx, wsi);
 
-  out[0] = (events & POLLIN) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, READ_HANDLER)) : JS_NULL;
-  out[1] = (events & POLLOUT) ? js_function_bind_1(ctx, func, JS_NewInt32(ctx, WRITE_HANDLER)) : JS_NULL;
+    opaque->handlers[READ_HANDLER] = js_function_bind_1(ctx, func, JS_NewBool(ctx, READ_HANDLER));
+    opaque->handlers[WRITE_HANDLER] = js_function_bind_1(ctx, func, JS_NewBool(ctx, WRITE_HANDLER));
 
-  JS_FreeValue(ctx, func);
+    JS_FreeValue(ctx, func);
+  }
+
+  opaque->poll = (struct pollfd){args.fd, args.events, 0};
+
+  out[0] = (args.events & POLLIN) ? JS_DupValue(ctx, opaque->handlers[READ_HANDLER]) : JS_NULL;
+  out[1] = (args.events & POLLOUT) ? JS_DupValue(ctx, opaque->handlers[WRITE_HANDLER]) : JS_NULL;
 }
 
-/*static JSValue
-minnet_fd_callback(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue data[]) {
-  JSValueConst args[] = {argv[0], JS_NULL};
+static int
+minnet_pollfds_handle(struct lws* wsi, struct js_callback* cb, struct lws_pollargs args) {
+  JSValue argv[3] = {
+      JS_NewInt32(cb->ctx, get_osf_handle(args.fd)),
+      JS_NULL,
+      JS_NULL,
+  };
 
-  args[1] = argv[1];
-  JS_Call(ctx, data[0], JS_UNDEFINED, 2, args);
+  minnet_io_handlers(cb->ctx, wsi, args, &argv[1]);
+  callback_emit(cb, countof(argv), argv);
 
-  args[1] = argv[2];
-  JS_Call(ctx, data[1], JS_UNDEFINED, 2, args);
+  js_argv_free(cb->ctx, countof(argv), argv);
+  return 0;
+}
 
-  return JS_UNDEFINED;
-}*/
+int
+minnet_pollfds_change(struct lws* wsi, enum lws_callback_reasons reason, struct js_callback* cb, struct lws_pollargs* args) {
+  switch(reason) {
+    case LWS_CALLBACK_LOCK_POLL:
+    case LWS_CALLBACK_UNLOCK_POLL: {
+      break;
+    }
+
+    case LWS_CALLBACK_ADD_POLL_FD:
+    case LWS_CALLBACK_DEL_POLL_FD:
+    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
+      if(callback_valid(cb))
+        minnet_pollfds_handle(wsi, cb, *args);
+
+      break;
+    }
+
+    default: {
+      return -1;
+    }
+  }
+
+  return 0;
+}
 
 struct FDCallbackClosure {
   JSContext* ctx;
@@ -231,6 +254,13 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
   return JS_UNDEFINED;
 }
 
+/**
+ * @brief      Returns a JS function which sets the read/write I/O callbacks (quickjs 'os' module) for an fd.
+ *
+ * @param      ctx   JS context
+ *
+ * @return     The function
+ */
 JSValue
 minnet_default_fd_callback(JSContext* ctx) {
   JSValue os = js_global_get(ctx, "os");
@@ -256,20 +286,21 @@ static void
 minnet_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
     size_t n = 0, len = strlen(line);
+    const char* x = line;
 
     if(JS_IsFunction(minnet_log_ctx, minnet_log_cb)) {
-      n = skip_brackets(line, len);
-      line += n;
+      n = skip_brackets(x, len);
+      x += n;
       len -= n;
-      n = skip_directory(line, len);
-      line += n;
+      n = skip_directory(x, len);
+      x += n;
       len -= n;
 
-      strip_trailing_newline(line, &len);
+      strip_trailing_newline(x, &len);
 
-      JSValueConst argv[2] = {
+      JSValue argv[2] = {
           JS_NewInt32(minnet_log_ctx, level),
-          JS_NewStringLen(minnet_log_ctx, line, len),
+          JS_NewStringLen(minnet_log_ctx, x, len),
       };
       JSValue ret = JS_Call(minnet_log_ctx, minnet_log_cb, minnet_log_this, 2, argv);
 
@@ -285,65 +316,6 @@ minnet_log_callback(int level, const char* line) {
       js_console_log(minnet_log_ctx, &minnet_log_this, &minnet_log_cb);
     }
   }
-}
-
-static int
-wsi_iohandler(struct lws* wsi, struct js_callback* cb, struct lws_pollargs args) {
-  JSValue argv[3] = {
-      JS_NewInt32(cb->ctx, get_osf_handle(args.fd)),
-      JS_NULL,
-      JS_NULL,
-  };
-
-  minnet_io_handlers(cb->ctx, wsi, args, &argv[1]);
-  callback_emit(cb, countof(argv), argv);
-
-  js_argv_free(cb->ctx, countof(argv), argv);
-  return 0;
-}
-
-int
-wsi_handle_poll(struct lws* wsi, enum lws_callback_reasons reason, struct js_callback* cb, struct lws_pollargs* args) {
-
-  /*if(reason != LWS_CALLBACK_LOCK_POLL && reason != LWS_CALLBACK_UNLOCK_POLL)
-    LOG("POLL",
-        FG("%d") "%-33s" NC " fd=%d events=%s",
-        22 + (ROR(reason, 4) ^ 0),
-        lws_callback_name(reason) + 13,
-        lws_get_socket_fd(wsi),
-        args->events == (POLLIN | POLLOUT) ? "IN|OUT"
-        : args->events == POLLIN           ? "IN"
-        : args->events == POLLOUT          ? "OUT"
-                                           : "");*/
-
-  switch(reason) {
-    case LWS_CALLBACK_LOCK_POLL:
-    case LWS_CALLBACK_UNLOCK_POLL: {
-      break;
-    }
-
-    case LWS_CALLBACK_ADD_POLL_FD:
-    case LWS_CALLBACK_DEL_POLL_FD: {
-      if(cb->ctx)
-        wsi_iohandler(wsi, cb, *args);
-
-      break;
-    }
-
-    case LWS_CALLBACK_CHANGE_MODE_POLL_FD: {
-      if(cb->ctx)
-        // if(args->events != args->prev_events)
-        wsi_iohandler(wsi, cb, *args);
-
-      break;
-    }
-
-    default: {
-      return -1;
-    }
-  }
-
-  return 0;
 }
 
 int
@@ -398,6 +370,7 @@ minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
     JS_SetPropertyUint32(ctx, ret, i++, opaque->sess ? session_object(opaque->sess, ctx) : JS_NewInt64(ctx, opaque->serial));
   }
+
   return ret;
 }
 

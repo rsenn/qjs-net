@@ -14,11 +14,12 @@ callback_emit_this(const JSCallback* cb, JSValueConst this_obj, int argc, JSValu
   if(cb->ctx)
     ret = JS_Call(cb->ctx, cb->func_obj, this_obj, argc, argv);
 
-  /*  if(JS_IsException(ret)) {
-      JSValue exception = JS_GetException(cb->ctx);
-      js_error_print(cb->ctx, exception);
-      ret = JS_Throw(cb->ctx, exception);
-    }*/
+  /*if(JS_IsException(ret)) {
+    JSValue exception = JS_GetException(cb->ctx);
+    js_error_print(cb->ctx, exception);
+    ret = JS_Throw(cb->ctx, exception);
+  }*/
+
   return ret;
 }
 

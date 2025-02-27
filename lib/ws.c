@@ -21,17 +21,13 @@ ws_new(struct lws* wsi, JSContext* ctx) {
 
   ws->lwsi = wsi;
   ws->ref_count = 2;
-  ws->fd = lws_get_socket_fd(lws_get_network_wsi(wsi));
   ws->raw = FALSE;
   ws->binary = TRUE;
 
-  // ringbuffer_init2(&ws->sendq, sizeof(ByteBlock), 65536 * 2);
-
-  if((opaque = lws_opaque(wsi, ctx))) {
+  if((opaque = opaque_from_wsi(wsi, ctx)))
     opaque->ws = ws;
-    opaque->status = 0;
-    opaque->fd = ws->fd;
-  }
+
+  ws->fd = opaque->fd;
 
   return ws;
 }
@@ -48,13 +44,8 @@ ws_clear(struct socket* ws, JSRuntime* rt) {
     if((opaque = lws_get_opaque_user_data(wsi))) {
       lws_set_opaque_user_data(wsi, 0);
       opaque_free(opaque, rt);
-
-      /*  if(status < CLOSING)
-          lws_close_free_wsi(wsi, LWS_CLOSE_STATUS_NOSTATUS, __func__);*/
     }
   }
-
-  // ringbuffer_zero(&ws->sendq);
 }
 
 void
@@ -79,6 +70,7 @@ ws_queue(struct socket* ws) {
   if((opaque = ws_opaque(ws)))
     if((session = opaque->sess))
       return &session->sendq;
+
   return 0;
 }
 

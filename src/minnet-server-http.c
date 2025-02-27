@@ -638,7 +638,7 @@ has_transfer_encoding(MinnetRequest* req, const char* enc) {
 
 static int
 serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext* ctx, struct session_data* session) {
-  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
+  struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
   lws_filepos_t content_len = LWS_ILLEGAL_HTTP_CONTENT_LEN;
   Queue* q = session_queue(session);
 
@@ -719,7 +719,7 @@ file_size(FILE* fp) {
 
 static int
 serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const char* path, MinnetHttpMount* mount) {
-  MinnetResponse* resp = opaque_fromwsi(wsi)->resp;
+  MinnetResponse* resp = ((struct wsi_opaque_user_data*)lws_get_opaque_user_data(wsi))->resp;
   FILE* fp;
   const char* mime = lws_get_mimetype(path, &mount->lws);
   // BOOL compressed = has_transfer_encoding(req, "gzip");
@@ -826,29 +826,25 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
 
   if(lws_reason_poll(reason)) {
     assert(server);
-    return wsi_handle_poll(wsi, reason, &server->on.fd, in);
-  }
-
-  if(user) {
-    if(!opaque && ctx)
-      opaque = lws_opaque(wsi, ctx);
-
-    assert(opaque);
+    return minnet_pollfds_change(wsi, reason, &server->on.fd, in);
   }
 
   if(session) {
+    if(!opaque && ctx) {
+      opaque = opaque_from_wsi(wsi, ctx);
+      opaque->sess = session;
+    }
 
     if(session->callback)
       return session->callback(wsi, reason, user, in, len);
 
-    if(opaque)
-      opaque->sess = session;
     ++session->callback_count;
   }
 
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE && reason != LWS_CALLBACK_VHOST_CERT_AGING && reason != LWS_CALLBACK_EVENT_WAIT_CANCELLED)
     LOGCB("HTTP(1)",
-          "callback=%" PRId32 " %s%sfd=%d len=%d in='%.*s' url=%s",
+          "fd=%d callback=%" PRId32 " %s%sfd=%d len=%d in='%.*s' url=%s",
+          lws_get_socket_fd(wsi),
           session ? session->callback_count : -1,
           wsi_http2(wsi) ? "h2, " : "http/1.1, ",
           wsi_tls(wsi) ? "TLS, " : "plain, ",
@@ -872,7 +868,6 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: break;
 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-
       if((session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, in, len)))
         if(mount_is_proxy(session->mount))
           lws_hdr_simple_create(wsi, wsi_http2(wsi) ? WSI_TOKEN_HTTP_COLON_AUTHORITY : WSI_TOKEN_HOST, "");
@@ -899,6 +894,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
 
       url_set_protocol(&opaque->req->url, wsi_tls(wsi) ? "https" : "http");
+
       break;
     }
 
@@ -906,8 +902,10 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
       session_init(session, wsi_context(wsi));
 
       opaque->status = OPEN;
+
       if(opaque->req)
         url_set_protocol(&opaque->req->url, wsi_tls(wsi) ? "https" : "http");
+
       break;
     }
 
@@ -938,8 +936,10 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
             JS_NewStringLen(server->on.read.ctx, in, len),
         };
         JSValue ret = minnet_server_exception(server, callback_emit_this(&server->on.read, session->req_obj, countof(args), args));
+
         JS_FreeValue(server->on.read.ctx, ret);
       }
+
       break;
     }
 
@@ -978,14 +978,14 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
       if(gen) {
         DBG("gen=%p", gen);
 
-        /* if(js_async_pending(&session->async)) {
-           BOOL done = FALSE;
-           JSValue value = generator_dequeue(gen, &done);
-           printf("value=%s\n", JS_ToCString(ctx, value));
+        /*if(js_async_pending(&session->async)) {
+          BOOL done = FALSE;
+          JSValue value = generator_dequeue(gen, &done);
+          printf("value=%s\n", JS_ToCString(ctx, value));
 
-           js_async_resolve(ctx, &session->async, value);
-           JS_FreeValue(ctx, value);
-         }*/
+          js_async_resolve(ctx, &session->async, value);
+          JS_FreeValue(ctx, value);
+        }*/
 
         generator_stop(req->body, JS_UNDEFINED);
       }
@@ -995,9 +995,8 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
             minnet_generator_iterator(server->on.post.ctx, gen),
         };
         JSValue ret = minnet_server_exception(server, callback_emit_this(&server->on.post, session->req_obj, countof(args), args));
-        JS_FreeValue(server->on.post.ctx, ret);
 
-      } else {
+        JS_FreeValue(server->on.post.ctx, ret);
       }
 
       /*if(opaque->resp) {
@@ -1036,9 +1035,11 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
       if(!session->mount)
         if(path)
           session->mount = mount_find(mounts, path, 0);
+
       if(!session->mount)
         if(req->url.path)
           session->mount = mount_find(mounts, req->url.path, mountpoint_len);
+
       if(req->url.path && !session->mount)
         if(!(session->mount = mount_find(mounts, req->url.path, mountpoint_len)))
           session->mount = mount_find(mounts, req->url.path, 0);
@@ -1083,6 +1084,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
 
         request_dup(req);
         cb = &mount->callback;
+
         if(mount && !mount->callback.ctx)
           cb = 0;
 

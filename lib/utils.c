@@ -199,10 +199,13 @@ size_t
 skip_directory(const char* line, size_t len) {
   if(line[0] == '/') {
     size_t colon = byte_chr(line, len, ':');
-    size_t slash = byte_rchr(line, colon, '/');
 
-    if(slash < colon)
-      return slash + 1;
+    if(colon < len) {
+      size_t slash = byte_rchr(line, colon, '/');
+
+      if(slash < colon)
+        return slash + 1;
+    }
   }
 
   return 0;

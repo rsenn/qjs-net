@@ -61,14 +61,17 @@ minnet_proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, 
       lws_dll2_foreach_safe(&pc->queue[ACCEPTED], NULL, proxy_ws_raw_msg_destroy);
       pc->wsi[ACCEPTED] = NULL;
       lws_set_opaque_user_data(wsi, NULL);
+
       if(!pc->wsi[ONWARD]) {
         free(pc);
         break;
       }
+
       if(pc->queue[ONWARD].count) {
         lws_set_timeout(pc->wsi[ONWARD], PENDING_TIMEOUT_KILLED_BY_PROXY_CLIENT_CLOSE, 3);
         break;
       }
+
       lws_wsi_close(pc->wsi[ONWARD], LWS_TO_KILL_ASYNC);
       break;
     }
@@ -96,6 +99,7 @@ minnet_proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, 
 
       if(pc->queue[ACCEPTED].count)
         lws_callback_on_writable(wsi);
+
       break;
     }
 
@@ -123,6 +127,7 @@ minnet_proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, 
       lws_callback_on_writable(pc->wsi[ONWARD]);
       break;
     }
+
     default: {
       break;
     }
@@ -137,6 +142,7 @@ minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reaso
   MinnetProxyMessage* msg;
   uint8_t* data;
   int m, a;
+
   LOG("PROXY-RAW-CLIENT", "in=%.*s len=%d", (int)len, (char*)in, (int)len);
 
   switch(reason) {
@@ -162,7 +168,6 @@ minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reaso
       lws_set_opaque_user_data(wsi, NULL);
 
       if(!pc->wsi[ACCEPTED]) {
-
         free(pc);
         break;
       }
@@ -179,6 +184,7 @@ minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reaso
 
     case LWS_CALLBACK_RAW_RX: {
       lwsl_user("LWS_CALLBACK_RAW_RX (%d)\n", (int)len);
+
       if(!pc || !pc->wsi[ACCEPTED])
         break;
 
@@ -202,6 +208,7 @@ minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reaso
 
     case LWS_CALLBACK_RAW_WRITEABLE: {
       lwsl_user("LWS_CALLBACK_RAW_WRITEABLE\n");
+
       if(!pc || !pc->queue[ONWARD].count)
         break;
 
@@ -220,9 +227,9 @@ minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reaso
 
       if(pc->queue[ONWARD].count)
         lws_callback_on_writable(wsi);
+
       break;
     }
-    default: break;
   }
 
   return 0;

@@ -471,9 +471,9 @@ minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
 static void
 minnet_ws_finalizer(JSRuntime* rt, JSValue val) {
   MinnetWebsocket* ws;
-  if((ws = minnet_ws_data(val))) {
+
+  if((ws = minnet_ws_data(val)))
     ws_free(ws, rt);
-  }
 }
 
 static const JSClassDef minnet_ws_class = {

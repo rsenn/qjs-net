@@ -52,6 +52,7 @@ lws_reason_poll(int reason) {
     case LWS_CALLBACK_DEL_POLL_FD:
     case LWS_CALLBACK_CHANGE_MODE_POLL_FD: return true;
   }
+
   return false;
 }
 

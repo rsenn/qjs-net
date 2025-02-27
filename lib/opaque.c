@@ -35,6 +35,12 @@ opaque_clear(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
     formparser_free(opaque->form_parser, rt);
     opaque->form_parser = 0;
   }
+
+  JS_FreeValueRT(rt, opaque->handlers[0]);
+  opaque->handlers[0] = JS_NULL;
+
+  JS_FreeValueRT(rt, opaque->handlers[1]);
+  opaque->handlers[1] = JS_NULL;
 }
 
 void
@@ -58,6 +64,8 @@ opaque_new(JSContext* ctx) {
     opaque->status = CONNECTING;
     opaque->ref_count = 1;
     opaque->fd = -1;
+    opaque->handlers[0] = JS_NULL;
+    opaque->handlers[1] = JS_NULL;
 
     if(opaque_list.prev == NULL)
       init_list_head(&opaque_list);
@@ -69,7 +77,7 @@ opaque_new(JSContext* ctx) {
 }
 
 struct wsi_opaque_user_data*
-lws_opaque(struct lws* wsi, JSContext* ctx) {
+opaque_from_wsi(struct lws* wsi, JSContext* ctx) {
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = lws_get_opaque_user_data(wsi)))
@@ -78,6 +86,8 @@ lws_opaque(struct lws* wsi, JSContext* ctx) {
   assert(ctx);
 
   opaque = opaque_new(ctx);
+
+  opaque->fd = lws_get_socket_fd(lws_get_network_wsi(wsi));
 
   lws_set_opaque_user_data(wsi, opaque);
   return opaque;

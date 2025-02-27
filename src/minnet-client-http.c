@@ -35,7 +35,7 @@ http_client_error(MinnetClient* cli, void* in, size_t len, struct session_data* 
 static int
 http_client_established(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
   int ret = 0;
-  struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
+  struct wsi_opaque_user_data* opaque = opaque_from_wsi(wsi, ctx);
   MinnetResponse* resp;
   char* type;
 
@@ -126,7 +126,7 @@ http_client_writable(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
 
   if(callback_valid(&cli->on.writeable)) {
     JSValue ret;
-    struct wsi_opaque_user_data* opaque = lws_opaque(wsi, ctx);
+    struct wsi_opaque_user_data* opaque = opaque_from_wsi(wsi, ctx);
 
     opaque->writable = TRUE;
     ret = minnet_client_exception(cli, callback_emit(&cli->on.writeable, 1, &cli->session.ws_obj));
@@ -294,9 +294,9 @@ minnet_http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, v
     return 0;
 
   if(lws_reason_poll(reason))
-    return wsi_handle_poll(wsi, reason, &client->on.fd, in);
+    return minnet_pollfds_change(wsi, reason, &client->on.fd, in);
 
-  if((opaque = lws_opaque(wsi, ctx)) && !opaque->sess && session)
+  if((opaque = opaque_from_wsi(wsi, ctx)) && !opaque->sess && session)
     opaque->sess = session;
 
   if(reason != LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ)
@@ -423,7 +423,6 @@ minnet_http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, v
     }
 
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP: {
-
       if(client->iter)
         asynciterator_stop(client->iter, JS_UNDEFINED, ctx);
 

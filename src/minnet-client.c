@@ -250,13 +250,13 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
   int ret = 0;
 
   if(lws_reason_poll(reason))
-    return wsi_handle_poll(wsi, reason, &client->on.fd, in);
+    return minnet_pollfds_change(wsi, reason, &client->on.fd, in);
 
   if(lws_reason_http(reason))
     return minnet_http_client_callback(wsi, reason, user, in, len);
 
   if((ctx = client->context.js))
-    opaque = lws_opaque(wsi, ctx);
+    opaque = opaque_from_wsi(wsi, ctx);
 
   LOGCB("CLIENT      ",
         "fd=%d h2=%i tls=%i len=%zu%s%.*s%s",
@@ -1070,7 +1070,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
       } else {
         synchfetch_setevents(c, lws_get_socket_fd(lws_get_network_wsi(client->wsi)), POLLIN | POLLOUT);
 
-        struct wsi_opaque_user_data* opaque = lws_opaque(client->wsi, ctx);
+        struct wsi_opaque_user_data* opaque = opaque_from_wsi(client->wsi, ctx);
         opaque->resp = client->response;
         Generator* gen = response_generator(opaque->resp, ctx);
 
