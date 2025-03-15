@@ -2,6 +2,7 @@
 #include "minnet-websocket.h"
 #include "minnet-request.h"
 #include "js-utils.h"
+#include "ssl-utils.h"
 #include "headers.h"
 #include "minnet-response.h"
 #include <assert.h>
@@ -10,6 +11,72 @@
 int minnet_http_server_callback(struct lws*, enum lws_callback_reasons, void*, void*, size_t);
 
 char* lws_hdr_simple_ptr(struct lws*, int);
+
+static int
+minnet_ws_server_cert_verify(int _ok, X509_STORE_CTX* store_ctx) {
+  int32_t ok = _ok;
+  MinnetServer* server = X509_STORE_CTX_get_app_data(store_ctx);
+  JSContext* ctx = server->context.js;
+  JSValue obj = JS_NewObjectProto(ctx, JS_NULL);
+  JSCallback* verify_cb = &server->on.cert_verify;
+  X509* err_cert = X509_STORE_CTX_get_current_cert(store_ctx);
+  int err = X509_STORE_CTX_get_error(store_ctx);
+  int depth = X509_STORE_CTX_get_error_depth(store_ctx);
+
+  if(err_cert) {
+    js_cert_object(ctx, obj, err_cert);
+  } else {
+  }
+
+  if(!ok) {
+    JS_SetPropertyStr(ctx, obj, "error", JS_NewInt32(ctx, err));
+    JS_SetPropertyStr(ctx, obj, "errorString", JS_NewString(ctx, X509_verify_cert_error_string(err)));
+  }
+
+  switch(err) {
+    case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: {
+      JS_SetPropertyStr(ctx, obj, "selfSigned", JS_TRUE);
+      break;
+    }
+
+    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: {
+      JS_SetPropertyStr(ctx, obj, "issuer", js_x509_name(ctx, X509_get_issuer_name(err_cert)));
+      break;
+    }
+
+    case X509_V_ERR_CERT_NOT_YET_VALID:
+    case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: {
+      JS_SetPropertyStr(ctx, obj, "notBefore", js_asn1_time(ctx, X509_get_notBefore(err_cert)));
+      break;
+    }
+
+    case X509_V_ERR_CERT_HAS_EXPIRED:
+    case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: {
+      JS_SetPropertyStr(ctx, obj, "notAfter", js_asn1_time(ctx, X509_get_notAfter(err_cert)));
+      break;
+    }
+  }
+
+  if(err == X509_V_OK && ok == 2) {}
+
+  JS_SetPropertyStr(ctx, obj, "ok", JS_NewInt32(ctx, ok));
+
+  if(JS_IsFunction(verify_cb->ctx, verify_cb->func_obj)) {
+    JSValue ret = JS_Call(verify_cb->ctx, verify_cb->func_obj, verify_cb->this_obj, 1, &obj);
+
+    if(JS_IsUndefined(ret))
+      ok = js_get_propertystr_int32(ctx, obj, "ok");
+    else
+      JS_ToInt32(ctx, &ok, ret);
+
+    JS_FreeValue(ctx, ret);
+  }
+
+  LOG("WS", "%-33s depth=%d ok=%" PRId32, "OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION", depth, ok);
+
+  JS_FreeValue(ctx, obj);
+  return ok;
+}
 
 int
 minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
@@ -34,6 +101,13 @@ minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, voi
 
     case LWS_CALLBACK_OPENSSL_PERFORM_SERVER_CERT_VERIFICATION: {
       X509_STORE_CTX_set_error(user, X509_V_OK);
+      return 0;
+    }
+
+    case LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION: {
+      X509_STORE_CTX_set_app_data(user, server);
+      X509_STORE_CTX_set_verify_cb(user, minnet_ws_server_cert_verify);
+      // X509_STORE_CTX_set_error(user, X509_V_OK);
       return 0;
     }
 

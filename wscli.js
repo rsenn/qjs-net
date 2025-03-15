@@ -216,25 +216,25 @@ class CLI {
 
           repl = globalThis.repl = new module.REPL(GetPrompt(remote));
 */
- repl=new CLI(remote);
+        repl = new CLI(remote);
 
-          repl.run(data => {
-            if(command) return repl.evalAndPrint(data);
-            if(typeof data == 'string' && data.length > 0) {
-              console.log(`Sending '${data}'`);
-              for(let connection of connections) {
-                connection.send(data);
-              }
+        repl.run(data => {
+          if(command) return repl.evalAndPrint(data);
+          if(typeof data == 'string' && data.length > 0) {
+            console.log(`Sending '${data}'`);
+            for(let connection of connections) {
+              connection.send(data);
             }
-          });
+          }
+        });
 
-          repl.commands['§'] = () => {
-            command = !command;
-            repl.readlineRemovePrompt();
-            repl.prompt = repl.ps1 = GetPrompt(remote) + '> ';
-            repl.readlinePrintPrompt();
-          };
-   /*     } catch(err) {
+        repl.commands['§'] = () => {
+          command = !command;
+          repl.readlineRemovePrompt();
+          repl.prompt = repl.ps1 = GetPrompt(remote) + '> ';
+          repl.readlinePrintPrompt();
+        };
+        /*     } catch(err) {
           console.log('error:', err.message + '\n' + err.stack);
         }
 */
@@ -326,13 +326,13 @@ class CLI {
     });
 
     function PrintMessage(msg) {
-     try {
+      try {
         if(/^{.*}\s*$/gm.test(msg)) {
           msg = JSON.parse(msg);
-         }
+        }
       } catch(e) {}
 
-repl.printStatus('Message:',console.config({compact:false}), msg);
+      repl.printStatus('Message:', console.config({ compact: false }), msg);
       //console.log('Message: ' + msg);
     }
 

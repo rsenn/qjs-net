@@ -172,6 +172,7 @@ JSValue js_error_new(JSContext*, const char* fmt, ...);
 void js_error_print(JSContext*, JSValueConst error);
 char* js_error_string(JSContext* ctx, JSValueConst error);
 uint8_t* js_toptrsize(JSContext*, unsigned int* plen, JSValueConst value);
+int32_t js_get_propertystr_int32(JSContext*, JSValueConst obj, const char* str);
 uint32_t js_get_propertystr_uint32(JSContext*, JSValueConst obj, const char* str);
 const char* js_get_propertystr_cstring(JSContext* ctx, JSValueConst obj, const char* prop);
 BOOL js_get_propertystr_bool(JSContext* ctx, JSValueConst obj, const char* str);
@@ -207,6 +208,8 @@ JSValue js_async_then(JSContext*, JSValueConst promise, JSValueConst handler);
 JSValue js_async_then2(JSContext* ctx, JSValueConst promise, JSValueConst, JSValueConst);
 JSValue js_async_catch(JSContext*, JSValueConst promise, JSValueConst handler);
 JSValue js_arraybuffer_tostring(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]);
+JSValue js_date_new(JSContext*, JSValueConst);
+JSValue js_date_from_str(JSContext*, const char*);
 
 typedef struct {
   JSValue promise;

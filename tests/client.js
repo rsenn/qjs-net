@@ -1,4 +1,4 @@
-import { client, Generator, LLL_CLIENT, LLL_USER, LLL_WARN, LLL_ALL, logLevels, setLog } from 'net.so';
+import { client, Generator, LLL_CLIENT, LLL_USER, LLL_WARN, LLL_INFO, LLL_ALL, logLevels, setLog } from 'net.so';
 import { setReadHandler, setWriteHandler } from 'os';
 import { abbreviate, escape } from './common.js';
 import { Init, Levels, log } from './log.js';

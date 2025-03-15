@@ -283,6 +283,10 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
       return 0;
     }
 
+    case LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION: {
+      return 0;
+    }
+
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
     case LWS_CALLBACK_PROTOCOL_INIT: {
       break;

@@ -1,5 +1,5 @@
-import { readlink, stat } from 'os';
-import { open } from 'std';
+import { readlink, stat, open, close, O_RDWR, exec } from 'os';
+import { open as fopen } from 'std';
 
 export function assert(actual, expected, message) {
   if(arguments.length == 1) expected = true;
@@ -44,7 +44,7 @@ export async function save(generator, file) {
   let handle;
 
   for await(let chunk of await generator) {
-    handle ??= open(file, 'w');
+    handle ??= fopen(file, 'w');
 
     if(chunk === undefined) break;
 
@@ -55,4 +55,11 @@ export async function save(generator, file) {
   handle.close();
 }
 
-export default { assert, getpid, once, exists, randStr, escape, abbreviate };
+export function MakeCert(sslCert, sslPrivateKey, hostname = 'localhost') {
+  const stderr = open('/dev/null', O_RDWR);
+  const ret = exec(['openssl', 'req', '-x509', '-out', sslCert, '-keyout', sslPrivateKey, '-newkey', 'rsa:2048', '-nodes', '-sha256', '-subj', '/CN=' + hostname], { stderr });
+  close(stderr);
+  return ret;
+}
+
+export default { assert, getpid, once, exists, randStr, escape, abbreviate, save, MakeCert, exists };

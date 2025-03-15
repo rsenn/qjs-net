@@ -86,6 +86,8 @@ void buffer_free(ByteBuffer*);
 BOOL buffer_write(ByteBuffer*, const void* x, size_t n);
 int buffer_vprintf(ByteBuffer*, const char* format, va_list ap);
 int buffer_printf(ByteBuffer*, const char* format, ...);
+int buffer_puts(ByteBuffer* buf, const char* s);
+int buffer_putc(ByteBuffer* buf, int c);
 uint8_t* buffer_realloc(ByteBuffer*, size_t size);
 int buffer_fromvalue(ByteBuffer*, JSValueConst value, JSContext* ctx);
 JSValue buffer_tostring(ByteBuffer const*, JSContext* ctx);
@@ -97,6 +99,8 @@ uint8_t* buffer_grow(ByteBuffer* buf, size_t size);
 size_t buffer_avail(ByteBuffer*);
 size_t buffer_remain(ByteBuffer*);
 size_t buffer_bytes(ByteBuffer*);
+ssize_t buffer_read(ByteBuffer*, void*, size_t);
+ssize_t buffer_gets(ByteBuffer*, void*, size_t);
 
 static inline void
 buffer_reset(ByteBuffer* buf) {
@@ -124,8 +128,15 @@ buffer_reader(ByteBuffer* bb) {
 static inline ByteBuffer
 buffer_move(ByteBuffer* buf) {
   ByteBuffer ret = {{buf->start, buf->end, buf->read, buf->write, buf->alloc}};
+
   buf->start = buf->end = buf->read = buf->write = buf->alloc = 0;
+
   return ret;
+}
+
+static inline int
+buffer_0(ByteBuffer* buf) {
+  return buffer_putc(buf, '\0');
 }
 
 #endif /* QJSNET_LIB_BUFFER_H */

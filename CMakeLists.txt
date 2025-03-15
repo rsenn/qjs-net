@@ -432,6 +432,33 @@ endmacro(TARGET_LINK TARGET)
 
 target_link(qjs-net net)
 
+include(CheckLibraryExists)
+
+#string(REGEX REPLACE "\\n" ";"  OPENSSL_LIBRARIES "${OPENSSL_LIBRARIES}")
+#dump(OPENSSL_LIBRARIES)
+message("OPENSSL_LIBRARIES: ${OPENSSL_LIBRARIES}")
+set(CMAKE_REQUIRED_LIBRARIES "${OPENSSL_LIBRARIES}")
+list(POP_FRONT CMAKE_REQUIRED_LIBRARIES OPENSSL_LIBRARY)
+message("CMAKE_REQUIRED_LIBRARIES: ${CMAKE_REQUIRED_LIBRARIES}")
+set(CMAKE_REQUIRED_LINK_DIRECTORIES "${OPENSSL_LIBRARY_DIR}")
+message("CMAKE_REQUIRED_LINK_DIRECTORIES: ${CMAKE_REQUIRED_LINK_DIRECTORIES}")
+
+dump(OPENSSL_LIBRARY)
+if(NOT HAVE_X509_self_signed)
+  unset(HAVE_X509_self_signed)
+endif(NOT HAVE_X509_self_signed)
+check_function_exists(X509_self_signed HAVE_X509_self_signed)
+if(NOT HAVE_X509_self_signed)
+  list(POP_FRONT CMAKE_REQUIRED_LIBRARIES CRYPTO_LIBRARY)
+  message("CRYPTO_LIBRARY: ${CRYPTO_LIBRARY}")
+  check_library_exists("${CRYPTO_LIBRARY}" X509_self_signed "${OPENSSL_LIBRARY_DIR}" HAVE_X509_self_signed2)
+endif(NOT HAVE_X509_self_signed)
+
+unset(CMAKE_REQUIRED_LIBRARIES)
+unset(CMAKE_REQUIRED_LINK_DIRECTORIES)
+dump(X509_self_signed)
+dump(X509_self_signed2)
+
 message(
   "Library directories:\n\
   libwebsockets - ${LIBWEBSOCKETS_LIBRARY_DIR}\n\

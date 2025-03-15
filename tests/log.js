@@ -1,5 +1,6 @@
 import { LLL_ALL, LLL_CLIENT, LLL_DEBUG, LLL_ERR, LLL_EXT, LLL_HEADER, LLL_INFO, LLL_LATENCY, LLL_NOTICE, LLL_PARSER, LLL_THREAD, LLL_USER, LLL_WARN, setLog } from 'net.so';
 import { err, getenv } from 'std';
+
 let logName;
 
 export const Levels = (() => {
@@ -60,11 +61,9 @@ export const log = (() => {
   let console = globalThis.console;
 
   import('console').then(({ Console }) => {
-    console = new Console(
-      /*err, */ {
-        inspectOptions: { compact: 1, depth: 10, customInspect: true, maxStringLength: 1000, colors: true }
-      }
-    );
+    console = new Console({
+      inspectOptions: { compact: 1, depth: 10, customInspect: true, maxStringLength: 1000, colors: true }
+    });
   });
-  return (...args) => console.log(logName + ':', ...args);
+  return (...args) => console.log(logName + ':', console.config({ compact: true }), ...args);
 })();

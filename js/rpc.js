@@ -13,7 +13,7 @@ const LogMethod = (className, method, ...args) =>
     ...args
   );
 
-const Compact = console.config ? (() => console.config({ compact: true })) : (() =>  '');
+const Compact = console.config ? () => console.config({ compact: true }) : () => '';
 const idSymbol = Symbol.for('rpcid');
 
 function isObject(value) {
@@ -432,7 +432,7 @@ export class RPCServer extends Connection {
     if(this.#instances) for(let instance in this.#instances) delete this.#instances[instance];
   }
 
-   processMessage(msg) {
+  processMessage(msg) {
     this.log('processMessage', msg);
 
     if(!('method' in msg)) return Respond(msg.id, false, `No method specified`);
@@ -443,7 +443,7 @@ export class RPCServer extends Connection {
     let ret;
 
     try {
-      ret =   fn(...(params ?? []));
+      ret = fn(...(params ?? []));
     } catch(error) {
       this.log('ERROR', error.message);
     }

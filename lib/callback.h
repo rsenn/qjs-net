@@ -64,7 +64,7 @@ typedef enum callback_e { MESSAGE = 0, CONNECT, CLOSE, ERROR, PONG, FD, HTTP, RE
 typedef struct callbacks {
   union {
     struct {
-      JSCallback message, connect, close, error, pong, fd, http, read, post, writeable;
+      JSCallback message, connect, close, error, pong, fd, http, read, post, writeable, cert_verify;
     };
     JSCallback cb[NUM_CALLBACKS];
   };

@@ -1,4 +1,4 @@
-import { LLL_INFO, LLL_USER,setLog ,client} from 'net.so';
+import { LLL_INFO, LLL_USER, setLog, client } from 'net.so';
 import { close, sleep } from 'os';
 import Client from './client.js';
 import { log } from './log.js';
@@ -26,8 +26,8 @@ function main(...args) {
           log('onConnect', { ws, req });
 
           ws.send('{"jsonrpc":"2.0","method":"alchemy_getTokenBalances","headers":{"Content-Type":"application/json"},"params":["0x3e4495646313C4b9B316827DE8567196a5C95Ac8"],"id":1}');
-         // ws.send(new Uint8Array([0x54, 0x45, 0x53, 0x54, 0x20, 0x44, 0x41, 0x54, 0x41]).buffer);
-         // ws.send('QUIT');
+          // ws.send(new Uint8Array([0x54, 0x45, 0x53, 0x54, 0x20, 0x44, 0x41, 0x54, 0x41]).buffer);
+          // ws.send('QUIT');
         },
         onClose(ws, reason) {
           log(`onClose ${reason}`);
@@ -40,7 +40,7 @@ function main(...args) {
         onMessage(ws, msg) {
           log(`onMessage '${msg}'`);
 
-            if(msg.endsWith('QUIT')) {
+          if(msg.endsWith('QUIT')) {
             log(`CLOSING!`);
             ws.close(1001);
           }

@@ -832,6 +832,18 @@ js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value) {
   return ret;
 }
 
+int32_t
+js_get_propertystr_int32(JSContext* ctx, JSValueConst obj, const char* str) {
+  int32_t ret = 0;
+  JSValue value = JS_GetPropertyStr(ctx, obj, str);
+
+  JS_ToInt32(ctx, &ret, value);
+
+  JS_FreeValue(ctx, value);
+
+  return ret;
+}
+
 uint32_t
 js_get_propertystr_uint32(JSContext* ctx, JSValueConst obj, const char* str) {
   uint32_t ret = 0;
@@ -1491,4 +1503,20 @@ js_arraybuffer_tostring(JSContext* ctx, JSValueConst this_val, int argc, JSValue
     return JS_NewStringLen(ctx, (const char*)ptr, size);
 
   return JS_ThrowTypeError(ctx, "ArrayBuffer expected");
+}
+
+JSValue
+js_date_new(JSContext* ctx, JSValueConst arg) {
+  JSValue ctor = js_global_get(ctx, "Date");
+  JSValue ret = JS_CallConstructor(ctx, ctor, 1, &arg);
+  JS_FreeValue(ctx, ctor);
+  return ret;
+}
+
+JSValue
+js_date_from_str(JSContext* ctx, const char* s) {
+  JSValue arg = JS_NewString(ctx, s);
+  JSValue ret = js_date_new(ctx, arg);
+  JS_FreeValue(ctx, arg);
+  return ret;
 }
