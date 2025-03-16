@@ -843,12 +843,11 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
 
   if(reason != LWS_CALLBACK_HTTP_WRITEABLE && reason != LWS_CALLBACK_VHOST_CERT_AGING && reason != LWS_CALLBACK_EVENT_WAIT_CANCELLED)
     LOGCB("HTTP(1)",
-          "fd=%d callback=%" PRId32 " %s%sfd=%d len=%d in='%.*s' url=%s",
-          lws_get_socket_fd(wsi),
+          "fd=%d callback=%" PRId32 " %s%slen=%d in='%.*s' url=%s",
+          lws_get_socket_fd(lws_get_network_wsi(wsi)),
           session ? session->callback_count : -1,
           wsi_http2(wsi) ? "h2, " : "http/1.1, ",
           wsi_tls(wsi) ? "TLS, " : "plain, ",
-          lws_get_socket_fd(lws_get_network_wsi(wsi)),
           (int)len,
           (int)MIN(32, len),
           (char*)in,
@@ -1165,7 +1164,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
 
       session->want_write = FALSE;
 
-      LOGCB("HTTP(2)",
+      LOGCB("HTTP(1)",
             "callback=%" PRIu32 " %smnt=%s closed=%d complete=%d sendq=%zu wait_resolve=%d",
             session->callback_count,
             wsi_http2(wsi) ? "h2, " : "",
@@ -1175,53 +1174,55 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
             q ? queue_bytes(q) : -1,
             session->wait_resolve);
 
-      if(!session->response_sent) {
-        ByteBuffer b = BUFFER(buf);
+      if(!ret)
+        if(!session->response_sent) {
+          ByteBuffer b = BUFFER(buf);
 
-        if(!(resp = opaque->resp)) {
-          session->resp_obj = minnet_response_new(ctx, opaque->req->url, 200, "OK", FALSE, 0);
-          resp = opaque->resp = minnet_response_data(session->resp_obj);
+          if(!(resp = opaque->resp)) {
+            session->resp_obj = minnet_response_new(ctx, opaque->req->url, 200, "OK", FALSE, 0);
+            resp = opaque->resp = minnet_response_data(session->resp_obj);
+          }
+
+          if((ret = serve_response(wsi, &b, opaque->resp, ctx, session)))
+            return ret;
         }
 
-        if((ret = serve_response(wsi, &b, opaque->resp, ctx, session)))
-          return ret;
-      }
+      if(!ret)
+        if(!q || !(qsize = queue_bytes(q))) {
+          if((!q || !(queue_closed(q) || queue_complete(q))) && !session->wait_resolve) {
+            ret = serve_generator(ctx, session, wsi, &done);
 
-      if(!q || !(qsize = queue_bytes(q))) {
-        if((!q || !(queue_closed(q) || queue_complete(q))) && !session->wait_resolve) {
-          ret = serve_generator(ctx, session, wsi, &done);
-
-          if(done && (q = session_queue(session)))
-            queue_close(q);
+            if(done && (q = session_queue(session)))
+              queue_close(q);
+          }
         }
-      }
 
-      if(q && http_server_writeable(session, wsi, !!queue_closed(q))) {
-        ret = minnet_http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, session, in, len);
+      if(!ret)
+        if(q && http_server_writeable(session, wsi, !!queue_closed(q))) {
+          ret = minnet_http_server_callback(wsi, LWS_CALLBACK_HTTP_FILE_COMPLETION, session, in, len);
 
-        if(queue_size(q) == 0)
-          ret = lws_http_transaction_completed(wsi);
-      }
-
-      if(qsize && !session->want_write) {
-        if(!(queue_closed(q) || queue_complete(q)) && !session->wait_resolve) {
-          ret = serve_generator(ctx, session, wsi, &done);
-
-          if(done)
-            queue_close(q);
+          if(queue_closed(q))
+            ret = lws_http_transaction_completed(wsi);
         }
-      }
 
-      LOGCB("HTTP(3)",
-            "callback=%" PRIu32 " %smnt=%s closed=%d complete=%d sendq=%zu wait_resolve=%d"
+      if(!ret)
+        if(qsize && !session->want_write) {
+          if(!(queue_closed(q) || queue_complete(q)) && !session->wait_resolve) {
+            ret = serve_generator(ctx, session, wsi, &done);
+
+            if(done)
+              queue_close(q);
+          }
+        }
+
+      LOGCB("HTTP(2)",
+            "callback=%" PRIu32 " %smnt=%s closed=%d complete=%d"
             " ret=%d want_write=%d wait_resolve=%d response_sent=%d",
             session->callback_count,
             wsi_http2(wsi) ? "h2, " : "",
             session->mount ? session->mount->mnt : 0,
             q ? queue_closed(q) : -1,
             q ? queue_complete(q) : -1,
-            q ? queue_bytes(q) : -1,
-            session->wait_resolve,
             ret,
             session->want_write,
             session->wait_resolve,

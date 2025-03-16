@@ -22,8 +22,11 @@ js_asn1_time(JSContext* ctx, ASN1_TIME* at) {
 JSValue
 js_asn1_integer(JSContext* ctx, ASN1_INTEGER* ai) {
   int64_t i64 = -1;
-  ASN1_INTEGER_get_int64(&i64, ai);
-  return JS_NewInt64(ctx, i64);
+
+  if(ASN1_INTEGER_get_int64(&i64, ai))
+    return JS_NewInt64(ctx, i64);
+
+  return JS_UNDEFINED;
 }
 
 JSValue
@@ -43,10 +46,10 @@ js_cert_object(JSContext* ctx, JSValueConst obj, X509* cert) {
   X509_PUBKEY* pubkey2 = X509_get_X509_PUBKEY(cert);
   EVP_PKEY* pubkey = X509_PUBKEY_get(pubkey2);
   ASN1_PCTX* ap = ASN1_PCTX_new();
-  EVP_PKEY_print_public(bio, pubkey, 4, ap);
+  EVP_PKEY_print_public(bio, pubkey, 0, ap);
   ASN1_PCTX_free(ap);
 
-  JS_SetPropertyStr(ctx, obj, "pubKey", ssl_bio_dynbuf_jsstring(bio, ctx));
+  JS_SetPropertyStr(ctx, obj, "key", ssl_bio_dynbuf_jsstring(bio, ctx));
   ssl_bio_dynbuf_clear(bio);
 
   X509_print(bio, cert);
@@ -56,7 +59,11 @@ js_cert_object(JSContext* ctx, JSValueConst obj, X509* cert) {
   JS_SetPropertyStr(ctx, obj, "subject", js_x509_name(ctx, X509_get_subject_name(cert)));
   JS_SetPropertyStr(ctx, obj, "issuer", js_x509_name(ctx, X509_get_issuer_name(cert)));
 
-  JS_SetPropertyStr(ctx, obj, "serialNumber", js_asn1_integer(ctx, X509_get_serialNumber(cert)));
+  JSValue serial = js_asn1_integer(ctx, X509_get_serialNumber(cert));
+  if(!JS_IsUndefined(serial))
+    JS_SetPropertyStr(ctx, obj, "serialNumber", serial);
+  JS_FreeValue(ctx, serial);
+
   JS_SetPropertyStr(ctx, obj, "notBefore", js_asn1_time(ctx, X509_get_notBefore(cert)));
   JS_SetPropertyStr(ctx, obj, "notAfter", js_asn1_time(ctx, X509_get_notAfter(cert)));
 

@@ -254,52 +254,43 @@ js_iterator_result(JSContext* ctx, JSValueConst value, BOOL done) {
 }
 
 JSValue
-js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next, BOOL* done_p, int argc, JSValueConst argv[]) {
-  JSValue fn = JS_UNDEFINED, result = JS_UNDEFINED, done = JS_FALSE, value = JS_UNDEFINED;
-
+js_iterator_next(JSContext* ctx, JSValueConst obj, JSValue* next_p, BOOL* done_p, int argc, JSValueConst argv[]) {
   if(!JS_IsObject(obj))
-    return JS_ThrowTypeError(ctx, "argument is not an object (%d) \"%s\"", JS_VALUE_GET_TAG(obj), JS_ToCString(ctx, obj));
+    return JS_ThrowTypeError(ctx, "%s(): requires object", __func__);
 
-  if(JS_IsObject(*next) && JS_IsFunction(ctx, *next)) {
-    fn = *next;
-  } else {
-    if(JS_IsFunction(ctx, obj)) {
+  if(!(JS_IsObject(*next_p) && JS_IsFunction(ctx, *next_p))) {
+    /*if(JS_IsFunction(ctx, obj)) {
       JSValue tmp = JS_Call(ctx, obj, JS_UNDEFINED, 0, 0);
 
       if(JS_IsObject(tmp)) {
         JS_FreeValue(ctx, obj);
         obj = tmp;
       }
-    }
+    }*/
+    JSValue next = JS_GetPropertyStr(ctx, obj, "next");
 
-    fn = JS_GetPropertyStr(ctx, obj, "next");
-
-    if(JS_IsUndefined(fn))
+    if(JS_IsUndefined(next))
       return JS_ThrowTypeError(ctx, "object does not have 'next' method");
 
-    if(!JS_IsFunction(ctx, fn))
-      return JS_ThrowTypeError(ctx, "object.next is not a function");
+    if(!JS_IsFunction(ctx, next))
+      return JS_ThrowTypeError(ctx, "object.next_p is not a function");
 
-    *next = js_function_bind_this(ctx, fn, obj);
-    JS_FreeValue(ctx, fn);
-    fn = *next;
+    *next_p = js_function_bind_this(ctx, next, obj);
+    JS_FreeValue(ctx, next);
   }
 
-  result = JS_Call(ctx, fn, JS_UNDEFINED, argc, argv);
-  JS_FreeValue(ctx, fn);
+  JSValue ret = JS_Call(ctx, *next_p, JS_UNDEFINED, argc, argv);
 
-  if(JS_IsException(result))
+  if(JS_IsException(ret))
     return JS_EXCEPTION;
 
-  if(js_is_promise(ctx, result))
-    return result;
+  if(js_is_promise(ctx, ret))
+    return ret;
 
-  done = JS_GetPropertyStr(ctx, result, "done");
-  value = JS_GetPropertyStr(ctx, result, "value");
-  *done_p = JS_ToBool(ctx, done);
+  *done_p = js_get_propertystr_bool(ctx, ret, "done");
+  JSValue value = JS_GetPropertyStr(ctx, ret, "value");
 
-  JS_FreeValue(ctx, result);
-  JS_FreeValue(ctx, done);
+  JS_FreeValue(ctx, ret);
 
   return value;
 }

@@ -33,33 +33,34 @@ minnet_ws_server_cert_verify(int _ok, X509_STORE_CTX* store_ctx) {
     JS_SetPropertyStr(ctx, obj, "errorString", JS_NewString(ctx, X509_verify_cert_error_string(err)));
   }
 
-  switch(err) {
-    case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: {
-      JS_SetPropertyStr(ctx, obj, "selfSigned", JS_TRUE);
-      break;
-    }
+  /* switch(err) {
+     case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: {
+       JS_SetPropertyStr(ctx, obj, "selfSigned", JS_TRUE);
+       break;
+     }
 
-    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: {
-      JS_SetPropertyStr(ctx, obj, "issuer", js_x509_name(ctx, X509_get_issuer_name(err_cert)));
-      break;
-    }
+     case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: {
+       JS_SetPropertyStr(ctx, obj, "issuer", js_x509_name(ctx, X509_get_issuer_name(err_cert)));
+       break;
+     }
 
-    case X509_V_ERR_CERT_NOT_YET_VALID:
-    case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: {
-      JS_SetPropertyStr(ctx, obj, "notBefore", js_asn1_time(ctx, X509_get_notBefore(err_cert)));
-      break;
-    }
+     case X509_V_ERR_CERT_NOT_YET_VALID:
+     case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: {
+       JS_SetPropertyStr(ctx, obj, "notBefore", js_asn1_time(ctx, X509_get_notBefore(err_cert)));
+       break;
+     }
 
-    case X509_V_ERR_CERT_HAS_EXPIRED:
-    case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: {
-      JS_SetPropertyStr(ctx, obj, "notAfter", js_asn1_time(ctx, X509_get_notAfter(err_cert)));
-      break;
-    }
-  }
+     case X509_V_ERR_CERT_HAS_EXPIRED:
+     case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: {
+       JS_SetPropertyStr(ctx, obj, "notAfter", js_asn1_time(ctx, X509_get_notAfter(err_cert)));
+       break;
+     }
+   }*/
 
   if(err == X509_V_OK && ok == 2) {}
 
-  JS_SetPropertyStr(ctx, obj, "ok", JS_NewInt32(ctx, ok));
+  if(err == X509_V_OK)
+    JS_SetPropertyStr(ctx, obj, "ok", JS_NewInt32(ctx, ok));
 
   if(JS_IsFunction(verify_cb->ctx, verify_cb->func_obj)) {
     JSValue ret = JS_Call(verify_cb->ctx, verify_cb->func_obj, verify_cb->this_obj, 1, &obj);
