@@ -7,7 +7,7 @@
 
 static BIO_METHOD* bio_dynbuf;
 
-JSValue
+/*JSValue
 js_asn1_time(JSContext* ctx, ASN1_TIME* at) {
   char buf[64];
   struct tm t;
@@ -17,7 +17,7 @@ js_asn1_time(JSContext* ctx, ASN1_TIME* at) {
       buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d.000+%02d:%02d", t.tm_year + 1900, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, (int)(t.tm_gmtoff / 3600), (int)((t.tm_gmtoff / 60) % 60));
 
   return js_date_from_str(ctx, buf);
-}
+}*/
 
 JSValue
 js_asn1_integer(JSContext* ctx, ASN1_INTEGER* ai) {
@@ -64,8 +64,8 @@ js_cert_object(JSContext* ctx, JSValueConst obj, X509* cert) {
     JS_SetPropertyStr(ctx, obj, "serialNumber", serial);
   JS_FreeValue(ctx, serial);
 
-  JS_SetPropertyStr(ctx, obj, "notBefore", js_asn1_time(ctx, X509_get_notBefore(cert)));
-  JS_SetPropertyStr(ctx, obj, "notAfter", js_asn1_time(ctx, X509_get_notAfter(cert)));
+  /*JS_SetPropertyStr(ctx, obj, "notBefore", js_asn1_time(ctx, X509_get_notBefore(cert)));
+  JS_SetPropertyStr(ctx, obj, "notAfter", js_asn1_time(ctx, X509_get_notAfter(cert)));*/
 
 #if OPENSSL_VERSION_MAJOR >= 3
   JS_SetPropertyStr(ctx, obj, "selfSigned", JS_NewBool(ctx, X509_self_signed(cert, 0)));
