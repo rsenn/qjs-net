@@ -56,8 +56,10 @@ http_client_established(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
   }
 
   if((type = response_type(resp, ctx))) {
-    if(!strncmp(type, "text/", 5))
+    if(!strncmp(type, "text/", 5)){
+      response_generator(resp,ctx);
       resp->body->block_fn = &block_tostring;
+    }
 
     js_free(ctx, type);
   }
