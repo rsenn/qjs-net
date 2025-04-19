@@ -4,7 +4,7 @@ import { err, fdopen } from 'std';
 const fetchArgs = {
   curl: (url, file) => ['-s', '-k', '-L', url].concat(file ? ['-o', file] : []),
   fetch: (url, file) => ['--quiet', '--no-verify-peer', '-o', file ?? '/dev/stdout', url],
-  wget: (url, file) => ['--quiet', '--no-check-certificate', '--content-disposition', '-O', file ?? '-', url]
+  wget: (url, file) => ['--quiet', '--no-check-certificate', '--content-disposition', '-O', file ?? '-', url],
 };
 
 const programs = Object.keys(fetchArgs);

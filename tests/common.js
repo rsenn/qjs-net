@@ -35,7 +35,7 @@ export const randStr = (n, set = '_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi
 export const escape = s =>
   [
     [/\r/g, '\\r'],
-    [/\n/g, '\\n']
+    [/\n/g, '\\n'],
   ].reduce((a, [exp, rpl]) => a.replace(exp, rpl), s);
 
 export const abbreviate = s => (s.length > 100 ? s.substring(0, 45) + ' ... ' + s.substring(-45) : s);

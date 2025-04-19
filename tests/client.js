@@ -35,7 +35,7 @@ export default function Client(url, options, debug) {
           block: false,
           headers: {
             'User-Agent': 'minnet',
-            ...headers
+            ...headers,
           },
           ...opts,
           onConnect(ws, req) {
@@ -45,7 +45,7 @@ export default function Client(url, options, debug) {
             writable = {
               write(chunk) {
                 return ws.send(chunk);
-              }
+              },
             };
 
             onConnect ? onConnect(ws, req) : log('onConnect', ws, req);
@@ -84,8 +84,8 @@ export default function Client(url, options, debug) {
             log('onRequest(2)', text.replace(/\n/g, '\\n').substring(0, 100));
 
             log('push', /* await*/ push(text));
-          }
-        })
+          },
+        }),
       );
     });
 
@@ -97,20 +97,20 @@ export default function Client(url, options, debug) {
       {},
       {
         [Symbol.asyncIterator]: {
-          value: () => readable
+          value: () => readable,
         },
         getReader: {
-          value: () => ({ read: () => readable.next() })
+          value: () => ({ read: () => readable.next() }),
         },
-        [Symbol.toStringTag]: { value: 'ReadableStream' }
-      }
+        [Symbol.toStringTag]: { value: 'ReadableStream' },
+      },
     ),
-    writable
+    writable,
   };
 }
 
 Object.defineProperty(Client, 'connections', {
   get() {
     return [...connections];
-  }
+  },
 });

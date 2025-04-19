@@ -99,7 +99,7 @@ class CLI {
             os.setReadHandler(fd, null);
             resolve(file);
           });
-        })(file.fileno())
+        })(file.fileno()),
       );
     }
 
@@ -154,20 +154,23 @@ class CLI {
           const value = arg.substring(pos + 2);
           headers.push([name, value]);
         },
-        'H'
+        'H',
       ],
       'ssl-cert': [true, null],
       'ssl-private-key': [true, null],
-      '@': 'url,'
+      '@': 'url,',
     },
-    args
+    args,
   );
 
-  const { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', method } = params;
+  let { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', method } = params;
   const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   const { binary, protocol } = params;
   let urls = params['@'];
+
+  if(os.stat(sslCert)[1] != 0) sslCert = undefined;
+  if(os.stat(sslPrivateKey)[1] != 0) sslPrivateKey = undefined;
 
   function createWS(url, callbacks, listen = 0) {
     let repl;
@@ -199,7 +202,7 @@ class CLI {
       },
       headers: {
         'user-agent': 'minnet',
-        ...Object.fromEntries(headers)
+        ...Object.fromEntries(headers),
       },
       ...callbacks,
       /*async*/ onConnect(ws, req) {
@@ -209,13 +212,6 @@ class CLI {
 
         const remote = `${ws.address}:${ws.port}`;
 
-        /*   try {
-          const module = await import('/home/roman/Projects/plot-cv/quickjs/qjs-modules/lib/repl.js').catch(() => ({
-            REPL: CLI
-          }));
-
-          repl = globalThis.repl = new module.REPL(GetPrompt(remote));
-*/
         repl = new CLI(remote);
 
         repl.run(data => {
@@ -234,12 +230,6 @@ class CLI {
           repl.prompt = repl.ps1 = GetPrompt(remote) + '> ';
           repl.readlinePrintPrompt();
         };
-        /*     } catch(err) {
-          console.log('error:', err.message + '\n' + err.stack);
-        }
-*/
-        // console.log('onConnect', { remote, repl });
-
         console.log(`Connected to ${remote}`);
 
         if(req) {
@@ -322,7 +312,7 @@ class CLI {
           let response = DNSResponse(msg);
         } else {
         }
-      }
+      },
     });
 
     function PrintMessage(msg) {
@@ -339,7 +329,7 @@ class CLI {
     Object.assign(globalThis, {
       get connections() {
         return [...connections];
-      }
+      },
     });
   }
 

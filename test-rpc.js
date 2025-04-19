@@ -6,7 +6,7 @@ import inspect from 'inspect';
 import { REPL } from '../qjs-modules/lib/repl.js';
 import * as std from 'std';
 import * as io from 'io';
-import { MessageReceiver, MessageTransmitter, MessageTransceiver, codecs, RPCApi, RPCProxy, RPCObject, RPCFactory, EncodeValue, DecodeValue, Connection, RPC_PARSE_ERROR, RPC_INVALID_REQUEST, RPC_METHOD_NOT_FOUND, RPC_INVALID_PARAMS, RPC_INTERNAL_ERROR, RPC_SERVER_ERROR_BASE, FactoryEndpoint, RPCServer, RPCClient, FactoryClient, RPCSocket, parseURL, GetProperties, GetKeys, SerializeValue, DeserializeSymbols, DeserializeValue, RPCConnect, RPCListen } from './js/rpc.js';
+import { MessageReceiver, MessageTransmitter, MessageTransceiver, codecs, RPCApi, RPCProxy, RPCObject, RPCFactory, EncodeValue, DecodeValue, Connection, RPC_PARSE_ERROR, RPC_INVALID_REQUEST, RPC_METHOD_NOT_FOUND, RPC_INVALID_PARAMS, RPC_INTERNAL_ERROR, RPC_SERVER_ERROR_BASE, FactoryEndpoint, RPCServer, RPCClient, FactoryClient, RPCSocket, parseURL, GetProperties, GetKeys, SerializeValue, DeserializeSymbols, DeserializeValue, RPCConnect, RPCListen, } from './js/rpc.js';
 import { List } from 'list';
 import { Lexer } from 'lexer';
 import { Location } from 'location';
@@ -63,7 +63,7 @@ function main(...args) {
   const config = ReadJSON(`.${base}-config`) ?? {};
 
   globalThis.console = new Console({
-    inspectOptions: { compact: 10, customInspect: true, maxStringLength: 1024 }
+    inspectOptions: { compact: 10, customInspect: true, maxStringLength: 1024 },
   });
 
   /* globalThis.console = {
@@ -89,16 +89,16 @@ function main(...args) {
       port: [true, null, 'p'],
       'ssl-cert': [true, null],
       'ssl-private-key': [true, null],
-      '@': 'url'
+      '@': 'url',
     },
-    args
+    args,
   ));
   if(params['no-tls'] === true) params.tls = false;
 
   const {
     '@': [url = `ws://127.0.0.1:${params.port ?? 9090}/ws`],
     'ssl-cert': sslCert = 'localhost.crt',
-    'ssl-private-key': sslPrivateKey = 'localhost.key'
+    'ssl-private-key': sslPrivateKey = 'localhost.key',
   } = params;
 
   const listen = params.listen; //params.connect && !params.listen ? false : true;
@@ -139,14 +139,14 @@ function main(...args) {
                 ReadableStreamDefaultController,
                 WritableStream,
                 WritableStreamDefaultController,
-                TransformStream
+                TransformStream,
               },
-              params.verbose
+              params.verbose,
             ),
-            params.verbose
+            params.verbose,
           )
         : new FactoryClient(params.verbose),
-      params.verbose
+      params.verbose,
     );
 
   let socket = (globalThis.socket = ctor());
@@ -178,7 +178,7 @@ function main(...args) {
       const clients = socket.connections.filter(c => c instanceof RPCClient);
 
       return clients[clients.length - 1];
-    }
+    },
   });
 
   Object.assign(
@@ -189,7 +189,7 @@ function main(...args) {
       exit: quit,
       ReadJSON,
       WriteFile,
-      WriteJSON
+      WriteJSON,
     },
     {
       MessageReceiver,
@@ -206,8 +206,8 @@ function main(...args) {
       RPCConnect,
       RPCListen,
       DecodeValue,
-      EncodeValue
-    }
+      EncodeValue,
+    },
   );
 
   /* delete globalThis.DEBUG;

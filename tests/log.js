@@ -16,7 +16,7 @@ export const Levels = (() => {
     LLL_CLIENT,
     LLL_LATENCY,
     LLL_USER,
-    LLL_THREAD
+    LLL_THREAD,
   };
   return Object.keys(llObj).reduce((acc, n) => {
     let v = Math.log2(llObj[n]);
@@ -42,7 +42,7 @@ export const Init = (name, mask = LLL_USER | ((LLL_CLIENT << 1) - 1)) => {
       if(level >= LLL_NOTICE && level <= LLL_EXT) return;*/
       if(l == 'USER') l = name ?? l;
       err.puts(`${l.padEnd(10)} ${msg}\n`);
-    })
+    }),
   );
 };
 
@@ -62,7 +62,7 @@ export const log = (() => {
 
   import('console').then(({ Console }) => {
     console = new Console({
-      inspectOptions: { compact: 1, depth: 10, customInspect: true, maxStringLength: 1000, colors: true }
+      inspectOptions: { compact: 1, depth: 10, customInspect: true, maxStringLength: 1000, colors: true },
     });
   });
   return (...args) => console.log(logName + ':', console.config({ compact: true }), ...args);
