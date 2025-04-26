@@ -26,8 +26,9 @@ Object.assign(globalThis, { JSValue, JSNumber, JSString, JSBoolean, JSSymbol, JS
 
 const TypedArrayPrototype = Object.getPrototypeOf(Uint32Array.prototype);
 
-export function EncodeJS(val, info = Object.setPrototypeOf({}, null)) {
+export function EncodeJS(val) {
   const type = typeof val;
+  let info;
 
   switch (type) {
     case 'function':
@@ -41,10 +42,7 @@ export function EncodeJS(val, info = Object.setPrototypeOf({}, null)) {
       const isArray = type == 'object' && Array.isArray(val) && val !== Array.prototype;
       const isTypedArray = (Object.getPrototypeOf(val) == TypedArrayPrototype || val instanceof TypedArrayPrototype.constructor) && val !== TypedArrayPrototype;
       const isArrayBuffer = (Object.getPrototypeOf(val) == ArrayBuffer.prototype || val instanceof ArrayBuffer) && val !== ArrayBuffer.prototype;
-      if(isFunction)
-        info = define(new JSFunction(), {
-          code: /=>/.test(val + '') ? (val + '').replace(/^\((.*)\)\s*=>\s/, '($1) => ') : (val + '').replace(/^(function\s*|)(.*)/, '(function $2)'),
-        });
+      if(isFunction) info = new JSFunction(/=>/.test(val + '') ? (val + '').replace(/^\((.*)\)\s*=>\s/, '($1) => ') : (val + '').replace(/^(function\s*|)(.*)/, '(function $2)'));
       else if(val instanceof RegExp) info = new JSRegExp(val.source, val.flags);
       else if(isArray || isTypedArray) info = new JSArray(isTypedArray ? null : [...val].map(v => EncodeJS(v)));
       else info = new JSObject();
@@ -54,11 +52,8 @@ export function EncodeJS(val, info = Object.setPrototypeOf({}, null)) {
       if(isArrayBuffer) info.data = [...new Uint8Array(val)].reduce((a, n) => (a ? a + ',' : '') + n.toString(16).padStart(2, '0'), '');
       if(!isFunction) {
         const members = isArray || isTypedArray ? [...val].map(i => EncodeJS(i)) : EncodeObj(val);
-        if(!isTypedArray) {
-          if(Object.keys(members).length > 0) info.members = members;
-        } else {
-          (info.members ??= {}).buffer = EncodeJS(val.buffer);
-        }
+        if(isTypedArray) (info.members ??= {}).buffer = EncodeJS(val.buffer);
+        else if(Object.keys(members).length > 0) info.members = members;
         if(!(isArray || isTypedArray)) if (proto) define(info, { proto: EncodeJS(proto) });
       }
       break;
@@ -129,10 +124,8 @@ export function DecodeJS(info) {
           info.members = members;
           val = new globalThis[info.class](DecodeJS(buffer));
         } else if(Array.isArray(info.members)) val = [...info.members].map(i => DecodeJS(i));
-      } else if(info.class == 'ArrayBuffer') {
-        val = new Uint8Array(info.data.split(',').map(s => parseInt(s, 16))).buffer;
-      } else val = {};
-
+      } else if(info.class == 'ArrayBuffer') val = new Uint8Array(info.data.split(',').map(s => parseInt(s, 16))).buffer;
+      else val = {};
       if(info.members) {
         const props = {};
         for(const k in info.members) {
@@ -147,7 +140,6 @@ export function DecodeJS(info) {
             props[k] = { enumerable: true, writable: true, configurable: true, value: DecodeJS(v) };
           }
         }
-
         Object.defineProperties(val, props);
       }
       break;
