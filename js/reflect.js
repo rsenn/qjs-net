@@ -1,17 +1,15 @@
 import { inspect } from 'inspect';
 
-class JSValue {
-  //[Symbol.for('quickjs.inspect.custom')](depth, opt) { return inspect(this, { ...opt, compact: this instanceof JSObject ? false : /*['JSNumber', 'JSString', 'JSBoolean', 'JSSymbol', 'JSRegExp'].indexOf(this[Symbol.toStringTag] ?? this.constructor.name) == -1 ? false :*/ true, }); }
-}
-/* prettier-ignore */ class JSNumber extends JSValue { constructor(value,type) { super(); this.value = value; if(type) this.type = type; } }
-/* prettier-ignore */ class JSString extends JSValue { constructor(value) { super(); this.value = value; } }
-/* prettier-ignore */ class JSBoolean extends JSValue { constructor(value) { super(); this.value = value; } }
+class JSValue {}
+/* prettier-ignore */ class JSNumber extends JSValue { constructor(value, type) { super(); if(this.value !== undefined) this.value = value; if(type) this.type = type; } }
+/* prettier-ignore */ class JSString extends JSValue { constructor(value) { super(); if(this.value !== undefined) this.value = value; } }
+/* prettier-ignore */ class JSBoolean extends JSValue { constructor(value) { super(); if(this.value !== undefined) this.value = value; } }
 /* prettier-ignore */ class JSSymbol extends JSValue { constructor(value, global) { super(); if(global) this.global=global;   if(value) this.value = value; } }
 /* prettier-ignore */ class JSRegExp extends JSValue { constructor(source, flags) { super(); this.source = source; this.flags = flags; } }
 /* prettier-ignore */ class JSObject extends JSValue { constructor(members, proto) { super(); if(members) this.members = members; if(proto) this.proto = proto; } }
 /* prettier-ignore */ class JSArray extends JSObject { constructor(arr) { super(arr ? [...arr] : undefined); } }
-/* prettier-ignore */ class JSFunction extends JSObject { constructor(code, members, proto) { super(members,proto); this.code = code; } }
-/* prettier-ignore */ class JSProperty   { constructor(get, set) { if(get)this.get=get;  if(set)this.set=set;   } }
+/* prettier-ignore */ class JSFunction extends JSObject { constructor(code, members, proto) { super(members,proto); if(this.code) this.code = code; } }
+/* prettier-ignore */ class JSProperty   { constructor(get, set) { if(get) this.get = get;  if(set) this.set = set; } }
 
 define(JSValue.prototype, { [Symbol.toStringTag]: 'JSValue' });
 define(JSNumber.prototype, { [Symbol.toStringTag]: 'JSNumber', type: 'number' });
@@ -28,15 +26,15 @@ Object.assign(globalThis, { JSValue, JSNumber, JSString, JSBoolean, JSSymbol, JS
 
 const TypedArrayPrototype = Object.getPrototypeOf(Uint32Array.prototype);
 
-export function EncodeJS(val, out = Object.setPrototypeOf({}, null)) {
+export function EncodeJS(val, info = Object.setPrototypeOf({}, null)) {
   const type = typeof val;
 
   switch (type) {
     case 'function':
     case 'object': {
       if(type == 'object' && val === null) {
-        out = new JSValue();
-        out.type = 'null';
+        info = new JSValue();
+        info.type = 'null';
         break;
       }
 
@@ -45,25 +43,25 @@ export function EncodeJS(val, out = Object.setPrototypeOf({}, null)) {
       const isTypedArray = (Object.getPrototypeOf(val) == TypedArrayPrototype || val instanceof TypedArrayPrototype.constructor) && val !== TypedArrayPrototype;
       const isArrayBuffer = (Object.getPrototypeOf(val) == ArrayBuffer.prototype || val instanceof ArrayBuffer) && val !== ArrayBuffer.prototype;
 
-      if(isFunction) out = new JSFunction(/=>/.test(val + '') ? (val + '').replace(/^\((.*)\)\s*=>\s/, '($1) => ') : (val + '').replace(/^(function\s*|)(.*)/, '(function $2)'));
-      else if(val instanceof RegExp) out = new JSRegExp(val.source, val.flags);
-      else if(isArray || isTypedArray) out = new JSArray(isTypedArray ? null : [...val].map(v => EncodeJS(v)));
-      else out = new JSObject();
+      if(isFunction) info = define(new JSFunction(), { code: /=>/.test(val + '') ? (val + '').replace(/^\((.*)\)\s*=>\s/, '($1) => ') : (val + '').replace(/^(function\s*|)(.*)/, '(function $2)') });
+      else if(val instanceof RegExp) info = new JSRegExp(val.source, val.flags);
+      else if(isArray || isTypedArray) info = new JSArray(isTypedArray ? null : [...val].map(v => EncodeJS(v)));
+      else info = new JSObject();
 
       const proto = Object.getPrototypeOf(val);
       const tag = (proto ? proto[Symbol.toStringTag] : val[Symbol.toStringTag]) ?? (proto != Object.prototype && val?.constructor?.name);
-      if(tag) out.class = tag;
+      if(tag) info.class = tag;
 
-      if(isArrayBuffer) out.data = [...new Uint8Array(val)].reduce((a, n) => (a ? a + ',' : '') + n.toString(16).padStart(2, '0'), '');
+      if(isArrayBuffer) info.data = [...new Uint8Array(val)].reduce((a, n) => (a ? a + ',' : '') + n.toString(16).padStart(2, '0'), '');
 
       if(!isFunction) {
         const members = isArray || isTypedArray ? [...val].map(i => EncodeJS(i)) : EncodeObj(val);
         if(!isTypedArray) {
-          if(Object.keys(members).length > 0) out.members = members;
+          if(Object.keys(members).length > 0) info.members = members;
         } else {
-          (out.members ??= {}).buffer = EncodeJS(val.buffer);
+          (info.members ??= {}).buffer = EncodeJS(val.buffer);
         }
-        if(!(isArray || isTypedArray)) if (proto) define(out, { proto: EncodeJS(proto) });
+        if(!(isArray || isTypedArray)) if (proto) define(info, { proto: EncodeJS(proto) });
       }
 
       break;
@@ -72,41 +70,42 @@ export function EncodeJS(val, out = Object.setPrototypeOf({}, null)) {
     case 'bigfloat':
     case 'bigint':
     case 'bigdecimal': {
-      out = new JSNumber(val + '', type == 'number' ? undefined : type);
+      info = new JSNumber(undefined, type == 'number' ? undefined : type);
+      info.value = val + '';
       break;
     }
     case 'string': {
-      out = new JSString(val);
+      info = new JSString(val);
       break;
     }
     case 'boolean': {
-      out = new JSBoolean(val + '');
+      info = new JSBoolean(val + '');
       break;
     }
     case 'undefined': {
-      out = new JSValue();
-      out.type = type;
+      info = new JSValue();
+      info.type = type;
       break;
     }
     case 'symbol': {
       const str = val.toString();
-      if(/Symbol\(Symbol\.([^)]*)\)/.test(str)) out = new JSSymbol(undefined, str.replace(/Symbol\(Symbol\.([^)]*)\)/g, '$1'));
-      else out = new JSSymbol(str.replace(/Symbol\(([^)]*)\)/g, '$1'));
+      if(/Symbol\(Symbol\.([^)]*)\)/.test(str)) info = new JSSymbol(undefined, str.replace(/Symbol\(Symbol\.([^)]*)\)/g, '$1'));
+      else info = new JSSymbol(str.replace(/Symbol\(([^)]*)\)/g, '$1'));
       break;
     }
     default: {
-      out = new JSValue();
-      out.type = type;
-      out.value = val + '';
+      info = new JSValue();
+      info.type = type;
+      info.value = val + '';
       break;
     }
   }
 
-  return out;
+  return info;
 }
 
 export function EncodeObj(obj) {
-  const out = {};
+  const members = Object.setPrototypeOf({}, null);
 
   try {
     const props = Object.getOwnPropertyDescriptors(obj);
@@ -120,10 +119,10 @@ export function EncodeObj(obj) {
       if(a.configurable === false) define(r, { configurable: a.configurable });
       if(!('value' in a) && 'writable' in a) define(r, { writable: a.writable });
 
-      out[k] = r;
+      members[k] = r;
     }
 
-    return out;
+    return members;
   } catch(e) {
     console.log('error', { e, obj });
     throw e;
@@ -131,7 +130,7 @@ export function EncodeObj(obj) {
 }
 
 export function DecodeJS(info) {
-  let out;
+  let val;
 
   switch (info.type) {
     case 'array':
@@ -139,7 +138,7 @@ export function DecodeJS(info) {
     case 'object': {
       if(info.type == 'function')
         try {
-          out = eval(info.code);
+          val = eval(info.code);
         } catch(e) {
           console.log('eval', info.code);
         }
@@ -147,14 +146,14 @@ export function DecodeJS(info) {
         const { buffer, ...members } = info.members ?? {};
         if(buffer && info.class) {
           const b = DecodeJS(buffer);
-          out = new globalThis[info.class](b);
+          val = new globalThis[info.class](b);
         } else if(Array.isArray(members)) {
-          out = [...members].map(i => DecodeJS(i));
+          val = [...members].map(i => DecodeJS(i));
         }
         break;
       } else if(info.class == 'ArrayBuffer') {
-        out = new Uint8Array(info.data.split(',').map(s => parseInt(s, 16))).buffer;
-      } else out = {};
+        val = new Uint8Array(info.data.split(',').map(s => parseInt(s, 16))).buffer;
+      } else val = {};
 
       if(info.members) {
         const props = {};
@@ -171,57 +170,57 @@ export function DecodeJS(info) {
           }
         }
 
-        Object.defineProperties(out, props);
+        Object.defineProperties(val, props);
       }
       break;
     }
     case 'boolean': {
-      out = info.value == 'true' ? true : false;
+      val = info.value == 'true' ? true : false;
       break;
     }
     case 'bigint': {
-      out = BigInt(info.value);
+      val = BigInt(info.value);
       break;
     }
     case 'bigfloat': {
-      out = BigFloat(info.value);
+      val = BigFloat(info.value);
       break;
     }
     case 'bigdecimal': {
-      out = BigDecimal(info.value);
+      val = BigDecimal(info.value);
       break;
     }
     case 'number': {
-      out = Number(info.value);
+      val = Number(info.value);
       break;
     }
     case 'string': {
-      out = info.value + '';
+      val = info.value + '';
       break;
     }
     case 'regexp': {
-      out = new RegExp(info.source, info.flags);
+      val = new RegExp(info.source, info.flags);
       break;
     }
     case 'symbol': {
-      out = info.global ? Symbol[info.global] : Symbol.for(info.value);
+      val = info.global ? Symbol[info.global] : Symbol.for(info.value);
       break;
     }
     case 'undefined': {
-      out = undefined;
+      val = undefined;
       break;
     }
     case 'null': {
-      out = null;
+      val = null;
       break;
     }
     default: {
-      out = info.value;
+      val = info.value;
       break;
     }
   }
 
-  return out;
+  return val;
 }
 
 function define(obj, ...args) {
