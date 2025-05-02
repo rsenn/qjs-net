@@ -230,14 +230,14 @@ if(BUILD_LIBWEBSOCKETS)
 
   include(FindZLIB)
 
-  build_libwebsockets()
+  build_libwebsockets(netlws)
 
   if(TARGET libmbedtls)
-    #ExternalProject_Add_StepDependencies(libwebsockets configure libmbedtls)
+    #ExternalProject_Add_StepDependencies(netlws configure libmbedtls)
     #add_dependencies(libwebsockets libmbedtls)
   endif(TARGET libmbedtls)
   if(TARGET libbrotli)
-    ExternalProject_Add_StepDependencies(libwebsockets configure libbrotli)
+    ExternalProject_Add_StepDependencies(netlws configure libbrotli)
     #add_dependencies(libwebsockets libbrotli)
   endif(TARGET libbrotli)
 else(BUILD_LIBWEBSOCKETS)
