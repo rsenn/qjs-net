@@ -49,7 +49,7 @@ if(NOT CMAKE_ARCH_LIBDIR)
                                                      "Cross compiling target")
   endif()
  set(THIS_SYSTEM "${SYSTEM_NAME}")
-  string(REGEX REPLACE unknown-android android THIS_SYSTEM "${THIS_SYSTEM}")
+  string(REGEX REPLACE "-unknown-" "-" THIS_SYSTEM "${THIS_SYSTEM}")
   string(REGEX REPLACE android[0-9]* android THIS_SYSTEM "${THIS_SYSTEM}")
 
   if(THIS_SYSTEM AND NOT "${THIS_SYSTEM}" STREQUAL "")

@@ -1,6 +1,12 @@
 include(CheckLibraryExists)
 
 macro(build_libwebsockets)
+  if(ARGN)
+    set(TARGET "${ARGN}")
+  else(ARGN)
+    set(TARGET libwebsockets)
+  endif(ARGN)
+
   message("-- Building LIBWEBSOCKETS from source")
 
   if(NOT DEFINED LIBWEBSOCKETS_C_FLAGS)
@@ -28,9 +34,8 @@ macro(build_libwebsockets)
     )
   endif(NOT EXISTS "${LIBWEBSOCKETS_INCLUDE_DIR}")
 
-  include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
-    ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets/include ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
+                      ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/include)
 
   set(LIBWEBSOCKETS_FOUND ON CACHE BOOL "found libwebsockets")
   check_library_exists(cap cap_init "" LIBCAP)
@@ -47,11 +52,9 @@ macro(build_libwebsockets)
     endif(MBEDTLS_LIBRARIES)
   endif(OPENSSL_LIBRARIES)
 
-  set(LIBWEBSOCKETS_ARGS -DLWS_WITH_SSL:BOOL=ON -DLWS_WITH_WOLFSSL:BOOL=OFF
-                         -DLWS_WITH_MBEDTLS:BOOL=OFF)
+  set(LIBWEBSOCKETS_ARGS -DLWS_WITH_SSL:BOOL=ON -DLWS_WITH_WOLFSSL:BOOL=OFF -DLWS_WITH_MBEDTLS:BOOL=OFF)
   if(CMAKE_TOOLCHAIN_FILE)
-    set(LIBWEBSOCKETS_ARGS ${LIBWEBSOCKETS_ARGS}
-                           -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${CMAKE_TOOLCHAIN_FILE})
+    set(LIBWEBSOCKETS_ARGS ${LIBWEBSOCKETS_ARGS} -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${CMAKE_TOOLCHAIN_FILE})
   endif(CMAKE_TOOLCHAIN_FILE)
 
   if(OPENSSL_LIBRARIES)
@@ -80,8 +83,7 @@ macro(build_libwebsockets)
     )
   endif(OPENSSL_INCLUDE_DIRS)
   if(OPENSSL_EXECUTABLE)
-    set(LIBWEBSOCKETS_ARGS
-        "${LIBWEBSOCKETS_ARGS} -DOPENSSL_EXECUTABLE:FILEPATH=${OPENSSL_EXECUTABLE}")
+    set(LIBWEBSOCKETS_ARGS "${LIBWEBSOCKETS_ARGS} -DOPENSSL_EXECUTABLE:FILEPATH=${OPENSSL_EXECUTABLE}")
   endif(OPENSSL_EXECUTABLE)
 
   if(WIN32)
@@ -99,10 +101,9 @@ macro(build_libwebsockets)
   #endif(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib/libwebsockets.a")
   set(LIBWEBSOCKETS_LIBRARIES "${LIBWEBSOCKETS_LIBRARIES}" CACHE STRING "libwebsockets libraries")
 
-  set(LIBWEBSOCKETS_INCLUDE_DIR "${LIBWEBSOCKETS_INCLUDE_DIR}"
-      CACHE PATH "libwebsockets include directory")
-  set(LIBWEBSOCKETS_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib
-      CACHE PATH "libwebsockets library directory")
+  set(LIBWEBSOCKETS_INCLUDE_DIR "${LIBWEBSOCKETS_INCLUDE_DIR}" CACHE PATH "libwebsockets include directory")
+  set(LIBWEBSOCKETS_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib CACHE PATH
+                                                                                    "libwebsockets library directory")
   # add_subdirectory(libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets)
   include(ExternalProject)
 
@@ -136,9 +137,8 @@ macro(build_libwebsockets)
       #list(FILTER WOLFSSL_LIBRARIES EXCLUDE REGEX wolfssl_shared)
 
       #dump(WOLFSSL_FOUND WOLFSSL_LIBRARIES WOLFSSL_LIBRARIES_DIR WOLFSSL_INCLUDE_DIR)
-      set(LIBWEBSOCKETS_ARGS
-          ${LIBWEBSOCKETS_ARGS} -DLWS_WOLFSSL_LIBRARIES:STRING=${WOLFSSL_LIBRARIES}
-          -DLWS_WOLFSSL_INCLUDE_DIRS:STRING=${WOLFSSL_INCLUDE_DIR})
+      set(LIBWEBSOCKETS_ARGS ${LIBWEBSOCKETS_ARGS} -DLWS_WOLFSSL_LIBRARIES:STRING=${WOLFSSL_LIBRARIES}
+                             -DLWS_WOLFSSL_INCLUDE_DIRS:STRING=${WOLFSSL_INCLUDE_DIR})
 
     endif(WOLFSSL_FOUND)
 
@@ -148,18 +148,15 @@ macro(build_libwebsockets)
 
     elseif(WITH_SSL)
       if(WITH_MBEDTLS)
-        set(LIBWEBSOCKETS_ARGS -DLWS_WITH_MBEDTLS:BOOL=ON -DLWS_WITH_WOLFSSL:BOOL=OFF
-                               -DLWS_WITH_SSL:BOOL=OFF)
-        set(LIBWEBSOCKETS_ARGS
-            ${LIBWEBSOCKETS_ARGS} -DLWS_MBEDTLS_LIBRARIES:STRING=${MBEDTLS_LIBRARIES}
-            -DLWS_MBEDTLS_INCLUDE_DIRS:STRING=${MBEDTLS_INCLUDE_DIR})
+        set(LIBWEBSOCKETS_ARGS -DLWS_WITH_MBEDTLS:BOOL=ON -DLWS_WITH_WOLFSSL:BOOL=OFF -DLWS_WITH_SSL:BOOL=OFF)
+        set(LIBWEBSOCKETS_ARGS ${LIBWEBSOCKETS_ARGS} -DLWS_MBEDTLS_LIBRARIES:STRING=${MBEDTLS_LIBRARIES}
+                               -DLWS_MBEDTLS_INCLUDE_DIRS:STRING=${MBEDTLS_INCLUDE_DIR})
       endif()
     endif()
   endif()
 
   if(ZLIB_LIBRARY_RELEASE)
-    set(LIBWEBSOCKETS_ARGS
-        "${LIBWEBSOCKETS_ARGS} -DLWS_ZLIB_LIBRARIES:PATH=${ZLIB_LIBRARY_RELEASE}")
+    set(LIBWEBSOCKETS_ARGS "${LIBWEBSOCKETS_ARGS} -DLWS_ZLIB_LIBRARIES:PATH=${ZLIB_LIBRARY_RELEASE}")
   endif(ZLIB_LIBRARY_RELEASE)
 
   if(ZLIB_INCLUDE_DIR)
@@ -192,7 +189,7 @@ macro(build_libwebsockets)
   string(REGEX REPLACE "[ ]" ";" LIBWEBSOCKETS_ARGS "${LIBWEBSOCKETS_ARGS}")
 
   ExternalProject_Add(
-    libwebsockets
+    "${TARGET}"
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
     PREFIX libwebsockets
@@ -332,13 +329,13 @@ macro(build_libwebsockets)
     USES_TERMINAL_BUILD ON
     #LOG_OUTPUT_ON_FAILURE ON
   )
-  # ExternalProject_Get_Property(libwebsockets CMAKE_CACHE_DEFAULT_ARGS)
+  # ExternalProject_Get_Property("${TARGET}" CMAKE_CACHE_DEFAULT_ARGS)
   #message("CMAKE_CACHE_DEFAULT_ARGS of libwebsockets = ${CMAKE_CACHE_DEFAULT_ARGS}")
 
   #link_directories("${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib")
 
   if(ARGN)
-    ExternalProject_Add_StepDependencies(libwebsockets build ${ARGN})
+    ExternalProject_Add_StepDependencies("${TARGET}" build ${ARGN})
   endif(ARGN)
 
 endmacro(build_libwebsockets)
