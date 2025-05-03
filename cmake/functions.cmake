@@ -1,15 +1,3 @@
-function(ABBREVIATE OUTPUT_VAR STR MAX)
-  if(NOT MAX)
-    set(MAX 30)
-  endif(NOT MAX)
-  string(LENGTH "${STR}" LEN)
-  if(LEN GREATER "${MAX}")
-    string(SUBSTRING "${STR}" 0 "${MAX}" STR)
-    set(STR "${STR}...")
-  endif(LEN GREATER "${MAX}")
-  set("${OUTPUT_VAR}" "${STR}" PARENT_SCOPE)
-endfunction(ABBREVIATE OUTPUT_VAR STR MAX)
-
 function(DUMP)
   foreach(VAR ${ARGN})
     if("${SEPARATOR}" STREQUAL "")
@@ -80,20 +68,40 @@ endfunction(RELATIVE_PATH RELATIVE_TO OUT_VAR)
 include(CheckFunctionExists)
 
 macro(CHECK_FUNCTION_DEF FUNC)
-  if(ARGC GREATER_EQUAL 2)
+  if(${ARGC} GREATER 1)
     set(RESULT_VAR "${ARGV1}")
-    set(PREPROC_DEF "${ARGV2}")
-  else(ARGC GREATER_EQUAL 2)
+  else(${ARGC} GREATER 1)
     string(TOUPPER "HAVE_${FUNC}" RESULT_VAR)
+  endif(${ARGC} GREATER 1)
+  
+  if(${ARGC} GREATER 2)
+    set(PREPROC_DEF "${ARGV2}")
+  else(${ARGC} GREATER 2)
     string(TOUPPER "HAVE_${FUNC}" PREPROC_DEF)
-  endif(ARGC GREATER_EQUAL 2)
-  check_function_exists("${FUNC}" "${RESULT_VAR}")
+  endif(${ARGC} GREATER 2)
+
+  if(NOT DEFINED ${RESULT_VAR})
+    check_function_exists("${FUNC}" "_${RESULT_VAR}")
+
+    if(${_${RESULT_VAR}})
+      #unset("${RESULT_VAR}")
+      #unset("${RESULT_VAR}" CACHE)
+      #set("${RESULT_VAR}" TRUE)
+      set("${RESULT_VAR}" TRUE CACHE BOOL "Define this if you have the '${FUNC}' function")
+    else(${_${RESULT_VAR}})
+      #unset("${RESULT_VAR}")
+      #unset("${RESULT_VAR}" CACHE)
+      #set("${RESULT_VAR}" FALSE)
+      set("${RESULT_VAR}" FALSE CACHE BOOL "Define this if you have the '${FUNC}' function")
+    endif(${_${RESULT_VAR}})
+  endif(NOT DEFINED ${RESULT_VAR})
+
   if(${${RESULT_VAR}})
-    set("${RESULT_VAR}" TRUE CACHE BOOL "Define this if you have the '${FUNC}' function")
-    if(NOT "${PREPROC_DEF}" STREQUAL "")
-      add_definitions(-D${PREPROC_DEF})
-    endif(NOT "${PREPROC_DEF}" STREQUAL "")
+      if(NOT "${PREPROC_DEF}" STREQUAL "")
+        add_definitions(-D${PREPROC_DEF})
+      endif(NOT "${PREPROC_DEF}" STREQUAL "")
   endif(${${RESULT_VAR}})
+  #message("${RESULT_VAR}: ${${RESULT_VAR}}")
 endmacro(CHECK_FUNCTION_DEF FUNC)
 
 macro(CHECK_FUNCTIONS)
@@ -102,51 +110,6 @@ macro(CHECK_FUNCTIONS)
     check_function_def("${FUNC}" "${RESULT_VAR}")
   endforeach(FUNC ${ARGN})
 endmacro(CHECK_FUNCTIONS)
-
-function(RESULT_VALUE OUTPUT_VAR VARNAME)
-  list(GET "${ARGN}" 0 POSITIVE_REPORT)
-  if("${POSITIVE_REPORT}" STREQUAL "")
-    set(POSITIVE_REPORT "YES")
-  endif("${POSITIVE_REPORT}" STREQUAL "")
-  list(GET "${ARGN}" 1 NEGATIVE_REPORT)
-  if("${NEGATIVE_REPORT}" STREQUAL "")
-    set(NEGATIVE_REPORT "NO")
-  endif("${NEGATIVE_REPORT}" STREQUAL "")
-
-  if(${${VARNAME}})
-    set("${OUTPUT_VAR}" "${POSITIVE_REPORT}" PARENT_SCOPE)
-  else(${${VARNAME}})
-    set("${OUTPUT_VAR}" "${NEGATIVE_REPORT}" PARENT_SCOPE)
-  endif(${${VARNAME}})
-endfunction(RESULT_VALUE OUTPUT_VAR VARNAME)
-
-macro(REPORT MSG VARNAME)
-  result_value(REPORT_RESULT "${VARNAME}" ${ARGN})
-  message(STATUS "${MSG}... ${REPORT_RESULT}")
-endmacro(REPORT MSG VARNAME)
-
-macro(CHECK_LIBRARY_FUNCTIONS LIB)
-  libname(LNAME "${LIB}")
-
-  foreach(FUNC ${ARGN})
-    string(TOUPPER "HAVE_${FUNC}" RESULT_VAR)
-    run_code("check-${FUNC}.c" "#include <stdio.h>\n\nextern int ${FUNC}();\n\nint main() {\n  printf(\"${FUNC}()=%p\\n\", ${FUNC}); return 0;\n}" RUN_RESULT RUN_OUTPUT "${QUICKJS_LIBRARY}" "")
-    # dump(RUN_RESULT RUN_OUTPUT)
-
-    if(NOT RUN_RESULT AND NOT RUN_OUTPUT STREQUAL "")
-      set(RESULT TRUE PARENT_SCOPE)
-    else(NOT RUN_RESULT AND NOT RUN_OUTPUT STREQUAL "")
-      set(RESULT FALSE PARENT_SCOPE)
-    endif(NOT RUN_RESULT AND NOT RUN_OUTPUT STREQUAL "")
-    set(${RESULT_VAR} "${RESULT}" PARENT_SCOPE)
-
-    result_value(R "${RESULT}")
-
-    message(STATUS "Checking for ${FUNC}() in '${LNAME}': ${R}")
-    # report("Checking for ${FUNC}() in '${LNAME}'" "${RESULT_VAR}")
-
-  endforeach(FUNC ${ARGN})
-endmacro(CHECK_LIBRARY_FUNCTIONS)
 
 macro(CHECK_FUNCTIONS_DEF)
   foreach(FUNC ${ARGN})
@@ -237,7 +200,9 @@ function(ADD_UNIQUE LIST)
 endfunction(ADD_UNIQUE LIST)
 
 macro(SYMLINK TARGET LINK_NAME)
-  install(CODE "message(\"Create symlink '$ENV{DESTDIR}${LINK_NAME}' to '${TARGET}'\")\nexecute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${TARGET} $ENV{DESTDIR}${LINK_NAME})")
+  install(
+    CODE "message(\"Create symlink '$ENV{DESTDIR}${LINK_NAME}' to '${TARGET}'\")\nexecute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${TARGET} $ENV{DESTDIR}${LINK_NAME})"
+  )
 endmacro(SYMLINK TARGET LINK_NAME)
 
 macro(RPATH_APPEND VAR)
@@ -249,6 +214,39 @@ macro(RPATH_APPEND VAR)
     endif("${${VAR}}" STREQUAL "")
   endforeach(VALUE ${ARGN})
 endmacro(RPATH_APPEND VAR)
+
+function(TRY_CODE FILE CODE RESULT_VAR OUTPUT_VAR LIBS LDFLAGS)
+  if(NOT DEFINED "${RESULT_VAR}" OR NOT DEFINED "${OUTPUT_VAR}")
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${FILE}" "${CODE}")
+
+    try_compile(
+      RESULT "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/${FILE}" CMAKE_FLAGS "${CMAKE_REQUIRED_FLAGS}"
+      COMPILE_DEFINITIONS "${CMAKE_REQUIRED_DEFINITIONS}" LINK_OPTIONS "${LDFLAGS}" LINK_LIBRARIES "${LIBS}"
+      OUTPUT_VARIABLE OUTPUT)
+
+    set(${RESULT_VAR} "${RESULT}" PARENT_SCOPE)
+    set(${OUTPUT_VAR} "${OUTPUT}" PARENT_SCOPE)
+  endif(NOT DEFINED "${RESULT_VAR}" OR NOT DEFINED "${OUTPUT_VAR}")
+endfunction()
+
+function(CHECK_EXTERNAL NAME LIBS LDFLAGS OUTPUT_VAR)
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
+  try_code(
+    "test-${NAME}.c"
+    "
+  extern int ${NAME}(void);
+  int main() {
+    ${NAME}();
+    return 0;
+  }
+  "
+    "${OUTPUT_VAR}"
+    OUT
+    "${LIBS}"
+    "${LDFLAGS}")
+  #dump(${OUTPUT_VAR})
+  set(${OUTPUT_VAR} "${${OUTPUT_VAR}}" PARENT_SCOPE)
+endfunction(CHECK_EXTERNAL NAME LIBS LDFLAGS OUTPUT_VAR)
 
 function(CHECK_FLAG FLAG VAR)
   if(NOT VAR OR VAR STREQUAL "")
@@ -267,54 +265,3 @@ function(CHECK_FLAG FLAG VAR)
 
   endif(RESULT)
 endfunction(CHECK_FLAG FLAG VAR)
-
-function(TRY_CODE FILE CODE RESULT_VAR OUTPUT_VAR LIBS LDFLAGS)
-  if(NOT DEFINED "${RESULT_VAR}" OR NOT DEFINED "${OUTPUT_VAR}")
-    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${FILE}" "${CODE}")
-
-    try_compile(RESULT "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/${FILE}" CMAKE_FLAGS "${CMAKE_REQUIRED_FLAGS}" COMPILE_DEFINITIONS "${CMAKE_REQUIRED_DEFINITIONS}" LINK_OPTIONS "${LDFLAGS}" LINK_LIBRARIES "${LIBS}" OUTPUT_VARIABLE OUTPUT)
-
-    set(${RESULT_VAR} "${RESULT}" PARENT_SCOPE)
-    set(${OUTPUT_VAR} "${OUTPUT}" PARENT_SCOPE)
-  endif(NOT DEFINED "${RESULT_VAR}" OR NOT DEFINED "${OUTPUT_VAR}")
-endfunction()
-
-function(RUN_CODE FILE CODE RESULT_VAR OUTPUT_VAR LIBS LDFLAGS)
-  # if(NOT DEFINED "${RESULT_VAR}" OR NOT DEFINED "${OUTPUT_VAR}")
-  string(RANDOM LENGTH 8 RND)
-  set(FN "${CMAKE_CURRENT_BINARY_DIR}/${RND}-${FILE}")
-  file(WRITE "${FN}" "${CODE}")
-  string(REGEX REPLACE "\.[^./]+$" ".log" LOG "${FN}")
-
-  # dump(FN)
-
-  try_run(RUN_RESULT COMPILE_RESULT SOURCES "${FN}" COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT RUN_OUTPUT_VARIABLE RUN_OUTPUT CMAKE_FLAGS "${CMAKE_REQUIRED_FLAGS}" COMPILE_DEFINITIONS "${CMAKE_REQUIRED_DEFINITIONS}" LINK_OPTIONS "${LDFLAGS}" LINK_LIBRARIES "${LIBS}")
-
-  file(WRITE "${LOG}" "Compile output:\n${COMPILE_OUTPUT}\n\nRun output:\n${RUN_OUTPUT}\n")
-  unset(LOG)
-
-  set(${RESULT_VAR} "${COMPILE_RESULT}" PARENT_SCOPE)
-  set(${OUTPUT_VAR} "${COMPILE_OUTPUT}" PARENT_SCOPE)
-
-  file(REMOVE "${FN}")
-
-  if(COMPILE_RESULT)
-    if(NOT "${RUN_RESULT}" STREQUAL "")
-      set(${RESULT_VAR} "${RUN_RESULT}" PARENT_SCOPE)
-    endif(NOT "${RUN_RESULT}" STREQUAL "")
-    if(NOT "${RUN_OUTPUT}" STREQUAL "")
-      set(${OUTPUT_VAR} "${RUN_OUTPUT}" PARENT_SCOPE)
-    endif(NOT "${RUN_OUTPUT}" STREQUAL "")
-  endif(COMPILE_RESULT)
-
-  file(REMOVE "${FN}")
-  unset(FN)
-  unset(RND)
-  # endif(NOT DEFINED "${RESULT_VAR}" OR NOT DEFINED "${OUTPUT_VAR}")
-endfunction()
-
-function(LIBNAME OUT_VAR FILENAME)
-  string(REGEX REPLACE ".*/(lib|)" "" LIBNAME "${FILENAME}")
-  string(REGEX REPLACE "\.[^/.]+$" "" LIBNAME "${LIBNAME}")
-  set(${OUT_VAR} "${LIBNAME}" PARENT_SCOPE)
-endfunction(LIBNAME OUT_VAR FILENAME)
