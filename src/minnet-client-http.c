@@ -124,7 +124,7 @@ http_client_established(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
 static int
 http_client_writable(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
 
-  assure(minnet_client_lws(cli) == wsi);
+  assure(minnet_client_lws(cli) == lws_get_network_wsi(wsi));
 
   if(callback_valid(&cli->on.writeable)) {
     JSValue ret;
@@ -457,7 +457,10 @@ minnet_http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, v
     }
 
     case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE: {
-      return http_client_writable(client, wsi, ctx);
+      if(minnet_client_lws(client) == wsi)
+        return http_client_writable(client, wsi, ctx);
+
+      break;
     }
 
     case LWS_CALLBACK_RECEIVE_CLIENT_HTTP: {

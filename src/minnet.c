@@ -293,16 +293,16 @@ minnet_pollfds_handle(struct lws* wsi, struct js_callback* cb, struct lws_pollar
 int
 minnet_pollfds_change(struct lws* wsi, enum lws_callback_reasons reason, struct js_callback* cb, struct lws_pollargs* args) {
 
-  /*if(reason != LWS_CALLBACK_LOCK_POLL && reason != LWS_CALLBACK_UNLOCK_POLL)
+  if(reason != LWS_CALLBACK_LOCK_POLL && reason != LWS_CALLBACK_UNLOCK_POLL)
     LOG("POLL",
-        FG("%d") "%-33s" NC " fd=%d events=%s",
+        FG("%d") "%-40s" NC " fd=%d events=%s",
         22 + (ROR(reason, 4) ^ 0),
         lws_callback_name(reason) + 13,
         lws_get_socket_fd(wsi),
         args->events == (POLLIN | POLLOUT) ? "IN|OUT"
         : args->events == POLLIN           ? "IN"
         : args->events == POLLOUT          ? "OUT"
-                                           : "");*/
+                                           : "");
 
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:

@@ -66,7 +66,8 @@ ws_from_wsi(struct lws* wsi) {
 
 static inline QueueItem*
 ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
-  return ws_enqueue(ws, block_copy(data, size));
+  QueueItem*item= ws_enqueue(ws, block_copy(data, size));
+  return item;
 }
 
 #endif /* QJSNET_LIB_WS_H */
