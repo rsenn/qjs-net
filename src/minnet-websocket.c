@@ -36,7 +36,7 @@ enum {
     WEBSOCKET_PARTIAL_BUFFERED,*/
 };
 
-enum { RESPONSE_BODY, RESPONSE_HEADER, RESPONSE_REDIRECT };
+enum { WEBSOCKET_RESPONSE_BODY, WEBSOCKET_RESPONSE_HEADER, WEBSOCKET_RESPONSE_REDIRECT };
 
 MinnetWebsocket*
 minnet_ws_data(JSValueConst obj) {
@@ -146,7 +146,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
   ByteBuffer header = BUFFER_0();
 
   switch(magic) {
-    case RESPONSE_BODY: {
+    case WEBSOCKET_RESPONSE_BODY: {
       const char* msg = 0;
       uint32_t status = 0;
 
@@ -159,7 +159,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
       break;
     }
 
-    case RESPONSE_REDIRECT: {
+    case WEBSOCKET_RESPONSE_REDIRECT: {
       const char* msg = 0;
       size_t len = 0;
       uint32_t status = 0;
@@ -174,7 +174,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
       break;
     }
 
-    case RESPONSE_HEADER: {
+    case WEBSOCKET_RESPONSE_HEADER: {
       size_t namelen;
       const char* namestr = JS_ToCStringLen(ctx, &namelen, argv[0]);
       char* name = js_malloc(ctx, namelen + 2);
@@ -473,9 +473,9 @@ static const JSClassDef minnet_ws_class = {
 
 static const JSCFunctionListEntry minnet_ws_proto_funcs[] = {
     JS_CFUNC_DEF("send", 1, minnet_ws_send),
-    JS_CFUNC_MAGIC_DEF("respond", 1, minnet_ws_respond, RESPONSE_BODY),
-    JS_CFUNC_MAGIC_DEF("redirect", 2, minnet_ws_respond, RESPONSE_REDIRECT),
-    JS_CFUNC_MAGIC_DEF("header", 2, minnet_ws_respond, RESPONSE_HEADER),
+    JS_CFUNC_MAGIC_DEF("respond", 1, minnet_ws_respond, WEBSOCKET_RESPONSE_BODY),
+    JS_CFUNC_MAGIC_DEF("redirect", 2, minnet_ws_respond, WEBSOCKET_RESPONSE_REDIRECT),
+    JS_CFUNC_MAGIC_DEF("header", 2, minnet_ws_respond, WEBSOCKET_RESPONSE_HEADER),
     JS_CFUNC_DEF("ping", 1, minnet_ws_ping),
     JS_CFUNC_DEF("pong", 1, minnet_ws_pong),
     JS_CFUNC_DEF("close", 1, minnet_ws_close),

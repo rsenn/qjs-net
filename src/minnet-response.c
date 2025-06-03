@@ -176,10 +176,10 @@ minnet_response_function(JSContext* ctx, JSValueConst this_val, int argc, JSValu
 }
 
 enum {
-  HEADERS_GET = 0,
-  HEADERS_SET,
-  HEADERS_APPEND,
-  HEADERS_LOCATION,
+  RESPONSE_HEADERS_GET = 0,
+  RESPONSE_HEADERS_SET,
+  RESPONSE_HEADERS_APPEND,
+  RESPONSE_HEADERS_LOCATION,
 };
 
 static JSValue
@@ -195,7 +195,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   key = JS_ToCStringLen(ctx, &keylen, argv[0]);
 
   switch(magic) {
-    case HEADERS_GET: {
+    case RESPONSE_HEADERS_GET: {
       size_t vlen;
       char* v;
 
@@ -205,7 +205,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       break;
     }
 
-    case HEADERS_SET: {
+    case RESPONSE_HEADERS_SET: {
       const char* v;
 
       if((v = JS_ToCString(ctx, argv[1])))
@@ -214,7 +214,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       break;
     }
 
-    case HEADERS_APPEND: {
+    case RESPONSE_HEADERS_APPEND: {
       const char* v;
       size_t vlen;
 
@@ -224,7 +224,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       break;
     }
 
-    case HEADERS_LOCATION: {
+    case RESPONSE_HEADERS_LOCATION: {
       ret = JS_NewInt32(ctx, headers_set(&resp->headers, "Location", key, "\r\n"));
       break;
     }
@@ -443,11 +443,11 @@ static const JSClassDef minnet_response_class = {
 };
 
 static const JSCFunctionListEntry minnet_response_proto_funcs[] = {
-    JS_CFUNC_MAGIC_DEF("append", 2, minnet_response_header, HEADERS_APPEND),
-    JS_CFUNC_MAGIC_DEF("get", 1, minnet_response_header, HEADERS_GET),
+    JS_CFUNC_MAGIC_DEF("append", 2, minnet_response_header, RESPONSE_HEADERS_APPEND),
+    JS_CFUNC_MAGIC_DEF("get", 1, minnet_response_header, RESPONSE_HEADERS_GET),
     JS_CFUNC_MAGIC_DEF("json", 0, minnet_response_method, RESPONSE_JSON),
-    JS_CFUNC_MAGIC_DEF("location", 1, minnet_response_header, HEADERS_LOCATION),
-    JS_CFUNC_MAGIC_DEF("set", 2, minnet_response_header, HEADERS_SET),
+    JS_CFUNC_MAGIC_DEF("location", 1, minnet_response_header, RESPONSE_HEADERS_LOCATION),
+    JS_CFUNC_MAGIC_DEF("set", 2, minnet_response_header, RESPONSE_HEADERS_SET),
     JS_CFUNC_MAGIC_DEF("text", 0, minnet_response_method, RESPONSE_TEXT),
     JS_CFUNC_MAGIC_DEF("write", 1, minnet_response_method, RESPONSE_WRITE),
     JS_CFUNC_MAGIC_DEF("finish", 0, minnet_response_method, RESPONSE_FINISH),
