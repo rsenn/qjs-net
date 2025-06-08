@@ -112,7 +112,7 @@ minnet_asynciterator_init(JSContext* ctx, JSModuleDef* m) {
   JSValue asynciterator_proto = js_asyncgenerator_prototype(ctx);
   minnet_asynciterator_proto = JS_NewObjectProto(ctx, asynciterator_proto);
   JS_FreeValue(ctx, asynciterator_proto);
-  
+
   JS_SetPropertyFunctionList(ctx, minnet_asynciterator_proto, minnet_asynciterator_proto_funcs, countof(minnet_asynciterator_proto_funcs));
   JS_SetClassProto(ctx, minnet_asynciterator_class_id, minnet_asynciterator_proto);
 

@@ -206,6 +206,7 @@ class CLI {
       },
       ...callbacks,
       /*async*/ onConnect(ws, req) {
+        globalThis.ws = ws;
         if(params.verbose) console.log('onConnect', { ws, req });
         connections.add(ws);
         Object.assign(globalThis, { ws, req });
