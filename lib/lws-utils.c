@@ -1,9 +1,12 @@
 /**
  * @file lws-utils.c
  */
+#define _POSIX_C_SOURCE 1
+
 #include "lws-utils.h"
 #include "utils.h"
 #include <string.h>
+#include <time.h>
 
 int lws_wsi_is_h2(struct lws* wsi);
 int lws_is_ssl(struct lws* wsi);
