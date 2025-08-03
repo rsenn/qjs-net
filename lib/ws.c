@@ -7,9 +7,9 @@
 #include "opaque.h"
 #include "session.h"
 #include "ringbuffer.h"
+#include "queue.h"
 #include <strings.h>
 #include <assert.h>
-#include <libwebsockets.h>
 
 struct socket*
 ws_new(struct lws* wsi, JSContext* ctx) {
@@ -86,4 +86,11 @@ ws_enqueue(struct socket* ws, ByteBlock chunk) {
         session_want_write(session, ws->lwsi);
 
   return item;
+}
+
+QueueItem*
+ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
+ QueueItem* item = ws_enqueue(ws, block_copy(data, size));
+
+ return item;
 }

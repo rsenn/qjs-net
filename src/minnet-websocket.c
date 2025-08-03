@@ -7,6 +7,7 @@
 #include "minnet-response.h"
 #include "minnet-ringbuffer.h"
 #include "minnet.h"
+#include "ws.h"
 #include "opaque.h"
 #include <strings.h>
 #include <assert.h>
@@ -128,7 +129,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
     item->binary = js_is_arraybuffer(ctx, jsbuf.value);
     item->unref = deferred_newjs(fns.resolve, ctx);
-    // item->unref = deferred_new(&JS_FreeValue, fns.resolve, ctx);
+    // item->unref = deferred_new(&JS_FreeValue,  fns.resolve, ctx);
     JS_FreeValue(ctx, fns.reject);
   }
 
@@ -280,9 +281,11 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
 
       if(!strncmp(protocol->name, "ws", 2))
         lws_close_reason(ws->lwsi, status, (uint8_t*)reason, rlen);
-    }
 
-    opaque->status = CLOSED;
+      opaque->status = CLOSING;
+
+      // lws_callback_on_writable(ws->lwsi);
+    } // else opaque->status = CLOSED;
 
     lws_close_free_wsi(ws->lwsi, status, "minnet_ws_close");
     ws->lwsi = 0;

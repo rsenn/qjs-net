@@ -30,6 +30,7 @@ void ws_free(struct socket*, JSRuntime* rt);
 struct socket* ws_dup(struct socket*);
 QueueItem* ws_enqueue(struct socket*, ByteBlock);
 Queue* ws_queue(struct socket* ws);
+QueueItem* ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx);
 
 static inline struct session_data*
 lws_session(struct lws* wsi) {
@@ -62,12 +63,6 @@ static inline struct socket*
 ws_from_wsi(struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
   return ((opaque = lws_get_opaque_user_data(wsi)) && opaque_valid(opaque)) ? opaque->ws : 0;
-}
-
-static inline QueueItem*
-ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
-  QueueItem*item= ws_enqueue(ws, block_copy(data, size));
-  return item;
 }
 
 #endif /* QJSNET_LIB_WS_H */
