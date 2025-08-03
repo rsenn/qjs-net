@@ -37,7 +37,11 @@ enum {
     WEBSOCKET_PARTIAL_BUFFERED,*/
 };
 
-enum { WEBSOCKET_RESPONSE_BODY, WEBSOCKET_RESPONSE_HEADER, WEBSOCKET_RESPONSE_REDIRECT };
+enum {
+  WEBSOCKET_RESPONSE_BODY,
+  WEBSOCKET_RESPONSE_HEADER,
+  WEBSOCKET_RESPONSE_REDIRECT,
+};
 
 MinnetWebsocket*
 minnet_ws_data(JSValueConst obj) {
@@ -112,7 +116,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
 
   int i = js_buffer_fromargs(ctx, argc, argv, &jsbuf);
 
-  if((opaque = ws_opaque(ws)) && opaque->writable) {
+  if((opaque = ws_opaque(ws)) /*&& opaque->writable*/) {
     int result;
     int32_t protocol = JS_IsString(jsbuf.value) ? LWS_WRITE_TEXT : LWS_WRITE_BINARY;
 
@@ -122,7 +126,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     result = lws_write(ws->lwsi, jsbuf.data, jsbuf.size, protocol);
     ret = JS_NewInt32(ctx, result);
 
-  } else if((item = ws_send(ws, jsbuf.data, jsbuf.size, ctx))) {
+  } /*else if((item = ws_send(ws, jsbuf.data, jsbuf.size, ctx))) {
     ResolveFunctions fns;
 
     ret = js_async_create(ctx, &fns);
@@ -131,7 +135,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
     item->unref = deferred_newjs(fns.resolve, ctx);
     // item->unref = deferred_new(&JS_FreeValue,  fns.resolve, ctx);
     JS_FreeValue(ctx, fns.reject);
-  }
+  }*/
 
   return ret;
 }

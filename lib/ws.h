@@ -21,7 +21,7 @@ struct socket {
   int ref_count;
   struct lws* lwsi;
   int fd;
-  BOOL raw : 1, binary : 1;
+  BOOL raw : 1, binary : 1, want_write : 1;
 };
 
 struct socket* ws_new(struct lws*, JSContext* ctx);
