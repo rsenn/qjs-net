@@ -1,5 +1,5 @@
 #!/usr/bin/env qjsm
-import { client, createServer, LLL_INFO, LLL_NOTICE, LLL_USER, Request, setLog, URL } from 'net.so';
+import { client, createServer, LWS_WRITE_BINARY, LWS_WRITE_TEXT, LLL_INFO, LLL_NOTICE, LLL_USER, Request, setLog, URL } from 'net.so';
 import * as os from 'os';
 import * as std from 'std';
 
@@ -220,7 +220,7 @@ class CLI {
           if(typeof data == 'string' && data.length > 0) {
             console.log(`Sending '${data}'`);
             for(let connection of connections) {
-              connection.send(data);
+              connection.send(data, 0, data.length, params.binary ? LWS_WRITE_BINARY : LWS_WRITE_TEXT);
             }
           }
         });

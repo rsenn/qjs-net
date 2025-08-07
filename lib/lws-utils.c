@@ -2,6 +2,7 @@
  * @file lws-utils.c
  */
 #define _POSIX_C_SOURCE 1
+#define _XOPEN_SOURCE 500
 
 #include "lws-utils.h"
 #include "utils.h"
