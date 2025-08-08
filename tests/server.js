@@ -1,8 +1,8 @@
 import { exit, getenv } from 'std';
 import { close, exec, open, realpath, O_RDWR, setReadHandler, setWriteHandler, Worker, kill, SIGUSR1 } from 'os';
-import { AsyncIterator, Response, Request, Ringbuffer, Generator, Socket, FormParser, Hash, URL, createServer, client, fetch, getSessions, setLog, METHOD_GET, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_HEAD, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD, LLL_ALL, logLevels } from 'net';
+import { AsyncIterator, Response, Request, Ringbuffer, Generator, Socket, FormParser, Hash, URL, createServer, client, fetch, getSessions, setLog, METHOD_GET, METHOD_POST, METHOD_OPTIONS, METHOD_PUT, METHOD_PATCH, METHOD_DELETE, METHOD_HEAD, LLL_ERR, LLL_WARN, LLL_NOTICE, LLL_INFO, LLL_DEBUG, LLL_PARSER, LLL_HEADER, LLL_EXT, LLL_CLIENT, LLL_LATENCY, LLL_USER, LLL_THREAD, LLL_ALL, logLevels, } from 'net';
 import { Levels, isDebug, DebugCallback, DefaultLevels, Init, SetLog, log } from './log.js';
-import { codecs, Connection, DecodeValue, DeserializeSymbols, DeserializeValue, EncodeValue, FactoryClient, FactoryEndpoint, GetKeys, GetProperties, MessageReceiver, MessageTransceiver, MessageTransmitter, parseURL, RPC_INTERNAL_ERROR, RPC_INVALID_PARAMS, RPC_INVALID_REQUEST, RPC_METHOD_NOT_FOUND, RPC_PARSE_ERROR, RPC_SERVER_ERROR_BASE, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue } from '../js/rpc.js';
+import { codecs, Connection, DecodeValue, DeserializeSymbols, DeserializeValue, EncodeValue, FactoryClient, FactoryEndpoint, GetKeys, GetProperties, MessageReceiver, MessageTransceiver, MessageTransmitter, parseURL, RPC_INTERNAL_ERROR, RPC_INVALID_PARAMS, RPC_INVALID_REQUEST, RPC_METHOD_NOT_FOUND, RPC_PARSE_ERROR, RPC_SERVER_ERROR_BASE, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue, } from '../js/rpc.js';
 import { assert, getpid, once, exists, randStr, escape, abbreviate, save, MakeCert } from './common.js';
 
 const w = Worker.parent;
@@ -58,7 +58,7 @@ export function Server(...args) {
       get connections() {
         return [...connections].map(([fd, ws]) => ws);
       },
-      fd2ws: n => connections.get(n)
+      fd2ws: n => connections.get(n),
     },
     {
       RPCApi,
@@ -70,8 +70,8 @@ export function Server(...args) {
       RPCProxy,
       RPCServer,
       RPCSocket,
-      SerializeValue
-    }
+      SerializeValue,
+    },
   );
 
   return createServer(
@@ -102,7 +102,7 @@ export function Server(...args) {
         ['.bat', 'text/x-msdos-batch'],
         ['.mm', 'text/x-objective-c'],
         ['.m', 'text/x-objective-c'],
-        ['.sh', 'text/x-shellscript']
+        ['.sh', 'text/x-shellscript'],
       ],
       host,
       port,
@@ -110,7 +110,7 @@ export function Server(...args) {
       sslCert,
       sslPrivateKey,
       mounts: {
-        '/': [ parentDir, 'index.html'],
+        '/': [parentDir, 'index.html'],
         *'/404.html'(req, res) {
           log('/404.html', { req, res });
           yield '<html><head><meta charset=utf-8 http-equiv="Content-Language" content="en"/><link rel="stylesheet" type="text/css" href="/error.css"/></head><body><h1>403</h1></body></html>';
@@ -127,7 +127,7 @@ export function Server(...args) {
           yield ' ';
           yield 'response';
           yield '\n';
-        }
+        },
       },
       onConnect(ws, req) {
         log('onConnect(1)', { ws, req });
@@ -148,14 +148,14 @@ export function Server(...args) {
             URL,
             Array,
             Map,
-            Set
-          })
+            Set,
+          }),
         });
 
         o.generator = new AsyncIterator();
         o.send = MakeSendFunction(
           msg => ws.send(msg),
-          () => o.generator.next()
+          () => o.generator.next(),
         );
       },
       onClose(ws, status, reason) {
@@ -207,8 +207,8 @@ export function Server(...args) {
         globalThis.verify = obj;
 
         obj.ok = 2;
-      }
-    })
+      },
+    }),
   );
 }
 

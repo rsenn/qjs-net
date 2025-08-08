@@ -25,7 +25,7 @@ export function spawn(script, args = [], log) {
         o.stdin = o.stdout = o.stderr = fd;
       }
       return o;
-    })()
+    })(),
   });
   if(fd) close(fd);
   return pid;
@@ -37,7 +37,7 @@ export function wait4(pid, status, options = 0) {
   ({
     array: st => status.splice(0, status.length, st),
     object: st => (status.status = st),
-    function: st => status(st)
-  }[Array.isArray(status) ? 'array' : typeof status](st));
+    function: st => status(st),
+  })[Array.isArray(status) ? 'array' : typeof status](st);
   return ret;
 }

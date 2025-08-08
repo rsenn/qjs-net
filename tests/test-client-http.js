@@ -35,9 +35,9 @@ async function main(...args) {
           log('onMessage', { args });
           /* stdout.puts(`\r\x1b[1;34m< ${escape(msg)}\x1b[0m\n`);
             stdout.flush();*/
-        }
+        },
       },
-      1 // debug ? LLL_INFO - 1 : LLL_USER
+      1, // debug ? LLL_INFO - 1 : LLL_USER
     );
 
     console.log('cli', cli);
