@@ -130,7 +130,7 @@ lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
 
   // p->revents = magic & (wr == WRITE_HANDLER ? POLLOUT : POLLIN);
 
-  if(x.events != x.events) {
+  if(x.revents != x.events) {
     if(poll(&x, 1, 0) < 0)
       lwsl_err("poll error: %s\n", strerror(errno));
   }

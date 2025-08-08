@@ -22,9 +22,9 @@ js_object_constructor(JSContext* ctx, JSValueConst value) {
 
 char*
 js_object_classname(JSContext* ctx, JSValueConst value) {
-   const char* name;
+  const char* name;
   char* s = 0;
-   JSValue proto = JS_UNDEFINED,ctor = js_object_constructor(ctx, value);
+  JSValue proto = JS_UNDEFINED, ctor = js_object_constructor(ctx, value);
 
   if(!JS_IsFunction(ctx, ctor)) {
     proto = JS_GetPrototype(ctx, value);

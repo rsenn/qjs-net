@@ -52,11 +52,10 @@ static char const* const protocol_names[] = {
 
 enum protocol
 protocol_number(const char* protocol) {
-  int i;
-
-  for(i = countof(protocol_names) - 1; i >= 0; --i)
-    if(!strcasecmp(protocol, protocol_names[i]))
-      return i;
+  if(protocol)
+    for(int i = countof(protocol_names) - 1; i >= 0; --i)
+      if(!strcasecmp(protocol, protocol_names[i]))
+        return i;
 
   return PROTOCOL_RAW;
 }

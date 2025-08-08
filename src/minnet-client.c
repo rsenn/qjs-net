@@ -1028,7 +1028,7 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
 #ifdef LWS_WITH_UDP
-  if(proto == PROTOCOL_RAW && !strcmp(client->request->url.protocol, "udp")) {
+  if(proto == PROTOCOL_RAW && client->request->url.protocol && !strcmp(client->request->url.protocol, "udp")) {
     struct lws_vhost* vhost;
     MinnetURL* url = &client->request->url;
 
