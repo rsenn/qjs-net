@@ -27,8 +27,7 @@ endif(DEBUG_OUTPUT)
 if(UNIX AND NOT APPLE)
   include(GNUInstallDirs)
 elseif(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  set(CMAKE_INSTALL_LIBDIR "" CACHE PATH
-                                    "Specify the output directory for libraries (default is lib)")
+  set(CMAKE_INSTALL_LIBDIR "" CACHE PATH "Specify the output directory for libraries (default is lib)")
 endif()
 
 include(CheckFunctionExists)
@@ -106,8 +105,7 @@ if(NOT BUILD_LIBWEBSOCKETS)
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLibwebsockets.cmake)
   find_libwebsockets()
   include_directories(${LIBWEBSOCKETS_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR})
-  link_libraries(${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY} ${CURL_LIBRARY}
-                 ${OPENSSL_LIBRARIES})
+  link_libraries(${LIBWEBSOCKETS_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY} ${CURL_LIBRARY} ${OPENSSL_LIBRARIES})
 endif(NOT BUILD_LIBWEBSOCKETS)
 
 if(NOT LIBWEBSOCKETS_FOUND)
@@ -178,8 +176,7 @@ if(BUILD_LIBWEBSOCKETS)
     endif(NOT OPENSSL_ROOT_DIR)
 
     if(NOT OPENSSL_INCLUDE_DIR)
-      set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include" CACHE FILEPATH
-                                                                  "OpenSSL include directory")
+      set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include" CACHE FILEPATH "OpenSSL include directory")
     endif(NOT OPENSSL_INCLUDE_DIR)
     #list(FILTER OPENSSL_LIBRARIES EXCLUDE REGEX "^$")
 
@@ -285,10 +282,9 @@ if(USE_CURL)
   include_directories(${CURL_INCLUDE_DIR})
 endif(USE_CURL)
 
-link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${OPENSSL_LIBRARY_DIR}
-                 ${MBEDTLS_LIBRARY_DIR})
-include_directories(lib ${CMAKE_CURRENT_BINARY_DIR} ${QUICKJS_INCLUDE_DIR}
-                    ${LIBWEBSOCKETS_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
+link_directories(${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR} ${OPENSSL_LIBRARY_DIR} ${MBEDTLS_LIBRARY_DIR})
+include_directories(lib ${CMAKE_CURRENT_BINARY_DIR} ${QUICKJS_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIR}
+                    ${OPENSSL_INCLUDE_DIR} ${MBEDTLS_INCLUDE_DIR})
 include_directories(
   libwebsockets/lib/abstract
   libwebsockets/lib/abstract/protocols/smtp
@@ -346,23 +342,9 @@ string(ASCII 27 ESC)
 function(DUMP_TARGET TARGET)
   foreach(
     PROP
-    BINARY_DIR
-    BUILD_RPATH
-    COMPILE_DEFINITIONS
-    COMPILE_FLAGS
-    INCLUDE_DIRECTORIES
-    INTERFACE_LINK_DIRECTORIES
-    INTERFACE_LINK_LIBRARIES
-    LINK_DIRECTORIES
-    LINK_LIBRARIES
-    MANUALLY_ADDED_DEPENDENCIES
-    NAME
-    OUTPUT_NAME
-    PCH_WARN_INVALID
-    POSITION_INDEPENDENT_CODE
-    SOURCE_DIR
-    SOURCES
-    TYPE)
+    BINARY_DIR BUILD_RPATH COMPILE_DEFINITIONS COMPILE_FLAGS INCLUDE_DIRECTORIES INTERFACE_LINK_DIRECTORIES
+    INTERFACE_LINK_LIBRARIES LINK_DIRECTORIES LINK_LIBRARIES MANUALLY_ADDED_DEPENDENCIES NAME OUTPUT_NAME
+    PCH_WARN_INVALID POSITION_INDEPENDENT_CODE SOURCE_DIR SOURCES TYPE)
     get_target_property(VALUE "${TARGET}" "${PROP}")
     if(VALUE)
       message("${ESC}[1;33m${TARGET} ${ESC}[1;31m${PROP} = ${ESC}[1;36m'${VALUE}'${ESC}[0m")
@@ -388,8 +370,7 @@ endif(BUILD_LIBWEBSOCKETS)
 
 if(OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY)
   if(NOT OPENSSL_LIBRARIES)
-    set(OPENSSL_LIBRARIES "${OPENSSL_SSL_LIBRARY};${OPENSSL_CRYPTO_LIBRARY}"
-        CACHE STRING "OpenSSL libraries")
+    set(OPENSSL_LIBRARIES "${OPENSSL_SSL_LIBRARY};${OPENSSL_CRYPTO_LIBRARY}" CACHE STRING "OpenSSL libraries")
   endif(NOT OPENSSL_LIBRARIES)
 endif(OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY)
 
@@ -408,10 +389,8 @@ macro(TARGET_LINK TARGET)
     PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_RPATH}"
                BUILD_RPATH "${CMAKE_BUILD_RPATH}"
                COMPILE_FLAGS "-fvisibility=hidden"
-               LINK_DIRECTORIES
-               "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
-               INTERFACE_LINK_DIRECTORIES
-               "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
+               LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
+               INTERFACE_LINK_DIRECTORIES "${LIBWEBSOCKETS_LIBRARY_DIR};${OPENSSL_LIBRARY_DIR};${MBEDTLS_LIBRARY_DIR}"
                PREFIX "")
 
   if(OUTPUT_NAME)
@@ -425,9 +404,8 @@ macro(TARGET_LINK TARGET)
 
   target_link_directories(${TARGET} PUBLIC ${QUICKJS_LIBRARY_DIR} ${LIBWEBSOCKETS_LIBRARY_DIR})
 
-  target_link_libraries(
-    ${TARGET} ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${OPENSSL_LIBRARIES}
-    ${SOCKET_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY})
+  target_link_libraries(${TARGET} ${LIBWEBSOCKETS_LIBRARIES} ${MBEDTLS_LIBRARIES} ${OPENSSL_LIBRARIES}
+                        ${SOCKET_LIBRARIES} ${BROTLI_LIBRARIES} ${ZLIB_LIBRARY})
 endmacro(TARGET_LINK TARGET)
 
 target_link(qjs-net net)
@@ -488,8 +466,7 @@ if(NOT QUICKJS_C_MODULE_DIR)
 endif(NOT QUICKJS_C_MODULE_DIR)
 
 install(TARGETS qjs-net DESTINATION "${QUICKJS_C_MODULE_DIR}"
-        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ
-                    WORLD_EXECUTE)
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE)
 
 #file(GLOB JSLIB js/*.js)
 #list(FILTER JSLIB EXCLUDE REGEX "(debugger-client|minnet)")
@@ -526,17 +503,16 @@ if(DO_TESTS)
   foreach(TEST ${TESTS})
     basename(BASE "${TEST}")
     string(REPLACE "test_" "" NAME "${BASE}")
-    add_test(NAME "${BASE}" COMMAND env "QUICKJS_MODULE_PATH=${MODULE_PATH}" "${QJS}" --bignum
-                                    "${TEST}" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME "${BASE}" COMMAND env "QUICKJS_MODULE_PATH=${MODULE_PATH}" "${QJS}" --bignum "${TEST}"
+             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
   endforeach(TEST ${TESTS})
 
-  add_custom_target(do_tests COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_CURRENT_BINARY_DIR}"
-                                     --target "test" COMMENT "Do all tests")
+  add_custom_target(do_tests COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_CURRENT_BINARY_DIR}" --target "test"
+                    COMMENT "Do all tests")
 endif(DO_TESTS)
 
-install(FILES wscli.js DESTINATION bin PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-                                                   GROUP_EXECUTE GROUP_READ)
+install(FILES wscli.js DESTINATION bin PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
 
 if(BUILD_MINIMAL_EXAMPLES)
   #  file(GLOB MINIMAL_EXAMPLES libwebsockets/minimal-examples/*/*/minimal*.c)
@@ -624,8 +600,7 @@ if(BUILD_MINIMAL_EXAMPLES)
       ws-server/minimal-ws-server-threads/minimal-ws-server.c
       ws-server/minimal-ws-server-threads-smp/minimal-ws-server.c
       ws-server/minimal-ws-server-timer/minimal-ws-server.c)
-  list(FILTER MINIMAL_EXAMPLES EXCLUDE REGEX
-       "(libuv|dbus|secure.streams|thread|mqtt|jit|fulltext|eventlib)")
+  list(FILTER MINIMAL_EXAMPLES EXCLUDE REGEX "(libuv|dbus|secure.streams|thread|mqtt|jit|fulltext|eventlib)")
   set(EXAMPLES_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/minimal-examples")
   make_directory("${EXAMPLES_SOURCE_DIR}")
   file(RELATIVE_PATH EXAMPLES_RELATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" "${EXAMPLES_SOURCE_DIR}")
@@ -661,10 +636,9 @@ if(BUILD_MINIMAL_EXAMPLES)
           exec_program(${CLANG_FORMAT} ARGS -style=file ${SRC} OUTPUT_VARIABLE EXAMPLE_SOURCE)
           #string(REGEX REPLACE "-100y.cert" "-100y.crt" EXAMPLE_SOURCE "${EXAMPLE_SOURCE}")
           #string(REGEX REPLACE "-100y" "" EXAMPLE_SOURCE "${EXAMPLE_SOURCE}")
-          string(REGEX REPLACE "\"localhost-100y" "\"${EXAMPLES_SOURCE_DIR}/localhost-100y"
-                               EXAMPLE_SOURCE "${EXAMPLE_SOURCE}")
-          string(REGEX REPLACE "\"./mount-origin\"" "\"${MOUNT_DIR}\"" EXAMPLE_SOURCE
+          string(REGEX REPLACE "\"localhost-100y" "\"${EXAMPLES_SOURCE_DIR}/localhost-100y" EXAMPLE_SOURCE
                                "${EXAMPLE_SOURCE}")
+          string(REGEX REPLACE "\"./mount-origin\"" "\"${MOUNT_DIR}\"" EXAMPLE_SOURCE "${EXAMPLE_SOURCE}")
 
           file(WRITE "${GENERATED_SOURCE}" "${EXAMPLE_SOURCE}")
         else("${SRC}" MATCHES "\\.[ch]$")
@@ -676,8 +650,7 @@ if(BUILD_MINIMAL_EXAMPLES)
     basename(BASE "${SOURCE}")
 
     add_executable(${EXAMPLE} "${EXAMPLES_SOURCE_DIR}/${BASE}")
-    set_target_properties(
-      ${EXAMPLE} PROPERTIES OUTPUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/minimal-examples/${EXAMPLE}")
+    set_target_properties(${EXAMPLE} PROPERTIES OUTPUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/minimal-examples/${EXAMPLE}")
     target_compile_definitions(
       ${EXAMPLE}
       PUBLIC -DLWS_WITH_CACHE_NSCOOKIEJAR

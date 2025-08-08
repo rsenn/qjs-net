@@ -105,6 +105,10 @@ macro(build_libwebsockets)
   set(LIBWEBSOCKETS_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets/lib CACHE PATH
                                                                                     "libwebsockets library directory")
   # add_subdirectory(libwebsockets ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets)
+
+  list(APPEND LIBWEBSOCKETS_ARGS -DLWS_HAVE_HMAC_CTX_new:INTERNAL=1 -DLWS_HAVE_RSA_SET0_KEY:INTERNAL=1
+       -DLWS_HAVE_ECDSA_SIG_set0:INTERNAL=1 -DLWS_HAVE_BN_bn2binpad:INTERNAL=1)
+
   include(ExternalProject)
 
   if(WITH_WOLFSSL)
@@ -193,7 +197,8 @@ macro(build_libwebsockets)
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libwebsockets
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libwebsockets
     PREFIX libwebsockets
-    CMAKE_ARGS "-DCMAKE_C_COMPILER:FILEPATH=${CMAKE_C_COMPILER}"
+    CMAKE_ARGS -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=ON
+               "-DCMAKE_C_COMPILER:FILEPATH=${CMAKE_C_COMPILER}"
                "-DCMAKE_C_FLAGS:STRING=${LIBWEBSOCKETS_C_FLAGS}"
                #"-DCMAKE_C_FLAGS:STRING=${LIBWEBSOCKETS_C_FLAGS} -DSSL_CTRL_SET_TLSEXT_HOSTNAME"
                "-DCMAKE_VERBOSE_MAKEFILE:BOOL=${CMAKE_VERBOSE_MAKEFILE}"
@@ -211,7 +216,7 @@ macro(build_libwebsockets)
                -DLWS_FALLBACK_GETHOSTBYNAME:BOOL=ON
                -DLWS_FOR_GITOHASHI:BOOL=OFF
                -DLWS_HTTP_HEADERS_ALL:BOOL=OFF
-               -DLWS_IPV6:BOOL=OFF
+               -DLWS_IPV6:BOOL=ON
                -DLWS_LOGS_TIMESTAMP:BOOL=ON
                -DLWS_LOG_TAG_LIFECYCLE:BOOL=ON
                -DLWS_REPRODUCIBLE:BOOL=ON
@@ -298,7 +303,7 @@ macro(build_libwebsockets)
                -DLWS_WITH_STRUCT_JSON:BOOL=OFF
                -DLWS_WITH_STRUCT_SQLITE3:BOOL=OFF
                -DLWS_WITH_SUL_DEBUGGING:BOOL=OFF
-               -DLWS_WITH_SYS_ASYNC_DNS:BOOL=OFF
+               -DLWS_WITH_SYS_ASYNC_DNS:BOOL=ON
                -DLWS_WITH_SYS_DHCP_CLIENT:BOOL=OFF
                -DLWS_WITH_SYS_FAULT_INJECTION:BOOL=OFF
                -DLWS_WITH_SYS_METRICS:BOOL=OFF
@@ -314,6 +319,7 @@ macro(build_libwebsockets)
                -DLWS_WITH_ZLIB:BOOL=ON
     CMAKE_CACHE_ARGS
       ${LIBWEBSOCKETS_ARGS}
+      -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=ON
       -DLWS_HAVE_LIBCAP:BOOL=FALSE
       -DLWS_WITH_PLUGINS_API:BOOL=${LWS_WITH_PLUGINS_API}
       -DLWS_WITH_PLUGINS:BOOL=${LWS_WITH_PLUGINS}
