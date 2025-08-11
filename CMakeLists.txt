@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 project(qjs-net C)
 
 cmake_policy(SET CMP0007 OLD)
