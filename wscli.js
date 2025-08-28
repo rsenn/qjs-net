@@ -80,9 +80,15 @@ function DNSResponse(buffer) {
 }
 
 class CLI {
+  cleanUpHandlers = new Set();
+
   constructor(prompt) {
     this.prompt = prompt + '> ';
     //os.ttySetRaw(1);
+  }
+
+  addCleanupHandler(fn) {
+    this.cleanUpHandlers.add(fn);
   }
 
   getline() {
@@ -118,6 +124,9 @@ class CLI {
 
       callback(line);
     }
+
+    for(const handler of this.cleanUpHandlers) handler.call(this);
+
     std.exit(0);
   }
 
@@ -215,6 +224,14 @@ class CLI {
 
         repl = new CLI(remote);
 
+        repl.addCleanupHandler(() => {
+          ws.close();
+
+          const { fd, readyState } = ws;
+
+          console.log('cleanup', console.config({ compact: true }), { fd, readyState });
+        });
+
         repl.run(data => {
           if(command) return repl.evalAndPrint(data);
           if(typeof data == 'string' && data.length > 0) {
@@ -231,6 +248,7 @@ class CLI {
           repl.prompt = repl.ps1 = GetPrompt(remote) + '> ';
           repl.readlinePrintPrompt();
         };
+
         console.log(`Connected to ${remote}`);
 
         if(req) {
