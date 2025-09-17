@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(qjs-net C)
 
-cmake_policy(SET CMP0007 OLD)
+#cmake_policy(SET CMP0007 OLD)
 
 message("Building project [1;31m${PROJECT_NAME}[0m")
 
