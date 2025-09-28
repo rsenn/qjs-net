@@ -878,6 +878,8 @@ minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   memset(&context->info, 0, sizeof(struct lws_context_creation_info));
   context->info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
   context->info.options |= LWS_SERVER_OPTION_H2_JUST_FIX_WINDOW_UPDATE_OVERFLOW;
+  context->info.options |= LWS_SERVER_OPTION_PEER_CERT_NOT_REQUIRED;
+  context->info.options |= LWS_SERVER_OPTION_IGNORE_MISSING_CERT;
   context->info.port = CONTEXT_PORT_NO_LISTEN;
   context->info.protocols = client_protocols;
   context->info.user = client;
