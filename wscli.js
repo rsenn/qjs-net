@@ -165,6 +165,7 @@ class CLI {
         },
         'H',
       ],
+      'ssl-ca': [true, null],
       'ssl-cert': [true, null],
       'ssl-private-key': [true, null],
       '@': 'url,',
@@ -172,12 +173,13 @@ class CLI {
     args,
   );
 
-  let { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', method } = params;
-  const listen = params.connect && !params.listen ? false : true;
+  let { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', 'ssl-ca': sslCA = 'ca.crt', method } = params;
+  const listen = params.connect && !params.listen ? false : true
   const server = !params.client || params.server;
   const { binary, protocol } = params;
   let urls = params['@'];
 
+  if(os.stat(sslCA)[1] != 0) sslCA = undefined;
   if(os.stat(sslCert)[1] != 0) sslCert = undefined;
   if(os.stat(sslPrivateKey)[1] != 0) sslPrivateKey = undefined;
 
@@ -202,6 +204,7 @@ class CLI {
     return fn(url, {
       sslCert,
       sslPrivateKey,
+      sslCA,
       method,
       binary,
       protocol,
