@@ -139,10 +139,22 @@ class CLI {
   }
 }
 
-/*async*/ function main(...args) {
+function main(...args) {
   let headers = [];
   params = GetOpt(
     {
+      help: [
+        false,
+        () => {
+          std.out.puts(`Usage: ${scriptArgs[0].replace(/.*\//g, '')} [OPTIONS...] <URL>\n\n`);
+          std.out.puts(`  -x, --debug              Debug output\n`);
+          std.out.puts(`  -P, --protocol NAME      WebSocket subprotocol\n`);
+          std.out.puts(`  -b, --binary             Binary message encoding\n`);
+          std.out.puts(`  -H, --header STRING      Add a HTTP header\n`);
+          std.exit(0);
+        },
+        'h',
+      ],
       verbose: [false, (a, v) => (v | 0) + 1, 'v'],
       listen: [false, null, 'l'],
       binary: [false, null, 'b'],
@@ -174,7 +186,7 @@ class CLI {
   );
 
   let { 'ssl-cert': sslCert = 'localhost.crt', 'ssl-private-key': sslPrivateKey = 'localhost.key', 'ssl-ca': sslCA = 'ca.crt', method } = params;
-  const listen = params.connect && !params.listen ? false : true
+  const listen = params.connect && !params.listen ? false : true;
   const server = !params.client || params.server;
   const { binary, protocol } = params;
   let urls = params['@'];
@@ -344,8 +356,9 @@ class CLI {
         }
       } catch(e) {}
 
-      repl.printStatus('Message:', console.config({ compact: false }), msg);
-      //console.log('Message: ' + msg);
+      Object.setPrototypeOf(msg, { [Symbol.toStringTag]: 'Message' });
+
+      repl.printStatus(console.config({ compact: false }), msg);
     }
 
     Object.assign(globalThis, {
@@ -358,7 +371,7 @@ class CLI {
   try {
     let instance = createWS(urls.shift(), {});
 
-    console.log('instance', instance, instance[Symbol.asyncIterator]);
+    //console.log('instance', instance, instance[Symbol.asyncIterator]);
   } catch(error) {
     quit('ERROR: ' + error.message);
   }

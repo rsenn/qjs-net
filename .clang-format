@@ -10,7 +10,7 @@ AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: false
-AlwaysBreakAfterDefinitionReturnType: TopLevelDefinitions
+#AlwaysBreakAfterDefinitionReturnType: TopLevelDefinitions
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: false
 BinPackArguments: false
@@ -52,7 +52,7 @@ SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 UseTab: Never
-AlwaysBreakAfterDefinitionReturnType: All
+#AlwaysBreakAfterDefinitionReturnType: All
 ColumnLimit: 200
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4

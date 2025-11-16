@@ -45,14 +45,12 @@ typedef struct {
   JSValue exception;
 } SyncFetch;
 
-static SyncFetch*
-synchfetch_dup(SyncFetch* c) {
+static SyncFetch* synchfetch_dup(SyncFetch* c) {
   ++c->ref_count;
   return c;
 }
 
-static void
-synchfetch_free(void* ptr) {
+static void synchfetch_free(void* ptr) {
   SyncFetch* c = ptr;
 
   if(--c->ref_count == 0) {
@@ -61,8 +59,7 @@ synchfetch_free(void* ptr) {
   }
 }
 
-static ssize_t
-synchfetch_indexpollfd(SyncFetch* c, int fd) {
+static ssize_t synchfetch_indexpollfd(SyncFetch* c, int fd) {
   size_t i;
 
   for(i = 0; i < c->nfds; i++)
@@ -72,8 +69,7 @@ synchfetch_indexpollfd(SyncFetch* c, int fd) {
   return -1;
 }
 
-static struct pollfd*
-synchfetch_getpollfd(SyncFetch* c, int fd) {
+static struct pollfd* synchfetch_getpollfd(SyncFetch* c, int fd) {
   ssize_t i;
 
   if((i = synchfetch_indexpollfd(c, fd)) == -1)
@@ -82,8 +78,7 @@ synchfetch_getpollfd(SyncFetch* c, int fd) {
   return &c->pfds[i];
 }
 
-static void
-synchfetch_setevents(SyncFetch* c, int fd, int events) {
+static void synchfetch_setevents(SyncFetch* c, int fd, int events) {
   struct pollfd* pfd;
 
   if(!(pfd = synchfetch_getpollfd(c, fd))) {
@@ -99,8 +94,7 @@ synchfetch_setevents(SyncFetch* c, int fd, int events) {
   }
 }
 
-static void
-synchfetch_removefd(SyncFetch* c, int fd) {
+static void synchfetch_removefd(SyncFetch* c, int fd) {
   size_t n;
   ssize_t i = synchfetch_indexpollfd(c, fd);
 
@@ -113,24 +107,21 @@ synchfetch_removefd(SyncFetch* c, int fd) {
   c->touched = TRUE;
 }
 
-static JSValue
-close_status(JSContext* ctx, const char* in, size_t len) {
+static JSValue close_status(JSContext* ctx, const char* in, size_t len) {
   if(len >= 2)
     return JS_NewInt32(ctx, ((uint8_t*)in)[0] << 8 | ((uint8_t*)in)[1]);
 
   return JS_UNDEFINED;
 }
 
-static JSValue
-close_reason(JSContext* ctx, const char* in, size_t len) {
+static JSValue close_reason(JSContext* ctx, const char* in, size_t len) {
   if(len > 2)
     return JS_NewStringLen(ctx, &in[2], len - 2);
 
   return JS_UNDEFINED;
 }
 
-void
-minnet_client_certificate(struct context* context, JSValueConst options) {
+void minnet_client_certificate(struct context* context, JSValueConst options) {
   struct lws_context_creation_info* info = &context->info;
   JSContext* ctx = context->js;
 
@@ -154,8 +145,7 @@ minnet_client_certificate(struct context* context, JSValueConst options) {
     info->client_ssl_ca_mem = js_toptrsize(ctx, &info->client_ssl_ca_mem_len, context->ca);
 }
 
-MinnetClient*
-minnet_client_new(JSContext* ctx) {
+MinnetClient* minnet_client_new(JSContext* ctx) {
   MinnetClient* client;
 
   if(!(client = js_mallocz(ctx, sizeof(MinnetClient))))
@@ -170,8 +160,7 @@ minnet_client_new(JSContext* ctx) {
   return client;
 }
 
-void
-minnet_client_free(MinnetClient* client, JSRuntime* rt) {
+void minnet_client_free(MinnetClient* client, JSRuntime* rt) {
   if(--client->ref_count == 0) {
 
 #ifdef DEBUG_OUTPUT
@@ -201,8 +190,7 @@ minnet_client_free(MinnetClient* client, JSRuntime* rt) {
   }
 }
 
-void
-minnet_client_zero(MinnetClient* client) {
+void minnet_client_zero(MinnetClient* client) {
   client->ref_count = 1;
   client->body = JS_NULL;
   client->next = JS_NULL;
@@ -219,15 +207,13 @@ minnet_client_zero(MinnetClient* client) {
   client->gen = 0;
 }
 
-MinnetClient*
-minnet_client_dup(MinnetClient* client) {
+MinnetClient* minnet_client_dup(MinnetClient* client) {
   ++client->ref_count;
 
   return client;
 }
 
-Generator*
-minnet_client_generator(MinnetClient* client, JSContext* ctx) {
+Generator* minnet_client_generator(MinnetClient* client, JSContext* ctx) {
   if(!client->gen)
     client->gen = generator_new(ctx);
 
@@ -237,13 +223,9 @@ minnet_client_generator(MinnetClient* client, JSContext* ctx) {
   return client->gen;
 }
 
-MinnetClient*
-lws_client(struct lws* wsi) {
-  return lws_context_user(lws_get_context(wsi));
-}
+MinnetClient* lws_client(struct lws* wsi) { return lws_context_user(lws_get_context(wsi)); }
 
-static int
-minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+static int minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetClient* client = lws_client(wsi);
   struct wsi_opaque_user_data* opaque = 0;
   JSContext* ctx = 0;
@@ -582,16 +564,14 @@ minnet_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* 
   return ret;
 }
 
-static void
-message_closure_free(void* ptr) {
+static void message_closure_free(void* ptr) {
   MessageClosure* closure = ptr;
   JSContext* ctx = closure->ctx;
 
   js_free(ctx, closure);
 }
 
-static MessageClosure*
-message_closure_new(JSContext* ctx) {
+static MessageClosure* message_closure_new(JSContext* ctx) {
   MessageClosure* closure;
 
   if((closure = js_malloc(ctx, sizeof(MessageClosure)))) {
@@ -602,8 +582,7 @@ message_closure_new(JSContext* ctx) {
   return closure;
 }
 
-static JSValue
-minnet_client_onmessage(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+static JSValue minnet_client_onmessage(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MessageClosure* closure = opaque;
 
   closure->msg = JS_DupValue(ctx, argv[0]);
@@ -611,8 +590,7 @@ minnet_client_onmessage(JSContext* ctx, JSValueConst this_val, int argc, JSValue
   return JS_UNDEFINED;
 }
 
-static JSValue
-minnet_client_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_client_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetClient* client;
   JSValue ret = JS_UNDEFINED;
 
@@ -646,8 +624,7 @@ minnet_client_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
   return ret;
 }
 
-static JSValue
-minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_client_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetClient* client;
   JSValue ret = JS_UNDEFINED;
 
@@ -691,8 +668,7 @@ enum {
   CLIENT_LINEBUFFERED,
 };
 
-static JSValue
-minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
+static JSValue minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetClient* client;
   JSValue ret = JS_UNDEFINED;
 
@@ -738,8 +714,7 @@ minnet_client_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-static JSValue
-minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+static JSValue minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetClient* client;
   JSValue ret = JS_UNDEFINED;
 
@@ -777,8 +752,7 @@ minnet_client_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int
   return ret;
 }
 
-JSValue
-minnet_client_response(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue func_data[]) {
+JSValue minnet_client_response(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, JSValue func_data[]) {
   JSValue ret = JS_Call(ctx, func_data[0], JS_UNDEFINED, 1, &argv[1]);
 
   JS_FreeValue(ctx, ret);
@@ -786,8 +760,7 @@ minnet_client_response(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   return JS_NewInt32(ctx, 1);
 }
 
-JSValue
-minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+JSValue minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   SyncFetch* c = ptr;
   int32_t fd;
   BOOL rd = JS_ToBool(ctx, argv[1]), wr = JS_ToBool(ctx, argv[2]);
@@ -806,8 +779,7 @@ minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   return JS_UNDEFINED;
 }
 
-JSValue
-minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+JSValue minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   SyncFetch* c = ptr;
   int32_t fd = -1;
   MinnetWebsocket* ws;
@@ -837,8 +809,7 @@ minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return JS_UNDEFINED;
 }
 
-JSValue
-minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+JSValue minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   int argind = 0;
   JSValue value, options, ret = JS_UNDEFINED;
   MinnetClient* client = 0;
@@ -1139,8 +1110,7 @@ fail:
   return ret;
 }
 
-static void
-minnet_client_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_client_finalizer(JSRuntime* rt, JSValue val) {
   MinnetClient* client;
 
   if((client = minnet_client_data(val)))
@@ -1169,8 +1139,7 @@ static const JSCFunctionListEntry minnet_client_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetClient", JS_PROP_CONFIGURABLE),
 };
 
-JSValue
-minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+JSValue minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   union closure* closure;
   JSValue ret;
   MinnetClient* cl;
@@ -1205,8 +1174,7 @@ minnet_client(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   return ret;
 }
 
-JSValue
-minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
+JSValue minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
   JSAtom prop;
   JSValue fn, ret = JS_NewObjectProtoClass(ctx, minnet_client_proto, minnet_client_class_id);
 
@@ -1224,8 +1192,7 @@ minnet_client_wrap(JSContext* ctx, MinnetClient* client) {
   return ret;
 }
 
-int
-minnet_client_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_client_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_client_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_client_class_id, &minnet_client_class);

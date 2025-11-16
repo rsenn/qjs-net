@@ -268,7 +268,7 @@ if(CMAKE_INSTALL_RPATH)
   set(CMAKE_BUILD_RPATH "${CMAKE_INSTALL_RPATH}")
 endif(CMAKE_INSTALL_RPATH)
 
-check_functions(strlcpy poll)
+check_functions_def(strlcpy poll)
 
 if(HAVE_STRLCPY)
   add_definitions(-DHAVE_STRLCPY)

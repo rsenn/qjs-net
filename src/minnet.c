@@ -53,8 +53,7 @@ typedef enum { READ_HANDLER = 0, WRITE_HANDLER } JSIOHandler;
 static THREAD_LOCAL intptr_t* osfhandle_map;
 static THREAD_LOCAL size_t osfhandle_count;
 
-static int
-make_osf_handle(intptr_t handle) {
+static int make_osf_handle(intptr_t handle) {
   int ret;
 
   assert((HANDLE)handle != INVALID_HANDLE_VALUE);
@@ -72,8 +71,7 @@ make_osf_handle(intptr_t handle) {
   return ret;
 };
 
-static int
-get_osf_handle(intptr_t handle) {
+static int get_osf_handle(intptr_t handle) {
   assert((HANDLE)handle != INVALID_HANDLE_VALUE);
 
   if(osfhandle_map) {
@@ -86,8 +84,7 @@ get_osf_handle(intptr_t handle) {
   return make_osf_handle(handle);
 }
 
-static void
-close_osf_handle(int fd) {
+static void close_osf_handle(int fd) {
   int ret;
   intptr_t handle = (intptr_t)_get_osfhandle(fd);
 
@@ -114,16 +111,14 @@ typedef struct {
   struct pollfd pfd;
 } LWSIOHandler;
 
-static void
-lws_iohandler_free(void* ptr) {
+static void lws_iohandler_free(void* ptr) {
   LWSIOHandler* closure = ptr;
   JSContext* ctx = closure->ctx;
 
   js_free(ctx, closure);
 };
 
-static JSValue
-lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+static JSValue lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   LWSIOHandler* closure = ptr;
   struct pollfd x = closure->pfd;
   JSValue ret = JS_UNDEFINED;
@@ -156,8 +151,7 @@ lws_iohandler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   return ret;
 }
 
-static JSValue
-minnet_io_handler(JSContext* ctx, int fd, int events, int magic, struct lws* wsi) {
+static JSValue minnet_io_handler(JSContext* ctx, int fd, int events, int magic, struct lws* wsi) {
   LWSIOHandler* h;
 
   if(!(h = js_mallocz(ctx, sizeof(LWSIOHandler))))
@@ -168,8 +162,7 @@ minnet_io_handler(JSContext* ctx, int fd, int events, int magic, struct lws* wsi
   return js_function_cclosure(ctx, lws_iohandler, 0, magic, h, lws_iohandler_free);
 }
 
-void
-minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {
+void minnet_io_handlers(JSContext* ctx, struct lws* wsi, struct lws_pollargs args, JSValue out[2]) {
   int events = args.events & (POLLIN | POLLOUT);
 
   out[0] = (events & POLLIN) ? minnet_io_handler(ctx, get_osf_handle(args.fd), events, READ_HANDLER, wsi) : JS_NULL;
@@ -195,8 +188,7 @@ struct FDCallbackClosure {
   JSCFunctionMagic* set_handler;
 };
 
-static void
-minnet_fd_callback_free(void* opaque) {
+static void minnet_fd_callback_free(void* opaque) {
   struct FDCallbackClosure* closure = opaque;
 
   JS_FreeValue(closure->ctx, closure->set_read);
@@ -204,8 +196,7 @@ minnet_fd_callback_free(void* opaque) {
   js_free(closure->ctx, closure);
 }
 
-static JSValue
-minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+static JSValue minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   struct FDCallbackClosure* closure = opaque;
   JSValueConst args[] = {argv[0], JS_NULL};
 
@@ -218,8 +209,7 @@ minnet_fd_callback_closure(JSContext* ctx, JSValueConst this_val, int argc, JSVa
   return JS_UNDEFINED;
 }
 
-JSValue
-minnet_default_fd_callback(JSContext* ctx) {
+JSValue minnet_default_fd_callback(JSContext* ctx) {
   JSValue os = js_global_get(ctx, "os");
 
   if(JS_IsObject(os)) {
@@ -239,8 +229,7 @@ minnet_default_fd_callback(JSContext* ctx) {
   return JS_ThrowTypeError(ctx, "globalThis.os must be imported module");
 }
 
-static void
-minnet_log_callback(int level, const char* line) {
+static void minnet_log_callback(int level, const char* line) {
   if(minnet_log_ctx) {
     size_t n = 0, len = strlen(line);
     const char* x = line;
@@ -275,8 +264,7 @@ minnet_log_callback(int level, const char* line) {
   }
 }
 
-static int
-minnet_pollfds_handle(struct lws* wsi, struct js_callback* cb, struct lws_pollargs args) {
+static int minnet_pollfds_handle(struct lws* wsi, struct js_callback* cb, struct lws_pollargs args) {
   JSValue argv[3] = {
       JS_NewInt32(cb->ctx, get_osf_handle(args.fd)),
       JS_NULL,
@@ -290,8 +278,7 @@ minnet_pollfds_handle(struct lws* wsi, struct js_callback* cb, struct lws_pollar
   return 0;
 }
 
-int
-minnet_pollfds_change(struct lws* wsi, enum lws_callback_reasons reason, struct js_callback* cb, struct lws_pollargs* args) {
+int minnet_pollfds_change(struct lws* wsi, enum lws_callback_reasons reason, struct js_callback* cb, struct lws_pollargs* args) {
 
   if(reason != LWS_CALLBACK_LOCK_POLL && reason != LWS_CALLBACK_UNLOCK_POLL)
     LOG("POLL",
@@ -334,15 +321,13 @@ minnet_pollfds_change(struct lws* wsi, enum lws_callback_reasons reason, struct 
   return 0;
 }
 
-int
-minnet_lws_unhandled(const char* handler, int reason) {
+int minnet_lws_unhandled(const char* handler, int reason) {
   lwsl_warn("Unhandled \x1b[1;31m%s\x1b[0m event: %i %s\n", handler, reason, lws_callback_name(reason));
   assert(0);
   return -1;
 }
 
-static JSValue
-set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst thisObj) {
+static JSValue set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst thisObj) {
   JSValue ret = JS_VALUE_GET_TAG(minnet_log_cb) == 0 ? JS_UNDEFINED : minnet_log_cb;
 
   minnet_log_ctx = ctx;
@@ -356,8 +341,7 @@ set_log(JSContext* ctx, JSValueConst this_val, JSValueConst value, JSValueConst 
   return ret;
 }
 
-static JSValue
-minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret;
   if(argc >= 1 && JS_IsNumber(argv[0])) {
     JS_ToInt32(ctx, &minnet_log_level, argv[0]);
@@ -370,8 +354,7 @@ minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return ret;
 }
 
-static JSValue
-minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct list_head* el;
   JSValue ret;
   uint32_t i = 0;
@@ -455,8 +438,7 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_OBJECT_DEF("logLevels", minnet_loglevels, countof(minnet_loglevels), JS_PROP_CONFIGURABLE),
 };
 
-static int
-js_minnet_init(JSContext* ctx, JSModuleDef* m) {
+static int js_minnet_init(JSContext* ctx, JSModuleDef* m) {
 
   // minnet_js_module = JS_ReadObject(ctx, qjsc_minnet, qjsc_minnet_size, JS_READ_OBJ_BYTECODE);
 
@@ -478,8 +460,7 @@ js_minnet_init(JSContext* ctx, JSModuleDef* m) {
   return 0;
 }
 
-UNUSED VISIBLE JSModuleDef*
-JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
+UNUSED VISIBLE JSModuleDef* JS_INIT_MODULE(JSContext* ctx, const char* module_name) {
   JSModuleDef* m;
 
   if(!(m = JS_NewCModule(ctx, module_name, js_minnet_init)))

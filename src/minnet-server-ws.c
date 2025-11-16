@@ -12,8 +12,7 @@ int minnet_http_server_callback(struct lws*, enum lws_callback_reasons, void*, v
 
 char* lws_hdr_simple_ptr(struct lws*, int);
 
-static int
-minnet_ws_server_cert_verify(int _ok, X509_STORE_CTX* store_ctx) {
+static int minnet_ws_server_cert_verify(int _ok, X509_STORE_CTX* store_ctx) {
   int32_t ok = _ok;
   MinnetServer* server = X509_STORE_CTX_get_app_data(store_ctx);
   JSContext* ctx = server->context.js;
@@ -79,8 +78,7 @@ minnet_ws_server_cert_verify(int _ok, X509_STORE_CTX* store_ctx) {
   return ok;
 }
 
-int
-minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+int minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   struct session_data* session = user;
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
   JSContext* ctx = server->context.js;
@@ -182,7 +180,8 @@ minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason, voi
         opaque->sess = 0;
       }*/
 
-      opaque_free(opaque, JS_GetRuntime(ctx));
+      if(opaque)
+        opaque_free(opaque, JS_GetRuntime(ctx));
 
       return 0;
     }
