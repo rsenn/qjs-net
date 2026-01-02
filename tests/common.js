@@ -1,4 +1,9 @@
-import { readlink, stat, open, close, O_RDWR, exec } from 'os';
+import { close } from 'os';
+import { exec } from 'os';
+import { O_RDWR } from 'os';
+import { open } from 'os';
+import { readlink } from 'os';
+import { stat } from 'os';
 import { open as fopen } from 'std';
 
 export function assert(actual, expected, message) {

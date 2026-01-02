@@ -1,6 +1,8 @@
-import { createServer, LLL_ERR, LLL_USER, setLog } from 'net';
+import { createServer } from 'net';
+import { LLL_ERR } from 'net';
+import { LLL_USER } from 'net';
+import { setLog } from 'net';
 import { getenv } from 'std';
-
 setLog((getenv('DEBUG') ? LLL_USER : 0) | LLL_ERR, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));
 
 const socket = createServer({
