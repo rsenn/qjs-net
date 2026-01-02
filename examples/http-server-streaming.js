@@ -1,6 +1,10 @@
-import { createServer, LLL_ERR, LLL_USER, logLevels, setLog } from 'net';
-import { getenv, popen } from 'std';
-
+import { createServer } from 'net';
+import { LLL_ERR } from 'net';
+import { LLL_USER } from 'net';
+import { logLevels } from 'net';
+import { setLog } from 'net';
+import { getenv } from 'std';
+import { popen } from 'std';
 import('console').then(({ Console }) => (globalThis.console = new Console({ inspectOptions: { compact: 0 } })));
 
 setLog((std.getenv('DEBUG') ? LLL_USER : 0) | LLL_ERR, (level, message) => console.log(logLevels[level].padEnd(10), message.replaceAll(/\n/g, '\\\\n')));

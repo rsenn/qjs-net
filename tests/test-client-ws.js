@@ -1,10 +1,12 @@
-import { LLL_INFO, LLL_USER, setLog, client } from 'net.so';
-import { close, sleep } from 'os';
-import Client from './client.js';
+import { client } from 'net.so';
+import { LLL_INFO } from 'net.so';
+import { LLL_USER } from 'net.so';
+import { setLog } from 'net.so';
+import { close } from 'os';
+import { sleep } from 'os';
 import { log } from './log.js';
 import { spawn } from './spawn.js';
 import { exit } from 'std';
-
 setLog(-1, (level, message) => console.log(logLevels[level], message));
 
 function main(...args) {

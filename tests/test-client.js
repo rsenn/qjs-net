@@ -1,11 +1,25 @@
-import { LLL_CLIENT, LLL_ALL, LLL_INFO, LLL_USER, setLog, client } from 'net.so';
-import { close, kill, setReadHandler, SIGINT, signal, sleep, ttySetRaw } from 'os';
+import { client } from 'net.so';
+import { LLL_CLIENT } from 'net.so';
+import { LLL_INFO } from 'net.so';
+import { LLL_USER } from 'net.so';
+import { close } from 'os';
+import { kill } from 'os';
+import { setReadHandler } from 'os';
+import { SIGINT } from 'os';
+import { signal } from 'os';
+import { sleep } from 'os';
+import { ttySetRaw } from 'os';
+import { escape } from './common.js';
+import { save } from './common.js';
+import { Init } from './log.js';
+import { log } from './log.js';
+import { spawn } from './spawn.js';
+import { wait4 } from './spawn.js';
+import { exit } from 'std';
+import { in as stdin } from 'std';
+import { out as stdout } from 'std';
+import { puts } from 'std';
 //import Client from './client.js';
-import { escape, save } from './common.js';
-import { Init, Levels, log } from './log.js';
-import { spawn, wait4 } from './spawn.js';
-import { exit, in as stdin, open, out as stdout, puts } from 'std';
-
 function main(...args) {
   const debug = args.indexOf('-x') != -1;
   args = args.filter(arg => !/^-[x]/.test(arg));

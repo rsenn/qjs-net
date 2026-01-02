@@ -1,5 +1,10 @@
-import { close, exec, pipe, waitpid, WNOHANG } from 'os';
-import { err, fdopen } from 'std';
+import { close } from 'os';
+import { exec } from 'os';
+import { pipe } from 'os';
+import { waitpid } from 'os';
+import { WNOHANG } from 'os';
+import { err } from 'std';
+import { fdopen } from 'std';
 
 const fetchArgs = {
   curl: (url, file) => ['-s', '-k', '-L', url].concat(file ? ['-o', file] : []),

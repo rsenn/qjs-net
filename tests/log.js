@@ -1,6 +1,19 @@
-import { LLL_ALL, LLL_CLIENT, LLL_DEBUG, LLL_ERR, LLL_EXT, LLL_HEADER, LLL_INFO, LLL_LATENCY, LLL_NOTICE, LLL_PARSER, LLL_THREAD, LLL_USER, LLL_WARN, setLog } from 'net.so';
-import { err, getenv } from 'std';
-
+import { LLL_ALL } from 'net.so';
+import { LLL_CLIENT } from 'net.so';
+import { LLL_DEBUG } from 'net.so';
+import { LLL_ERR } from 'net.so';
+import { LLL_EXT } from 'net.so';
+import { LLL_HEADER } from 'net.so';
+import { LLL_INFO } from 'net.so';
+import { LLL_LATENCY } from 'net.so';
+import { LLL_NOTICE } from 'net.so';
+import { LLL_PARSER } from 'net.so';
+import { LLL_THREAD } from 'net.so';
+import { LLL_USER } from 'net.so';
+import { LLL_WARN } from 'net.so';
+import { setLog } from 'net.so';
+import { err } from 'std';
+import { getenv } from 'std';
 let logName;
 
 export const Levels = (() => {

@@ -1,4 +1,11 @@
-import { close, exec, O_CREAT, O_TRUNC, O_WRONLY, open, readlink, waitpid } from 'os';
+import { close } from 'os';
+import { exec } from 'os';
+import { O_CREAT } from 'os';
+import { O_TRUNC } from 'os';
+import { O_WRONLY } from 'os';
+import { open } from 'os';
+import { readlink } from 'os';
+import { waitpid } from 'os';
 
 export { WNOHANG } from 'os';
 

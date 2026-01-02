@@ -1,4 +1,3 @@
-import { inspect } from 'inspect';
 
 class JSValue {}
 /* prettier-ignore */ class JSNumber extends JSValue { constructor(value, type) { super(); if(value !== undefined) this.value = value; if(type) this.type = type; } }
