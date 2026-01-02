@@ -544,8 +544,8 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
 
       if(js_is_promise(ctx, ret)) {
         JSValue promise = serve_promise(ctx, session, ret);
-        const char* prstr;
-        DBG("pr=%s", prstr = JS_ToCString(ctx, promise));
+        const char* prstr = JS_ToCString(ctx, promise);
+        DBG("pr=%s", prstr);
         JS_FreeCString(ctx, prstr);
         // JS_FreeValue(ctx, promise);
       } else if(JS_IsException(ret)) {
