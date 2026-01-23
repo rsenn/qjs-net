@@ -170,7 +170,7 @@ int minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason,
     }
 
     case LWS_CALLBACK_WSI_DESTROY: {
-      if(opaque && opaque->ws && opaque->sess)
+      if(opaque && opaque->ws && opaque->link.next)
         opaque->ws->lwsi = 0;
 
       lws_set_opaque_user_data(wsi, 0);
