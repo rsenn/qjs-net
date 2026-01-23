@@ -1,16 +1,8 @@
-import { client } from 'net.so';
-import { createServer } from 'net.so';
-import { LLL_INFO } from 'net.so';
-import { LLL_NOTICE } from 'net.so';
-import { LLL_USER } from 'net.so';
-import { LWS_WRITE_BINARY } from 'net.so';
-import { LWS_WRITE_TEXT } from 'net.so';
-import { Request } from 'net.so';
-import { setLog } from 'net.so';
-import { URL } from 'net.so';
+#!/usr/bin/env qjsm
+import { client, createServer, LLL_INFO, LLL_NOTICE, LLL_USER, LWS_WRITE_BINARY, LWS_WRITE_TEXT, Request, setLog, URL } from 'net';
 import * as os from 'os';
 import * as std from 'std';
-#!/usr/bin/env qjsm
+
 const connections = new Set();
 
 let debug = 0,
