@@ -23,7 +23,7 @@ class PulseAudio {
     /* pacat |lame has libmp3lame problems reading from stdin/writing to stdout, but you can try */
     const pipelines = {
       pacat: name => `pacat --stream-name '${name}' -r --rate=44100 --format=s16le --channels=2 --raw | lame --quiet -r --alt-preset 128 - -`,
-      sox: name => `sox -q -t pulseaudio '${name}' -r 44100 -t mp3 -`
+      sox: name => `sox -q -t pulseaudio '${name}' -r 44100 -t mp3 -`,
     };
 
     try {
@@ -69,10 +69,10 @@ createServer({
       const [source] = [...PulseAudio.getSources()];
 
       yield* PulseAudio.streamSource(source);
-    }
+    },
   },
   onRequest(req, resp) {
     console.log('onRequest', req, resp);
     //resp.headers.set('server', `qjs-net pulseaudio streamer`);
-  }
+  },
 });

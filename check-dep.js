@@ -12,7 +12,7 @@ let references = (globalThis.references = {}),
 
 function main() {
   globalThis.console = new Console({
-    inspectOptions: { compact: 2, maxArrayLength: Infinity, maxStringLength: 200 }
+    inspectOptions: { compact: 2, maxArrayLength: Infinity, maxStringLength: 200 },
   });
 
   //epl.inspectOptions.maxStringLength=20;
@@ -37,7 +37,7 @@ function main() {
     decorate,
     Chain,
     Transform,
-    SaveSlices
+    SaveSlices,
   });
   Object.assign(
     globalThis,
@@ -47,8 +47,8 @@ function main() {
       Match,
       MissingRange,
       MatchRanges,
-      RangeSlice
-    })
+      RangeSlice,
+    }),
   );
   Object.assign(globalThis, decorate([YieldAll, YieldJoin], { fc: FilterComments }));
 
@@ -77,14 +77,14 @@ function main() {
         [...fileMap.values()]
           .map(file => [...file.functions].map(([fn, range]) => [fn, define({ count: 0, range }, { file })]))
           .flat()
-          .sort()
+          .sort(),
         //          .map((n, s, e) => [n, [0, [s, e]]])
       ),
     unused: () =>
       [...defines]
         .filter(([k, { count }]) => count == 0)
         .map(([k]) => k)
-        .sort()
+        .sort(),
   });
 
   globalThis.getFile = memoize(
@@ -98,7 +98,7 @@ function main() {
             new Map(
               YieldAll(Match)(/^([a-zA-Z_][0-9a-zA-Z_]*)\(.*(,|{)$/gm, code)
                 .filter(Negate(ArrayArgs(Within(comments))))
-                .map(([index, name]) => [name, [code.lastIndexOf('\n', code.lastIndexOf('\n', index) - 1) + 1, code.indexOf('\n}', index) + 3]])
+                .map(([index, name]) => [name, [code.lastIndexOf('\n', code.lastIndexOf('\n', index) - 1) + 1, code.indexOf('\n}', index) + 3]]),
             ),
           functionAt:
             ({ functions }) =>
@@ -121,17 +121,17 @@ function main() {
             (to = src) =>
               SaveSlices(
                 slices.map(([, s]) => s),
-                to
+                to,
               ),
           commentFunction: ({ slices }) => {
             let [get, set] = getset(slices);
             let clean = globalThis.fc || (s => [...FilterComments(s)].join(''));
             return (name, s = get(name)[1]) => (s.startsWith('/*') ? null : (set(name, `/*${(s = clean(get(name)[1]))}*/`), s));
           },
-          slices: obj => /*new Map*/ GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s])
-        })
+          slices: obj => /*new Map*/ GetRanges(obj.code, obj.functions.values(), (i, s) => [obj.functionAt(i) ?? i, s]),
+        }),
       ),
-    fileMap
+    fileMap,
   );
   globalThis.allFiles = GetProxy(getFile, () => [...fileMap.keys()]);
 
@@ -236,7 +236,7 @@ function MatchSymbols(code, symbols) {
   return SplitByPred(
     matches,
     ([, column]) => column == 0,
-    ([, , m]) => m
+    ([, , m]) => m,
   );
 }
 
@@ -422,8 +422,8 @@ function GetProxy(get, keys) {
     {
       get: (target, prop, receiver) => get(prop),
       getOwnPropertyDescriptor: (target, prop) => ({ configurable: true, enumerable: true, value: get(prop) }),
-      ownKeys: target => (keys ?? get)()
-    }
+      ownKeys: target => (keys ?? get)(),
+    },
   );
 }
 

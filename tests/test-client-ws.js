@@ -46,9 +46,9 @@ function main(...args) {
             log(`CLOSING!`);
             ws.close(1001);
           }
-        }
+        },
       },
-      debug ? LLL_INFO - 1 : LLL_USER
+      debug ? LLL_INFO - 1 : LLL_USER,
     );
   }
 }

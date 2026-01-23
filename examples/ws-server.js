@@ -14,5 +14,5 @@ const socket = createServer({
     console.log('Got Message:', data.toString());
 
     ws.send('Hello, MinnetServer!');
-  }
+  },
 });

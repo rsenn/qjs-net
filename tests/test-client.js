@@ -136,7 +136,7 @@ function main(...args) {
             stdout.flush();
           }
         },
-        debug ? LLL_INFO - 1 : LLL_USER*/
+        debug ? LLL_INFO - 1 : LLL_USER*/,
       );
       log('cli', cli);
 

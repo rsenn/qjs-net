@@ -8,9 +8,9 @@ const LogMethod = (className, method, ...args) =>
   Log(
     PadEnd(
       className + Color('.', 1, 36) + Color(method, ...(method == 'constructor' ? [38, 5, 165] : method.startsWith('on') && method.length > 2 ? [38, 5, IsUpper(method[2]) ? 40 : 45] : [38, 5, 208])),
-      25
+      25,
     ),
-    ...args
+    ...args,
   );
 
 const Compact = console.config ? () => console.config({ compact: true }) : () => '';
@@ -75,7 +75,7 @@ export function MessageTransceiver() {}
 define(MessageTransceiver.prototype, MessageReceiver.prototype, MessageTransmitter.prototype);
 
 Object.defineProperty(MessageTransceiver, Symbol.hasInstance, {
-  value: instance => [MessageReceiver, MessageTransmitter].every(ctor => ctor[Symbol.hasInstance](instance))
+  value: instance => [MessageReceiver, MessageTransmitter].every(ctor => ctor[Symbol.hasInstance](instance)),
 });
 
 export const codecs = {
@@ -83,14 +83,14 @@ export const codecs = {
     return {
       name: 'none',
       encode: v => v,
-      decode: v => v
+      decode: v => v,
     };
   },
   json(verbose = false) {
     return {
       name: 'json',
       encode: v => JSON.stringify(v, ...(verbose ? [null, 2] : [])),
-      decode: v => JSON.parse(v)
+      decode: v => JSON.parse(v),
     };
   },
   async bjson() {
@@ -104,9 +104,9 @@ export const codecs = {
     return {
       name: 'js',
       encode: v => inspect(v, { colors: false, compact: verbose ? false : -2, reparseable: true }),
-      decode: v => eval(`(${v})`)
+      decode: v => eval(`(${v})`),
     };
-  }
+  },
 };
 
 export function RPCApi(connection) {
@@ -203,7 +203,7 @@ export class Connection {
     define(this, {
       makeId: IdSequencer(0),
       exception: null,
-      log: verbose ? (arg, ...args) => LogMethod(getPrototypeName(this), arg, ...args) : () => {}
+      log: verbose ? (arg, ...args) => LogMethod(getPrototypeName(this), arg, ...args) : () => {},
     });
 
     define(this, typeof codec == 'string' && codecs[codec] ? { codecName: codec, codec: codecs[codec]() } : {});
@@ -341,7 +341,7 @@ export function FactoryEndpoint(classes, verbose, instances = {}) {
       return Respond(false, { message: `No such method on object #${instance}: ${method}` });
     }),
     keys: instance((obj, enumerable = true) =>
-      Respond(true, GetProperties(obj, enumerable ? obj => ('keys' in obj && isFunction(obj.keys) ? [...obj.keys()] : Object.keys(obj)) : obj => Object.getOwnPropertyNames(obj)))
+      Respond(true, GetProperties(obj, enumerable ? obj => ('keys' in obj && isFunction(obj.keys) ? [...obj.keys()] : Object.keys(obj)) : obj => Object.getOwnPropertyNames(obj))),
     ),
     names: instance((obj, enumerable = true) =>
       Respond(
@@ -350,15 +350,15 @@ export function FactoryEndpoint(classes, verbose, instances = {}) {
           obj,
           Object.getOwnPropertyNames,
           (proto, depth) => proto != Object.prototype,
-          (prop, obj, proto, depth) => isNaN(+prop)
-        )
-      )
+          (prop, obj, proto, depth) => isNaN(+prop),
+        ),
+      ),
     ),
     symbols: instance((obj, enumerable = true) =>
       Respond(
         true,
-        GetProperties(obj, Object.getOwnPropertySymbols).map(sym => sym.description)
-      )
+        GetProperties(obj, Object.getOwnPropertySymbols).map(sym => sym.description),
+      ),
     ),
     properties: instance(members(v => !isFunction(v))),
     methods: instance(members(v => isFunction(v))),
@@ -370,7 +370,7 @@ export function FactoryEndpoint(classes, verbose, instances = {}) {
 
       return Respond(false, { message: `No such property on object #${instance}: ${property}` });
     }),
-    set: instance((obj, property, value) => Respond(true, (obj[property] = value)))
+    set: instance((obj, property, value) => Respond(true, (obj[property] = value))),
   };
 
   function instance(fn) {
@@ -397,7 +397,7 @@ export function FactoryEndpoint(classes, verbose, instances = {}) {
             acc.push([keyDescriptor ? SerializeValue(key) : key, v, RemoveFalsish(desc)]);
           }
           return acc;
-        }, [])
+        }, []),
       )
     );
   }
@@ -418,7 +418,7 @@ export class RPCServer extends Connection {
     this.log('constructor', Compact(), { codec, verbose });
 
     define(this, {
-      methods
+      methods,
     });
 
     RPCServer.set.add(this);
@@ -507,7 +507,7 @@ export class FactoryClient extends RPCClient {
     const { key: instance } = await this.call(
       'new',
       className,
-      params.map(a => EncodeValue(a))
+      params.map(a => EncodeValue(a)),
     );
 
     const methodList = await this.call('methods', instance, true, false),
@@ -532,7 +532,7 @@ export class FactoryClient extends RPCClient {
                 'invoke',
                 instance,
                 prop,
-                args.map(a => EncodeValue(a))
+                args.map(a => EncodeValue(a)),
               );
           } else if((tmp = properties.indexOf(prop)) != -1) {
             return this.call('get', instance, prop).then(DeserializeValue);
@@ -543,10 +543,10 @@ export class FactoryClient extends RPCClient {
           return {
             configurable: true,
             ...(descriptors[prop] ?? {}),
-            value: this.get(target, prop)
+            value: this.get(target, prop),
           };
-        }
-      }
+        },
+      },
     );
   }
 
@@ -571,7 +571,7 @@ export class RPCSocket {
       verbose,
       service,
       url: typeof url != 'object' ? parseURL(url) : url,
-      log: verbose ? (arg, ...args) => LogMethod(getPrototypeName(this), arg, ...args) : () => {}
+      log: verbose ? (arg, ...args) => LogMethod(getPrototypeName(this), arg, ...args) : () => {},
     });
 
     RPCSocket.set.add(this);
@@ -649,7 +649,7 @@ export class RPCSocket {
       onPong(socket, data) {
         log('onPong', { socket, data });
         handle(socket, 'pong', data);
-      }
+      },
     };
 
     function handle(sock, event, ...args) {
@@ -677,7 +677,7 @@ for(let ctor of [RPCSocket, Connection, RPCClient, RPCServer]) {
     },
     get last() {
       return this.list.last;
-    }
+    },
   });
 }
 define(RPCSocket.prototype, { [Symbol.toStringTag]: 'RPCSocket' });
@@ -738,14 +738,14 @@ export function parseURL(urlOrPort) {
     {
       protocol,
       host,
-      port
+      port,
     },
     {
       toString() {
         const { protocol, host, port } = this;
         return `${protocol || 'ws'}://${host}:${port}`;
-      }
-    }
+      },
+    },
   );
 }
 

@@ -28,7 +28,7 @@ function TestClient(url) {
       log('onMessage', { ws, msg });
       const exitCode = +!(`ECHO: ${message}` == msg);
       ws.close(1000 + exitCode);
-    }
+    },
   });
 }
 

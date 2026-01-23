@@ -37,7 +37,7 @@ function TestClient(url) {
       console.log('onRequest', { body, file });
 
       if(file.length == body.length) if (file === body) exit(0);
-    }
+    },
   });
 }
 

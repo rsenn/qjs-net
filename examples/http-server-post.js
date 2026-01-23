@@ -31,13 +31,13 @@ let srv = createServer({
 
       return new Response('Hello, World!\n' + (body ? JSON.stringify(body, null, 2) : '') + '\n', {
         status: 200,
-        headers: { 'content-type': 'text/plain' }
+        headers: { 'content-type': 'text/plain' },
       });
-    }
+    },
   },
   onRequest(req, resp) {
     console.log('req:', req, 'resp:', resp);
-  }
+  },
 });
 
 srv.listen(3333);

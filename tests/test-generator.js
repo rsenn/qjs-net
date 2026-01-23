@@ -100,5 +100,5 @@ tests({
     r = await gen.next();
     eq(r.done, true);
     eq(r.value, undefined);
-  }
+  },
 });

@@ -1,7 +1,7 @@
 import { client, createServer, URL } from 'net';
-import { ReadableStream, ReadableStreamDefaultController, StreamReader, StreamWriter, TransformStream, WritableStream, WritableStreamDefaultController, define, filter, getOpt, showHelp, split, Console } from '../qjs-modules/lib/console.js';
+import { ReadableStream, ReadableStreamDefaultController, StreamReader, StreamWriter, TransformStream, WritableStream, WritableStreamDefaultController, define, filter, getOpt, showHelp, split, Console, } from '../qjs-modules/lib/console.js';
 import { REPL } from '../qjs-modules/lib/repl.js';
-import { codecs, DecodeValue, EncodeValue, FactoryClient, FactoryEndpoint, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket } from './js/rpc.js';
+import { codecs, DecodeValue, EncodeValue, FactoryClient, FactoryEndpoint, MessageReceiver, MessageTransceiver, MessageTransmitter, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, } from './js/rpc.js';
 import inspect from 'inspect';
 import { Lexer } from 'lexer';
 import { List } from 'list';

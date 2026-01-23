@@ -1,4 +1,3 @@
-
 class JSValue {}
 /* prettier-ignore */ class JSNumber extends JSValue { constructor(value, type) { super(); if(value !== undefined) this.value = value; if(type) this.type = type; } }
 /* prettier-ignore */ class JSString extends JSValue { constructor(value) { super(); if(value !== undefined) this.value = value; } }

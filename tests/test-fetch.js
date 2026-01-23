@@ -35,8 +35,8 @@ async function FetchNext(array) {
         pragma: 'no-cache',
         'cache-control': 'no-cache',
         connection: 'keep-alive',
-        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.27 Safari/537.36'
-      }
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.27 Safari/537.36',
+      },
     });
 
     console.log('response', console.config({ compact: 0 }), response);
@@ -79,10 +79,10 @@ function main(...args) {
     .then(
       ({ Console }) => (
         (globalThis.console = new Console({
-          inspectOptions: { compact: 2, depth: 4, maxArrayLength: 10, maxStringLength: 64, reparseable: false }
+          inspectOptions: { compact: 2, depth: 4, maxArrayLength: 10, maxStringLength: 64, reparseable: false },
         })),
         run()
-      )
+      ),
     )
     .catch(run);
 
