@@ -1,10 +1,4 @@
-import { createServer } from 'net.so';
-import { FormParser } from 'net.so';
-import { Generator } from 'net.so';
-import { LLL_USER } from 'net.so';
-import { Request } from 'net.so';
-import { Response } from 'net.so';
-import { setLog } from 'net.so';
+import { createServer, FormParser, Generator, LLL_USER, Request, Response, setLog } from 'net';
 
 const args = [...(globalThis.scriptArgs ?? process.argv)];
 
