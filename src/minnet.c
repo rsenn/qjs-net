@@ -14,7 +14,14 @@
 #include "js-utils.h"
 #include "utils.h"
 #include "buffer.h"
+#include "ssl-utils.h"
 #include <libwebsockets.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+#include <openssl/rsa.h>
+#include <openssl/bn.h>
+#include <openssl/evp.h>
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
@@ -354,6 +361,217 @@ static JSValue minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, J
   return ret;
 }
 
+static EVP_PKEY*
+minnet_generate_rsa_key(int bits) {
+#if OPENSSL_VERSION_MAJOR >= 3
+  return EVP_RSA_gen(bits);
+#else
+  EVP_PKEY_CTX* pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+  EVP_PKEY* pkey = NULL;
+  if(!pctx)
+    return NULL;
+  if(EVP_PKEY_keygen_init(pctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(pctx, bits) <= 0 || EVP_PKEY_keygen(pctx, &pkey) <= 0) {
+    EVP_PKEY_CTX_free(pctx);
+    return NULL;
+  }
+  EVP_PKEY_CTX_free(pctx);
+  return pkey;
+#endif
+}
+
+static int
+minnet_is_ip_literal(const char* s) {
+  int dots = 0, colons = 0;
+  for(const char* p = s; *p; p++) {
+    if(*p == '.')
+      dots++;
+    else if(*p == ':')
+      colons++;
+    else if(!((*p >= '0' && *p <= '9') || (*p >= 'a' && *p <= 'f') || (*p >= 'A' && *p <= 'F')))
+      return 0;
+  }
+  return (dots == 3 && colons == 0) || colons >= 2;
+}
+
+static JSValue minnet_generate_cert(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+  const char* cn = NULL;
+  const char* cn_owned = NULL;
+  int bits = 2048, days = 365;
+  char** san_list = NULL;
+  int san_n = 0;
+  JSValue ret = JS_UNDEFINED;
+  EVP_PKEY* pkey = NULL;
+  X509* cert = NULL;
+  BIO* cbio = NULL;
+  BIO* kbio = NULL;
+
+  if(argc > 0 && JS_IsObject(argv[0])) {
+    JSValue v;
+
+    v = JS_GetPropertyStr(ctx, argv[0], "commonName");
+    if(JS_IsString(v)) {
+      cn_owned = JS_ToCString(ctx, v);
+      cn = cn_owned;
+    }
+    JS_FreeValue(ctx, v);
+
+    v = JS_GetPropertyStr(ctx, argv[0], "bits");
+    if(!JS_IsUndefined(v) && !JS_IsNull(v))
+      JS_ToInt32(ctx, &bits, v);
+    JS_FreeValue(ctx, v);
+
+    v = JS_GetPropertyStr(ctx, argv[0], "days");
+    if(!JS_IsUndefined(v) && !JS_IsNull(v))
+      JS_ToInt32(ctx, &days, v);
+    JS_FreeValue(ctx, v);
+
+    v = JS_GetPropertyStr(ctx, argv[0], "altNames");
+    if(JS_IsArray(ctx, v)) {
+      JSValue lenv = JS_GetPropertyStr(ctx, v, "length");
+      JS_ToInt32(ctx, &san_n, lenv);
+      JS_FreeValue(ctx, lenv);
+      if(san_n > 0) {
+        san_list = calloc(san_n, sizeof(char*));
+        for(int i = 0; i < san_n; i++) {
+          JSValue item = JS_GetPropertyUint32(ctx, v, i);
+          const char* s = JS_ToCString(ctx, item);
+          san_list[i] = s ? strdup(s) : NULL;
+          if(s)
+            JS_FreeCString(ctx, s);
+          JS_FreeValue(ctx, item);
+        }
+      }
+    }
+    JS_FreeValue(ctx, v);
+  }
+
+  if(!cn)
+    cn = "localhost";
+  if(bits < 512)
+    bits = 2048;
+  if(days <= 0)
+    days = 365;
+
+  if(!(pkey = minnet_generate_rsa_key(bits))) {
+    ret = JS_ThrowInternalError(ctx, "generateCert: RSA key generation failed");
+    goto out;
+  }
+
+  if(!(cert = X509_new())) {
+    ret = JS_ThrowInternalError(ctx, "generateCert: X509_new failed");
+    goto out;
+  }
+
+  ASN1_INTEGER_set(X509_get_serialNumber(cert), (long)time(NULL));
+  X509_gmtime_adj(X509_get_notBefore(cert), 0);
+  X509_gmtime_adj(X509_get_notAfter(cert), (long)days * 86400L);
+  X509_set_version(cert, 2);
+  X509_set_pubkey(cert, pkey);
+
+  {
+    X509_NAME* name = X509_get_subject_name(cert);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)cn, -1, -1, 0);
+    X509_set_issuer_name(cert, name);
+  }
+
+  {
+    X509V3_CTX v3ctx;
+    X509V3_set_ctx_nodb(&v3ctx);
+    X509V3_set_ctx(&v3ctx, cert, cert, NULL, NULL, 0);
+
+    X509_EXTENSION* ext;
+    if((ext = X509V3_EXT_conf_nid(NULL, &v3ctx, NID_basic_constraints, "critical,CA:TRUE"))) {
+      X509_add_ext(cert, ext, -1);
+      X509_EXTENSION_free(ext);
+    }
+    if((ext = X509V3_EXT_conf_nid(NULL, &v3ctx, NID_key_usage, "digitalSignature,keyEncipherment,keyCertSign"))) {
+      X509_add_ext(cert, ext, -1);
+      X509_EXTENSION_free(ext);
+    }
+
+    /* Build SAN entries: default DNS:<cn> if none provided. */
+    char* san_str = NULL;
+    size_t san_cap = 0, san_len = 0;
+#define SAN_APPEND(prefix, value) \
+  do { \
+    size_t need = strlen(prefix) + strlen(value) + (san_len ? 1 : 0) + 1; \
+    if(san_len + need > san_cap) { \
+      san_cap = (san_len + need) * 2; \
+      san_str = realloc(san_str, san_cap); \
+    } \
+    if(san_len) \
+      san_str[san_len++] = ','; \
+    memcpy(san_str + san_len, prefix, strlen(prefix)); \
+    san_len += strlen(prefix); \
+    memcpy(san_str + san_len, value, strlen(value)); \
+    san_len += strlen(value); \
+    san_str[san_len] = '\0'; \
+  } while(0)
+
+    if(san_n > 0) {
+      for(int i = 0; i < san_n; i++) {
+        if(!san_list[i])
+          continue;
+        SAN_APPEND(minnet_is_ip_literal(san_list[i]) ? "IP:" : "DNS:", san_list[i]);
+      }
+    } else {
+      SAN_APPEND(minnet_is_ip_literal(cn) ? "IP:" : "DNS:", cn);
+    }
+#undef SAN_APPEND
+
+    if(san_str) {
+      if((ext = X509V3_EXT_conf_nid(NULL, &v3ctx, NID_subject_alt_name, san_str))) {
+        X509_add_ext(cert, ext, -1);
+        X509_EXTENSION_free(ext);
+      }
+      free(san_str);
+    }
+  }
+
+  if(!X509_sign(cert, pkey, EVP_sha256())) {
+    ret = JS_ThrowInternalError(ctx, "generateCert: X509_sign failed");
+    goto out;
+  }
+
+  cbio = ssl_bio_dynbuf_new();
+  if(!PEM_write_bio_X509(cbio, cert)) {
+    ret = JS_ThrowInternalError(ctx, "generateCert: PEM cert write failed");
+    goto out;
+  }
+  JSValue cert_ab = ssl_bio_dynbuf_jsarraybuffer(cbio, ctx);
+
+  kbio = ssl_bio_dynbuf_new();
+  if(!PEM_write_bio_PrivateKey(kbio, pkey, NULL, NULL, 0, NULL, NULL)) {
+    JS_FreeValue(ctx, cert_ab);
+    ret = JS_ThrowInternalError(ctx, "generateCert: PEM key write failed");
+    goto out;
+  }
+  JSValue key_ab = ssl_bio_dynbuf_jsarraybuffer(kbio, ctx);
+
+  ret = JS_NewObject(ctx);
+  JS_SetPropertyStr(ctx, ret, "cert", cert_ab);
+  JS_SetPropertyStr(ctx, ret, "key", key_ab);
+  JS_SetPropertyStr(ctx, ret, "commonName", JS_NewString(ctx, cn));
+
+out:
+  if(cbio)
+    BIO_free(cbio);
+  if(kbio)
+    BIO_free(kbio);
+  if(cert)
+    X509_free(cert);
+  if(pkey)
+    EVP_PKEY_free(pkey);
+  if(cn_owned)
+    JS_FreeCString(ctx, cn_owned);
+  if(san_list) {
+    for(int i = 0; i < san_n; i++)
+      free(san_list[i]);
+    free(san_list);
+  }
+  return ret;
+}
+
 static JSValue minnet_get_sessions(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   struct list_head* el;
   JSValue ret;
@@ -398,6 +616,7 @@ static const JSCFunctionListEntry minnet_funcs[] = {
     JS_CFUNC_DEF("fetch", 1, minnet_fetch),
     JS_CFUNC_DEF("getSessions", 0, minnet_get_sessions),
     JS_CFUNC_DEF("setLog", 1, minnet_set_log),
+    JS_CFUNC_DEF("generateCert", 1, minnet_generate_cert),
     JS_PROP_INT32_DEF("METHOD_GET", METHOD_GET, 0),
     JS_PROP_INT32_DEF("METHOD_POST", METHOD_POST, 0),
     JS_PROP_INT32_DEF("METHOD_OPTIONS", METHOD_OPTIONS, 0),

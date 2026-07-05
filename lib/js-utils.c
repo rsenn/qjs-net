@@ -819,6 +819,9 @@ js_toptrsize(JSContext* ctx, unsigned int* plen, JSValueConst value) {
     if((ret = js_malloc(ctx, n)))
       memcpy(ret, ptr, n);
 
+  if(plen)
+    *plen = ret ? (unsigned int)n : 0;
+
   return ret;
 }
 
