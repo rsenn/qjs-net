@@ -813,6 +813,8 @@ int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reaso
         JSValue retval = callback_emit_this(&server->on.check_access_rights, session->ws_obj, countof(args), args);
 
         ret = minnet_server_exception(server, retval);
+
+        JS_FreeValue(server->on.check_access_rights.ctx, args[1]);
       }
 
       break;
