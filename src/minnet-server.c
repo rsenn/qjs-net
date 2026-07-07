@@ -613,6 +613,7 @@ JSValue minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, J
   JSValue opt_on_pong = JS_GetPropertyStr(ctx, options, "onPong");
   JSValue opt_on_close = JS_GetPropertyStr(ctx, options, "onClose");
   JSValue opt_on_connect = JS_GetPropertyStr(ctx, options, "onConnect");
+  JSValue opt_on_checkaccess = JS_GetPropertyStr(ctx, options, "onCheckAccessRights");
   JSValue opt_on_message = JS_GetPropertyStr(ctx, options, "onMessage");
   JSValue opt_on_fd = JS_GetPropertyStr(ctx, options, "onFd");
   JSValue opt_on_http = JS_GetPropertyStr(ctx, options, "onRequest");
@@ -659,6 +660,7 @@ JSValue minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, J
   GETCB(opt_on_pong, server->on.pong)
   GETCB(opt_on_close, server->on.close)
   GETCB(opt_on_connect, server->on.connect)
+  GETCB(opt_on_checkaccess, server->on.check_access_rights)
   GETCB(opt_on_message, server->on.message)
   GETCB(opt_on_fd, server->on.fd)
   GETCB(opt_on_http, server->on.http)

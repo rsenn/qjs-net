@@ -59,12 +59,12 @@ callback_clear(JSCallback* cb) {
 
 #undef ERROR
 
-typedef enum callback_e { MESSAGE = 0, CONNECT, CLOSE, ERROR, PONG, FD, HTTP, READ, POST, WRITEABLE, NUM_CALLBACKS } CallbackType;
+typedef enum callback_e { MESSAGE = 0, CHECK_ACCESS_RIGHTS, CONNECT, CLOSE, ERROR, PONG, FD, HTTP, READ, POST, WRITEABLE, NUM_CALLBACKS } CallbackType;
 
 typedef struct callbacks {
   union {
     struct {
-      JSCallback message, connect, close, error, pong, fd, http, read, post, writeable, cert_verify;
+      JSCallback message,check_access_rights, connect, close, error, pong, fd, http, read, post, writeable, cert_verify;
     };
     JSCallback cb[NUM_CALLBACKS];
   };

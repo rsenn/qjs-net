@@ -843,10 +843,10 @@ int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reaso
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
       struct lws_process_html_args* pa = (struct lws_process_html_args*)in;
 
-      if(callback_valid(&server->on.connect)) {
-        JSValue args[] = {pa->p && pa->len ? JS_NewStringLen(server->on.connect.ctx, pa->p, pa->len) : JS_NULL};
+      if(callback_valid(&server->on.check_access_rights)) {
+        JSValue args[] = {pa->p && pa->len ? JS_NewStringLen(server->on.check_access_rights.ctx, pa->p, pa->len) : JS_NULL};
 
-        JSValue retval = callback_emit_this(&server->on.connect, session->req_obj, countof(args), args);
+        JSValue retval = callback_emit_this(&server->on.check_access_rights, session->req_obj, countof(args), args);
 
         ret = minnet_server_exception(server, retval);
       }
