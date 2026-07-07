@@ -843,6 +843,15 @@ int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reaso
     case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
       struct lws_process_html_args* pa = (struct lws_process_html_args*)in;
 
+      if(!JS_IsObject(session->ws_obj) && opaque->ws)
+        session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
+
+      if(!JS_IsObject(session->req_obj) && opaque->req)
+        session->req_obj = minnet_request_wrap(ctx, opaque->req);
+
+      if(!JS_IsObject(session->resp_obj) && opaque->resp)
+        session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
+
       if(callback_valid(&server->on.check_access_rights)) {
         JSValue args[] = {pa->p && pa->len ? JS_NewStringLen(server->on.check_access_rights.ctx, pa->p, pa->len) : JS_NULL};
 
@@ -861,6 +870,9 @@ int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reaso
       if(opaque->upstream)
         return lws_callback_http_dummy(wsi, reason, user, in, len);
 
+      if(!opaque->ws)
+        opaque->ws = ws_new(wsi, ctx);
+
       if(ctx && opaque->ws)
         session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
 
@@ -870,14 +882,14 @@ int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reaso
       if(in)
         url_set_path_len(&opaque->req->url, in, len, ctx);
 
-      if(!JS_IsObject(session->ws_obj) && opaque->ws)
-        session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
+      /*  if(!JS_IsObject(session->ws_obj) && opaque->ws)
+          session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
 
-      if(!JS_IsObject(session->req_obj) && opaque->req)
-        session->req_obj = minnet_request_wrap(ctx, opaque->req);
+        if(!JS_IsObject(session->req_obj) && opaque->req)
+          session->req_obj = minnet_request_wrap(ctx, opaque->req);
 
-      if(!JS_IsObject(session->resp_obj) && opaque->resp)
-        session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
+        if(!JS_IsObject(session->resp_obj) && opaque->resp)
+          session->resp_obj = minnet_response_wrap(ctx, opaque->resp);*/
 
       url_set_protocol(&opaque->req->url, wsi_tls(wsi) ? "https" : "http");
 
