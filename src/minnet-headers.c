@@ -31,8 +31,7 @@ struct MinnetHeadersOpaque {
   } separator;
 };
 
-void*
-minnet_headers_dup_obj(JSContext* ctx, JSValueConst obj) {
+void* minnet_headers_dup_obj(JSContext* ctx, JSValueConst obj) {
   if(JS_IsObject(obj)) {
     JS_DupValue(ctx, obj);
     return JS_VALUE_GET_OBJ(obj);
@@ -40,26 +39,18 @@ minnet_headers_dup_obj(JSContext* ctx, JSValueConst obj) {
   return 0;
 }
 
-void
-minnet_headers_free_obj(void* obj, JSRuntime* rt) {
-  JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_OBJECT, obj));
-}
+void minnet_headers_free_obj(void* obj, JSRuntime* rt) { JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_OBJECT, obj)); }
 
-struct MinnetHeadersOpaque*
-minnet_headers_opaque(JSValueConst obj) {
-  return JS_GetOpaque(obj, minnet_headers_class_id);
-}
+struct MinnetHeadersOpaque* minnet_headers_opaque(JSValueConst obj) { return JS_GetOpaque(obj, minnet_headers_class_id); }
 
-ByteBuffer*
-minnet_headers_data2(JSContext* ctx, JSValueConst obj) {
+ByteBuffer* minnet_headers_data2(JSContext* ctx, JSValueConst obj) {
   struct MinnetHeadersOpaque* ptr;
   if(!(ptr = JS_GetOpaque2(ctx, obj, minnet_headers_class_id)))
     return 0;
   return ptr->headers;
 }
 
-JSValue
-minnet_headers_value(JSContext* ctx, ByteBuffer* headers, JSValueConst obj) {
+JSValue minnet_headers_value(JSContext* ctx, ByteBuffer* headers, JSValueConst obj) {
   JSValue headers_obj = JS_NewObjectProtoClass(ctx, minnet_headers_proto, minnet_headers_class_id);
   struct MinnetHeadersOpaque* ptr;
 
@@ -80,8 +71,7 @@ minnet_headers_value(JSContext* ctx, ByteBuffer* headers, JSValueConst obj) {
   return headers_obj;
 }
 
-JSValue
-minnet_headers_wrap(JSContext* ctx, ByteBuffer* headers, void* opaque, void (*free_func)(void* opaque, JSRuntime* rt)) {
+JSValue minnet_headers_wrap(JSContext* ctx, ByteBuffer* headers, void* opaque, void (*free_func)(void* opaque, JSRuntime* rt)) {
   JSValue headers_obj = JS_NewObjectProtoClass(ctx, minnet_headers_proto, minnet_headers_class_id);
   struct MinnetHeadersOpaque* ptr;
 
@@ -102,8 +92,7 @@ minnet_headers_wrap(JSContext* ctx, ByteBuffer* headers, void* opaque, void (*fr
   return headers_obj;
 }
 
-static JSValue
-minnet_headers_get(JSContext* ctx, JSValueConst this_val, int magic) {
+static JSValue minnet_headers_get(JSContext* ctx, JSValueConst this_val, int magic) {
   ByteBuffer* headers;
   JSValue ret = JS_UNDEFINED;
 
@@ -120,8 +109,7 @@ enum {
   HEADERS_TO_OBJECT,
 };
 
-static JSValue
-minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   ByteBuffer* headers;
   JSValue ret = JS_UNDEFINED;
   struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(this_val);
@@ -184,8 +172,7 @@ minnet_headers_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return ret;
 }
 
-static JSValue
-minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   ByteBuffer* headers;
   JSValue ret = JS_UNDEFINED;
   struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(this_val);
@@ -227,8 +214,7 @@ minnet_headers_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValue
   return ret;
 }
 
-static JSValue
-minnet_headers_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_headers_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret = JS_NULL;
 
   return ret;
@@ -248,8 +234,7 @@ static const JSCFunctionListEntry minnet_headers_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetHeaders", JS_PROP_CONFIGURABLE),
 };
 
-static int
-minnet_headers_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSValueConst obj, JSAtom prop) {
+static int minnet_headers_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSValueConst obj, JSAtom prop) {
   ByteBuffer* headers = minnet_headers_data2(ctx, obj);
   const char* propstr = JS_AtomToCString(ctx, prop);
   char* value;
@@ -271,8 +256,7 @@ minnet_headers_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSV
   return ret;
 }
 
-static int
-minnet_headers_get_own_property_names(JSContext* ctx, JSPropertyEnum** ptab, uint32_t* plen, JSValueConst obj) {
+static int minnet_headers_get_own_property_names(JSContext* ctx, JSPropertyEnum** ptab, uint32_t* plen, JSValueConst obj) {
   struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(obj);
   ByteBuffer* headers = ptr->headers;
   uint32_t i = 0, size = headers_size(headers, ptr->separator.item);
@@ -294,8 +278,7 @@ minnet_headers_get_own_property_names(JSContext* ctx, JSPropertyEnum** ptab, uin
   return 0;
 }
 
-static int
-minnet_headers_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
+static int minnet_headers_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
   ByteBuffer* headers = minnet_headers_data2(ctx, obj);
   const char* propstr = JS_AtomToCString(ctx, prop);
   ssize_t index;
@@ -309,8 +292,7 @@ minnet_headers_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
   return ret;
 }
 
-static int
-minnet_headers_set_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueConst value, JSValueConst receiver, int flags) {
+static int minnet_headers_set_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueConst value, JSValueConst receiver, int flags) {
   struct MinnetHeadersOpaque* ptr = minnet_headers_opaque(obj);
   ByteBuffer* headers = ptr->headers;
   const char* propstr = JS_AtomToCString(ctx, prop);
@@ -324,8 +306,7 @@ minnet_headers_set_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSVal
   return FALSE;
 }
 
-static void
-minnet_headers_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_headers_finalizer(JSRuntime* rt, JSValue val) {
   struct MinnetHeadersOpaque* ptr;
 
   if((ptr = minnet_headers_opaque(val))) {
@@ -350,8 +331,7 @@ static const JSClassDef minnet_headers_class = {
     ///  .exotic = &minnet_headers_exotic_methods,
 };
 
-int
-minnet_headers_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_headers_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_headers_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_headers_class_id, &minnet_headers_class);

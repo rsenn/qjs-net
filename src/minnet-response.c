@@ -29,13 +29,9 @@ enum {
   RESPONSE_FINISH,
 };
 
-MinnetResponse*
-minnet_response_data(JSValueConst obj) {
-  return JS_GetOpaque(obj, minnet_response_class_id);
-}
+MinnetResponse* minnet_response_data(JSValueConst obj) { return JS_GetOpaque(obj, minnet_response_class_id); }
 
-JSValue
-minnet_response_new(JSContext* ctx, MinnetURL url, int status, const char* status_text, BOOL headers_sent, const char* type) {
+JSValue minnet_response_new(JSContext* ctx, MinnetURL url, int status, const char* status_text, BOOL headers_sent, const char* type) {
   MinnetResponse* resp;
 
   if((resp = response_new(ctx))) {
@@ -47,8 +43,7 @@ minnet_response_new(JSContext* ctx, MinnetURL url, int status, const char* statu
   return JS_NULL;
 }
 
-JSValue
-minnet_response_wrap(JSContext* ctx, MinnetResponse* resp) {
+JSValue minnet_response_wrap(JSContext* ctx, MinnetResponse* resp) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_response_proto, minnet_response_class_id);
 
   if(JS_IsException(ret))
@@ -64,8 +59,7 @@ enum {
   RESPONSE_JSON,
 };
 
-static JSValue
-minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_response_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   JSValue ret = JS_UNDEFINED;
   ResolveFunctions funcs;
   MinnetResponse* resp;
@@ -150,8 +144,7 @@ enum {
   RESPONSE_ERROR,
 };
 
-static JSValue
-minnet_response_function(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_response_function(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   JSValue ret = JS_UNDEFINED;
 
   switch(magic) {
@@ -182,8 +175,7 @@ enum {
   RESPONSE_HEADERS_LOCATION,
 };
 
-static JSValue
-minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   JSValue ret = JS_UNDEFINED;
   MinnetResponse* resp;
   const char* key;
@@ -233,8 +225,7 @@ minnet_response_header(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   return ret;
 }
 
-static JSValue
-minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetResponse *resp, *clone;
 
   if(!(resp = minnet_response_data2(ctx, this_val)))
@@ -254,8 +245,7 @@ minnet_response_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return minnet_response_wrap(ctx, clone);
 }
 
-static JSValue
-minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
+static JSValue minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetResponse* resp;
   JSValue ret = JS_UNDEFINED;
 
@@ -315,8 +305,7 @@ minnet_response_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-static JSValue
-minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+static JSValue minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetResponse* resp;
   JSValue ret = JS_UNDEFINED;
   const char* str;
@@ -372,8 +361,7 @@ minnet_response_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, i
   return ret;
 }
 
-static JSValue
-minnet_response_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_response_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret = JS_UNDEFINED;
   MinnetResponse* resp;
 
@@ -386,8 +374,7 @@ minnet_response_iterator(JSContext* ctx, JSValueConst this_val, int argc, JSValu
   return ret;
 }
 
-JSValue
-minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+JSValue minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetResponse* resp;
   int i;
@@ -429,8 +416,7 @@ fail:
   return JS_EXCEPTION;
 }
 
-void
-minnet_response_finalizer(JSRuntime* rt, JSValue val) {
+void minnet_response_finalizer(JSRuntime* rt, JSValue val) {
   MinnetResponse* res;
 
   if((res = minnet_response_data(val)))
@@ -472,8 +458,7 @@ static const JSCFunctionListEntry minnet_response_static_funcs[] = {
     JS_CFUNC_MAGIC_DEF("error", 0, minnet_response_function, RESPONSE_ERROR),
 };
 
-int
-minnet_response_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_response_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_response_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_response_class_id, &minnet_response_class);
 

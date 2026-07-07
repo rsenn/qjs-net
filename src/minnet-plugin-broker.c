@@ -63,8 +63,7 @@ typedef struct broker_vhost {
 
 /* destroys the message when everyone has had a copy of it */
 
-static void
-broker_destroy_message(void* _msg) {
+static void broker_destroy_message(void* _msg) {
   BrokerMsg* msg = _msg;
 
   free(msg->payload);
@@ -72,8 +71,7 @@ broker_destroy_message(void* _msg) {
   msg->len = 0;
 }
 
-static int
-broker_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+static int broker_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   BrokerSession* pss = user;
   BrokerVhost* vhd = lws_protocol_vh_priv_get(lws_get_vhost(wsi), lws_get_protocol(wsi));
 

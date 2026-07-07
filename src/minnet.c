@@ -361,8 +361,7 @@ static JSValue minnet_set_log(JSContext* ctx, JSValueConst this_val, int argc, J
   return ret;
 }
 
-static EVP_PKEY*
-minnet_generate_rsa_key(int bits) {
+static EVP_PKEY* minnet_generate_rsa_key(int bits) {
 #if OPENSSL_VERSION_MAJOR >= 3
   return EVP_RSA_gen(bits);
 #else
@@ -379,8 +378,7 @@ minnet_generate_rsa_key(int bits) {
 #endif
 }
 
-static int
-minnet_is_ip_literal(const char* s) {
+static int minnet_is_ip_literal(const char* s) {
   int dots = 0, colons = 0;
   for(const char* p = s; *p; p++) {
     if(*p == '.')

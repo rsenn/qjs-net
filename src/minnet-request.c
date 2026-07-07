@@ -16,13 +16,9 @@
 THREAD_LOCAL JSClassID minnet_request_class_id;
 THREAD_LOCAL JSValue minnet_request_proto, minnet_request_ctor;
 
-MinnetRequest*
-minnet_request_data(JSValueConst obj) {
-  return JS_GetOpaque(obj, minnet_request_class_id);
-}
+MinnetRequest* minnet_request_data(JSValueConst obj) { return JS_GetOpaque(obj, minnet_request_class_id); }
 
-JSValue
-minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+JSValue minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetRequest *req, *other;
   BOOL got_url = FALSE;
@@ -65,8 +61,7 @@ fail:
   return JS_EXCEPTION;
 }
 
-JSValue
-minnet_request_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+JSValue minnet_request_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetRequest *req, *req2;
 
   if(!(req = minnet_request_data2(ctx, this_val)))
@@ -78,8 +73,7 @@ minnet_request_clone(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   return JS_EXCEPTION;
 }
 
-JSValue
-minnet_request_wrap(JSContext* ctx, MinnetRequest* req) {
+JSValue minnet_request_wrap(JSContext* ctx, MinnetRequest* req) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_request_proto, minnet_request_class_id);
 
   if(JS_IsException(ret))
@@ -104,8 +98,7 @@ enum {
   REQUEST_URI,
 };
 
-static JSValue
-minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
+static JSValue minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetRequest* req;
   JSValue ret = JS_UNDEFINED;
 
@@ -194,8 +187,7 @@ minnet_request_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-static JSValue
-minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+static JSValue minnet_request_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetRequest* req;
   JSValue ret = JS_UNDEFINED;
   const char* str;
@@ -258,8 +250,7 @@ enum {
   REQUEST_JSON,
 };
 
-static JSValue
-minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   JSValue ret = JS_UNDEFINED;
   ResolveFunctions funcs;
   MinnetRequest* req;
@@ -344,8 +335,7 @@ minnet_request_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return ret;
 }
 */
-static JSValue
-minnet_request_getheader(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_request_getheader(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetRequest* req;
   JSValue ret = JS_UNDEFINED;
   const char *key, *value;
@@ -365,8 +355,7 @@ minnet_request_getheader(JSContext* ctx, JSValueConst this_val, int argc, JSValu
   return ret;
 }
 
-static void
-minnet_request_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_request_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRequest* req;
 
   if((req = minnet_request_data(val)))
@@ -397,8 +386,7 @@ static const JSCFunctionListEntry minnet_request_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRequest", JS_PROP_CONFIGURABLE),
 };
 
-int
-minnet_request_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_request_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_request_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_request_class_id, &minnet_request_class);

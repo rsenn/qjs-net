@@ -8,8 +8,7 @@
 #include "assure.h"
 #include <libwebsockets.h>
 
-static int
-http_client_error(MinnetClient* cli, void* in, size_t len, struct session_data* session, struct wsi_opaque_user_data* opaque, JSContext* ctx) {
+static int http_client_error(MinnetClient* cli, void* in, size_t len, struct session_data* session, struct wsi_opaque_user_data* opaque, JSContext* ctx) {
   if(js_async_pending(&cli->promise)) {
     JSValue err = js_error_new(ctx, "%s", (char*)in);
 
@@ -32,8 +31,7 @@ http_client_error(MinnetClient* cli, void* in, size_t len, struct session_data* 
   return -1;
 }
 
-static int
-http_client_established(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
+static int http_client_established(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
   int ret = 0;
   struct wsi_opaque_user_data* opaque = opaque_from_wsi(wsi, ctx);
   MinnetResponse* resp;
@@ -121,8 +119,7 @@ http_client_established(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
   return ret;
 }
 
-static int
-http_client_writable(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
+static int http_client_writable(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
 
   assure(minnet_client_lws(cli) == lws_get_network_wsi(wsi));
 
@@ -213,8 +210,7 @@ http_client_writable(MinnetClient* cli, struct lws* wsi, JSContext* ctx) {
   return 0;
 }
 
-static int
-http_client_completed(MinnetClient* cli, struct lws* wsi, struct wsi_opaque_user_data* opaque) {
+static int http_client_completed(MinnetClient* cli, struct lws* wsi, struct wsi_opaque_user_data* opaque) {
   int32_t r32 = -1;
 
   assure(minnet_client_lws(cli) == wsi);
@@ -285,8 +281,7 @@ http_client_completed(MinnetClient* cli, struct lws* wsi, struct wsi_opaque_user
   return cli->lwsret;
 }
 
-int
-minnet_http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+int minnet_http_client_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetClient* client = lws_client(wsi);
   struct session_data* session = &client->session;
   JSContext* ctx = client ? client->context.js : 0;

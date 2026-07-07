@@ -21,9 +21,6 @@ extern THREAD_LOCAL JSValue minnet_url_proto, minnet_url_ctor;
 
 int minnet_url_init(JSContext*, JSModuleDef* m);
 
-static inline MinnetURL*
-minnet_url_data2(JSContext* ctx, JSValueConst obj) {
-  return JS_GetOpaque2(ctx, obj, minnet_url_class_id);
-}
+static inline MinnetURL* minnet_url_data2(JSContext* ctx, JSValueConst obj) { return JS_GetOpaque2(ctx, obj, minnet_url_class_id); }
 
 #endif /* MINNET_URL_H */

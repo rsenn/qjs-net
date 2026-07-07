@@ -24,13 +24,9 @@ enum {
   URL_HREF,
 };
 
-MinnetURL*
-minnet_url_data(JSValueConst obj) {
-  return JS_GetOpaque(obj, minnet_url_class_id);
-}
+MinnetURL* minnet_url_data(JSValueConst obj) { return JS_GetOpaque(obj, minnet_url_class_id); }
 
-JSValue
-minnet_url_wrap(JSContext* ctx, MinnetURL* url) {
+JSValue minnet_url_wrap(JSContext* ctx, MinnetURL* url) {
   JSValue url_obj = JS_NewObjectProtoClass(ctx, minnet_url_proto, minnet_url_class_id);
 
   if(JS_IsException(url_obj))
@@ -48,8 +44,7 @@ minnet_url_wrap(JSContext* ctx, MinnetURL* url) {
   return url_obj;
 }
 
-JSValue
-minnet_url_new(JSContext* ctx, MinnetURL u) {
+JSValue minnet_url_new(JSContext* ctx, MinnetURL u) {
   MinnetURL* url;
 
   if(!(url = url_new(ctx)))
@@ -59,8 +54,7 @@ minnet_url_new(JSContext* ctx, MinnetURL u) {
   return minnet_url_wrap(ctx, url);
 }
 
-static JSValue
-minnet_url_get(JSContext* ctx, JSValueConst this_val, int magic) {
+static JSValue minnet_url_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetURL* url;
   JSValue ret = JS_UNDEFINED;
 
@@ -152,8 +146,7 @@ minnet_url_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-static JSValue
-minnet_url_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+static JSValue minnet_url_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetURL* url;
   JSValue ret = JS_UNDEFINED;
   size_t len;
@@ -228,8 +221,7 @@ enum {
   URL_TO_OBJECT,
 };
 
-JSValue
-minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+JSValue minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetURL* url;
   JSValue ret = JS_UNDEFINED;
 
@@ -255,8 +247,7 @@ minnet_url_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
   return ret;
 }
 
-JSValue
-minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+JSValue minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetURL* url;
 
   if(!(url = url_new(ctx)))
@@ -270,8 +261,7 @@ minnet_url_from(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
   return minnet_url_wrap(ctx, url);
 }
 
-JSValue
-minnet_url_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+JSValue minnet_url_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   DynBuf dbuf;
   char* str;
   MinnetURL* url;
@@ -298,8 +288,7 @@ minnet_url_inspect(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
   return ret;
 }
 
-JSValue
-minnet_url_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+JSValue minnet_url_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetURL* url;
 
@@ -333,8 +322,7 @@ fail:
   return JS_EXCEPTION;
 }
 
-static void
-minnet_url_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_url_finalizer(JSRuntime* rt, JSValue val) {
   MinnetURL* url = JS_GetOpaque(val, minnet_url_class_id);
   if(url) {
     url_free(url, rt);
@@ -370,8 +358,7 @@ static const JSCFunctionListEntry minnet_url_static_funcs[] = {
     JS_CFUNC_DEF("from", 1, minnet_url_from),
 };
 
-int
-minnet_url_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_url_init(JSContext* ctx, JSModuleDef* m) {
   JSAtom inspect_atom;
 
   JS_NewClassID(&minnet_url_class_id);

@@ -17,13 +17,9 @@ int minnet_response_init(JSContext*, JSModuleDef*);
 extern THREAD_LOCAL JSClassID minnet_response_class_id;
 extern THREAD_LOCAL JSValue minnet_response_proto, minnet_response_ctor;
 
-static inline MinnetResponse*
-minnet_response_data2(JSContext* ctx, JSValueConst obj) {
-  return JS_GetOpaque2(ctx, obj, minnet_response_class_id);
-}
+static inline MinnetResponse* minnet_response_data2(JSContext* ctx, JSValueConst obj) { return JS_GetOpaque2(ctx, obj, minnet_response_class_id); }
 
-static inline Queue*
-session_queue(struct session_data* session) {
+static inline Queue* session_queue(struct session_data* session) {
   Response* resp;
 
   if(queue_size(&session->sendq))

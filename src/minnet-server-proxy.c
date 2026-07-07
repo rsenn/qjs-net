@@ -1,8 +1,7 @@
 #include "minnet-server-proxy.h"
 #include <libwebsockets.h>
 
-static MinnetProxyConnection*
-proxy_new() {
+static MinnetProxyConnection* proxy_new() {
   MinnetProxyConnection* pc;
 
   if((pc = malloc(sizeof(MinnetProxyConnection))))
@@ -11,8 +10,7 @@ proxy_new() {
   return pc;
 }
 
-static int
-proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
+static int proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
   MinnetProxyMessage* msg = lws_container_of(d, MinnetProxyMessage, list);
 
   lws_dll2_remove(d);
@@ -21,8 +19,7 @@ proxy_ws_raw_msg_destroy(struct lws_dll2* d, void* user) {
   return 0;
 }
 
-int
-minnet_proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+int minnet_proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetProxyConnection* pc = (MinnetProxyConnection*)lws_get_opaque_user_data(wsi);
 
   LOG("PROXY-WS-SERVER", "in=%.*s len=%d", (int)len, (char*)in, (int)len);
@@ -136,8 +133,7 @@ minnet_proxy_server_callback(struct lws* wsi, enum lws_callback_reasons reason, 
   return 0;
 }
 
-int
-minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+int minnet_proxy_rawclient_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   MinnetProxyConnection* pc = (MinnetProxyConnection*)lws_get_opaque_user_data(wsi);
   MinnetProxyMessage* msg;
   uint8_t* data;

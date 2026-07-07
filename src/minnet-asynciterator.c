@@ -13,8 +13,7 @@ enum {
   ASYNCITERATOR_STOP,
 };
 
-static JSValue
-minnet_asynciterator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_asynciterator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   JSValue ret = JS_UNDEFINED;
   AsyncIterator* iter;
 
@@ -41,13 +40,9 @@ minnet_asynciterator_method(JSContext* ctx, JSValueConst this_val, int argc, JSV
   return ret;
 }
 
-static JSValue
-minnet_asynciterator_asynciterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
-  return JS_DupValue(ctx, this_val);
-}
+static JSValue minnet_asynciterator_asynciterator(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) { return JS_DupValue(ctx, this_val); }
 
-void
-minnet_asynciterator_decorate(JSContext* ctx, JSValueConst this_val, JSValueConst ret) {
+void minnet_asynciterator_decorate(JSContext* ctx, JSValueConst this_val, JSValueConst ret) {
   JSValue fn = JS_NewCFunction(ctx, minnet_asynciterator_asynciterator, "[Symbol.asyncIterator]", 0);
 
   JSAtom atom = js_symbol_static_atom(ctx, "asyncIterator");
@@ -56,8 +51,7 @@ minnet_asynciterator_decorate(JSContext* ctx, JSValueConst this_val, JSValueCons
   JS_FreeValue(ctx, fn);
 }
 
-JSValue
-minnet_asynciterator_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+JSValue minnet_asynciterator_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   AsyncIterator* iter;
 
@@ -84,8 +78,7 @@ fail:
   return JS_EXCEPTION;
 }
 
-static void
-minnet_asynciterator_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_asynciterator_finalizer(JSRuntime* rt, JSValue val) {
   AsyncIterator* iter;
 
   if((iter = minnet_asynciterator_data(val)))
@@ -104,8 +97,7 @@ static const JSCFunctionListEntry minnet_asynciterator_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "AsyncIterator", JS_PROP_CONFIGURABLE),
 };
 
-int
-minnet_asynciterator_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_asynciterator_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_asynciterator_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_asynciterator_class_id, &minnet_asynciterator_class);
 

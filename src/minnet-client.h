@@ -59,27 +59,15 @@ JSValue minnet_client(JSContext*, JSValueConst, int, JSValueConst[]);
 JSValue minnet_client_wrap(JSContext*, MinnetClient*);
 int minnet_client_init(JSContext*, JSModuleDef*);
 
-static inline struct context*
-minnet_client_context(MinnetClient* client) {
-  return &client->context;
-}
+static inline struct context* minnet_client_context(MinnetClient* client) { return &client->context; }
 
 extern THREAD_LOCAL JSClassID minnet_client_class_id;
 extern THREAD_LOCAL JSValue minnet_client_proto, minnet_client_ctor;
 
-static inline MinnetClient*
-minnet_client_data(JSValueConst obj) {
-  return JS_GetOpaque(obj, minnet_client_class_id);
-}
+static inline MinnetClient* minnet_client_data(JSValueConst obj) { return JS_GetOpaque(obj, minnet_client_class_id); }
 
-static inline MinnetClient*
-minnet_client_data2(JSContext* ctx, JSValueConst obj) {
-  return JS_GetOpaque2(ctx, obj, minnet_client_class_id);
-}
+static inline MinnetClient* minnet_client_data2(JSContext* ctx, JSValueConst obj) { return JS_GetOpaque2(ctx, obj, minnet_client_class_id); }
 
-static inline struct lws*
-minnet_client_lws(MinnetClient* client) {
-  return client->wsi;
-}
+static inline struct lws* minnet_client_lws(MinnetClient* client) { return client->wsi; }
 
 #endif

@@ -37,8 +37,7 @@ typedef struct {
   struct lws* wsi;
 } ServerClosure;
 
-MinnetVhostOptions*
-vhost_options_create(JSContext* ctx, const char* name, const char* value) {
+MinnetVhostOptions* vhost_options_create(JSContext* ctx, const char* name, const char* value) {
   MinnetVhostOptions* vo = js_mallocz(ctx, sizeof(MinnetVhostOptions));
 
   DBG("name=%s value=%s", name, value);
@@ -49,8 +48,7 @@ vhost_options_create(JSContext* ctx, const char* name, const char* value) {
   return vo;
 }
 
-MinnetVhostOptions*
-vhost_options_new(JSContext* ctx, JSValueConst vhost_option) {
+MinnetVhostOptions* vhost_options_new(JSContext* ctx, JSValueConst vhost_option) {
   MinnetVhostOptions* vo;
   JSValue name, value;
   const char *namestr, *valuestr;
@@ -72,8 +70,7 @@ vhost_options_new(JSContext* ctx, JSValueConst vhost_option) {
   return vo;
 }
 
-MinnetVhostOptions*
-vhost_options_fromentries(JSContext* ctx, JSValueConst arr) {
+MinnetVhostOptions* vhost_options_fromentries(JSContext* ctx, JSValueConst arr) {
   uint32_t i, len = js_get_propertystr_uint32(ctx, arr, "length");
   MinnetVhostOptions *vo = 0, **voptr = &vo;
 
@@ -89,8 +86,7 @@ vhost_options_fromentries(JSContext* ctx, JSValueConst arr) {
   return vo;
 }
 
-MinnetVhostOptions*
-vhost_options_fromobj(JSContext* ctx, JSValueConst obj) {
+MinnetVhostOptions* vhost_options_fromobj(JSContext* ctx, JSValueConst obj) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
   MinnetVhostOptions *vo = 0, **voptr = &vo;
@@ -120,8 +116,7 @@ vhost_options_fromobj(JSContext* ctx, JSValueConst obj) {
   return vo;
 }
 
-void
-vhost_options_dump(MinnetVhostOptions* vo) {
+void vhost_options_dump(MinnetVhostOptions* vo) {
   uint32_t i = 0;
 
   while(vo) {
@@ -132,8 +127,7 @@ vhost_options_dump(MinnetVhostOptions* vo) {
   }
 }
 
-void
-vhost_options_free_list(JSContext* ctx, MinnetVhostOptions* vo) {
+void vhost_options_free_list(JSContext* ctx, MinnetVhostOptions* vo) {
   MinnetVhostOptions* next;
 
   do {
@@ -152,8 +146,7 @@ vhost_options_free_list(JSContext* ctx, MinnetVhostOptions* vo) {
   } while((vo = next));
 }
 
-MinnetHttpMount*
-mount_new(JSContext* ctx, const char* mnt, const char* org, const char* def, const char* pro) {
+MinnetHttpMount* mount_new(JSContext* ctx, const char* mnt, const char* org, const char* def, const char* pro) {
   MinnetHttpMount* m;
   enum lws_mount_protocols origin_proto = LWSMPRO_CALLBACK;
 
@@ -189,8 +182,7 @@ mount_new(JSContext* ctx, const char* mnt, const char* org, const char* def, con
   return m;
 }
 
-MinnetHttpMount*
-mount_fromobj(JSContext* ctx, JSValueConst obj, const char* key) {
+MinnetHttpMount* mount_fromobj(JSContext* ctx, JSValueConst obj, const char* key) {
   MinnetHttpMount* ret;
   JSValue mnt = JS_UNDEFINED, org = JS_UNDEFINED, def = JS_UNDEFINED, pro = JS_UNDEFINED;
   const char* path;
@@ -259,8 +251,7 @@ mount_fromobj(JSContext* ctx, JSValueConst obj, const char* key) {
   return ret;
 }
 
-MinnetHttpMount*
-mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
+MinnetHttpMount* mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
   struct lws_http_mount *p, *m = 0;
   int protocol = n == 0 ? LWSMPRO_CALLBACK : LWSMPRO_HTTP;
   size_t l = 0;
@@ -306,8 +297,7 @@ mount_find(MinnetHttpMount* mounts, const char* x, size_t n) {
   return (MinnetHttpMount*)m;
 }
 
-MinnetHttpMount*
-mount_find_s(MinnetHttpMount* mounts, const char* x) {
+MinnetHttpMount* mount_find_s(MinnetHttpMount* mounts, const char* x) {
   struct lws_http_mount *p, *m = 0;
   size_t n = strlen(x);
 
@@ -336,8 +326,7 @@ mount_find_s(MinnetHttpMount* mounts, const char* x) {
   return (MinnetHttpMount*)m;
 }
 
-void
-mount_free(JSContext* ctx, MinnetHttpMount const* m) {
+void mount_free(JSContext* ctx, MinnetHttpMount const* m) {
   js_free(ctx, (void*)m->lws.mountpoint);
 
   if(m->org)
@@ -352,13 +341,9 @@ mount_free(JSContext* ctx, MinnetHttpMount const* m) {
   js_free(ctx, (void*)m);
 }
 
-BOOL
-mount_is_proxy(MinnetHttpMount const* m) {
-  return m->lws.origin_protocol == LWSMPRO_HTTP || m->lws.origin_protocol == LWSMPRO_HTTPS;
-}
+BOOL mount_is_proxy(MinnetHttpMount const* m) { return m->lws.origin_protocol == LWSMPRO_HTTP || m->lws.origin_protocol == LWSMPRO_HTTPS; }
 
-static void
-serve_resolved_free(void* ptr) {
+static void serve_resolved_free(void* ptr) {
   ServerClosure* closure = ptr;
 
   if(--closure->ref_count == 0) {
@@ -375,8 +360,7 @@ serve_resolved_free(void* ptr) {
   }
 }
 
-static JSValue
-serve_rejected(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+static JSValue serve_rejected(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   ServerClosure* closure = ptr;
   struct session_data* session = closure->session;
   MinnetServer* server;
@@ -422,8 +406,7 @@ serve_rejected(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return JS_UNDEFINED;
 }
 
-static JSValue
-serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+static JSValue serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   ServerClosure* closure = ptr;
   struct session_data* session = closure->session;
   JSValue value = JS_UNDEFINED;
@@ -483,8 +466,7 @@ serve_resolved(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return JS_UNDEFINED;
 }
 
-static JSValue
-serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) {
+static JSValue serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) {
   ServerClosure* p;
   JSValue ret = JS_UNDEFINED;
   MinnetResponse* resp = minnet_response_data(session->resp_obj);
@@ -516,8 +498,7 @@ serve_promise(JSContext* ctx, struct session_data* session, JSValueConst value) 
   return ret;
 }
 
-static int
-serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, BOOL* done_p) {
+static int serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, BOOL* done_p) {
   int result = 0;
 
   DBG("callback=%" PRIu32 " run=%" PRIu32 " done=%s wait_resolve=%i closed=%s complete=%s",
@@ -584,8 +565,7 @@ serve_generator(JSContext* ctx, struct session_data* session, struct lws* wsi, B
   return result;
 }
 
-static int
-serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
+static int serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
   FunctionType type = session_callback(session, cb);
 
   DBG("type=%s generator=%s", ((const char*[]){"SYNC", "ASYNC", "GENERATOR", "ASYNC_GENERATOR"})[type], JS_ToCString(cb->ctx, session->generator));
@@ -618,8 +598,7 @@ serve_callback(JSCallback* cb, struct session_data* session, struct lws* wsi) {
   return 0;
 }
 
-static BOOL
-has_transfer_encoding(MinnetRequest* req, const char* enc) {
+static BOOL has_transfer_encoding(MinnetRequest* req, const char* enc) {
   const char* accept;
   size_t len, enclen = strlen(enc);
 
@@ -637,8 +616,7 @@ has_transfer_encoding(MinnetRequest* req, const char* enc) {
   return FALSE;
 }
 
-static int
-serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext* ctx, struct session_data* session) {
+static int serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext* ctx, struct session_data* session) {
   struct wsi_opaque_user_data* opaque = lws_get_opaque_user_data(wsi);
   lws_filepos_t content_len = LWS_ILLEGAL_HTTP_CONTENT_LEN;
   Queue* q = session_queue(session);
@@ -705,8 +683,7 @@ serve_response(struct lws* wsi, ByteBuffer* buf, MinnetResponse* resp, JSContext
   return 0;
 }
 
-static size_t
-file_size(FILE* fp) {
+static size_t file_size(FILE* fp) {
   long pos = ftell(fp);
   size_t size = 0;
 
@@ -718,8 +695,7 @@ file_size(FILE* fp) {
   return size;
 }
 
-static int
-serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const char* path, MinnetHttpMount* mount) {
+static int serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const char* path, MinnetHttpMount* mount) {
   MinnetResponse* resp = ((struct wsi_opaque_user_data*)lws_get_opaque_user_data(wsi))->resp;
   FILE* fp;
   const char* mime = lws_get_mimetype(path, &mount->lws);
@@ -766,12 +742,10 @@ serve_file(JSContext* ctx, struct session_data* session, struct lws* wsi, const 
   return 0;
 }
 
-static int
-http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) {
-  struct http_response* resp = minnet_response_data(session->resp_obj);
+static int http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) {
+  // struct http_response* resp = minnet_response_data(session->resp_obj);
   enum lws_write_protocol n, wp = -1;
   size_t remain = 0;
-  ssize_t ret = 0;
   Queue* q = session_queue(session);
   size_t qsize = queue_bytes(q);
 
@@ -793,7 +767,9 @@ http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) 
 
       if(l > 0) {
         wp = queue_complete(q) && remain == l ? LWS_WRITE_HTTP_FINAL : n;
-        ret = lws_write(wsi, x, l, wp);
+        int ret = lws_write(wsi, x, l, wp);
+
+        assert(ret == l);
         DBG("len=%zu final=%d ret=%zd data='%.*s'", l, wp == LWS_WRITE_HTTP_FINAL, ret, (int)(l > 32 ? 32 : l), x);
 
         remain -= l;
@@ -816,8 +792,7 @@ http_server_writeable(struct session_data* session, struct lws* wsi, BOOL done) 
   return 0;
 }
 
-int
-minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
+int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, void* user, void* in, size_t len) {
   int ret = 0;
   uint8_t buf[LWS_PRE + LWS_RECOMMENDED_MIN_HEADER_SPACE];
   MinnetServer* server = lws_context_user(lws_get_context(wsi));
@@ -864,9 +839,20 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
     case LWS_CALLBACK_PROTOCOL_DESTROY:
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: break;
-   case LWS_CALLBACK_ESTABLISHED: break;
-    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: break;
- 
+    case LWS_CALLBACK_ESTABLISHED: break;
+    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
+      struct lws_process_html_args* pa = (struct lws_process_html_args*)in;
+
+      if(callback_valid(&server->on.connect)) {
+        JSValue args[] = {pa->p && pa->len ? JS_NewStringLen(server->on.connect.ctx, pa->p, pa->len) : JS_NULL};
+
+        JSValue retval = callback_emit_this(&server->on.connect, session->req_obj, countof(args), args);
+
+        ret = minnet_server_exception(server, retval);
+      }
+
+      break;
+
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
       if((session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, in, len)))
         if(mount_is_proxy(session->mount))
@@ -935,9 +921,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
         JSValue args[] = {
             JS_NewStringLen(server->on.read.ctx, in, len),
         };
-        JSValue ret = minnet_server_exception(server, callback_emit_this(&server->on.read, session->req_obj, countof(args), args));
-
-        JS_FreeValue(server->on.read.ctx, ret);
+        ret = minnet_server_exception(server, callback_emit_this(&server->on.read, session->req_obj, countof(args), args));
       }
 
       break;
@@ -945,7 +929,6 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
 
     case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
       MinnetFormParser* fp;
-      ByteBuffer b = BUFFER(buf);
       JSCallback* cb;
       MinnetRequest* req = opaque->req;
       Generator* gen = req->body;
@@ -958,7 +941,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
         lws_spa_finalize(fp->spa);
 
         if(callback_valid(&fp->cb.finalize)) {
-          JSValue ret = minnet_server_exception(server, callback_emit(&fp->cb.finalize, 0, 0));
+          JSValue ret = context_exception(&server->context, callback_emit(&fp->cb.finalize, 0, 0));
 
           if(minnet_response_data(ret)) {
             session->resp_obj = ret;
@@ -994,7 +977,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
         JSValue args[] = {
             minnet_generator_iterator(server->on.post.ctx, gen),
         };
-        JSValue ret = minnet_server_exception(server, callback_emit_this(&server->on.post, session->req_obj, countof(args), args));
+        JSValue ret = context_exception(&server->context, callback_emit_this(&server->on.post, session->req_obj, countof(args), args));
 
         JS_FreeValue(server->on.post.ctx, ret);
       }
@@ -1139,9 +1122,7 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
 
         session->req_obj = minnet_request_wrap(ctx, opaque->req);
 
-        JSValue val = minnet_server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &session->req_obj));
-
-        JS_FreeValue(ctx, val);
+        minnet_server_exception(server, callback_emit_this(cb, session->ws_obj, 2, &session->req_obj));
       }
 
       return ret;

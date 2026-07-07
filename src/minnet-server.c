@@ -83,8 +83,7 @@ static const struct lws_extension extension_pmd[] = {
     },
 };
 
-static MinnetServer*
-server_new(JSContext* ctx) {
+static MinnetServer* server_new(JSContext* ctx) {
   MinnetServer* server;
 
   if(!(server = js_mallocz(ctx, sizeof(MinnetServer))))
@@ -102,14 +101,12 @@ server_new(JSContext* ctx) {
   return server;
 }
 
-MinnetServer*
-minnet_server_dup(MinnetServer* srv) {
+MinnetServer* minnet_server_dup(MinnetServer* srv) {
   ++srv->ref_count;
   return srv;
 }
 
-static BOOL
-server_listen(MinnetServer* server) {
+static BOOL server_listen(MinnetServer* server) {
   JSValue timer_cb;
   uint32_t interval;
 
@@ -136,8 +133,21 @@ server_listen(MinnetServer* server) {
   return TRUE;
 }
 
-void
-minnet_server_free(MinnetServer* server) {
+int minnet_server_exception(MinnetServer* server, JSValue retval) {
+  int32_t r = -1;
+  JSValue ret = context_exception(&server->context, retval);
+
+  JS_FreeValue(server->context.js, retval);
+
+  if(JS_IsException(ret))
+    return -1;
+
+  JS_ToInt32(server->context.js, &r, ret);
+  JS_FreeValue(server->context.js, ret);
+  return r;
+}
+
+void minnet_server_free(MinnetServer* server) {
   JSContext* ctx = server->context.js;
 
   if(--server->ref_count == 0) {
@@ -158,20 +168,15 @@ struct ServerMatchClosure {
   BOOL next;
 };
 
-static BOOL
-server_match_all(struct ServerMatchClosure* closure) {
-  return closure->path == 0 && (int)closure->method == -1;
-}
+static BOOL server_match_all(struct ServerMatchClosure* closure) { return closure->path == 0 && (int)closure->method == -1; }
 
-static struct ServerMatchClosure*
-server_match_dup(struct ServerMatchClosure* closure) {
+static struct ServerMatchClosure* server_match_dup(struct ServerMatchClosure* closure) {
   ++closure->ref_count;
 
   return closure;
 }
 
-static void
-server_match_free(void* ptr) {
+static void server_match_free(void* ptr) {
   struct ServerMatchClosure* closure = ptr;
 
   if(--closure->ref_count == 0) {
@@ -183,16 +188,14 @@ server_match_free(void* ptr) {
   }
 }
 
-static JSValue
-minnet_server_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+static JSValue minnet_server_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   struct ServerMatchClosure* closure = opaque;
 
   closure->next = TRUE;
   return JS_UNDEFINED;
 };
 
-static JSValue
-server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+static JSValue server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   struct ServerMatchClosure* closure = opaque;
   JSValue ret = JS_UNDEFINED;
   MinnetRequest* req;
@@ -234,8 +237,7 @@ server_match(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[
   return ret;
 }
 
-JSValue
-minnet_server_match(MinnetServer* server, const char* path, enum http_method method, JSValue callback, JSValue prev_callback) {
+JSValue minnet_server_match(MinnetServer* server, const char* path, enum http_method method, JSValue callback, JSValue prev_callback) {
   JSContext* ctx = server->context.js;
   struct ServerMatchClosure* closure;
   JSValue ret = JS_UNDEFINED;
@@ -268,8 +270,7 @@ minnet_server_match(MinnetServer* server, const char* path, enum http_method met
   return ret;
 }
 
-void
-minnet_server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
+void minnet_server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
   JSContext* ctx = server->context.js;
   struct lws_context_creation_info* info = &server->context.info;
   MinnetHttpMount** m = (MinnetHttpMount**)&info->mounts;
@@ -314,8 +315,7 @@ minnet_server_mounts(MinnetServer* server, JSValueConst opt_mounts) {
   }
 }
 
-void
-minnet_server_certificate(struct context* context, JSValueConst options) {
+void minnet_server_certificate(struct context* context, JSValueConst options) {
   struct lws_context_creation_info* info = &context->info;
   JSContext* ctx = context->js;
 
@@ -363,8 +363,7 @@ minnet_server_certificate(struct context* context, JSValueConst options) {
   }
 }
 
-JSValue
-minnet_server_wrap(JSContext* ctx, MinnetServer* srv) {
+JSValue minnet_server_wrap(JSContext* ctx, MinnetServer* srv) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_server_proto, minnet_server_class_id);
 
   if(JS_IsException(ret))
@@ -380,8 +379,7 @@ enum {
   SERVER_LISTENING,
 };
 
-JSValue
-minnet_server_get(JSContext* ctx, JSValueConst this_val, int magic) {
+JSValue minnet_server_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetServer* server;
   JSValue ret = JS_UNDEFINED;
 
@@ -402,8 +400,7 @@ minnet_server_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-JSValue
-minnet_server_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+JSValue minnet_server_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetServer* server;
   JSValue ret = JS_UNDEFINED;
 
@@ -429,8 +426,7 @@ enum {
   SERVER_MOUNT,
 };
 
-JSValue
-minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+JSValue minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetServer* server;
   JSValue ret = JS_UNDEFINED;
 
@@ -531,13 +527,9 @@ minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   return ret;
 }
 
-static JSValue
-minnet_server_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  return JS_UNDEFINED;
-}
+static JSValue minnet_server_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) { return JS_UNDEFINED; }
 
-static JSValue
-minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+static JSValue minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   MinnetServer* server = ptr;
   struct TimerClosure* timer = server->context.timer;
   uint32_t new_interval;
@@ -572,8 +564,7 @@ minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return JS_TRUE;
 }
 
-JSValue
-minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
+JSValue minnet_server_closure(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
   int argind = 0, a = 0;
   BOOL block = FALSE, is_tls = FALSE, is_h2 = TRUE, per_message_deflate = FALSE;
   MinnetServer* server;
@@ -837,8 +828,7 @@ lwsl_user("DEBUG pvo mimetype %s %s\n", pvo->name, pvo->value);
   return ret;
 }
 
-JSValue
-minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+JSValue minnet_server(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   union closure* closure;
   JSValue ret;
 
@@ -883,8 +873,7 @@ static const JSCFunctionListEntry minnet_server_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetServer", JS_PROP_CONFIGURABLE),
 };
 
-static void
-minnet_server_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_server_finalizer(JSRuntime* rt, JSValue val) {
   MinnetServer* srv;
 
   if((srv = minnet_server_data(val))) {
@@ -899,8 +888,7 @@ static const JSClassDef minnet_server_class = {
     .finalizer = minnet_server_finalizer,
 };
 
-int
-minnet_server_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_server_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_server_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_server_class_id, &minnet_server_class);

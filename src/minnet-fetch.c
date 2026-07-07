@@ -16,8 +16,7 @@ enum {
   ON_FD,
 };
 
-static JSValue
-fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+static JSValue fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   union closure* closure = opaque;
   MinnetClient* client = closure->pointer;
 
@@ -75,8 +74,7 @@ fetch_handler(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv
   return JS_UNDEFINED;
 }
 
-JSValue
-minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+JSValue minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   JSValue ret, handlers[4], args[2];
   union closure* cc;
   BOOL block = TRUE;

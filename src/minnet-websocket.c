@@ -43,10 +43,7 @@ enum {
   WEBSOCKET_RESPONSE_REDIRECT,
 };
 
-MinnetWebsocket*
-minnet_ws_data(JSValueConst obj) {
-  return JS_GetOpaque(obj, minnet_ws_class_id);
-}
+MinnetWebsocket* minnet_ws_data(JSValueConst obj) { return JS_GetOpaque(obj, minnet_ws_class_id); }
 
 /*JSValue
 minnet_ws_new(JSContext* ctx, struct lws* wsi) {
@@ -66,8 +63,7 @@ minnet_ws_new(JSContext* ctx, struct lws* wsi) {
   return ws_obj;
 }*/
 
-JSValue
-minnet_ws_wrap(JSContext* ctx, MinnetWebsocket* ws) {
+JSValue minnet_ws_wrap(JSContext* ctx, MinnetWebsocket* ws) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_ws_proto, minnet_ws_class_id);
 
   if(JS_IsException(ret))
@@ -78,8 +74,7 @@ minnet_ws_wrap(JSContext* ctx, MinnetWebsocket* ws) {
   return ret;
 }
 
-JSValue
-minnet_ws_fromwsi(JSContext* ctx, struct lws* wsi) {
+JSValue minnet_ws_fromwsi(JSContext* ctx, struct lws* wsi) {
   MinnetWebsocket* ws;
   JSValue ret;
 
@@ -96,8 +91,7 @@ minnet_ws_fromwsi(JSContext* ctx, struct lws* wsi) {
   return ret;
 }
 
-static JSValue
-minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
   JSBuffer jsbuf;
@@ -140,8 +134,7 @@ minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return ret;
 }
 
-static JSValue
-minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
 
@@ -202,8 +195,7 @@ minnet_ws_respond(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst 
   return ret;
 }
 
-static JSValue
-minnet_ws_ping(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_ws_ping(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   uint8_t* data;
   size_t len;
@@ -228,8 +220,7 @@ minnet_ws_ping(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return JS_UNDEFINED;
 }
 
-static JSValue
-minnet_ws_pong(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_ws_pong(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   uint8_t* data;
   size_t len;
@@ -254,8 +245,7 @@ minnet_ws_pong(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst arg
   return JS_UNDEFINED;
 }
 
-static JSValue
-minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
+static JSValue minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[]) {
   MinnetWebsocket* ws;
   const char* reason = 0;
   size_t rlen = 0;
@@ -300,8 +290,7 @@ minnet_ws_close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst ar
   return JS_FALSE;
 }
 
-static JSValue
-minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
+static JSValue minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
 
@@ -411,8 +400,7 @@ minnet_ws_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-static JSValue
-minnet_ws_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+static JSValue minnet_ws_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
 
@@ -433,8 +421,7 @@ enum {
   WEBSOCKET_FROMFD = 0,
 };
 
-static JSValue
-minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   JSValue ret = JS_UNDEFINED;
 
   switch(magic) {
@@ -465,8 +452,7 @@ minnet_ws_static(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst a
   return ret;
 }
 
-static void
-minnet_ws_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_ws_finalizer(JSRuntime* rt, JSValue val) {
   MinnetWebsocket* ws;
 
   if((ws = minnet_ws_data(val)))
@@ -562,8 +548,7 @@ static const JSCFunctionListEntry minnet_ws_proto_defs[] = {
     JS_PROP_INT32_DEF("HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED", HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED, 0),
 };
 
-int
-minnet_ws_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_ws_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_ws_class_id);
   JS_NewClass(JS_GetRuntime(ctx), minnet_ws_class_id, &minnet_ws_class);
   minnet_ws_proto = JS_NewObject(ctx);

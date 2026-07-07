@@ -19,8 +19,7 @@ enum {
   GENERATOR_ITERATOR,
 };
 
-static JSValue
-minnet_generator_function(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+static JSValue minnet_generator_function(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
   JSValue ret = JS_UNDEFINED;
 
@@ -54,8 +53,7 @@ minnet_generator_function(JSContext* ctx, JSValueConst this_val, int argc, JSVal
   return ret;
 }
 
-static JSValue
-minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_generator_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetGenerator* gen;
   JSValue ret = JS_UNDEFINED;
 
@@ -118,8 +116,7 @@ enum {
   GENERATOR_CHUNK_SIZE,
 };
 
-static JSValue
-minnet_generator_get(JSContext* ctx, JSValueConst this_val, int magic) {
+static JSValue minnet_generator_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetGenerator* gen;
   JSValue ret = JS_UNDEFINED;
 
@@ -177,8 +174,7 @@ minnet_generator_get(JSContext* ctx, JSValueConst this_val, int magic) {
   }
 }
 
-static JSValue
-minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+static JSValue minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
   JSValue ret = JS_UNDEFINED;
 
@@ -193,8 +189,7 @@ minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return ret;
 }
 
-static JSValue
-minnet_generator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+static JSValue minnet_generator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   MinnetGenerator* gen = (MinnetGenerator*)opaque;
   JSValue ret = JS_UNDEFINED;
 
@@ -207,8 +202,7 @@ minnet_generator_stop(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   return ret;
 }
 
-JSValue
-minnet_generator_wrap(JSContext* ctx, MinnetGenerator* req) {
+JSValue minnet_generator_wrap(JSContext* ctx, MinnetGenerator* req) {
   JSValue ret = JS_NewObjectProtoClass(ctx, minnet_generator_proto, minnet_generator_class_id);
 
   if(JS_IsException(ret))
@@ -219,8 +213,7 @@ minnet_generator_wrap(JSContext* ctx, MinnetGenerator* req) {
   return ret;
 }
 
-JSValue
-minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+JSValue minnet_generator_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   MinnetGenerator* gen;
   JSValue args[2];
 
@@ -274,8 +267,7 @@ static const JSCFunctionListEntry minnet_generator_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetGenerator", JS_PROP_CONFIGURABLE),
 };
 
-JSValue
-minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
+JSValue minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
   static const char* method_names[] = {
       "next",
       "return",
@@ -295,8 +287,7 @@ minnet_generator_iterator(JSContext* ctx, MinnetGenerator* gen) {
   return ret;
 }
 
-JSValue
-minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
+JSValue minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
   if(!*gen_p)
     *gen_p = generator_new(ctx);
   else
@@ -305,8 +296,7 @@ minnet_generator_create(JSContext* ctx, MinnetGenerator** gen_p) {
   return minnet_generator_iterator(ctx, *gen_p);
 }
 
-static void
-minnet_generator_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_generator_finalizer(JSRuntime* rt, JSValue val) {
   MinnetGenerator* g;
 
   if((g = JS_GetOpaque(val, minnet_generator_class_id))) {
@@ -319,8 +309,7 @@ static const JSClassDef minnet_generator_class = {
     .finalizer = minnet_generator_finalizer,
 };
 
-int
-minnet_generator_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_generator_init(JSContext* ctx, JSModuleDef* m) {
 
   JS_NewClassID(&minnet_generator_class_id);
 

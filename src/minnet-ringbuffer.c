@@ -40,8 +40,7 @@ struct ringbuffer_tail {
   };
 };
 
-static void
-tail_finalize(void* ptr) {
+static void tail_finalize(void* ptr) {
   struct ringbuffer_tail* tail = ptr;
 
   ringbuffer_free(tail->rb, JS_GetRuntime(tail->ctx));
@@ -49,8 +48,7 @@ tail_finalize(void* ptr) {
   js_free(tail->ctx, tail);
 }
 
-static struct ringbuffer_tail*
-tail_new(JSContext* ctx, struct ringbuffer* rb, JSValueConst tail_value) {
+static struct ringbuffer_tail* tail_new(JSContext* ctx, struct ringbuffer* rb, JSValueConst tail_value) {
   struct ringbuffer_tail* tail;
 
   if((tail = js_malloc(ctx, sizeof(struct ringbuffer_tail)))) {
@@ -62,8 +60,7 @@ tail_new(JSContext* ctx, struct ringbuffer* rb, JSValueConst tail_value) {
   return tail;
 }
 
-static JSValue
-tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
+static JSValue tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {
   JSValue ret = JS_UNDEFINED;
   struct ringbuffer_tail* tail = opaque;
   struct lws_ring* r = tail->rb->ring;
@@ -84,15 +81,13 @@ tail_next(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], 
 
 static JSValue minnet_ringbuffer_multitail(JSContext*, JSValueConst, int, JSValueConst[], int);
 
-static void
-tail_decorate(JSContext* ctx, JSValueConst obj, JSValueConst ringbuffer, const char* name, int argc, int magic) {
+static void tail_decorate(JSContext* ctx, JSValueConst obj, JSValueConst ringbuffer, const char* name, int argc, int magic) {
   JSValue func = JS_NewCFunctionMagic(ctx, minnet_ringbuffer_multitail, name, 0, JS_CFUNC_generic_magic, magic);
   JS_SetPropertyStr(ctx, obj, name, js_function_bind_this_1(ctx, func, ringbuffer, obj));
   JS_FreeValue(ctx, func);
 }
 
-static JSValue
-minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_ringbuffer_multitail(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetRingbuffer* rb;
   JSValue ret = JS_UNDEFINED;
   JSBuffer tail_buf;
@@ -188,8 +183,7 @@ fail:
   return ret;
 }
 
-JSValue
-minnet_ringbuffer_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+JSValue minnet_ringbuffer_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetRingbuffer* rb;
 
@@ -241,8 +235,7 @@ fail:
   return JS_EXCEPTION;
 }
 
-static JSValue
-minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetRingbuffer* rb;
 
   if(!(rb = JS_GetOpaque2(ctx, this_val, minnet_ringbuffer_class_id)))
@@ -291,8 +284,7 @@ minnet_ringbuffer_method(JSContext* ctx, JSValueConst this_val, int argc, JSValu
   return ret;
 }
 
-static JSValue
-minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
+static JSValue minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetRingbuffer* rb;
 
   if(!(rb = JS_GetOpaque2(ctx, this_val, minnet_ringbuffer_class_id)))
@@ -376,8 +368,7 @@ minnet_ringbuffer_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-static JSValue
-minnet_ringbuffer_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
+static JSValue minnet_ringbuffer_set(JSContext* ctx, JSValueConst this_val, JSValueConst value, int magic) {
   JSValue ret = JS_UNDEFINED;
   MinnetRingbuffer* rb;
   struct {
@@ -419,8 +410,7 @@ minnet_ringbuffer_set(JSContext* ctx, JSValueConst this_val, JSValueConst value,
   return ret;
 }
 
-static void
-minnet_ringbuffer_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_ringbuffer_finalizer(JSRuntime* rt, JSValue val) {
   MinnetRingbuffer* rb;
 
   if((rb = JS_GetOpaque(val, minnet_ringbuffer_class_id)))
@@ -455,8 +445,7 @@ static const JSCFunctionListEntry minnet_ringbuffer_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "MinnetRingbuffer", JS_PROP_CONFIGURABLE),
 };
 
-int
-minnet_ringbuffer_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_ringbuffer_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_ringbuffer_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_ringbuffer_class_id, &minnet_ringbuffer_class);

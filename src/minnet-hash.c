@@ -21,8 +21,7 @@ enum {
 static char hash_hexdigits[] = "0123456789abcdef"
                                "ghijklmnopqrstuvwxyz";
 
-static MinnetHash*
-hash_alloc(JSContext* ctx, uint8_t type, BOOL hmac) {
+static MinnetHash* hash_alloc(JSContext* ctx, uint8_t type, BOOL hmac) {
   MinnetHash* ret;
   size_t bytes = hmac ? lws_genhmac_size(type - (LWS_GENHASH_TYPE_SHA256 - LWS_GENHMAC_TYPE_SHA256)) : lws_genhash_size(type);
 
@@ -32,8 +31,7 @@ hash_alloc(JSContext* ctx, uint8_t type, BOOL hmac) {
   return ret;
 }
 
-static BOOL
-hash_init(MinnetHash* h, const uint8_t* key, size_t key_len) {
+static BOOL hash_init(MinnetHash* h, const uint8_t* key, size_t key_len) {
   assert(!h->initialized);
   if(h->hmac ? lws_genhmac_init(&h->lws.hmac, h->type - (LWS_GENHASH_TYPE_SHA256 - LWS_GENHMAC_TYPE_SHA256), key, key_len) : lws_genhash_init(&h->lws.hash, h->type))
     return FALSE;
@@ -41,13 +39,9 @@ hash_init(MinnetHash* h, const uint8_t* key, size_t key_len) {
   return TRUE;
 }
 
-static size_t
-hash_size(MinnetHash* h) {
-  return h->hmac ? lws_genhmac_size(h->type - (LWS_GENHASH_TYPE_SHA256 - LWS_GENHMAC_TYPE_SHA256)) : lws_genhash_size(h->type);
-}
+static size_t hash_size(MinnetHash* h) { return h->hmac ? lws_genhmac_size(h->type - (LWS_GENHASH_TYPE_SHA256 - LWS_GENHMAC_TYPE_SHA256)) : lws_genhash_size(h->type); }
 
-static BOOL
-hash_update(MinnetHash* h, const void* data, size_t size) {
+static BOOL hash_update(MinnetHash* h, const void* data, size_t size) {
   assert(h->initialized);
   assert(!h->finalized);
   if(h->hmac ? lws_genhmac_update(&h->lws.hmac, data, size) : lws_genhash_update(&h->lws.hash, data, size))
@@ -55,13 +49,9 @@ hash_update(MinnetHash* h, const void* data, size_t size) {
   return TRUE;
 }
 
-static void*
-tmp_realloc(void* opaque, void* ptr, size_t size) {
-  return realloc(ptr, size);
-}
+static void* tmp_realloc(void* opaque, void* ptr, size_t size) { return realloc(ptr, size); }
 
-static char*
-hash_tostring(MinnetHash* h, int bits_per_char) {
+static char* hash_tostring(MinnetHash* h, int bits_per_char) {
   DynBuf dbuf = {0};
   size_t bitpos, bitsize = hash_size(h) * 8;
   unsigned base = uint_pow(2, bits_per_char);
@@ -85,8 +75,7 @@ hash_tostring(MinnetHash* h, int bits_per_char) {
   return (char*)dbuf.buf;
 }
 
-static BOOL
-hash_finalize(MinnetHash* h) {
+static BOOL hash_finalize(MinnetHash* h) {
   assert(h->initialized);
   assert(!h->finalized);
   if(h->hmac ? lws_genhmac_destroy(&h->lws.hmac, h->digest) : lws_genhash_destroy(&h->lws.hash, h->digest))
@@ -95,8 +84,7 @@ hash_finalize(MinnetHash* h) {
   return TRUE;
 }
 
-JSValue
-minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
+JSValue minnet_hash_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetHash* h = NULL;
   int32_t type = -1;
@@ -148,8 +136,7 @@ fail:
   return JS_EXCEPTION;
 }
 
-static JSValue
-minnet_hash_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
+static JSValue minnet_hash_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic) {
   MinnetHash* h;
   JSValue ret = JS_UNDEFINED;
 
@@ -225,8 +212,7 @@ minnet_hash_method(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst
   return ret;
 }
 
-static JSValue
-minnet_hash_get(JSContext* ctx, JSValueConst this_val, int magic) {
+static JSValue minnet_hash_get(JSContext* ctx, JSValueConst this_val, int magic) {
   MinnetHash* h;
   JSValue ret = JS_UNDEFINED;
 
@@ -262,8 +248,7 @@ minnet_hash_get(JSContext* ctx, JSValueConst this_val, int magic) {
   return ret;
 }
 
-static void
-minnet_hash_finalizer(JSRuntime* rt, JSValue val) {
+static void minnet_hash_finalizer(JSRuntime* rt, JSValue val) {
   MinnetHash* h;
 
   if((h = minnet_hash_data(val))) {
@@ -273,14 +258,12 @@ minnet_hash_finalizer(JSRuntime* rt, JSValue val) {
   }
 }
 
-static JSValue
-minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags) {
+static JSValue minnet_hash_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags) {
   /*MinnetHash* h = minnet_hash_data2(ctx, func_obj);*/
   return minnet_hash_method(ctx, func_obj, argc, argv, (argc < 1 || js_is_nullish(argv[0])) ? HASH_FINALIZE : HASH_UPDATE);
 }
 
-static int
-minnet_hash_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSValueConst obj, JSAtom prop) {
+static int minnet_hash_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSValueConst obj, JSAtom prop) {
   MinnetHash* h = minnet_hash_data2(ctx, obj);
   int64_t index;
 
@@ -303,8 +286,7 @@ minnet_hash_get_own_property(JSContext* ctx, JSPropertyDescriptor* pdesc, JSValu
   return FALSE;
 }
 
-static int
-minnet_hash_get_own_property_names(JSContext* ctx, JSPropertyEnum** ptab, uint32_t* plen, JSValueConst obj) {
+static int minnet_hash_get_own_property_names(JSContext* ctx, JSPropertyEnum** ptab, uint32_t* plen, JSValueConst obj) {
   MinnetHash* h = minnet_hash_data2(ctx, obj);
   JSPropertyEnum* props;
   size_t i, len = h->finalized ? hash_size(h) : 0;
@@ -324,8 +306,7 @@ minnet_hash_get_own_property_names(JSContext* ctx, JSPropertyEnum** ptab, uint32
   return 0;
 }
 
-static int
-minnet_hash_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
+static int minnet_hash_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
   MinnetHash* h = minnet_hash_data2(ctx, obj);
   int64_t index;
 
@@ -338,8 +319,7 @@ minnet_hash_has_property(JSContext* ctx, JSValueConst obj, JSAtom prop) {
   return FALSE;
 }
 
-static JSValue
-minnet_hash_get_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueConst receiver) {
+static JSValue minnet_hash_get_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueConst receiver) {
   MinnetHash* h = minnet_hash_data2(ctx, obj);
   JSValue value = JS_UNDEFINED;
   int64_t index;
@@ -398,8 +378,7 @@ static const JSCFunctionListEntry minnet_hash_static_funcs[] = {
     JS_PROP_INT32_DEF("TYPE_SHA512", LWS_GENHASH_TYPE_SHA512, JS_PROP_ENUMERABLE),
 };
 
-int
-minnet_hash_init(JSContext* ctx, JSModuleDef* m) {
+int minnet_hash_init(JSContext* ctx, JSModuleDef* m) {
   JS_NewClassID(&minnet_hash_class_id);
 
   JS_NewClass(JS_GetRuntime(ctx), minnet_hash_class_id, &minnet_hash_class);
