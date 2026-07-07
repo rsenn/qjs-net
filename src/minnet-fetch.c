@@ -109,7 +109,11 @@ JSValue minnet_fetch(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
   JS_FreeValue(ctx, args[1]);
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG                    %-22s url=%s client=%p", __func__, JS_ToCString(ctx, args[0]), cc->pointer);
+  {
+    const char* s = JS_ToCString(ctx, args[0]);
+    lwsl_user("DEBUG                    %-22s url=%s client=%p", __func__, s, cc->pointer);
+    JS_FreeCString(ctx, s);
+  }
 #endif
 
   cc->pointer = minnet_client_dup(cc->pointer);

@@ -102,7 +102,6 @@ ByteBlock queue_next(Queue* q, BOOL* done_p, BOOL* binary_p) {
 uint8_t* queue_peek(Queue* q, size_t* lenp) {
   QueueItem* i = queue_front(q);
   ByteBlock ret = i->block;
-  BOOL done = i->done;
 
   if(lenp)
     *lenp = block_SIZE(&ret);
@@ -117,7 +116,6 @@ ssize_t queue_read(Queue* q, void* buf, size_t n) {
 
   while((i = queue_front(q))) {
     ByteBlock ret = i->block;
-    BOOL done = i->done;
     size_t len = block_SIZE(&ret);
     char* b = block_BEGIN(&ret);
     size_t j = MIN(len, n);

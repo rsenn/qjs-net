@@ -229,7 +229,6 @@ int minnet_ws_server_callback(struct lws* wsi, enum lws_callback_reasons reason,
     }
 
     case LWS_CALLBACK_ESTABLISHED: {
-      int status = lws_http_client_http_response(wsi);
       MinnetHttpMount* mount = 0;
       MinnetURL* url;
 

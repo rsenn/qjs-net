@@ -81,7 +81,7 @@ static JSValue bio_to_jsstring(BIO* b, void* (*get)(BIO*, size_t*), JSContext* c
 
 static JSValue bio_to_jsarraybuffer(BIO* b, void* (*get)(BIO*, size_t*), JSContext* ctx) {
   size_t len;
-  const char* data;
+  const uint8_t* data;
 
   if((data = get(b, &len)))
     return JS_NewArrayBufferCopy(ctx, data, len);
@@ -92,13 +92,13 @@ static JSValue bio_to_jsarraybuffer(BIO* b, void* (*get)(BIO*, size_t*), JSConte
 static int bio_dynbuf_write(BIO* b, const char* x, int len) {
   DynBuf* dbuf = BIO_get_app_data(b);
 
-  return dbuf_put(dbuf, x, len) ? -1 : len;
+  return dbuf_put(dbuf, (const uint8_t*)x, len) ? -1 : len;
 }
 
 static int bio_dynbuf_write_ex(BIO* b, const char* x, size_t len, size_t* written) {
   DynBuf* dbuf = BIO_get_app_data(b);
 
-  if(dbuf_put(dbuf, x, len))
+  if(dbuf_put(dbuf, (const uint8_t*)x, len))
     return 0;
 
   if(written)
@@ -110,12 +110,16 @@ static int bio_dynbuf_write_ex(BIO* b, const char* x, size_t len, size_t* writte
 static int bio_dynbuf_puts(BIO* b, const char* s) { return bio_dynbuf_write(b, s, strlen(s)); }
 
 static int bio_dynbuf_create(BIO* b) {
-  DynBuf* db = malloc(sizeof(DynBuf));
+  DynBuf* db;
+
+  if(!(db = malloc(sizeof(DynBuf))))
+    return 0;
 
   dbuf_init(db);
 
   BIO_set_app_data(b, db);
   BIO_set_init(b, 1);
+  return 1;
 }
 
 static int bio_dynbuf_destroy(BIO* b) {
@@ -123,6 +127,7 @@ static int bio_dynbuf_destroy(BIO* b) {
 
   dbuf_free(dbuf);
   free(dbuf);
+  return 1;
 }
 
 static BIO_METHOD* bio_dynbuf_method(void) {
@@ -162,7 +167,7 @@ char* ssl_bio_dynbuf_string(BIO* b) {
   dbuf_putc(db, '\0');
   --db->size;
 
-  return db->buf;
+  return (char*)db->buf;
 }
 
 void* ssl_bio_dynbuf_get(BIO* b, size_t* lenp) {
@@ -201,12 +206,16 @@ static int bio_writebuf_write_ex(BIO* b, const char* x, size_t len, size_t* writ
 static int bio_writebuf_puts(BIO* b, const char* s) { return bio_writebuf_write(b, s, strlen(s)); }
 
 static int bio_writebuf_create(BIO* b) {
-  ByteBuffer* wb = malloc(sizeof(ByteBuffer));
+  ByteBuffer* wb;
+
+  if(!(wb = malloc(sizeof(ByteBuffer))))
+    return 0;
 
   *wb = BUFFER_0();
 
   BIO_set_app_data(b, wb);
   BIO_set_init(b, 1);
+  return 1;
 }
 
 static int bio_writebuf_destroy(BIO* b) {
@@ -214,6 +223,7 @@ static int bio_writebuf_destroy(BIO* b) {
 
   buffer_free(wbuf);
   free(wbuf);
+  return 1;
 }
 
 static BIO_METHOD* bio_writebuf_method(void) {
@@ -296,6 +306,7 @@ static int bio_readbuf_destroy(BIO* b) {
 
   buffer_free(rbuf);
   free(rbuf);
+  return 1;
 }
 
 static BIO_METHOD* bio_readbuf_method(void) {

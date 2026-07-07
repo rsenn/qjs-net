@@ -401,8 +401,6 @@ void url_fromobj(URL* url, JSValueConst obj, JSContext* ctx) {
 }
 
 BOOL url_fromvalue(URL* url, JSValueConst value, JSContext* ctx) {
-  URL* other;
-
   if(JS_IsObject(value)) {
     url_fromobj(url, value, ctx);
   } else if(JS_IsString(value)) {

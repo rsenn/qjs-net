@@ -448,13 +448,17 @@ static int minnet_client_callback(struct lws* wsi, enum lws_callback_reasons rea
       BOOL binary = (!client->line_buffered) && (raw || lws_frame_is_binary(wsi));
       BOOL text = !client->binary || client->line_buffered;
       Queue* q;
-      QueueItem* it;
 
       if(!single_fragment) {
         if(!client->recvq)
           client->recvq = queue_new(ctx);
 
-        it = client->line_buffered ? queue_putline(client->recvq, in, len, ctx) : first ? queue_write(client->recvq, in, len, ctx) : queue_append(client->recvq, in, len, ctx);
+        if(client->line_buffered)
+          queue_putline(client->recvq, in, len, ctx);
+        else if(first)
+          queue_write(client->recvq, in, len, ctx);
+        else
+          queue_append(client->recvq, in, len, ctx);
       }
 
       if(final) {
@@ -761,7 +765,6 @@ JSValue minnet_client_response(JSContext* ctx, JSValueConst this_val, int argc, 
 }
 
 JSValue minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* ptr) {
-  SyncFetch* c = ptr;
   int32_t fd;
   BOOL rd = JS_ToBool(ctx, argv[1]), wr = JS_ToBool(ctx, argv[2]);
 
@@ -773,7 +776,7 @@ JSValue minnet_client_pollfd(JSContext* ctx, JSValueConst this_val, int argc, JS
     synchfetch_setevents(ptr, fd, (rd ? POLLIN : 0) | (wr ? POLLOUT : 0));
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG                    %-22s argc=%d fd=%d rd=%d wr=%d c->nfds=%zu\n", __func__, argc, fd, rd, wr, c->nfds);
+  lwsl_user("DEBUG                    %-22s argc=%d fd=%d rd=%d wr=%d c->nfds=%zu\n", __func__, argc, fd, rd, wr, ((SyncFetch*)ptr)->nfds);
 #endif
 
   return JS_UNDEFINED;
@@ -791,7 +794,11 @@ JSValue minnet_client_onclose(JSContext* ctx, JSValueConst this_val, int argc, J
     JS_ToInt32(ctx, &fd, argv[0]);
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG                    %-22s err=%i argv[1]=%s\n", __func__, is_error, JS_ToCString(ctx, argv[1]));
+  {
+    const char* s = JS_ToCString(ctx, argv[1]);
+    lwsl_user("DEBUG                    %-22s err=%i argv[1]=%s\n", __func__, is_error, s);
+    JS_FreeCString(ctx, s);
+  }
 #endif
 
   if(fd != -1)
@@ -1057,13 +1064,12 @@ JSValue minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, J
         opaque->resp->sync = TRUE;
 
         for(;;) {
-          int r;
           size_t i;
 
 #ifdef DEBUG_OUTPUT
           lwsl_user("DEBUG                    %-22s c->nfds=%zu\n", __func__, c->nfds);
 #endif
-          r = poll(c->pfds, c->nfds, 1000);
+          poll(c->pfds, c->nfds, 1000);
 
           c->touched = FALSE;
 
@@ -1076,7 +1082,7 @@ JSValue minnet_client_closure(JSContext* ctx, JSValueConst this_val, int argc, J
 
             if(x->events) {
               struct lws_pollfd lpfd = {x->fd, x->events, x->revents};
-              int result = lws_service_fd(client->context.lws, &lpfd);
+              lws_service_fd(client->context.lws, &lpfd);
             }
 
             if(c->touched)

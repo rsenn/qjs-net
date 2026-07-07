@@ -262,48 +262,6 @@ static int minnet_formparser_has_property(JSContext* ctx, JSValueConst obj, JSAt
   return ret;
 }
 
-static JSValue minnet_formparser_get_property(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValueConst receiver) {
-  MinnetFormParser* fp = minnet_formparser_data2(ctx, obj);
-  JSValue value = JS_UNDEFINED;
-  int64_t index;
-
-  if(js_atom_is_index(ctx, &index, prop)) {
-    if(formparser_param_valid(fp, index))
-      value = JS_NewString(ctx, formparser_param_name(fp, index));
-
-  } else if(js_atom_is_length(ctx, prop)) {
-    value = JS_NewUint32(ctx, formparser_param_count(fp));
-  } else {
-    const char* str = JS_AtomToCString(ctx, prop);
-
-    int index;
-
-    if((index = formparser_param_index(fp, str)) != -1) {
-      value = JS_NewStringLen(ctx, lws_spa_get_string(fp->spa, index), lws_spa_get_length(fp->spa, index));
-
-    } else {
-      JSValue proto = JS_GetPrototype(ctx, obj);
-      if(JS_IsObject(proto) && JS_HasProperty(ctx, proto, prop))
-        value = JS_GetProperty(ctx, proto, prop);
-    }
-
-    JS_FreeCString(ctx, str);
-  }
-
-  return value;
-}
-/*
-static int
-minnet_formparser_define_own_property(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValueConst val, JSValueConst getter, JSValueConst setter, int flags) {
-
-  if(js_atom_is_index(ctx, NULL, prop))
-    return TRUE;
-  if(js_atom_is_length(ctx, prop))
-    return TRUE;
-
-  return JS_DefineProperty(ctx, this_obj, prop, val, getter, setter, flags | JS_PROP_NO_EXOTIC);
-}*/
-
 static JSValue minnet_formparser_call(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val, int argc, JSValueConst argv[], int flags) {
   MinnetFormParser* fp = minnet_formparser_data2(ctx, func_obj);
   JSValue ret = JS_UNDEFINED;
@@ -335,10 +293,9 @@ static JSValue minnet_formparser_call(JSContext* ctx, JSValueConst func_obj, JSV
 }
 
 static JSClassExoticMethods minnet_formparser_exotic_methods = {
-    .get_own_property = minnet_formparser_get_own_property, .get_own_property_names = minnet_formparser_get_own_property_names, .has_property = minnet_formparser_has_property,
-    //.define_own_property = minnet_formparser_define_own_property,
-    //.get_property = minnet_formparser_get_property,
-    //.set_property = minnet_formparser_set_property,
+    .get_own_property = minnet_formparser_get_own_property,
+    .get_own_property_names = minnet_formparser_get_own_property_names,
+    .has_property = minnet_formparser_has_property,
 };
 
 static const JSClassDef minnet_formparser_class = {

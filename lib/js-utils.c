@@ -733,11 +733,8 @@ char* js_error_string(JSContext* ctx, JSValueConst error) {
     dbuf_printf(&buf, "Exception %s: %s", type, exception);
   }
 
-  if(stack && *stack) {
-    size_t pos = 0, i = 0, len, end = strlen(stack);
-
+  if(stack && *stack)
     dbuf_printf(&buf, "\nStack:\n%s", stack);
-  }
 
   dbuf_putc(&buf, '\0');
 
@@ -1275,7 +1272,6 @@ static JSValue js_wrappedpromise_methods(JSContext* ctx, JSValueConst this_val, 
 }
 
 static JSValue js_wrappedpromise_state(JSContext* ctx, JSValueConst this_val) {
-  JSValue ret = JS_UNDEFINED;
   JSWrappedPromiseRecord* wpr;
 
   if(!(wpr = js_wrappedpromise_data2(ctx, this_val)))
@@ -1318,7 +1314,7 @@ JSValue js_promise_prototype(JSContext* ctx) {
 
 JSValue js_promise_wrap(JSContext* ctx, JSValueConst promise) {
   JSWrappedPromiseRecord* wpr;
-  JSValue proto, obj, promise_proto;
+  JSValue obj, promise_proto;
 
   if(js_wrappedpromise_class_id == 0) {
     JS_NewClassID(&js_wrappedpromise_class_id);

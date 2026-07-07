@@ -169,9 +169,9 @@ static JSValue minnet_generator_get(JSContext* ctx, JSValueConst this_val, int m
 
       break;
     }
-
-      return ret;
   }
+
+  return ret;
 }
 
 static JSValue minnet_generator_push(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst argv[], int magic, void* opaque) {

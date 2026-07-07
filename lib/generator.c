@@ -21,7 +21,11 @@ static Queue* create_queue(Generator* gen) {
   if(!gen->q) {
 
 #ifdef DEBUG_OUTPUT_
-    printf("Creating Queue... %s\n", JS_ToCString(gen->ctx, gen->callback));
+    {
+      const char* s = JS_ToCString(gen->ctx, gen->callback);
+      printf("Creating Queue... %s\n", s);
+      JS_FreeCString(gen->ctx, s);
+    }
 #endif
     gen->q = queue_new(gen->ctx);
   }
@@ -550,7 +554,11 @@ BOOL generator_continuous(Generator* gen, JSValueConst callback) {
   Queue* q;
 
 #ifdef DEBUG_OUTPUT
-  lwsl_debug("DEBUG                    %-22s gen=%p, callback=%s", __func__, gen, JS_ToCString(gen->ctx, callback));
+  {
+    const char* s = JS_ToCString(gen->ctx, callback);
+    lwsl_debug("DEBUG                    %-22s gen=%p, callback=%s", __func__, gen, s);
+    JS_FreeCString(gen->ctx, s);
+  }
 #endif
 
   if((q = create_queue(gen))) {
@@ -626,8 +634,6 @@ BOOL generator_buffering(Generator* gen, size_t chunk_size) {
 #endif
 
   if((q = create_queue(gen))) {
-    QueueItem* item;
-
     gen->chunk_size = chunk_size;
     gen->buffering = TRUE;
   }

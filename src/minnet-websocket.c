@@ -95,7 +95,6 @@ static JSValue minnet_ws_send(JSContext* ctx, JSValueConst this_val, int argc, J
   MinnetWebsocket* ws;
   JSValue ret = JS_UNDEFINED;
   JSBuffer jsbuf;
-  QueueItem* item;
   struct wsi_opaque_user_data* opaque;
 
   if(!(ws = minnet_ws_data2(ctx, this_val)))

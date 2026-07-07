@@ -270,7 +270,6 @@ ssize_t buffer_read(ByteBuffer* buf, void* x, size_t n) {
 }
 
 ssize_t buffer_gets(ByteBuffer* buf, void* x, size_t n) {
-  size_t sz = n > buffer_REMAIN(buf) ? buffer_REMAIN(buf) : n;
   ssize_t sz2 = -1;
   char* ptr;
 

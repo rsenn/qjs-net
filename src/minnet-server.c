@@ -455,7 +455,7 @@ JSValue minnet_server_method(JSContext* ctx, JSValueConst this_val, int argc, JS
       const char* path = 0;
       int index = 0;
       enum http_method method = magic == SERVER_GET ? METHOD_GET : magic == SERVER_POST ? METHOD_POST : -1;
-      JSValue fn, new_cb;
+      JSValue new_cb;
 
       if(JS_IsString(argv[0]) && argc > 1)
         path = JS_ToCString(ctx, argv[index++]);
@@ -558,7 +558,13 @@ static JSValue minnet_server_timeout(JSContext* ctx, JSValueConst this_val, int 
   }
 
 #ifdef DEBUG_OUTPUT
-  lwsl_user("DEBUG timeout %s %s\n", JS_ToCString(ctx, argv[0]), JS_ToCString(ctx, argv[argc - 1]));
+  {
+    const char* s0 = JS_ToCString(ctx, argv[0]);
+    const char* s1 = JS_ToCString(ctx, argv[argc - 1]);
+    lwsl_user("DEBUG timeout %s %s\n", s0, s1);
+    JS_FreeCString(ctx, s0);
+    JS_FreeCString(ctx, s1);
+  }
 #endif
 
   return JS_TRUE;

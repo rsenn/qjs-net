@@ -377,7 +377,6 @@ static JSValue minnet_response_iterator(JSContext* ctx, JSValueConst this_val, i
 JSValue minnet_response_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetResponse* resp;
-  int i;
 
   if(!(resp = js_malloc(ctx, sizeof(MinnetResponse))))
     return JS_EXCEPTION;

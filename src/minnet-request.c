@@ -21,7 +21,6 @@ MinnetRequest* minnet_request_data(JSValueConst obj) { return JS_GetOpaque(obj, 
 JSValue minnet_request_constructor(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst argv[]) {
   JSValue proto, obj;
   MinnetRequest *req, *other;
-  BOOL got_url = FALSE;
 
   if(!(req = request_alloc(ctx)))
     return JS_EXCEPTION;

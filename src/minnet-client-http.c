@@ -159,7 +159,11 @@ static int http_client_writable(MinnetClient* cli, struct lws* wsi, JSContext* c
         value = js_iterator_next(ctx, cli->body, &cli->next, &done, 0, 0);
 
 #ifdef DEBUG_OUTPUT
-        lwsl_user("DEBUG %-22s js_iterator_next() = %s %i done=%i", __func__, JS_ToCString(ctx, value), JS_VALUE_GET_TAG(value), done);
+        {
+          const char* s = JS_ToCString(ctx, value);
+          lwsl_user("DEBUG %-22s js_iterator_next() = %s %i done=%i", __func__, s, JS_VALUE_GET_TAG(value), done);
+          JS_FreeCString(ctx, s);
+        }
 #endif
 
         if(JS_IsException(value)) {
@@ -220,10 +224,6 @@ static int http_client_completed(MinnetClient* cli, struct lws* wsi, struct wsi_
 
   if(callback_valid(&cli->on.http)) {
     MinnetRequest* req;
-    MinnetResponse* resp = opaque->resp;
-
-    // url_copy(&resp->url, cli->request->url, cli->on.http.ctx);
-    // resp->type = headers_get(&resp->headers, "content-type", cli->on.http.ctx);
 
     JSValue ret = minnet_client_exception(cli, callback_emit_this(&cli->on.http, cli->session.ws_obj, 2, &cli->session.req_obj));
 
