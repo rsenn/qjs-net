@@ -1,6 +1,5 @@
-import { fetch } from 'net.so';
-import { LLL_USER } from 'net.so';
-import { setLog } from 'net.so';
+import { fetch, LLL_USER, setLog } from 'net';
+
 async function main(...args) {
   setLog(LLL_USER, (level, msg) => console.log('LLL_USER', msg));
 

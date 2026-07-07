@@ -1,5 +1,5 @@
-import { LLL_INFO } from 'net.so';
-import { LLL_USER } from 'net.so';
+import { LLL_INFO } from 'net';
+import { LLL_USER } from 'net';
 import { kill } from 'os';
 import { sleep } from 'os';
 import Client from './client.js';
@@ -11,6 +11,7 @@ import { wait4 } from './spawn.js';
 import { exit } from 'std';
 import { out as stdout } from 'std';
 import { puts } from 'std';
+
 async function main(...args) {
   const debug = args.indexOf('-x') != -1;
   args = args.filter(arg => !/^-[x]/.test(arg));

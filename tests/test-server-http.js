@@ -9,6 +9,7 @@ import { spawn } from './spawn.js';
 import { wait4 } from './spawn.js';
 import { exit } from 'std';
 import { loadFile } from 'std';
+
 function TestClient(url) {
   const message = randStr(100);
 

@@ -1,7 +1,4 @@
-import { client } from 'net.so';
-import { LLL_CLIENT } from 'net.so';
-import { LLL_INFO } from 'net.so';
-import { LLL_USER } from 'net.so';
+import { client, LLL_CLIENT, LLL_INFO, LLL_USER } from 'net';
 import { close } from 'os';
 import { kill } from 'os';
 import { setReadHandler } from 'os';
@@ -19,6 +16,7 @@ import { exit } from 'std';
 import { in as stdin } from 'std';
 import { out as stdout } from 'std';
 import { puts } from 'std';
+
 //import Client from './client.js';
 function main(...args) {
   const debug = args.indexOf('-x') != -1;

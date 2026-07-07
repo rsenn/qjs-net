@@ -1,10 +1,4 @@
-import { client } from 'net.so';
-import { createServer } from 'net.so';
-import { LLL_INFO } from 'net.so';
-import { LLL_USER } from 'net.so';
-import { LLL_WARN } from 'net.so';
-import { logLevels } from 'net.so';
-import { setLog } from 'net.so';
+import { client, createServer, LLL_INFO, LLL_USER, LLL_WARN, logLevels, setLog } from 'net';
 import { setReadHandler } from 'os';
 import { setTimeout } from 'os';
 import { setWriteHandler } from 'os';
