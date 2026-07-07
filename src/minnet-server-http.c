@@ -860,13 +860,13 @@ minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reason, v
 
   switch(reason) {
     case LWS_CALLBACK_PROTOCOL_INIT:
-    case LWS_CALLBACK_ESTABLISHED:
-    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS:
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS:
     case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
     case LWS_CALLBACK_PROTOCOL_DESTROY:
     case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE: break;
-
+   case LWS_CALLBACK_ESTABLISHED: break;
+    case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: break;
+ 
     case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
       if((session->mount = mount_find((MinnetHttpMount*)server->context.info.mounts, in, len)))
         if(mount_is_proxy(session->mount))
