@@ -853,7 +853,10 @@ int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reaso
         session->resp_obj = minnet_response_wrap(ctx, opaque->resp);
 
       if(callback_valid(&server->on.check_access_rights)) {
-        JSValue args[] = {pa->p && pa->len ? JS_NewStringLen(server->on.check_access_rights.ctx, pa->p, pa->len) : JS_NULL};
+        JSValue args[] = {
+            session->req_obj,
+            pa->p && pa->len ? JS_NewStringLen(server->on.check_access_rights.ctx, pa->p, pa->len) : JS_NULL,
+        };
 
         JSValue retval = callback_emit_this(&server->on.check_access_rights, session->ws_obj, countof(args), args);
 
@@ -873,8 +876,8 @@ int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reaso
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);
 
-/*      if(ctx && opaque->ws)
-        session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);*/
+      /*      if(ctx && opaque->ws)
+              session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);*/
 
       if(!opaque->req)
         opaque->req = request_fromwsi(wsi, ctx);
