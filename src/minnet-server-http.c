@@ -873,8 +873,8 @@ int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reaso
       if(!opaque->ws)
         opaque->ws = ws_new(wsi, ctx);
 
-      if(ctx && opaque->ws)
-        session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);
+/*      if(ctx && opaque->ws)
+        session->ws_obj = minnet_ws_wrap(ctx, opaque->ws);*/
 
       if(!opaque->req)
         opaque->req = request_fromwsi(wsi, ctx);
