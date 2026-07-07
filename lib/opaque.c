@@ -11,8 +11,7 @@
 THREAD_LOCAL int64_t opaque_serial = 0;
 THREAD_LOCAL struct list_head opaque_list = {0, 0};
 
-void
-opaque_clear(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
+void opaque_clear(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
   if(opaque->ws) {
     struct socket* ws = opaque->ws;
     opaque->ws = 0;
@@ -43,8 +42,7 @@ opaque_clear(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
   opaque->handlers[1] = JS_NULL;
 }
 
-void
-opaque_free(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
+void opaque_free(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
   if(--opaque->ref_count == 0) {
     opaque_clear(opaque, rt);
 
@@ -55,8 +53,7 @@ opaque_free(struct wsi_opaque_user_data* opaque, JSRuntime* rt) {
   }
 }
 
-struct wsi_opaque_user_data*
-opaque_new(JSContext* ctx) {
+struct wsi_opaque_user_data* opaque_new(JSContext* ctx) {
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = js_mallocz(ctx, sizeof(struct wsi_opaque_user_data)))) {
@@ -76,8 +73,7 @@ opaque_new(JSContext* ctx) {
   return opaque;
 }
 
-struct wsi_opaque_user_data*
-opaque_from_wsi(struct lws* wsi, JSContext* ctx) {
+struct wsi_opaque_user_data* opaque_from_wsi(struct lws* wsi, JSContext* ctx) {
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = lws_get_opaque_user_data(wsi)))

@@ -5,8 +5,7 @@
 #include "js-utils.h"
 #include <assert.h>
 
-static JSValue
-dequeue_value(Generator* gen, BOOL* done_p, BOOL* binary_p) {
+static JSValue dequeue_value(Generator* gen, BOOL* done_p, BOOL* binary_p) {
   ByteBlock blk = queue_next(gen->q, done_p, binary_p);
   JSValue ret = block_SIZE(&blk) ? gen->block_fn(&blk, gen->ctx) : JS_UNDEFINED;
 
@@ -18,8 +17,7 @@ dequeue_value(Generator* gen, BOOL* done_p, BOOL* binary_p) {
   return ret;
 }
 
-static Queue*
-create_queue(Generator* gen) {
+static Queue* create_queue(Generator* gen) {
   if(!gen->q) {
 
 #ifdef DEBUG_OUTPUT_
@@ -31,8 +29,7 @@ create_queue(Generator* gen) {
   return gen->q;
 }
 
-static ssize_t
-enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
+static ssize_t enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
   QueueItem* item;
   ssize_t ret = block_SIZE(&blk);
 
@@ -83,8 +80,7 @@ enqueue_block(Generator* gen, ByteBlock blk, JSValueConst callback) {
   return ret;
 }
 
-static ssize_t
-enqueue_value(Generator* gen, JSValueConst value, JSValueConst callback) {
+static ssize_t enqueue_value(Generator* gen, JSValueConst value, JSValueConst callback) {
   ssize_t ret;
   JSBuffer buf = js_input_chars(gen->ctx, value);
   ByteBlock blk = block_copy(buf.data, buf.size);
@@ -97,8 +93,7 @@ enqueue_value(Generator* gen, JSValueConst value, JSValueConst callback) {
   return ret;
 }
 
-static BOOL
-start_executor(Generator* gen) {
+static BOOL start_executor(Generator* gen) {
   if(JS_IsFunction(gen->ctx, gen->executor)) {
     JSValue tmp, cb = gen->executor;
     gen->executor = JS_UNDEFINED;
@@ -117,8 +112,7 @@ start_executor(Generator* gen) {
   return FALSE;
 }
 
-static void
-generator_callback(Generator* gen, JSValueConst argument) {
+static void generator_callback(Generator* gen, JSValueConst argument) {
   if(JS_IsFunction(gen->ctx, gen->callback)) {
     JSValue cb = gen->callback;
     gen->callback = JS_NULL;
@@ -127,8 +121,7 @@ generator_callback(Generator* gen, JSValueConst argument) {
   }
 }
 
-static int
-generator_update(Generator* gen) {
+static int generator_update(Generator* gen) {
   int i = 0;
 
   while(!list_empty(&gen->iterator.reads) && gen->q && queue_size(gen->q)) {
@@ -191,8 +184,7 @@ generator_update(Generator* gen) {
  * Async generator object
  * @{
  */
-static void
-generator_zero(Generator* gen) {
+static void generator_zero(Generator* gen) {
   memset(gen, 0, sizeof(Generator));
   asynciterator_zero(&gen->iterator);
 
@@ -213,8 +205,7 @@ generator_zero(Generator* gen) {
  *
  * @return  Pointer to generator struct
  */
-Generator*
-generator_new(JSContext* ctx) {
+Generator* generator_new(JSContext* ctx) {
   Generator* gen;
 
   if((gen = js_malloc(ctx, sizeof(Generator)))) {
@@ -234,8 +225,7 @@ generator_new(JSContext* ctx) {
  *
  * @param gen   Pointer to generator struct
  */
-void
-generator_free(Generator* gen) {
+void generator_free(Generator* gen) {
   if(--gen->ref_count == 0) {
     asynciterator_clear(&gen->iterator, JS_GetRuntime(gen->ctx));
 
@@ -255,8 +245,7 @@ generator_free(Generator* gen) {
  *
  * @return a Promise
  */
-JSValue
-generator_next(Generator* gen, JSValueConst arg) {
+JSValue generator_next(Generator* gen, JSValueConst arg) {
   JSValue ret = JS_UNDEFINED;
 
 #ifdef DEBUG_OUTPUT
@@ -316,8 +305,7 @@ generator_next(Generator* gen, JSValueConst arg) {
  *
  * @return bytes written or -1 on error
  */
-ssize_t
-generator_write(Generator* gen, const void* data, size_t len, JSValueConst callback) {
+ssize_t generator_write(Generator* gen, const void* data, size_t len, JSValueConst callback) {
   ByteBlock blk = block_copy(data, len);
   ssize_t ret = -1, size = block_SIZE(&blk);
   JSValue chunk;
@@ -386,8 +374,7 @@ generator_write(Generator* gen, const void* data, size_t len, JSValueConst callb
  *
  * @return Promise that is resolved on the subsequent call to generator_next()
  */
-JSValue
-generator_push(Generator* gen, JSValueConst value) {
+JSValue generator_push(Generator* gen, JSValueConst value) {
   JSValue ret;
 
   ret = js_async_create(gen->ctx, &gen->resolve_reject);
@@ -436,8 +423,7 @@ generator_push(Generator* gen, JSValueConst value) {
  * @return  A promise which fulfills to the next iteration result if the
  *          generator handles the error, and otherwise rejects with the given error.
  */
-JSValue
-generator_throw(Generator* gen, JSValueConst error) {
+JSValue generator_throw(Generator* gen, JSValueConst error) {
   JSValue ret = JS_UNDEFINED;
   JSWrappedPromiseRecord* wpr = js_wrappedpromise_data(gen->promise);
 
@@ -466,8 +452,7 @@ generator_throw(Generator* gen, JSValueConst error) {
  *
  * @return Promise that is resolved on the subsequent call to generator_next()
  */
-BOOL
-generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
+BOOL generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
   ssize_t ret;
 
   /*if(gen->closing || gen->closed)
@@ -501,8 +486,7 @@ generator_yield(Generator* gen, JSValueConst value, JSValueConst callback) {
  *
  * @return TRUE when successful, FALSE otherwise
  */
-BOOL
-generator_stop(Generator* gen, JSValueConst arg) {
+BOOL generator_stop(Generator* gen, JSValueConst arg) {
   BOOL ret = FALSE;
   Queue* q;
   QueueItem* item = 0;
@@ -562,8 +546,7 @@ generator_stop(Generator* gen, JSValueConst arg) {
  *
  * @return TRUE when successful, FALSE otherwise
  */
-BOOL
-generator_continuous(Generator* gen, JSValueConst callback) {
+BOOL generator_continuous(Generator* gen, JSValueConst callback) {
   Queue* q;
 
 #ifdef DEBUG_OUTPUT
@@ -600,8 +583,7 @@ generator_continuous(Generator* gen, JSValueConst callback) {
  *
  * @return TRUE when successful, FALSE otherwise
  */
-BOOL
-generator_finish(Generator* gen) {
+BOOL generator_finish(Generator* gen) {
   gen->closing = TRUE;
 
   if((gen->q && gen->q->continuous) && !js_is_nullish(gen->callback)) {
@@ -630,15 +612,13 @@ generator_finish(Generator* gen) {
  *
  * @return Number of enqueued bytes or -1 on error
  */
-ssize_t
-generator_enqueue(Generator* gen, JSValueConst value) {
+ssize_t generator_enqueue(Generator* gen, JSValueConst value) {
   create_queue(gen);
 
   return enqueue_value(gen, value, JS_UNDEFINED);
 }
 
-BOOL
-generator_buffering(Generator* gen, size_t chunk_size) {
+BOOL generator_buffering(Generator* gen, size_t chunk_size) {
   Queue* q;
 
 #ifdef DEBUG_OUTPUT

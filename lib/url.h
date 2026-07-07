@@ -60,34 +60,20 @@ void url_fromwsi(URL*, struct lws* wsi, JSContext* ctx);
 URL* url_new(JSContext*);
 JSValue url_object(const URL, JSContext* ctx);
 
-static inline const char*
-url_path(const struct url url) {
-  return url.path;
-}
+static inline const char* url_path(const struct url url) { return url.path; }
 
-static inline BOOL
-url_valid(const struct url url) {
-  return url.host || url.path;
-}
+static inline BOOL url_valid(const struct url url) { return url.host || url.path; }
 
-static inline enum protocol
-url_protocol(const struct url url) {
-  return protocol_number(url.protocol);
-}
+static inline enum protocol url_protocol(const struct url url) { return protocol_number(url.protocol); }
 
-static inline BOOL
-url_is_tls(const struct url url) {
-  return url.protocol ? protocol_is_tls(protocol_number(url.protocol)) : FALSE;
-}
+static inline BOOL url_is_tls(const struct url url) { return url.protocol ? protocol_is_tls(protocol_number(url.protocol)) : FALSE; }
 
-static inline struct url*
-url_dup(struct url* url) {
+static inline struct url* url_dup(struct url* url) {
   ++url->ref_count;
   return url;
 }
 
-static inline struct url
-url_clone(struct url url, JSContext* ctx) {
+static inline struct url url_clone(struct url url, JSContext* ctx) {
   return (struct url){
       .ref_count = 1,
       .protocol = url.protocol,
@@ -97,29 +83,21 @@ url_clone(struct url url, JSContext* ctx) {
   };
 }
 
-static inline void
-url_copy(struct url* url, const struct url other, JSContext* ctx) {
+static inline void url_copy(struct url* url, const struct url other, JSContext* ctx) {
   url->protocol = other.protocol;
   url->host = other.host ? js_strdup(ctx, other.host) : 0;
   url->path = other.path ? js_strdup(ctx, other.path) : 0;
   url->port = other.port;
 }
 
-static inline char*
-url_string(struct url const* url) {
+static inline char* url_string(struct url const* url) {
   static char buf[4096];
 
   url_print(buf, sizeof(buf), *url);
   return buf;
 }
 
-static inline BOOL
-url_set_path(struct url* url, const char* path, JSContext* ctx) {
-  return url_set_path_len(url, path, strlen(path), ctx);
-}
+static inline BOOL url_set_path(struct url* url, const char* path, JSContext* ctx) { return url_set_path_len(url, path, strlen(path), ctx); }
 
-static inline BOOL
-url_set_query(struct url* url, const char* query, JSContext* ctx) {
-  return url_set_query_len(url, query, strlen(query), ctx);
-}
+static inline BOOL url_set_query(struct url* url, const char* query, JSContext* ctx) { return url_set_query_len(url, query, strlen(query), ctx); }
 #endif /* QJSNET_LIB_URL_H */

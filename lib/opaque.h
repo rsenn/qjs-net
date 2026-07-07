@@ -50,8 +50,7 @@ struct wsi_opaque_user_data* opaque_new(JSContext*);
 struct wsi_opaque_user_data* opaque_from_wsi(struct lws*, JSContext* ctx);
 bool opaque_valid(struct wsi_opaque_user_data* opaque);
 
-static inline struct wsi_opaque_user_data*
-opaque_dup(struct wsi_opaque_user_data* opaque) {
+static inline struct wsi_opaque_user_data* opaque_dup(struct wsi_opaque_user_data* opaque) {
   ++opaque->ref_count;
   return opaque;
 }

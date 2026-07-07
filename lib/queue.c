@@ -4,16 +4,14 @@
 #include "queue.h"
 #include <assert.h>
 
-void
-queue_zero(Queue* q) {
+void queue_zero(Queue* q) {
   init_list_head(&q->items);
 
   q->size = 0;
   q->continuous = FALSE;
 }
 
-void
-queue_clear(Queue* q, JSRuntime* rt) {
+void queue_clear(Queue* q, JSRuntime* rt) {
   struct list_head *p, *p2;
 
   if(q->items.prev == 0 && q->items.next == 0)
@@ -33,15 +31,13 @@ queue_clear(Queue* q, JSRuntime* rt) {
   q->size = 0;
 }
 
-void
-queue_free(Queue* q, JSRuntime* rt) {
+void queue_free(Queue* q, JSRuntime* rt) {
   queue_clear(q, rt);
 
   js_free_rt(rt, q);
 }
 
-Queue*
-queue_new(JSContext* ctx) {
+Queue* queue_new(JSContext* ctx) {
   Queue* q;
 
   if((q = js_malloc(ctx, sizeof(Queue))))
@@ -50,18 +46,11 @@ queue_new(JSContext* ctx) {
   return q;
 }
 
-QueueItem*
-queue_front(Queue* q) {
-  return list_empty(&q->items) ? 0 : list_entry(q->items.next, QueueItem, link);
-}
+QueueItem* queue_front(Queue* q) { return list_empty(&q->items) ? 0 : list_entry(q->items.next, QueueItem, link); }
 
-QueueItem*
-queue_back(Queue* q) {
-  return list_empty(&q->items) ? 0 : list_entry(q->items.prev, QueueItem, link);
-}
+QueueItem* queue_back(Queue* q) { return list_empty(&q->items) ? 0 : list_entry(q->items.prev, QueueItem, link); }
 
-QueueItem*
-queue_last_chunk(Queue* q) {
+QueueItem* queue_last_chunk(Queue* q) {
   struct list_head* el;
 
   list_for_each_prev(el, &q->items) {
@@ -74,8 +63,7 @@ queue_last_chunk(Queue* q) {
   return 0;
 }
 
-ByteBlock
-queue_next(Queue* q, BOOL* done_p, BOOL* binary_p) {
+ByteBlock queue_next(Queue* q, BOOL* done_p, BOOL* binary_p) {
   ByteBlock ret = {0, 0};
   QueueItem* i;
   BOOL done = FALSE;
@@ -111,8 +99,7 @@ queue_next(Queue* q, BOOL* done_p, BOOL* binary_p) {
   return ret;
 }
 
-uint8_t*
-queue_peek(Queue* q, size_t* lenp) {
+uint8_t* queue_peek(Queue* q, size_t* lenp) {
   QueueItem* i = queue_front(q);
   ByteBlock ret = i->block;
   BOOL done = i->done;
@@ -123,8 +110,7 @@ queue_peek(Queue* q, size_t* lenp) {
   return block_BEGIN(&ret);
 }
 
-ssize_t
-queue_read(Queue* q, void* buf, size_t n) {
+ssize_t queue_read(Queue* q, void* buf, size_t n) {
   QueueItem* i;
   char* x = buf;
   ssize_t r = 0;
@@ -172,8 +158,7 @@ queue_read(Queue* q, void* buf, size_t n) {
   return r;
 }
 
-QueueItem*
-queue_add(Queue* q, ByteBlock chunk) {
+QueueItem* queue_add(Queue* q, ByteBlock chunk) {
   QueueItem* i;
 
 #ifdef DEBUG_OUTPUT
@@ -198,8 +183,7 @@ queue_add(Queue* q, ByteBlock chunk) {
   return i;
 }
 
-QueueItem*
-queue_put(Queue* q, ByteBlock chunk, JSContext* ctx) {
+QueueItem* queue_put(Queue* q, ByteBlock chunk, JSContext* ctx) {
   QueueItem* i;
 
   if(q->continuous && (i = queue_last_chunk(q))) {
@@ -217,8 +201,7 @@ queue_put(Queue* q, ByteBlock chunk, JSContext* ctx) {
   return i;
 }
 
-QueueItem*
-queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
+QueueItem* queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
   QueueItem* i;
 
   if(q->continuous && (i = queue_last_chunk(q))) {
@@ -234,8 +217,7 @@ queue_write(Queue* q, const void* data, size_t size, JSContext* ctx) {
   return i;
 }
 
-QueueItem*
-queue_putline(Queue* q, const void* data, size_t size, JSContext* ctx) {
+QueueItem* queue_putline(Queue* q, const void* data, size_t size, JSContext* ctx) {
   const char* x = data;
   QueueItem* i;
   char* lineend;
@@ -268,8 +250,7 @@ queue_putline(Queue* q, const void* data, size_t size, JSContext* ctx) {
   return i;
 }
 
-QueueItem*
-queue_append(Queue* q, const void* data, size_t size, JSContext* ctx) {
+QueueItem* queue_append(Queue* q, const void* data, size_t size, JSContext* ctx) {
   QueueItem* i;
 
   if((i = queue_last_chunk(q))) {
@@ -284,8 +265,7 @@ queue_append(Queue* q, const void* data, size_t size, JSContext* ctx) {
   return i;
 }
 
-QueueItem*
-queue_close(Queue* q) {
+QueueItem* queue_close(Queue* q) {
   QueueItem* i;
 
   if(queue_complete(q))
@@ -306,8 +286,7 @@ queue_close(Queue* q) {
   return i;
 }
 
-size_t
-queue_bytes(Queue* q) {
+size_t queue_bytes(Queue* q) {
   QueueItem* i;
   struct list_head* el;
   size_t bytes = 0;
@@ -324,8 +303,7 @@ queue_bytes(Queue* q) {
   return bytes;
 }
 
-QueueItem*
-queue_continuous(Queue* q) {
+QueueItem* queue_continuous(Queue* q) {
   QueueItem* i;
 
   q->continuous = TRUE;

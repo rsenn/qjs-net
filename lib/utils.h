@@ -50,7 +50,7 @@
             (char*)(name), \
             args);
 
-//#define DBG(fmt, args...) LOG(__FILE__, FG("%d") "%-38s" NC " " fmt, (((__LINE__ % 220) + 20) & 0xff), __func__, args)
+// #define DBG(fmt, args...) LOG(__FILE__, FG("%d") "%-38s" NC " " fmt, (((__LINE__ % 220) + 20) & 0xff), __func__, args)
 
 #ifdef DEBUG_OUTPUT
 #define DBG(fmt, args...) lwsl_debug("%-25s " fmt, __func__, args);
@@ -78,8 +78,7 @@ int byte_diff(const void*, size_t len, const void* b);
 size_t byte_equal(const void*, size_t n, const void* t);
 size_t byte_findb(const void*, size_t hlen, const void* what, size_t wlen);
 
-static inline char*
-str_ndup(const char* s, size_t n) {
+static inline char* str_ndup(const char* s, size_t n) {
   char* r = (char*)malloc(n + 1);
   if(r == NULL)
     return NULL;
@@ -88,10 +87,7 @@ str_ndup(const char* s, size_t n) {
   return r;
 }
 
-static inline size_t
-byte_finds(const void* haystack, size_t hlen, const char* what) {
-  return byte_findb(haystack, hlen, what, strlen(what));
-}
+static inline size_t byte_finds(const void* haystack, size_t hlen, const char* what) { return byte_findb(haystack, hlen, what, strlen(what)); }
 
 size_t scan_whitenskip(const void*, size_t);
 size_t scan_nonwhitenskip(const void*, size_t);
@@ -100,8 +96,7 @@ size_t scan_nextline(const void*, size_t);
 size_t scan_charsetnskip(const void*, const char*, size_t);
 size_t scan_noncharsetnskip(const void*, const char*, size_t);
 
-static inline size_t
-scan_past(const void* s, const char* charset, size_t limit) {
+static inline size_t scan_past(const void* s, const char* charset, size_t limit) {
   size_t i;
 
   if((i = scan_noncharsetnskip(s, charset, limit)) < limit) {
@@ -127,38 +122,20 @@ typedef int(
 
 char* socket_address(int, getaddrfunc*);
 
-static inline BOOL
-has_query(const char* str) {
-  return !!strchr(str, '?');
-}
+static inline BOOL has_query(const char* str) { return !!strchr(str, '?'); }
 
-static inline BOOL
-has_query_b(const char* str, size_t len) {
-  return byte_chr(str, len, '?') < len;
-}
+static inline BOOL has_query_b(const char* str, size_t len) { return byte_chr(str, len, '?') < len; }
 
-static inline char*
-socket_remote(socket_type fd) {
-  return socket_address(fd, &getpeername);
-}
+static inline char* socket_remote(socket_type fd) { return socket_address(fd, &getpeername); }
 
-static inline char*
-socket_local(socket_type fd) {
-  return socket_address(fd, &getsockname);
-}
+static inline char* socket_local(socket_type fd) { return socket_address(fd, &getsockname); }
 
 size_t list_size(struct list_head*);
 struct list_head* list_at(struct list_head*, int64_t);
 
-static inline struct list_head*
-list_front(const struct list_head* list) {
-  return list->next != list ? list->next : 0;
-}
+static inline struct list_head* list_front(const struct list_head* list) { return list->next != list ? list->next : 0; }
 
-static inline struct list_head*
-list_back(const struct list_head* list) {
-  return list->prev != list ? list->prev : 0;
-}
+static inline struct list_head* list_back(const struct list_head* list) { return list->prev != list ? list->prev : 0; }
 
 #define list_entry_at(list, type, field, index) list_entry(list_at(list, index), type, field)
 

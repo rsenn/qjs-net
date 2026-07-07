@@ -32,25 +32,15 @@ size_t ringbuffer_avail(struct ringbuffer*);
 void ringbuffer_zero(struct ringbuffer*);
 void ringbuffer_free(struct ringbuffer*, JSRuntime* rt);
 
-static inline int
-ringbuffer_lock(struct ringbuffer* strm) {
-  return pthread_mutex_lock(&strm->lock_ring);
-}
+static inline int ringbuffer_lock(struct ringbuffer* strm) { return pthread_mutex_lock(&strm->lock_ring); }
 
-static inline struct ringbuffer*
-ringbuffer_dup(struct ringbuffer* rb) {
+static inline struct ringbuffer* ringbuffer_dup(struct ringbuffer* rb) {
   ++rb->ref_count;
   return rb;
 }
 
-static inline int
-ringbuffer_unlock(struct ringbuffer* strm) {
-  return pthread_mutex_unlock(&strm->lock_ring);
-}
+static inline int ringbuffer_unlock(struct ringbuffer* strm) { return pthread_mutex_unlock(&strm->lock_ring); }
 
-static inline size_t
-ringbuffer_element_len(struct ringbuffer* rb) {
-  return rb->element_len;
-}
+static inline size_t ringbuffer_element_len(struct ringbuffer* rb) { return rb->element_len; }
 
 #endif /* QJSNET_LIB_RINGBUFFER_H */

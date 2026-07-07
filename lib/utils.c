@@ -3,8 +3,7 @@
  */
 #include "utils.h"
 
-size_t
-str_chr(const char* in, char needle) {
+size_t str_chr(const char* in, char needle) {
   const char* t;
 
   for(t = in; *t; ++t)
@@ -14,8 +13,7 @@ str_chr(const char* in, char needle) {
   return (size_t)(t - in);
 }
 
-size_t
-str_chrs(const char* in, const char needles[], size_t nn) {
+size_t str_chrs(const char* in, const char needles[], size_t nn) {
   const char* t = in;
   size_t i;
 
@@ -33,8 +31,7 @@ str_chrs(const char* in, const char needles[], size_t nn) {
   return (size_t)(t - in);
 }
 
-size_t
-byte_chr(const void* x, size_t len, char c) {
+size_t byte_chr(const void* x, size_t len, char c) {
   const char *s, *t, *str = x;
 
   for(s = str, t = s + len; s < t; ++s)
@@ -44,8 +41,7 @@ byte_chr(const void* x, size_t len, char c) {
   return s - str;
 }
 
-size_t
-byte_chrs(const void* x, size_t len, const char needle[], size_t nl) {
+size_t byte_chrs(const void* x, size_t len, const char needle[], size_t nl) {
   const char *s, *t;
 
   for(s = x, t = (const char*)x + len; s != t; s++)
@@ -55,8 +51,7 @@ byte_chrs(const void* x, size_t len, const char needle[], size_t nl) {
   return s - (const char*)x;
 }
 
-size_t
-byte_rchr(const void* x, size_t len, char needle) {
+size_t byte_rchr(const void* x, size_t len, char needle) {
   const char *s, *t;
 
   for(s = x, t = (const char*)x + len; --t >= s;)
@@ -66,8 +61,7 @@ byte_rchr(const void* x, size_t len, char needle) {
   return len;
 }
 
-int
-byte_diff(const void* a, size_t len, const void* b) {
+int byte_diff(const void* a, size_t len, const void* b) {
   size_t i;
 
   for(i = 0; i < len; ++i) {
@@ -79,13 +73,9 @@ byte_diff(const void* a, size_t len, const void* b) {
   return 0;
 }
 
-size_t
-byte_equal(const void* s, size_t n, const void* t) {
-  return byte_diff(s, n, t) == 0;
-}
+size_t byte_equal(const void* s, size_t n, const void* t) { return byte_diff(s, n, t) == 0; }
 
-size_t
-byte_findb(const void* haystack, size_t hlen, const void* what, size_t wlen) {
+size_t byte_findb(const void* haystack, size_t hlen, const void* what, size_t wlen) {
   size_t i, last;
   const char* s = (const char*)haystack;
 
@@ -103,8 +93,7 @@ byte_findb(const void* haystack, size_t hlen, const void* what, size_t wlen) {
   return hlen;
 }
 
-size_t
-scan_whitenskip(const void* s, size_t limit) {
+size_t scan_whitenskip(const void* s, size_t limit) {
   const char *t = s, *u = t + limit;
 
   while(t < u && isspace(*t))
@@ -113,8 +102,7 @@ scan_whitenskip(const void* s, size_t limit) {
   return t - (const char*)s;
 }
 
-size_t
-scan_nonwhitenskip(const void* s, size_t limit) {
+size_t scan_nonwhitenskip(const void* s, size_t limit) {
   const char *t = s, *u = t + limit;
 
   while(t < u && !isspace(*t))
@@ -123,8 +111,7 @@ scan_nonwhitenskip(const void* s, size_t limit) {
   return t - (const char*)s;
 }
 
-size_t
-scan_eol(const void* s, size_t limit) {
+size_t scan_eol(const void* s, size_t limit) {
   const char* t = s;
   size_t i = byte_chr(s, limit, '\n');
 
@@ -134,8 +121,7 @@ scan_eol(const void* s, size_t limit) {
   return i;
 }
 
-size_t
-scan_nextline(const void* s, size_t limit) {
+size_t scan_nextline(const void* s, size_t limit) {
   size_t i;
 
   if((i = byte_chr(s, limit, '\n')) < limit)
@@ -144,8 +130,7 @@ scan_nextline(const void* s, size_t limit) {
   return i;
 }
 
-size_t
-scan_charsetnskip(const void* s, const char* charset, size_t limit) {
+size_t scan_charsetnskip(const void* s, const char* charset, size_t limit) {
   const char *t, *u, *i;
 
   for(t = s, u = t + limit; t < u; t++) {
@@ -159,8 +144,7 @@ scan_charsetnskip(const void* s, const char* charset, size_t limit) {
   return t - (const char*)s;
 }
 
-size_t
-scan_noncharsetnskip(const void* s, const char* charset, size_t limit) {
+size_t scan_noncharsetnskip(const void* s, const char* charset, size_t limit) {
   const char *t, *u, *i;
 
   for(t = s, u = t + limit; t < u; t++) {
@@ -174,8 +158,7 @@ scan_noncharsetnskip(const void* s, const char* charset, size_t limit) {
   return t - (const char*)s;
 }
 
-size_t
-skip_brackets(const char* line, size_t len) {
+size_t skip_brackets(const char* line, size_t len) {
   size_t n = 0;
 
   if(len > 0 && line[0] == '[') {
@@ -195,8 +178,7 @@ skip_brackets(const char* line, size_t len) {
   return n;
 }
 
-size_t
-skip_directory(const char* line, size_t len) {
+size_t skip_directory(const char* line, size_t len) {
   if(line[0] == '/') {
     size_t colon = byte_chr(line, len, ':');
 
@@ -211,8 +193,7 @@ skip_directory(const char* line, size_t len) {
   return 0;
 }
 
-size_t
-strip_trailing_newline(const char* line, size_t* len_p) {
+size_t strip_trailing_newline(const char* line, size_t* len_p) {
   size_t len = *len_p;
 
   while(len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
@@ -221,8 +202,7 @@ strip_trailing_newline(const char* line, size_t* len_p) {
   return *len_p = len;
 }
 
-unsigned
-uint_pow(unsigned base, unsigned degree) {
+unsigned uint_pow(unsigned base, unsigned degree) {
   unsigned result = 1;
   unsigned term = base;
 
@@ -236,8 +216,7 @@ uint_pow(unsigned base, unsigned degree) {
   return result;
 }
 
-size_t
-list_size(struct list_head* list) {
+size_t list_size(struct list_head* list) {
   size_t count = 0;
 
   if(list->next && list->prev) {
@@ -248,8 +227,7 @@ list_size(struct list_head* list) {
   return count;
 }
 
-struct list_head*
-list_at(struct list_head* list, int64_t i) {
+struct list_head* list_at(struct list_head* list, int64_t i) {
   struct list_head* el;
 
   if(!list_empty(list)) {

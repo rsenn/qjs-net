@@ -32,18 +32,14 @@ ssize_t response_settype(Response*, const char*);
 char* response_type(Response*, JSContext*);
 void response_redirect(Response* resp, int code, const char* location);
 
-static inline Generator*
-response_generator(struct http_response* resp, JSContext* ctx) {
+static inline Generator* response_generator(struct http_response* resp, JSContext* ctx) {
   if(!resp->body)
     resp->body = generator_new(ctx);
 
   return resp->body;
 }
 
-static inline BOOL
-response_body_used(struct http_response* resp) {
-  return resp->body && generator_bytes_written(resp->body);
-}
+static inline BOOL response_body_used(struct http_response* resp) { return resp->body && generator_bytes_written(resp->body); }
 
 struct http_response* response_new(JSContext*);
 

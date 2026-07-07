@@ -40,25 +40,19 @@ size_t queue_bytes(Queue*);
 QueueItem* queue_continuous(Queue* q);
 uint8_t* queue_peek(Queue* q, size_t* lenp);
 
-static inline BOOL
-queue_empty(Queue* q) {
-  return list_empty(&q->items);
-}
+static inline BOOL queue_empty(Queue* q) { return list_empty(&q->items); }
 
-static inline BOOL
-queue_closed(Queue* q) {
+static inline BOOL queue_closed(Queue* q) {
   QueueItem* i;
   return (i = queue_front(q)) ? i->done : FALSE;
 }
 
-static inline BOOL
-queue_complete(Queue* q) {
+static inline BOOL queue_complete(Queue* q) {
   QueueItem* i;
   return (i = queue_back(q)) ? i->done : FALSE;
 }
 
-static inline BOOL
-queue_gotline(Queue* q) {
+static inline BOOL queue_gotline(Queue* q) {
   uint8_t* x;
   size_t sz;
 
@@ -68,14 +62,8 @@ queue_gotline(Queue* q) {
   return FALSE;
 }
 
-static inline BOOL
-queue_is_continuous(Queue* q) {
-  return q->continuous;
-}
+static inline BOOL queue_is_continuous(Queue* q) { return q->continuous; }
 
-static inline size_t
-queue_size(Queue* q) {
-  return q->size;
-}
+static inline size_t queue_size(Queue* q) { return q->size; }
 
 #endif /* QJSNET_LIB_QUEUE_H */

@@ -19,10 +19,7 @@ enum http_method {
 
 typedef enum http_method HTTPMethod;
 
-static inline void*
-wsi_context(struct lws* wsi) {
-  return lws_context_user(lws_get_context(wsi));
-}
+static inline void* wsi_context(struct lws* wsi) { return lws_context_user(lws_get_context(wsi)); }
 
 bool wsi_http2(struct lws*);
 bool wsi_tls(struct lws*);
@@ -38,13 +35,9 @@ HTTPMethod wsi_method(struct lws*);
 char* wsi_ipaddr(struct lws*);
 const char* lws_callback_name(int);
 
-static inline char*
-wsi_token(struct lws* wsi, enum lws_token_indexes token) {
-  return wsi_token_len(wsi, token, NULL);
-}
+static inline char* wsi_token(struct lws* wsi, enum lws_token_indexes token) { return wsi_token_len(wsi, token, NULL); }
 
-static inline bool
-lws_reason_poll(int reason) {
+static inline bool lws_reason_poll(int reason) {
   switch(reason) {
     case LWS_CALLBACK_LOCK_POLL:
     case LWS_CALLBACK_UNLOCK_POLL:
@@ -56,8 +49,7 @@ lws_reason_poll(int reason) {
   return false;
 }
 
-static inline bool
-lws_reason_http(int reason) {
+static inline bool lws_reason_http(int reason) {
   switch(reason) {
     case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP:
     case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
@@ -83,8 +75,7 @@ lws_reason_http(int reason) {
   return false;
 }
 
-static inline bool
-lws_reason_client(int reason) {
+static inline bool lws_reason_client(int reason) {
   switch(reason) {
     case LWS_CALLBACK_CONNECTING:
     case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
@@ -119,9 +110,6 @@ lws_reason_client(int reason) {
   return false;
 }
 
-static inline int
-wsi_query_len(struct lws* wsi) {
-  return lws_hdr_total_length(wsi, WSI_TOKEN_HTTP_URI_ARGS);
-}
+static inline int wsi_query_len(struct lws* wsi) { return lws_hdr_total_length(wsi, WSI_TOKEN_HTTP_URI_ARGS); }
 
 #endif /* QJSNET_LIB_LWS_UTILS_H */

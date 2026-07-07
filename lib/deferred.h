@@ -65,8 +65,7 @@ JSValue deferred_tojs(Deferred*, JSContext* ctx);
 
 #define DEFERRED_SENTINEL (/*((void*)0) +*/ 0xb222471f43df05)
 
-static inline Deferred*
-vdeferred_new(ptr_t fn, va_list a) {
+static inline Deferred* vdeferred_new(ptr_t fn, va_list a) {
   int argc = 0;
   ptr_t args[8] = {0};
   size_t arg;
@@ -83,8 +82,7 @@ vdeferred_new(ptr_t fn, va_list a) {
 #define deferred_new(args...) deferred_new_x(args, DEFERRED_SENTINEL)
 #define deferred_call(args...) deferred_call_x(args, DEFERRED_SENTINEL)
 
-static inline Deferred*
-deferred_new_x(ptr_t fn, ...) {
+static inline Deferred* deferred_new_x(ptr_t fn, ...) {
   va_list a;
   int argc = 0;
   ptr_t args[8] = {0}, arg;
@@ -102,30 +100,19 @@ deferred_new_x(ptr_t fn, ...) {
   return deferred_newv(fn, argc, args);
 }
 
-static inline Deferred*
-deferred_dup(Deferred* def) {
+static inline Deferred* deferred_dup(Deferred* def) {
   ++def->ref_count;
 
   return def;
 }
 
-static inline JSContext*
-deferred_getctx(Deferred* def) {
-  return (JSContext*)def->argv[0];
-}
+static inline JSContext* deferred_getctx(Deferred* def) { return (JSContext*)def->argv[0]; }
 
-static inline JSValue
-deferred_getjs(Deferred* def) {
-  return *(JSValue*)&def->argv[1];
-}
+static inline JSValue deferred_getjs(Deferred* def) { return *(JSValue*)&def->argv[1]; }
 
-static inline Deferred*
-deferred_new1(ptr_t fn, ptr_t arg1) {
-  return deferred_newv(fn, 1, &arg1);
-}
+static inline Deferred* deferred_new1(ptr_t fn, ptr_t arg1) { return deferred_newv(fn, 1, &arg1); }
 
-static inline Deferred*
-deferred_new2(ptr_t fn, ptr_t arg1, ptr_t arg2) {
+static inline Deferred* deferred_new2(ptr_t fn, ptr_t arg1, ptr_t arg2) {
   ptr_t args[] = {
       arg1,
       arg2,
@@ -134,8 +121,7 @@ deferred_new2(ptr_t fn, ptr_t arg1, ptr_t arg2) {
   return deferred_newv(fn, 2, args);
 }
 
-static inline Deferred*
-deferred_new3(ptr_t fn, ptr_t arg1, ptr_t arg2, ptr_t arg3) {
+static inline Deferred* deferred_new3(ptr_t fn, ptr_t arg1, ptr_t arg2, ptr_t arg3) {
   ptr_t args[] = {
       arg1,
       arg2,

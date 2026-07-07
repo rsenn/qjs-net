@@ -6,8 +6,7 @@
 #include "utils.h"
 #include "ws.h"
 
-static int
-formparser_callback(void* data, const char* name, const char* filename, char* buf, int len, enum lws_spa_fileupload_states state) {
+static int formparser_callback(void* data, const char* name, const char* filename, char* buf, int len, enum lws_spa_fileupload_states state) {
   FormParser* fp = data;
   JSCallback* cb = 0;
   JSValue result, args[2] = {JS_NULL, JS_NULL};
@@ -93,8 +92,7 @@ formparser_callback(void* data, const char* name, const char* filename, char* bu
   return 0;
 }
 
-void
-formparser_init(FormParser* fp, struct socket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
+void formparser_init(FormParser* fp, struct socket* ws, int nparams, const char* const* param_names, size_t chunk_size) {
   memset(&fp->spa_create_info, 0, sizeof(struct lws_spa_create_info));
 
   fp->ws = ws_dup(ws);
@@ -110,8 +108,7 @@ formparser_init(FormParser* fp, struct socket* ws, int nparams, const char* cons
   fp->file = JS_UNDEFINED;
 }
 
-FormParser*
-formparser_alloc(JSContext* ctx) {
+FormParser* formparser_alloc(JSContext* ctx) {
   FormParser* ret;
 
   ret = js_mallocz(ctx, sizeof(FormParser));
@@ -120,8 +117,7 @@ formparser_alloc(JSContext* ctx) {
   return ret;
 }
 
-void
-formparser_clear(FormParser* fp, JSRuntime* rt) {
+void formparser_clear(FormParser* fp, JSRuntime* rt) {
   if(fp->spa) {
     lws_spa_destroy(fp->spa);
     fp->spa = 0;
@@ -137,8 +133,7 @@ formparser_clear(FormParser* fp, JSRuntime* rt) {
   FREECB_RT(fp->cb.close);
 }
 
-void
-formparser_free(FormParser* fp, JSRuntime* rt) {
+void formparser_free(FormParser* fp, JSRuntime* rt) {
   if(--fp->ref_count == 0) {
     ws_free(fp->ws, rt);
     formparser_clear(fp, rt);
@@ -146,29 +141,23 @@ formparser_free(FormParser* fp, JSRuntime* rt) {
   }
 }
 
-const char*
-formparser_param_name(FormParser* fp, int index) {
+const char* formparser_param_name(FormParser* fp, int index) {
   if(index >= 0 && index < fp->spa_create_info.count_params)
     return fp->spa_create_info.param_names[index];
 
   return 0;
 }
 
-bool
-formparser_param_valid(FormParser* fp, int index) {
+bool formparser_param_valid(FormParser* fp, int index) {
   if(index >= 0 && index < fp->spa_create_info.count_params)
     return true;
 
   return false;
 }
 
-size_t
-formparser_param_count(FormParser* fp) {
-  return fp->spa_create_info.count_params;
-}
+size_t formparser_param_count(FormParser* fp) { return fp->spa_create_info.count_params; }
 
-int
-formparser_param_index(FormParser* fp, const char* name) {
+int formparser_param_index(FormParser* fp, const char* name) {
   int i;
 
   for(i = 0; i < fp->spa_create_info.count_params; i++)
@@ -178,15 +167,13 @@ formparser_param_index(FormParser* fp, const char* name) {
   return -1;
 }
 
-bool
-formparser_param_exists(FormParser* fp, const char* name) {
+bool formparser_param_exists(FormParser* fp, const char* name) {
   int i = formparser_param_index(fp, name);
 
   return i != -1;
 }
 
-int
-formparser_process(FormParser* fp, const void* data, size_t len) {
+int formparser_process(FormParser* fp, const void* data, size_t len) {
   int retval = lws_spa_process(fp->spa, data, len);
 
   fp->read += len;

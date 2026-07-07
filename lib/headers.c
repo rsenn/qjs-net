@@ -6,8 +6,7 @@
 #include <libwebsockets.h>
 #include <strings.h>
 
-JSValue
-headers_object(JSContext* ctx, const void* start, const void* e) {
+JSValue headers_object(JSContext* ctx, const void* start, const void* e) {
   JSValue ret = JS_NewObject(ctx);
   size_t len, namelen, n;
   const uint8_t *x, *end;
@@ -30,8 +29,7 @@ headers_object(JSContext* ctx, const void* start, const void* e) {
   return ret;
 }
 
-size_t
-headers_write(ByteBuffer* buffer, struct lws* wsi, uint8_t** in, uint8_t* end) {
+size_t headers_write(ByteBuffer* buffer, struct lws* wsi, uint8_t** in, uint8_t* end) {
   int ret;
   uint8_t *p = buffer->read, *q = buffer->write, *start = *in;
 
@@ -59,8 +57,7 @@ headers_write(ByteBuffer* buffer, struct lws* wsi, uint8_t** in, uint8_t* end) {
   return *in - start;
 }
 
-int
-headers_fromobj(ByteBuffer* buffer, JSValueConst obj, const char* itemdelim, const char* keydelim, JSContext* ctx) {
+int headers_fromobj(ByteBuffer* buffer, JSValueConst obj, const char* itemdelim, const char* keydelim, JSContext* ctx) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
 
@@ -93,8 +90,7 @@ headers_fromobj(ByteBuffer* buffer, JSValueConst obj, const char* itemdelim, con
   return i;
 }
 
-ssize_t
-headers_findb(ByteBuffer* b, const char* name, size_t namelen, const char* itemdelim) {
+ssize_t headers_findb(ByteBuffer* b, const char* name, size_t namelen, const char* itemdelim) {
   uint8_t *y, *x;
   ssize_t ret = 0;
 
@@ -116,8 +112,7 @@ headers_findb(ByteBuffer* b, const char* name, size_t namelen, const char* itemd
   return -1;
 }
 
-char*
-headers_at(ByteBuffer* b, size_t* lenptr, size_t index, const char* itemdelim) {
+char* headers_at(ByteBuffer* b, size_t* lenptr, size_t index, const char* itemdelim) {
   uint8_t* x;
   size_t i = 0;
 
@@ -136,8 +131,7 @@ headers_at(ByteBuffer* b, size_t* lenptr, size_t index, const char* itemdelim) {
   return 0;
 }
 
-char*
-headers_getlen(ByteBuffer* b, size_t* lenptr, const char* name, const char* itemdelim, const char* keydelim) {
+char* headers_getlen(ByteBuffer* b, size_t* lenptr, const char* name, const char* itemdelim, const char* keydelim) {
   ssize_t i;
 
   if((i = headers_find(b, name, itemdelim)) != -1) {
@@ -154,8 +148,7 @@ headers_getlen(ByteBuffer* b, size_t* lenptr, const char* name, const char* item
   return 0;
 }
 
-char*
-headers_get(ByteBuffer* buffer, const char* name, const char* itemdelim, const char* keydelim, JSContext* ctx) {
+char* headers_get(ByteBuffer* buffer, const char* name, const char* itemdelim, const char* keydelim, JSContext* ctx) {
   size_t len;
   char* str;
 
@@ -164,13 +157,9 @@ headers_get(ByteBuffer* buffer, const char* name, const char* itemdelim, const c
   return 0;
 }
 
-ssize_t
-headers_find(ByteBuffer* buffer, const char* name, const char* itemdelim) {
-  return headers_findb(buffer, name, strlen(name), itemdelim);
-}
+ssize_t headers_find(ByteBuffer* buffer, const char* name, const char* itemdelim) { return headers_findb(buffer, name, strlen(name), itemdelim); }
 
-int
-headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
+int headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   int tok, len, count = 0;
 
   if(!headers->start)
@@ -205,8 +194,7 @@ headers_tobuffer(JSContext* ctx, ByteBuffer* headers, struct lws* wsi) {
   return count;
 }
 
-ssize_t
-headers_unsetb(ByteBuffer* b, const char* name, size_t namelen, const char* itemdelim) {
+ssize_t headers_unsetb(ByteBuffer* b, const char* name, size_t namelen, const char* itemdelim) {
   ssize_t i;
 
   if((i = headers_findb(b, name, namelen, itemdelim)) >= 0) {
@@ -224,8 +212,7 @@ headers_unsetb(ByteBuffer* b, const char* name, size_t namelen, const char* item
   return i;
 }
 
-ssize_t
-headers_set(ByteBuffer* b, const char* name, const char* value, const char* itemdelim) {
+ssize_t headers_set(ByteBuffer* b, const char* name, const char* value, const char* itemdelim) {
   size_t namelen = strlen(name), valuelen = strlen(value);
   size_t c = namelen + 2 + valuelen + 2;
 
@@ -241,8 +228,7 @@ headers_set(ByteBuffer* b, const char* name, const char* value, const char* item
   return c;
 }
 
-ssize_t
-headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* value, size_t valuelen, const char* itemdelim) {
+ssize_t headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* value, size_t valuelen, const char* itemdelim) {
   ssize_t i;
 
   buffer_grow(b, valuelen + 2);
@@ -270,8 +256,7 @@ headers_appendb(ByteBuffer* b, const char* name, size_t namelen, const char* val
   return i;
 }
 
-size_t
-headers_size(ByteBuffer* headers, const char* itemdelim) {
+size_t headers_size(ByteBuffer* headers, const char* itemdelim) {
   uint8_t *ptr, *end = headers->write;
   size_t i = 0;
 

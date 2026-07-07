@@ -8,8 +8,7 @@
 #include "headers.h"
 #include <assert.h>
 
-void
-response_zero(Response* resp) {
+void response_zero(Response* resp) {
   memset(resp, 0, sizeof(Response));
   resp->ref_count = 1;
   resp->read_only = FALSE;
@@ -18,8 +17,7 @@ response_zero(Response* resp) {
   resp->status = 200;
 }
 
-void
-response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type) {
+void response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL headers_sent, char* type) {
   resp->status = status;
   resp->status_text = status_text;
   resp->headers_sent = headers_sent;
@@ -28,15 +26,13 @@ response_init(Response* resp, URL url, int32_t status, char* status_text, BOOL h
   resp->body = NULL;
 }
 
-Response*
-response_dup(Response* resp) {
+Response* response_dup(Response* resp) {
   ++resp->ref_count;
 
   return resp;
 }
 
-void
-response_clear(Response* resp, JSRuntime* rt) {
+void response_clear(Response* resp, JSRuntime* rt) {
   url_free(&resp->url, rt);
   buffer_free(&resp->headers);
 
@@ -51,16 +47,14 @@ response_clear(Response* resp, JSRuntime* rt) {
   }
 }
 
-void
-response_free(Response* resp, JSRuntime* rt) {
+void response_free(Response* resp, JSRuntime* rt) {
   if(--resp->ref_count == 0) {
     response_clear(resp, rt);
     js_free_rt(rt, resp);
   }
 }
 
-Response*
-response_new(JSContext* ctx) {
+Response* response_new(JSContext* ctx) {
   Response* resp;
 
   if((resp = js_mallocz(ctx, sizeof(Response))))
@@ -69,18 +63,11 @@ response_new(JSContext* ctx) {
   return resp;
 }
 
-ssize_t
-response_settype(Response* resp, const char* type) {
-  return headers_set(&resp->headers, "content-type", type, "\r\n");
-}
+ssize_t response_settype(Response* resp, const char* type) { return headers_set(&resp->headers, "content-type", type, "\r\n"); }
 
-void
-response_redirect(Response* resp, int code, const char* location) {
+void response_redirect(Response* resp, int code, const char* location) {
   resp->status = code;
   headers_set(&resp->headers, "location", location, "\r\n");
 }
 
-char*
-response_type(Response* resp, JSContext* ctx) {
-  return headers_get(&resp->headers, "content-type", "\r\n", ":", ctx);
-}
+char* response_type(Response* resp, JSContext* ctx) { return headers_get(&resp->headers, "content-type", "\r\n", ":", ctx); }

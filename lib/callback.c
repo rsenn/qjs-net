@@ -7,8 +7,7 @@
 #include "opaque.h"
 #include <assert.h>
 
-JSValue
-callback_emit_this(const JSCallback* cb, JSValueConst this_obj, int argc, JSValue* argv) {
+JSValue callback_emit_this(const JSCallback* cb, JSValueConst this_obj, int argc, JSValue* argv) {
   JSValue ret = JS_UNDEFINED;
 
   if(cb->ctx)
@@ -23,7 +22,4 @@ callback_emit_this(const JSCallback* cb, JSValueConst this_obj, int argc, JSValu
   return ret;
 }
 
-JSValue
-callback_emit(const JSCallback* cb, int argc, JSValue* argv) {
-  return callback_emit_this(cb, cb->this_obj, argc, argv);
-}
+JSValue callback_emit(const JSCallback* cb, int argc, JSValue* argv) { return callback_emit_this(cb, cb->this_obj, argc, argv); }

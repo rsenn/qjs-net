@@ -44,56 +44,28 @@ BOOL generator_buffering(Generator*, size_t chunk_size);
 BOOL generator_finish(Generator* gen);
 ssize_t generator_enqueue(Generator* gen, JSValueConst value);
 
-static inline Generator*
-generator_dup(Generator* gen) {
+static inline Generator* generator_dup(Generator* gen) {
   ++gen->ref_count;
 
   return gen;
 }
 
-static inline BOOL
-generator_started(Generator* gen) {
-  return !JS_IsFunction(gen->ctx, gen->executor);
-}
+static inline BOOL generator_started(Generator* gen) { return !JS_IsFunction(gen->ctx, gen->executor); }
 
-static inline BOOL
-generator_stopped(Generator* gen) {
-  return gen->closing || gen->closed;
-}
+static inline BOOL generator_stopped(Generator* gen) { return gen->closing || gen->closed; }
 
-static inline BOOL
-generator_is_continuous(Generator* gen) {
-  return gen->q && queue_is_continuous(gen->q);
-}
+static inline BOOL generator_is_continuous(Generator* gen) { return gen->q && queue_is_continuous(gen->q); }
 
-static inline BOOL
-generator_is_buffering(Generator* gen) {
-  return gen->buffering;
-}
+static inline BOOL generator_is_buffering(Generator* gen) { return gen->buffering; }
 
-static inline uint64_t
-generator_bytes_written(Generator* gen) {
-  return gen->bytes_written;
-}
+static inline uint64_t generator_bytes_written(Generator* gen) { return gen->bytes_written; }
 
-static inline uint64_t
-generator_bytes_read(Generator* gen) {
-  return gen->bytes_read;
-}
+static inline uint64_t generator_bytes_read(Generator* gen) { return gen->bytes_read; }
 
-static inline uint32_t
-generator_chunks_written(Generator* gen) {
-  return gen->chunks_written;
-}
+static inline uint32_t generator_chunks_written(Generator* gen) { return gen->chunks_written; }
 
-static inline uint32_t
-generator_chunks_read(Generator* gen) {
-  return gen->chunks_read;
-}
+static inline uint32_t generator_chunks_read(Generator* gen) { return gen->chunks_read; }
 
-static inline uint32_t
-generator_chunk_size(Generator* gen) {
-  return gen->chunk_size;
-}
+static inline uint32_t generator_chunk_size(Generator* gen) { return gen->chunk_size; }
 
 #endif /* QJSNET_LIB_GENERATOR_H */

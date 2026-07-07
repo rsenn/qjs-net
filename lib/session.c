@@ -12,8 +12,7 @@
 #include "lws-utils.h"
 #include <assert.h>
 
-static void
-session_zero(struct session_data* session) {
+static void session_zero(struct session_data* session) {
   session->ws_obj = JS_NULL;
   session->req_obj = JS_NULL;
   session->resp_obj = JS_NULL;
@@ -33,14 +32,12 @@ session_zero(struct session_data* session) {
   queue_zero(&session->sendq);
 }
 
-void
-session_init(struct session_data* session, struct context* context) {
+void session_init(struct session_data* session, struct context* context) {
   session_zero(session);
   session->context = context;
 }
 
-void
-session_clear(struct session_data* session, JSRuntime* rt) {
+void session_clear(struct session_data* session, JSRuntime* rt) {
   JS_FreeValueRT(rt, session->ws_obj);
   session->ws_obj = JS_UNDEFINED;
   JS_FreeValueRT(rt, session->req_obj);
@@ -60,8 +57,7 @@ session_clear(struct session_data* session, JSRuntime* rt) {
   queue_clear(&session->sendq, rt);
 }
 
-JSValue
-session_object(struct session_data* session, JSContext* ctx) {
+JSValue session_object(struct session_data* session, JSContext* ctx) {
   JSValue ret;
   ret = JS_NewArray(ctx);
 
@@ -72,16 +68,14 @@ session_object(struct session_data* session, JSContext* ctx) {
   return ret;
 }
 
-void
-session_want_write(struct session_data* session, struct lws* wsi) {
+void session_want_write(struct session_data* session, struct lws* wsi) {
   if(!session->want_write) {
     lws_callback_on_writable(wsi);
     session->want_write = TRUE;
   }
 }
 
-int
-session_writable(struct session_data* session, struct lws* wsi, JSContext* ctx) {
+int session_writable(struct session_data* session, struct lws* wsi, JSContext* ctx) {
   int ret = 0;
   size_t size;
 
@@ -104,8 +98,7 @@ session_writable(struct session_data* session, struct lws* wsi, JSContext* ctx) 
   return ret;
 }
 
-FunctionType
-session_callback(struct session_data* session, JSCallback* cb) {
+FunctionType session_callback(struct session_data* session, JSCallback* cb) {
   int ret = 0;
   JSValue body, this = session->ws_obj;
   BOOL async = FALSE, is_generator = js_function_is_generator(cb->ctx, cb->func_obj, &async);
@@ -131,8 +124,7 @@ session_callback(struct session_data* session, JSCallback* cb) {
   return ret;
 }
 
-FunctionType
-session_generator(struct session_data* session, JSValue generator, JSValueConst this) {
+FunctionType session_generator(struct session_data* session, JSValue generator, JSValueConst this) {
   JSContext* ctx = session->context->js;
   JSAtom prop;
   BOOL async = FALSE;

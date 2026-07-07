@@ -108,14 +108,12 @@ typedef unsigned int nfds_t;
 /* Avoid warnings from gcc -Wcast-function-type.  */
 #define GetProcAddress (void*)GetProcAddress
 
-static BOOL
-IsConsoleHandle(HANDLE h) {
+static BOOL IsConsoleHandle(HANDLE h) {
   DWORD mode;
   return GetConsoleMode(h, &mode) != 0;
 }
 
-static BOOL
-IsSocketHandle(HANDLE h) {
+static BOOL IsSocketHandle(HANDLE h) {
   WSANETWORKEVENTS ev;
 
   if(IsConsoleHandle(h))
@@ -161,8 +159,7 @@ typedef DWORD(WINAPI* PNtQueryInformationFile)(HANDLE, IO_STATUS_BLOCK*, VOID*, 
 /* Compute revents values for file handle H.  If some events cannot happen
    for the handle, eliminate them from *P_SOUGHT.  */
 
-static int
-windows_compute_revents(HANDLE h, int* p_sought) {
+static int windows_compute_revents(HANDLE h, int* p_sought) {
   int i, ret, happened;
   INPUT_RECORD* irbuffer;
   DWORD avail, nbuffer;
@@ -246,8 +243,7 @@ windows_compute_revents(HANDLE h, int* p_sought) {
 
 /* Convert fd_sets returned by select into revents values.  */
 
-static int
-windows_compute_revents_socket(SOCKET h, int sought, long lNetworkEvents) {
+static int windows_compute_revents_socket(SOCKET h, int sought, long lNetworkEvents) {
   int happened = 0;
 
   if((lNetworkEvents & (FD_READ | FD_ACCEPT | FD_CLOSE)) == FD_ACCEPT)
@@ -285,8 +281,7 @@ windows_compute_revents_socket(SOCKET h, int sought, long lNetworkEvents) {
 #else /* !MinGW */
 
 /* Convert select(2) returned fd_sets into poll(2) revents values.  */
-static int
-compute_revents(int fd, int sought, fd_set* rfds, fd_set* wfds, fd_set* efds) {
+static int compute_revents(int fd, int sought, fd_set* rfds, fd_set* wfds, fd_set* efds) {
   int happened = 0;
   if(FD_ISSET(fd, rfds)) {
     int r;
@@ -337,8 +332,7 @@ compute_revents(int fd, int sought, fd_set* rfds, fd_set* wfds, fd_set* efds) {
 
 #endif /* !MinGW */
 
-int
-poll(struct pollfd* pfd, nfds_t nfd, int timeout) {
+int poll(struct pollfd* pfd, nfds_t nfd, int timeout) {
 #ifndef WINDOWS_NATIVE
   fd_set rfds, wfds, efds;
   struct timeval tv;

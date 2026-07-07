@@ -32,8 +32,7 @@ QueueItem* ws_enqueue(struct socket*, ByteBlock);
 Queue* ws_queue(struct socket* ws);
 QueueItem* ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx);
 
-static inline struct session_data*
-lws_session(struct lws* wsi) {
+static inline struct session_data* lws_session(struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
 
   if((opaque = lws_get_opaque_user_data(wsi)))
@@ -42,25 +41,17 @@ lws_session(struct lws* wsi) {
   return 0;
 }
 
-static inline struct wsi_opaque_user_data*
-ws_opaque(struct socket* ws) {
+static inline struct wsi_opaque_user_data* ws_opaque(struct socket* ws) {
   struct wsi_opaque_user_data* opaque = ws->lwsi ? lws_get_opaque_user_data(ws->lwsi) : 0;
 
   return opaque;
 }
 
-static inline struct session_data*
-ws_session(struct socket* ws) {
-  return ws->lwsi ? lws_session(ws->lwsi) : 0;
-}
+static inline struct session_data* ws_session(struct socket* ws) { return ws->lwsi ? lws_session(ws->lwsi) : 0; }
 
-static inline int
-ws_fd(struct socket* ws) {
-  return ws->lwsi ? lws_get_socket_fd(lws_get_network_wsi(ws->lwsi)) : 0;
-}
+static inline int ws_fd(struct socket* ws) { return ws->lwsi ? lws_get_socket_fd(lws_get_network_wsi(ws->lwsi)) : 0; }
 
-static inline struct socket*
-ws_from_wsi(struct lws* wsi) {
+static inline struct socket* ws_from_wsi(struct lws* wsi) {
   struct wsi_opaque_user_data* opaque;
   return ((opaque = lws_get_opaque_user_data(wsi)) && opaque_valid(opaque)) ? opaque->ws : 0;
 }

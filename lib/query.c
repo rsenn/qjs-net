@@ -3,13 +3,9 @@
  */
 #include "query.h"
 
-JSValue
-query_object(const char* q, JSContext* ctx) {
-  return query_object_len(q, strlen(q), ctx);
-}
+JSValue query_object(const char* q, JSContext* ctx) { return query_object_len(q, strlen(q), ctx); }
 
-JSValue
-query_object_len(const char* q, size_t n, JSContext* ctx) {
+JSValue query_object_len(const char* q, size_t n, JSContext* ctx) {
   const char *p, *end = q + n;
   size_t entrylen;
   JSValue ret = JS_NewObject(ctx);
@@ -24,8 +20,7 @@ query_object_len(const char* q, size_t n, JSContext* ctx) {
   return ret;
 }
 
-BOOL
-query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry) {
+BOOL query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry) {
   size_t len;
 
   if((len = byte_chr(q, n, '=')) < n) {
@@ -49,8 +44,7 @@ query_entry(const char* q, size_t n, JSContext* ctx, JSEntry* entry) {
   return FALSE;
 }
 
-char*
-query_from(JSValueConst obj, JSContext* ctx) {
+char* query_from(JSValueConst obj, JSContext* ctx) {
   JSPropertyEnum* tab;
   uint32_t tab_len, i;
   DynBuf out;

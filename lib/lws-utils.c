@@ -12,18 +12,11 @@
 int lws_wsi_is_h2(struct lws* wsi);
 int lws_is_ssl(struct lws* wsi);
 
-bool
-wsi_http2(struct lws* wsi) {
-  return lws_wsi_is_h2(wsi);
-}
+bool wsi_http2(struct lws* wsi) { return lws_wsi_is_h2(wsi); }
 
-bool
-wsi_tls(struct lws* wsi) {
-  return lws_is_ssl(lws_get_network_wsi(wsi));
-}
+bool wsi_tls(struct lws* wsi) { return lws_is_ssl(lws_get_network_wsi(wsi)); }
 
-void
-wsi_cert(struct lws* wsi) {
+void wsi_cert(struct lws* wsi) {
   uint8_t buf[1280];
   union lws_tls_cert_info_results* ci = (union lws_tls_cert_info_results*)buf;
 #if defined(LWS_HAVE_CTIME_R)
@@ -82,8 +75,7 @@ wsi_cert(struct lws* wsi) {
 #endif
 }
 
-char*
-wsi_query_string_len(struct lws* wsi, size_t* len_p) {
+char* wsi_query_string_len(struct lws* wsi, size_t* len_p) {
   if(!wsi_token_exists(wsi, WSI_TOKEN_HTTP_URI_ARGS)) {
     if(len_p)
       *len_p = 0;
@@ -93,13 +85,9 @@ wsi_query_string_len(struct lws* wsi, size_t* len_p) {
   return wsi_token_len(wsi, WSI_TOKEN_HTTP_URI_ARGS, len_p);
 }
 
-bool
-wsi_token_exists(struct lws* wsi, enum lws_token_indexes token) {
-  return lws_hdr_total_length(wsi, token) > 0;
-}
+bool wsi_token_exists(struct lws* wsi, enum lws_token_indexes token) { return lws_hdr_total_length(wsi, token) > 0; }
 
-char*
-wsi_token_len(struct lws* wsi, enum lws_token_indexes token, size_t* len_p) {
+char* wsi_token_len(struct lws* wsi, enum lws_token_indexes token, size_t* len_p) {
   size_t len;
   char* buf;
 
@@ -116,8 +104,7 @@ wsi_token_len(struct lws* wsi, enum lws_token_indexes token, size_t* len_p) {
   return buf;
 }
 
-char*
-wsi_uri_and_method(struct lws* wsi, HTTPMethod* method) {
+char* wsi_uri_and_method(struct lws* wsi, HTTPMethod* method) {
   char* url;
 
   if((url = wsi_token(wsi, WSI_TOKEN_POST_URI))) {
@@ -143,8 +130,7 @@ wsi_uri_and_method(struct lws* wsi, HTTPMethod* method) {
   return url;
 }
 
-char*
-wsi_host_and_port(struct lws* wsi, int* port) {
+char* wsi_host_and_port(struct lws* wsi, int* port) {
   char* host;
   size_t hostlen;
 
@@ -160,8 +146,7 @@ wsi_host_and_port(struct lws* wsi, int* port) {
   return host;
 }
 
-const char*
-wsi_protocol_name(struct lws* wsi) {
+const char* wsi_protocol_name(struct lws* wsi) {
   const struct lws_protocols* protocol;
 
   if((protocol = lws_get_protocol(wsi)))
@@ -170,8 +155,7 @@ wsi_protocol_name(struct lws* wsi) {
   return 0;
 }
 
-char*
-wsi_vhost_and_port(struct lws* wsi, int* port) {
+char* wsi_vhost_and_port(struct lws* wsi, int* port) {
   char* host = 0;
   struct lws_vhost* vhost;
 
@@ -199,8 +183,7 @@ static const enum lws_token_indexes wsi_uri_tokens[] = {
     WSI_TOKEN_HEAD_URI,
 };
 
-HTTPMethod
-wsi_method(struct lws* wsi) {
+HTTPMethod wsi_method(struct lws* wsi) {
   static const HTTPMethod methods[] = {
       METHOD_GET,
       METHOD_POST,
@@ -218,8 +201,7 @@ wsi_method(struct lws* wsi) {
   return -1;
 }
 
-char*
-wsi_ipaddr(struct lws* wsi) {
+char* wsi_ipaddr(struct lws* wsi) {
   char ipaddr[16], *ret = 0;
 
   if(lws_get_peer_simple(wsi, ipaddr, sizeof(ipaddr)))
@@ -228,8 +210,7 @@ wsi_ipaddr(struct lws* wsi) {
   return ret;
 }
 
-const char*
-lws_callback_name(int reason) {
+const char* lws_callback_name(int reason) {
   return ((const char* const[]){
       "LWS_CALLBACK_ESTABLISHED",
       "LWS_CALLBACK_CLIENT_CONNECTION_ERROR",

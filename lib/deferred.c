@@ -5,8 +5,7 @@
 #include "deferred.h"
 #include "js-utils.h"
 
-void
-deferred_clear(Deferred* def) {
+void deferred_clear(Deferred* def) {
   def->num_calls = 0;
   def->only_once = FALSE;
   def->func = 0;
@@ -15,8 +14,7 @@ deferred_clear(Deferred* def) {
     def->argv[i] = 0;
 }
 
-void
-deferred_free(Deferred* def) {
+void deferred_free(Deferred* def) {
   if(def->next)
     deferred_destructor(def->next);
 
@@ -26,8 +24,7 @@ deferred_free(Deferred* def) {
   }
 }
 
-Deferred*
-deferred_newv(ptr_t fn, int argc, ptr_t argv[]) {
+Deferred* deferred_newv(ptr_t fn, int argc, ptr_t argv[]) {
   Deferred* def;
 
   if(!(def = malloc(sizeof(Deferred))))
@@ -42,8 +39,7 @@ deferred_newv(ptr_t fn, int argc, ptr_t argv[]) {
   return def;
 }
 
-Deferred*
-deferred_newjs(JSValue func, JSContext* ctx) {
+Deferred* deferred_newjs(JSValue func, JSContext* ctx) {
   Deferred* def;
   /*ptr_t args[] = {
       ctx,
@@ -57,8 +53,7 @@ deferred_newjs(JSValue func, JSContext* ctx) {
   return def;
 }
 
-void
-deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
+void deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
   int i;
 
   def->ref_count = 0;
@@ -73,8 +68,7 @@ deferred_init(Deferred* def, ptr_t fn, int argc, ptr_t argv[]) {
   def->next = 0;
 }
 
-DoubleWord
-deferred_call_x(Deferred* def, ...) {
+DoubleWord deferred_call_x(Deferred* def, ...) {
   ptr_t const* av = def->argv;
   DoubleWord ret = {{0, 0}};
   va_list a;
@@ -106,8 +100,7 @@ deferred_call_x(Deferred* def, ...) {
   return ret;
 }
 
-void
-deferred_destructor(void* ptr) {
+void deferred_destructor(void* ptr) {
   Deferred* def = ptr;
 
   do {
@@ -118,7 +111,4 @@ deferred_destructor(void* ptr) {
   } while((def = ptr));
 }
 
-void
-deferred_finalizer(JSRuntime* rt, void* opaque, void* ptr) {
-  deferred_destructor(opaque);
-}
+void deferred_finalizer(JSRuntime* rt, void* opaque, void* ptr) { deferred_destructor(opaque); }

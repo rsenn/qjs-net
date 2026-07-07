@@ -8,8 +8,7 @@
 
 THREAD_LOCAL struct list_head context_list = {0, 0};
 
-JSValue
-context_exception(struct context* context, JSValue value) {
+JSValue context_exception(struct context* context, JSValue value) {
   if(JS_IsException(value)) {
     JSValue stack;
     const char *err, *stk;
@@ -35,8 +34,7 @@ context_exception(struct context* context, JSValue value) {
   return value;
 }
 
-void
-context_clear(struct context* context) {
+void context_clear(struct context* context) {
   JSContext* ctx = context->js;
 
   lws_set_log_level(0, 0);
@@ -51,16 +49,14 @@ context_clear(struct context* context) {
   JS_FreeValue(ctx, context->error);
 }
 
-void
-context_add(struct context* context) {
+void context_add(struct context* context) {
   if(context_list.next == 0 && context_list.prev == 0)
     init_list_head(&context_list);
 
   list_add(&context->link, &context_list);
 }
 
-void
-context_delete(struct context* context) {
+void context_delete(struct context* context) {
   if(context->link.next || context->link.prev)
     list_del(&context->link);
 }

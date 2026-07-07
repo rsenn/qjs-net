@@ -36,8 +36,7 @@ JSValue block_tostring(ByteBlock*, JSContext* ctx);
 JSValue block_tojson(ByteBlock* blk, JSContext* ctx);
 ssize_t block_append(ByteBlock*, const void* data, size_t size);
 
-static inline ByteBlock
-block_move(ByteBlock* blk) {
+static inline ByteBlock block_move(ByteBlock* blk) {
   ByteBlock ret = {blk->start, blk->end};
   blk->start = 0;
   blk->end = 0;
@@ -102,8 +101,7 @@ size_t buffer_bytes(ByteBuffer*);
 ssize_t buffer_read(ByteBuffer*, void*, size_t);
 ssize_t buffer_gets(ByteBuffer*, void*, size_t);
 
-static inline void
-buffer_reset(ByteBuffer* buf) {
+static inline void buffer_reset(ByteBuffer* buf) {
   buf->read = buf->start;
   buf->write = buf->start;
 }
@@ -112,21 +110,14 @@ typedef struct writer {
   uint8_t **write, *end;
 } BufferWriter;
 
-static inline BufferWriter
-buffer_writer(ByteBuffer* bb) {
-  return (BufferWriter){&bb->write, bb->end};
-}
+static inline BufferWriter buffer_writer(ByteBuffer* bb) { return (BufferWriter){&bb->write, bb->end}; }
 typedef struct reader {
   uint8_t **read, *write;
 } BufferReader;
 
-static inline BufferReader
-buffer_reader(ByteBuffer* bb) {
-  return (BufferReader){&bb->read, bb->write};
-}
+static inline BufferReader buffer_reader(ByteBuffer* bb) { return (BufferReader){&bb->read, bb->write}; }
 
-static inline ByteBuffer
-buffer_move(ByteBuffer* buf) {
+static inline ByteBuffer buffer_move(ByteBuffer* buf) {
   ByteBuffer ret = {{buf->start, buf->end, buf->read, buf->write, buf->alloc}};
 
   buf->start = buf->end = buf->read = buf->write = buf->alloc = 0;
@@ -134,9 +125,6 @@ buffer_move(ByteBuffer* buf) {
   return ret;
 }
 
-static inline int
-buffer_0(ByteBuffer* buf) {
-  return buffer_putc(buf, '\0');
-}
+static inline int buffer_0(ByteBuffer* buf) { return buffer_putc(buf, '\0'); }
 
 #endif /* QJSNET_LIB_BUFFER_H */

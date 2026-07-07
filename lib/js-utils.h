@@ -105,10 +105,9 @@ struct TimerClosure {
 #define JS_NUM_MASK (~0xffff)
 #define JS_NUM_FUNCTIONS(flags) (((flags) >> JS_NUM_SHIFT) + 1)
 
-#define JS_BIND_MAGIC(num_functions, flags) ((((num_functions)-1) << JS_NUM_SHIFT) | (flags))
+#define JS_BIND_MAGIC(num_functions, flags) ((((num_functions) - 1) << JS_NUM_SHIFT) | (flags))
 
-static inline void
-js_argv_free(JSContext* ctx, int argc, JSValue argv[]) {
+static inline void js_argv_free(JSContext* ctx, int argc, JSValue argv[]) {
   for(int i = 0; i < argc; i++) {
     JS_FreeValue(ctx, argv[i]);
     argv[i] = JS_UNDEFINED;
@@ -220,26 +219,20 @@ JSWrappedPromiseRecord* js_wrappedpromise_data(JSValueConst);
 JSWrappedPromiseRecord* js_wrappedpromise_data2(JSContext*, JSValueConst);
 JSValue js_promise_wrap(JSContext*, JSValueConst);
 
-static inline BOOL
-js_atom_is_int32(JSAtom atom) {
+static inline BOOL js_atom_is_int32(JSAtom atom) {
   if((int32_t)atom < 0)
     return TRUE;
   return FALSE;
 }
 
-static inline BOOL
-js_atom_valid(JSAtom atom) {
-  return atom != 0x7fffffff;
-}
+static inline BOOL js_atom_valid(JSAtom atom) { return atom != 0x7fffffff; }
 
-static inline void
-js_entry_init(JSEntry* entry) {
+static inline void js_entry_init(JSEntry* entry) {
   entry->key = -1;
   entry->value = JS_UNDEFINED;
 }
 
-static inline void
-js_entry_clear(JSRuntime* rt, JSEntry* entry) {
+static inline void js_entry_clear(JSRuntime* rt, JSEntry* entry) {
   if(entry->key >= 0)
     JS_FreeAtomRT(rt, entry->key);
   entry->key = -1;
@@ -247,42 +240,36 @@ js_entry_clear(JSRuntime* rt, JSEntry* entry) {
   entry->value = JS_UNDEFINED;
 }
 
-static inline void
-js_entry_reset(JSContext* ctx, JSEntry* entry, JSAtom key, JSValue value) {
+static inline void js_entry_reset(JSContext* ctx, JSEntry* entry, JSAtom key, JSValue value) {
   js_entry_clear(JS_GetRuntime(ctx), entry);
   entry->key = key;
   entry->value = value;
 }
 
-static inline void
-js_entry_reset_string(JSContext* ctx, JSEntry* entry, const char* keystr, JSValue value) {
+static inline void js_entry_reset_string(JSContext* ctx, JSEntry* entry, const char* keystr, JSValue value) {
   JSAtom key;
   key = JS_NewAtom(ctx, keystr);
   js_entry_reset(ctx, entry, key, value);
 }
 
-static inline const char*
-js_entry_key_string(JSContext* ctx, const JSEntry entry) {
+static inline const char* js_entry_key_string(JSContext* ctx, const JSEntry entry) {
   const char* str;
   str = JS_AtomToCString(ctx, entry.key);
   return str;
 }
 
-static inline const char*
-js_entry_value_string(JSContext* ctx, const JSEntry entry) {
+static inline const char* js_entry_value_string(JSContext* ctx, const JSEntry entry) {
   const char* str;
   str = JS_ToCString(ctx, entry.value);
   return str;
 }
 
-static inline JSEntry
-js_entry_dup(JSContext* ctx, const JSEntry entry) {
+static inline JSEntry js_entry_dup(JSContext* ctx, const JSEntry entry) {
   JSEntry ret = {JS_DupAtom(ctx, entry.key), JS_DupValue(ctx, entry.value)};
   return ret;
 }
 
-static inline int
-js_entry_apply(JSContext* ctx, JSEntry* entry, JSValueConst obj) {
+static inline int js_entry_apply(JSContext* ctx, JSEntry* entry, JSValueConst obj) {
   int ret;
   ret = JS_SetProperty(ctx, obj, entry->key, entry->value);
   JS_FreeAtom(ctx, entry->key);
@@ -291,26 +278,16 @@ js_entry_apply(JSContext* ctx, JSEntry* entry, JSValueConst obj) {
   return ret;
 }
 
-static inline void
-ol_init(OffsetLength* ol) {
+static inline void ol_init(OffsetLength* ol) {
   ol->offset = 0;
   ol->length = INT64_MAX;
 }
 
-static inline BOOL
-ol_is_default(const OffsetLength* ol) {
-  return ol->offset == 0 && ol->length == INT64_MAX;
-}
+static inline BOOL ol_is_default(const OffsetLength* ol) { return ol->offset == 0 && ol->length == INT64_MAX; }
 
-static inline uint8_t*
-ol_data(const OffsetLength* ol, const void* x) {
-  return (uint8_t*)x + ol->offset;
-}
+static inline uint8_t* ol_data(const OffsetLength* ol, const void* x) { return (uint8_t*)x + ol->offset; }
 
-static inline size_t
-ol_size(const OffsetLength* ol, int64_t n) {
-  return MIN(ol->length, n - ol->offset);
-}
+static inline size_t ol_size(const OffsetLength* ol, int64_t n) { return MIN(ol->length, n - ol->offset); }
 
 /*static inline MemoryBlock
 ol_block(const OffsetLength* ol, const void* x, size_t n) {
@@ -323,8 +300,7 @@ ol_range(const OffsetLength* ol, const void* x, size_t n) {
   return range_from(&mb);
 }*/
 
-static inline OffsetLength
-ol_slice(const OffsetLength ol, int64_t start, int64_t end) {
+static inline OffsetLength ol_slice(const OffsetLength ol, int64_t start, int64_t end) {
   if(start < 0)
     start = ol.length + (start % ol.length);
   else if(start > ol.length)
@@ -337,24 +313,21 @@ ol_slice(const OffsetLength ol, int64_t start, int64_t end) {
   return (OffsetLength){start, end - start};
 }
 
-static inline OffsetLength
-ol_offset(const OffsetLength* ol, const OffsetLength* by) {
+static inline OffsetLength ol_offset(const OffsetLength* ol, const OffsetLength* by) {
   OffsetLength ret;
   ret.offset = ol->offset + by->offset;
   ret.length = MIN(by->length, ol->length - by->offset);
   return ret;
 }
 
-static inline void
-js_clear(JSContext* ctx, const void* arg) {
+static inline void js_clear(JSContext* ctx, const void* arg) {
   const void** ptr = (const void**)arg;
   if(*ptr)
     js_free(ctx, (void*)*ptr);
   *ptr = 0;
 }
 
-static inline void
-js_dump_string(const char* str, size_t len, size_t maxlen) {
+static inline void js_dump_string(const char* str, size_t len, size_t maxlen) {
   size_t i, n = 2;
   putchar('\'');
   for(i = 0; i < len; i++) {
@@ -374,8 +347,7 @@ js_dump_string(const char* str, size_t len, size_t maxlen) {
   putchar('\'');
 }
 
-static inline char*
-js_to_string(JSContext* ctx, JSValueConst value) {
+static inline char* js_to_string(JSContext* ctx, JSValueConst value) {
   const char* s;
   char* ret = 0;
 
@@ -386,8 +358,7 @@ js_to_string(JSContext* ctx, JSValueConst value) {
   return ret;
 }
 
-static inline char*
-js_replace_string(JSContext* ctx, JSValueConst value, char** sptr) {
+static inline char* js_replace_string(JSContext* ctx, JSValueConst value, char** sptr) {
   const char* s;
 
   if(*sptr)
@@ -400,19 +371,10 @@ js_replace_string(JSContext* ctx, JSValueConst value, char** sptr) {
   return *sptr;
 }
 
-static inline BOOL
-js_is_nullish(JSValueConst value) {
-  return JS_IsNull(value) || JS_IsUndefined(value);
-}
+static inline BOOL js_is_nullish(JSValueConst value) { return JS_IsNull(value) || JS_IsUndefined(value); }
 
-static inline const uint8_t*
-js_buffer_begin(const JSBuffer* in) {
-  return in->data;
-}
+static inline const uint8_t* js_buffer_begin(const JSBuffer* in) { return in->data; }
 
-static inline const uint8_t*
-js_buffer_end(const JSBuffer* in) {
-  return in->data + in->size;
-}
+static inline const uint8_t* js_buffer_end(const JSBuffer* in) { return in->data + in->size; }
 
 #endif /* QJSNET_LIB_JS_UTILS_H */

@@ -30,26 +30,18 @@ BOOL asynciterator_stop(AsyncIterator*, JSValueConst value, JSContext* ctx);
 int asynciterator_cancel(AsyncIterator*, JSValueConst error, JSContext* ctx);
 BOOL asynciterator_emplace(AsyncIterator*, JSValueConst value, BOOL done, JSContext* ctx);
 
-static inline BOOL
-asynciterator_pending(AsyncIterator* it) {
-  return !list_empty(&it->reads);
-}
+static inline BOOL asynciterator_pending(AsyncIterator* it) { return !list_empty(&it->reads); }
 
-static inline AsyncRead*
-asynciterator_front(AsyncIterator* it) {
-  return list_entry(list_front(&it->reads), AsyncRead, link);
-}
+static inline AsyncRead* asynciterator_front(AsyncIterator* it) { return list_entry(list_front(&it->reads), AsyncRead, link); }
 
-static inline BOOL
-asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
+static inline BOOL asynciterator_yield(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   if(list_empty(&it->reads))
     return FALSE;
 
   return asynciterator_emplace(it, value, FALSE, ctx);
 }
 
-static inline BOOL
-asynciterator_throw(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
+static inline BOOL asynciterator_throw(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
   if(list_empty(&it->reads))
     return FALSE;
 
@@ -57,8 +49,7 @@ asynciterator_throw(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
   return TRUE;
 }
 
-static inline AsyncIterator*
-asynciterator_dup(AsyncIterator* it) {
+static inline AsyncIterator* asynciterator_dup(AsyncIterator* it) {
   ++it->ref_count;
   return it;
 }

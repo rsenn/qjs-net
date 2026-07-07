@@ -846,7 +846,7 @@ int minnet_http_server_callback(struct lws* wsi, enum lws_callback_reasons reaso
       if(callback_valid(&server->on.check_access_rights)) {
         JSValue args[] = {pa->p && pa->len ? JS_NewStringLen(server->on.check_access_rights.ctx, pa->p, pa->len) : JS_NULL};
 
-        JSValue retval = callback_emit_this(&server->on.check_access_rights, session->req_obj, countof(args), args);
+        JSValue retval = callback_emit_this(&server->on.check_access_rights, session->ws_obj, countof(args), args);
 
         ret = minnet_server_exception(server, retval);
       }

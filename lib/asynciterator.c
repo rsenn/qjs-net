@@ -5,8 +5,7 @@
 #include "utils.h"
 #include <assert.h>
 
-static AsyncRead*
-asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
+static AsyncRead* asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
   if(!list_empty(&it->reads)) {
     AsyncRead* rd = list_entry(it->reads.next, AsyncRead, link);
     list_del(&rd->link);
@@ -15,16 +14,14 @@ asynciterator_shift(AsyncIterator* it, JSContext* ctx) {
   return 0;
 }
 
-void
-asynciterator_zero(AsyncIterator* it) {
+void asynciterator_zero(AsyncIterator* it) {
   it->ref_count = 1;
   it->closed = FALSE;
   it->closing = FALSE;
   init_list_head(&it->reads);
 }
 
-void
-asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
+void asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
   struct list_head *el, *next;
 
   list_for_each_safe(el, next, &it->reads) {
@@ -35,8 +32,7 @@ asynciterator_clear(AsyncIterator* it, JSRuntime* rt) {
   }
 }
 
-AsyncIterator*
-asynciterator_new(JSContext* ctx) {
+AsyncIterator* asynciterator_new(JSContext* ctx) {
   AsyncIterator* iter;
 
   if((iter = js_malloc(ctx, sizeof(AsyncIterator))))
@@ -45,16 +41,14 @@ asynciterator_new(JSContext* ctx) {
   return iter;
 }
 
-void
-asynciterator_free(AsyncIterator* it, JSRuntime* rt) {
+void asynciterator_free(AsyncIterator* it, JSRuntime* rt) {
   if(--it->ref_count == 0) {
     asynciterator_clear(it, rt);
     js_free_rt(rt, it);
   }
 }
 
-JSValue
-asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
+JSValue asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
   AsyncRead* rd;
   JSValue ret = JS_UNDEFINED;
   ResolveFunctions async;
@@ -86,8 +80,7 @@ asynciterator_next(AsyncIterator* it, JSValueConst argument, JSContext* ctx) {
   return ret;
 }
 
-BOOL
-asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
+BOOL asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   if(asynciterator_pending(it)) {
     asynciterator_emplace(it, value, TRUE, ctx);
     it->closing = FALSE;
@@ -101,8 +94,7 @@ asynciterator_stop(AsyncIterator* it, JSValueConst value, JSContext* ctx) {
   return FALSE;
 }
 
-int
-asynciterator_cancel(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
+int asynciterator_cancel(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
   int ret = 0;
   AsyncRead* rd;
 
@@ -118,8 +110,7 @@ asynciterator_cancel(AsyncIterator* it, JSValueConst error, JSContext* ctx) {
   return ret;
 }
 
-BOOL
-asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContext* ctx) {
+BOOL asynciterator_emplace(AsyncIterator* it, JSValueConst value, BOOL done, JSContext* ctx) {
   AsyncRead* rd;
 
   if((rd = asynciterator_shift(it, ctx))) {

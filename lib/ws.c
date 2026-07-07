@@ -11,8 +11,7 @@
 #include <strings.h>
 #include <assert.h>
 
-struct socket*
-ws_new(struct lws* wsi, JSContext* ctx) {
+struct socket* ws_new(struct lws* wsi, JSContext* ctx) {
   struct socket* ws;
   struct wsi_opaque_user_data* opaque;
 
@@ -32,8 +31,7 @@ ws_new(struct lws* wsi, JSContext* ctx) {
   return ws;
 }
 
-void
-ws_clear(struct socket* ws, JSRuntime* rt) {
+void ws_clear(struct socket* ws, JSRuntime* rt) {
   struct lws* wsi = ws->lwsi;
 
   ws->lwsi = 0;
@@ -48,22 +46,19 @@ ws_clear(struct socket* ws, JSRuntime* rt) {
   }
 }
 
-void
-ws_free(struct socket* ws, JSRuntime* rt) {
+void ws_free(struct socket* ws, JSRuntime* rt) {
   if(--ws->ref_count == 0) {
     ws_clear(ws, rt);
     js_free_rt(rt, ws);
   }
 }
 
-struct socket*
-ws_dup(struct socket* ws) {
+struct socket* ws_dup(struct socket* ws) {
   ++ws->ref_count;
   return ws;
 }
 
-Queue*
-ws_queue(struct socket* ws) {
+Queue* ws_queue(struct socket* ws) {
   struct wsi_opaque_user_data* opaque;
   struct session_data* session;
 
@@ -74,8 +69,7 @@ ws_queue(struct socket* ws) {
   return 0;
 }
 
-QueueItem*
-ws_enqueue(struct socket* ws, ByteBlock chunk) {
+QueueItem* ws_enqueue(struct socket* ws, ByteBlock chunk) {
   struct wsi_opaque_user_data* opaque;
   struct session_data* session;
   QueueItem* item;
@@ -88,8 +82,7 @@ ws_enqueue(struct socket* ws, ByteBlock chunk) {
   return item;
 }
 
-QueueItem*
-ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
+QueueItem* ws_send(struct socket* ws, const void* data, size_t size, JSContext* ctx) {
   QueueItem* item = ws_enqueue(ws, block_copy(data, size));
 
   return item;

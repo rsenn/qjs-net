@@ -35,16 +35,14 @@ typedef struct js_callback {
   const char* name;
 } JSCallback;
 
-static inline void
-callback_zero(JSCallback* cb) {
+static inline void callback_zero(JSCallback* cb) {
   cb->this_obj = JS_UNDEFINED;
   cb->func_obj = JS_NULL;
   cb->ctx = NULL;
   cb->name = NULL;
 }
 
-static inline void
-callback_clear(JSCallback* cb) {
+static inline void callback_clear(JSCallback* cb) {
 
   if(cb->ctx) {
     JS_FreeValue(cb->ctx, cb->this_obj);
@@ -64,28 +62,23 @@ typedef enum callback_e { MESSAGE = 0, CHECK_ACCESS_RIGHTS, CONNECT, CLOSE, ERRO
 typedef struct callbacks {
   union {
     struct {
-      JSCallback message,check_access_rights, connect, close, error, pong, fd, http, read, post, writeable, cert_verify;
+      JSCallback message, check_access_rights, connect, close, error, pong, fd, http, read, post, writeable, cert_verify;
     };
     JSCallback cb[NUM_CALLBACKS];
   };
 } CallbackList;
 
-static inline void
-callbacks_zero(CallbackList* cbs) {
+static inline void callbacks_zero(CallbackList* cbs) {
   for(int i = 0; i < NUM_CALLBACKS; i++)
     callback_zero(&cbs->cb[i]);
 }
 
-static inline void
-callbacks_clear(CallbackList* cbs) {
+static inline void callbacks_clear(CallbackList* cbs) {
   for(int i = 0; i < NUM_CALLBACKS; i++)
     callback_clear(&cbs->cb[i]);
 }
 
-static inline int
-callback_valid(JSCallback const* cb) {
-  return cb->ctx != NULL && JS_IsObject(cb->func_obj);
-}
+static inline int callback_valid(JSCallback const* cb) { return cb->ctx != NULL && JS_IsObject(cb->func_obj); }
 
 JSValue callback_emit_this(const JSCallback*, JSValue, int, JSValue* argv);
 JSValue callback_emit(const JSCallback*, int, JSValue*);
