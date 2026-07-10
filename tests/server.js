@@ -1,17 +1,9 @@
 import { AsyncIterator , createServer, Generator, Hash, LLL_DEBUG, LLL_USER, LLL_WARN, logLevels, Request, Response, Ringbuffer, setLog, Socket, URL } from 'net';
-import { close } from 'os';
-import { setReadHandler } from 'os';
-import { setWriteHandler } from 'os';
-import { Worker } from 'os';
-import { Connection } from '../js/rpc.js';
-import { RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue } from '../js/rpc.js';
-import { exists } from './common.js';
-import { MakeCert } from './common.js';
-import { Init } from './log.js';
-import { Levels } from './log.js';
-import { log } from './log.js';
-import { exit } from 'std';
-import { getenv } from 'std';
+import { close, setReadHandler, setWriteHandler, Worker } from 'os';
+import { Connection, RPCApi, RPCClient, RPCConnect, RPCFactory, RPCListen, RPCObject, RPCProxy, RPCServer, RPCSocket, SerializeValue } from '../js/rpc.js';
+import { exists, MakeCert } from './common.js';
+import { Init, Levels, log } from './log.js';
+import { exit, getenv } from 'std';
 
 const w = Worker.parent;
 const name = w ? 'CHILD\t' : 'PARENT\t';

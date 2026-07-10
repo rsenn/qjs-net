@@ -1,16 +1,10 @@
-import { LLL_INFO } from 'net';
-import { LLL_USER } from 'net';
-import { kill } from 'os';
-import { sleep } from 'os';
+import { LLL_INFO, LLL_USER } from 'net';
+import { kill, sleep } from 'os';
 import Client from './client.js';
-import { escape } from './common.js';
-import { save } from './common.js';
+import { escape, save } from './common.js';
 import { log } from './log.js';
-import { spawn } from './spawn.js';
-import { wait4 } from './spawn.js';
-import { exit } from 'std';
-import { out as stdout } from 'std';
-import { puts } from 'std';
+import { spawn, wait4 } from './spawn.js';
+import { exit, out as stdout, puts } from 'std';
 
 async function main(...args) {
   const debug = args.indexOf('-x') != -1;

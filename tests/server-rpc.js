@@ -1,8 +1,5 @@
 import { client, createServer, LLL_INFO, LLL_USER, LLL_WARN, logLevels, setLog } from 'net';
-import { setReadHandler } from 'os';
-import { setTimeout } from 'os';
-import { setWriteHandler } from 'os';
-import { clearTimeout } from 'os';
+import { setReadHandler, setTimeout, setWriteHandler, clearTimeout } from 'os';
 import { RPCPeer } from '../js/rpc-peer.js';
 import { ensureCert, qjsnetServerHandlers } from '../js/rpc-transport-qjsnet.js';
 import { Init, log } from './log.js';

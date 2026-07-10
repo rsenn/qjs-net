@@ -1,6 +1,5 @@
 import { LLL_ALL, LLL_CLIENT, LLL_DEBUG, LLL_ERR, LLL_EXT, LLL_HEADER, LLL_INFO, LLL_LATENCY, LLL_NOTICE, LLL_PARSER, LLL_THREAD, LLL_USER, LLL_WARN, setLog } from 'net';
-import { err } from 'std';
-import { getenv } from 'std';
+import { err, getenv } from 'std';
 let logName;
 
 export const Levels = (() => {

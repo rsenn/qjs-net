@@ -1,22 +1,8 @@
-import { client } from 'net';
-import { Generator } from 'net';
-import { LLL_ALL } from 'net';
-import { LLL_CLIENT } from 'net';
-import { LLL_INFO } from 'net';
-import { LLL_USER } from 'net';
-import { LLL_WARN } from 'net';
-import { logLevels } from 'net';
-import { setLog } from 'net';
-import { setReadHandler } from 'os';
-import { setWriteHandler } from 'os';
-import { abbreviate } from './common.js';
-import { escape } from './common.js';
-import { Init } from './log.js';
-import { Levels } from './log.js';
-import { log } from './log.js';
-import { err } from 'std';
-import { exit } from 'std';
-import { puts } from 'std';
+import { client, Generator, LLL_ALL, LLL_CLIENT, LLL_INFO, LLL_USER, LLL_WARN, logLevels, setLog } from 'net';
+import { setReadHandler, setWriteHandler } from 'os';
+import { abbreviate, escape } from './common.js';
+import { Init, Levels, log } from './log.js';
+import { err, exit, puts } from 'std';
 
 const connections = new Set();
 

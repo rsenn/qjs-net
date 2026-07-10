@@ -1,21 +1,9 @@
 import { client, LLL_CLIENT, LLL_INFO, LLL_USER } from 'net';
-import { close } from 'os';
-import { kill } from 'os';
-import { setReadHandler } from 'os';
-import { SIGINT } from 'os';
-import { signal } from 'os';
-import { sleep } from 'os';
-import { ttySetRaw } from 'os';
-import { escape } from './common.js';
-import { save } from './common.js';
-import { Init } from './log.js';
-import { log } from './log.js';
-import { spawn } from './spawn.js';
-import { wait4 } from './spawn.js';
-import { exit } from 'std';
-import { in as stdin } from 'std';
-import { out as stdout } from 'std';
-import { puts } from 'std';
+import { close, kill, setReadHandler, SIGINT, signal, sleep, ttySetRaw } from 'os';
+import { escape, save } from './common.js';
+import { Init, log } from './log.js';
+import { spawn, wait4 } from './spawn.js';
+import { exit, in as stdin, out as stdout, puts } from 'std';
 
 //import Client from './client.js';
 function main(...args) {

@@ -1,6 +1,5 @@
 import { client, LLL_INFO, LLL_USER, setLog } from 'net';
-import { close } from 'os';
-import { sleep } from 'os';
+import { close, sleep } from 'os';
 import { log } from './log.js';
 import { spawn } from './spawn.js';
 import { exit } from 'std';
