@@ -1,0 +1,40 @@
+- ws-server-session-clear-never-called: src/minnet-server-ws.c:172-187, the LWS_CALLBACK_WSI_DESTROY handler has the call to session_clear(opaque->sess, ...) commented out. session_init() (line 144) allocates session->{ws_obj,req_obj,resp_obj,generator,next} and a sendq, but nothing ever frees them when the connection is destroyed. Every WebSocket connection to a server leaks this JSValue tree plus any queued send buffers.
+
+    import { ws } from 'qjs-net';
+    ws.serve({ port: 8080, onConnect(sock) { /* ... */ } });
+    // repeatedly open/close connections from a client; each one leaks
+
+- client-close-handler-frees-borrowed-ws-obj: src/minnet-client.c:345-367, on LWS_CALLBACK_CLIENT_CONNECTION_ERROR / RAW_CLOSE / WS_PEER_INITIATED_CLOSE / CLIENT_CLOSED, argv[0] is set to client->session.ws_obj without a JS_DupValue, but the cleanup loop `while(--argc >= 0) JS_FreeValue(ctx, argv[argc])` frees it anyway. Every other call site in this file leaves session.ws_obj un-freed since it's a borrowed reference; this one drops its refcount without ever owning it, risking premature free / use-after-free.
+
+    import { connect } from 'qjs-net';
+    const c = connect('ws://127.0.0.1:1'); // nothing listening
+    c.onerror = (sock, err) => { /* sock's refcount now under-counted */ };
+
+- queue-unref-callback-invoked-twice: lib/queue.c:78-86 (queue_next) and lib/queue.c:133-141 (queue_read), when a QueueItem has a deferred `unref` callback, the code calls `JS_Call(ctx, fn, ...)` directly and then also calls `deferred_call(i->unref)`, which (since def->func == &JS_Call, see lib/deferred.c:71-101) invokes the same JS_Call a second time. The completion callback passed to Generator.write() fires twice per chunk instead of once.
+
+    gen.write(new Uint8Array([1, 2, 3]).buffer, () => {
+      console.log('called'); // fires twice for this one write
+    });
+
+- formparser-name-arg-inverted-condition: lib/formparser.c:80-81, `if(JS_IsUndefined(fp->name)) args[0] = JS_DupValue(cb->ctx, fp->name);` is inverted -- it should run when fp->name IS set. As written, the field-name argument passed to onopen/oncontent/onclose is always JS_NULL (its initializer) whenever a real name exists, and only gets (uselessly) duped when there's no name to give. The commented-out block just above (lines 76-78) shows the intended, non-inverted logic.
+
+    const fp = new FormParser(sock, ['file', 'field'], {
+      onContent(name, chunk) {
+        console.log(name); // always null, even though a real field name exists
+      }
+    });
+
+- session-generator-leaks-extracted-iterator-method: lib/session.c:127-156 (session_generator), when the response body isn't itself an iterator but exposes Symbol.iterator/Symbol.asyncIterator, the method is fetched via JS_GetProperty into `tmp` and assigned to `generator` (lines 132-139). If that method is callable, `generator` is then reassigned to the call result (line 145), overwriting the only reference to `tmp` without ever calling JS_FreeValue on it. Leaks one reference to the extracted method per such request.
+
+    server.onRequest = (req, resp) => {
+      resp.body = {
+        [Symbol.iterator]() { // this function value leaks once per request
+          let i = 0;
+          return { next: () => (i++ < 3 ? { value: 'x', done: false } : { done: true }) };
+        }
+      };
+    };
+
+- ws-new-null-opaque-deref-on-oom: lib/ws.c:26-29 (ws_new), opaque_from_wsi() can return NULL if the underlying js_mallocz in opaque_new() fails (lib/opaque.c:56-90), but ws_new() does `ws->fd = opaque->fd;` unconditionally right after the guarded assignment, dereferencing opaque even when NULL.
+
+    C-level only, not directly reachable from JS API -- requires an allocation failure (OOM) at connection-accept time.
