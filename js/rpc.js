@@ -828,25 +828,6 @@ function define(obj, ...args) {
   return obj;
 }
 
-/*export function weakDefine(obj, ...args) {
-  const propdesc = {};
-
-  for(let props of args) {
-    const desc = Object.getOwnPropertyDescriptors(props);
-
-    for(let prop of GetKeys(desc)) {
-      if(prop in obj) continue;
-
-      propdesc[prop] = { ...desc[prop], enumerable: false, configurable: true };
-
-      if('value' in propdesc[prop]) propdesc[prop].writable = true;
-    }
-  }
-
-  Object.defineProperties(obj, propdesc);
-  return obj;
-}*/
-
 function DeserializeEntries(e) {
   if(Array.isArray(e)) return e.map(a => a.map(DeserializeValue));
   throw new Error(`DeserializeEntries e=${inspect(e)}`);
